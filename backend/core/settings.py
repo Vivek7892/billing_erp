@@ -2,6 +2,11 @@ from decouple import config
 from pathlib import Path
 import dj_database_url
 
+
+def origin_list(value):
+    """Parse comma-separated CORS/CSRF origins in the format Django expects."""
+    return [origin.strip().rstrip('/') for origin in value.split(',') if origin.strip()]
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default='1') in ('1', 'true', 'True', 'yes')
@@ -61,7 +66,7 @@ TEMPLATES = [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
-                'django.contrib.auth.context_processors.messages',
+                'django.contrib.messages.context_processors.messages',
             ],
         },
     },
@@ -151,30 +156,26 @@ SIMPLE_JWT = {
 }
 
 
-CORS_ALLOWED_ORIGINS = [
-    origin.strip()
-    for origin in config(
+CORS_ALLOWED_ORIGINS = origin_list(
+    config(
         'CORS_ALLOWED_ORIGINS',
         default=(
             'http://localhost:3000,'
             'http://127.0.0.1:3000,'
             'https://billing-erp-7ga7.onrender.com'
         )
-    ).split(',')
-    if origin.strip()
-]
+    )
+)
 
 CORS_ALLOW_CREDENTIALS = True
 
 
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip()
-    for origin in config(
+CSRF_TRUSTED_ORIGINS = origin_list(
+    config(
         'CSRF_TRUSTED_ORIGINS',
         default='https://billing-erp-7ga7.onrender.com'
-    ).split(',')
-    if origin.strip()
-]
+    )
+)
 
 RENDER_URL = 'https://billing-erp-7ga7.onrender.com'
 
