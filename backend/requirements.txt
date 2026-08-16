@@ -1,0 +1,17 @@
+Django>=4.2,<7
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+dj-database-url
+gunicorn
+django-filter
+python-decouple
+psycopg2-binary
+openpyxl
+reportlab
+Pillow
+qrcode[pil]
+python-barcode
+supabase
+whitenoise[brotli]
+twilio>=8.0.0
