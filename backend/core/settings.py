@@ -5,7 +5,22 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default='1') in ('1', 'true', 'True', 'yes')
-ALLOWED_HOSTS = [host.strip() for host in config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',') if host.strip()]
+
+# Render sets RENDER_EXTERNAL_HOSTNAME automatically.
+RENDER_EXTERNAL_HOSTNAME = config('RENDER_EXTERNAL_HOSTNAME', default='').strip()
+
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in config(
+        'ALLOWED_HOSTS',
+        default='localhost,127.0.0.1,billing-erp-7ga7.onrender.com'
+    ).split(',')
+    if host.strip()
+]
+
+if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -46,7 +61,7 @@ TEMPLATES = [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+                'django.contrib.auth.context_processors.messages',
             ],
         },
     },
@@ -54,9 +69,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-# Set USE_SQLITE=true in backend/.env for local development. Render does not
-# set it, so it continues to use its managed PostgreSQL DATABASE_URL.
+# Set USE_SQLITE=true in backend/.env for local development.
+# Render uses its managed PostgreSQL DATABASE_URL.
 USE_SQLITE = config('USE_SQLITE', default=False, cast=bool)
+
 if USE_SQLITE:
     DATABASES = {
         'default': {
@@ -76,6 +92,7 @@ else:
         )
     }
 
+
 AUTH_USER_MODEL = 'api.User'
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -89,17 +106,25 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 STORAGES = {
-    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    },
 }
+
 MEDIA_URL = '/api/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 SUPABASE_URL = config('SUPABASE_URL', default='')
 SUPABASE_SECRET_KEY = config('SUPABASE_SECRET_KEY', default='')
-SUPABASE_SHOP_LOGO_BUCKET = config('SUPABASE_SHOP_LOGO_BUCKET', default='billing_shop_logo')
+SUPABASE_SHOP_LOGO_BUCKET = config(
+    'SUPABASE_SHOP_LOGO_BUCKET',
+    default='billing_shop_logo'
+)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -117,22 +142,64 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 50,
 }
 
+
 from datetime import timedelta
+
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=8),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
 
-CORS_ALLOWED_ORIGINS = [origin.strip() for origin in config(
-    'CORS_ALLOWED_ORIGINS', default='http://localhost:3000,http://127.0.0.1:3000'
-).split(',') if origin.strip()]
+
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in config(
+        'CORS_ALLOWED_ORIGINS',
+        default=(
+            'http://localhost:3000,'
+            'http://127.0.0.1:3000,'
+            'https://billing-erp-7ga7.onrender.com'
+        )
+    ).split(',')
+    if origin.strip()
+]
+
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in config('CSRF_TRUSTED_ORIGINS', default='').split(',') if origin.strip()]
+
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in config(
+        'CSRF_TRUSTED_ORIGINS',
+        default='https://billing-erp-7ga7.onrender.com'
+    ).split(',')
+    if origin.strip()
+]
+
+RENDER_URL = 'https://billing-erp-7ga7.onrender.com'
+
+if RENDER_URL not in CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS.append(RENDER_URL)
+
+if RENDER_URL not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(RENDER_URL)
+
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=not DEBUG, cast=bool)
+SECURE_SSL_REDIRECT = config(
+    'SECURE_SSL_REDIRECT',
+    default=not DEBUG,
+    cast=bool
+)
+
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
-SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=0 if DEBUG else 31536000, cast=int)
+
+SECURE_HSTS_SECONDS = config(
+    'SECURE_HSTS_SECONDS',
+    default=0 if DEBUG else 31536000,
+    cast=int
+)
+
 SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
 SECURE_HSTS_PRELOAD = False
