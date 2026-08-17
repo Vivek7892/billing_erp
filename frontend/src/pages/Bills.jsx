@@ -231,7 +231,7 @@ function StatCard({
   const style = tones[tone] || tones.blue
 
   return (
-    <div className="group rounded-2xl border border-gray-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <div className="group rounded-2xl border border-gray-200/80 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
@@ -239,7 +239,7 @@ function StatCard({
           </p>
 
           <p
-            className={`mt-1.5 truncate text-xl font-bold tracking-tight ${style.value}`}
+            className={`mt-1.5 truncate text-base font-bold tracking-tight sm:text-xl ${style.value}`}
           >
             {value}
           </p>
@@ -532,7 +532,7 @@ function InvoiceModal({
         onClick={e => e.stopPropagation()}
       >
         {/* Modal header */}
-        <div className="border-b border-gray-100 bg-white px-5 py-4 sm:px-6">
+        <div className="border-b border-gray-100 bg-white px-4 py-3.5 sm:px-6 sm:py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
@@ -562,7 +562,7 @@ function InvoiceModal({
             </button>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-2 sm:mt-4">
             <button
               onClick={() => openPdf(false)}
               className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3.5 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50"
@@ -603,10 +603,10 @@ function InvoiceModal({
         </div>
 
         {/* Modal body */}
-        <div className="overflow-y-auto bg-[#f8fafc] p-4 sm:p-6">
+        <div className="overflow-y-auto bg-[#f8fafc] p-3 sm:p-6">
           {/* Information cards */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-2xl border border-gray-200 bg-white p-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
+            <div className="rounded-2xl border border-gray-200 bg-white p-3.5 sm:p-4">
               <div className="flex items-center gap-2 text-gray-400">
                 <UserRound size={14} />
                 <span className="text-[10px] font-bold uppercase tracking-wider">
@@ -625,7 +625,7 @@ function InvoiceModal({
               )}
             </div>
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-4">
+            <div className="rounded-2xl border border-gray-200 bg-white p-3.5 sm:p-4">
               <div className="flex items-center gap-2 text-gray-400">
                 <CalendarDays size={14} />
                 <span className="text-[10px] font-bold uppercase tracking-wider">
@@ -642,7 +642,7 @@ function InvoiceModal({
               </p>
             </div>
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-4">
+            <div className="rounded-2xl border border-gray-200 bg-white p-3.5 sm:p-4">
               <div className="flex items-center gap-2 text-gray-400">
                 <CreditCard size={14} />
                 <span className="text-[10px] font-bold uppercase tracking-wider">
@@ -655,7 +655,7 @@ function InvoiceModal({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-gray-200 bg-white p-4">
+            <div className="rounded-2xl border border-gray-200 bg-white p-3.5 sm:p-4">
               <div className="flex items-center gap-2 text-gray-400">
                 <CircleDollarSign size={14} />
                 <span className="text-[10px] font-bold uppercase tracking-wider">
@@ -807,6 +807,112 @@ function InvoiceModal({
         </div>
       </div>
     </div>
+  )
+}
+
+/* =========================================================
+   MOBILE INVOICE CARD
+========================================================= */
+
+function MobileInvoiceCard({ bill, shopName, onView, onRefresh }) {
+  return (
+    <article
+      className="rounded-2xl border border-gray-200 bg-white p-3.5 shadow-sm transition active:bg-gray-50"
+      onClick={() => onView(bill)}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <button
+            onClick={e => {
+              e.stopPropagation()
+              onView(bill)
+            }}
+            className="font-mono text-xs font-bold text-blue-600"
+          >
+            {bill.invoice_number}
+          </button>
+
+          <p className="mt-1 truncate text-sm font-semibold text-gray-900">
+            {bill.customer_name || 'Walk-in customer'}
+          </p>
+
+          {bill.customer_phone && (
+            <p className="mt-1 flex items-center gap-1 text-[11px] text-gray-400">
+              <Phone size={10} />
+              {bill.customer_phone}
+            </p>
+          )}
+        </div>
+
+        <div className="shrink-0 text-right">
+          <p className="text-base font-bold text-gray-950">
+            {fmt(bill.grand_total)}
+          </p>
+          <div className="mt-1 flex justify-end">
+            <StatusPill bill={bill} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-gray-50 p-2.5">
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400">
+            Date
+          </p>
+          <p className="mt-1 text-[11px] font-semibold text-gray-700">
+            {formatDate(bill.created_at)}
+          </p>
+          <p className="text-[10px] text-gray-400">
+            {formatTime(bill.created_at)}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400">
+            Payment
+          </p>
+          <div className="mt-1">
+            <PaymentBadge method={bill.payment_method} />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400">
+            Items
+          </p>
+          <p className="mt-1 text-[11px] font-semibold text-gray-700">
+            {bill.items?.length || 0} products
+          </p>
+        </div>
+
+        <div className="text-right">
+          <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400">
+            Subtotal
+          </p>
+          <p className="mt-1 text-[11px] font-semibold text-gray-700">
+            {fmt(bill.subtotal)}
+          </p>
+        </div>
+      </div>
+
+      {Number(bill.discount_amount || 0) > 0 && (
+        <p className="mt-2 text-right text-[10px] font-medium text-red-500">
+          -{fmt(bill.discount_amount)} discount
+        </p>
+      )}
+
+      <div
+        className="mt-3 border-t border-gray-100 pt-2.5"
+        onClick={e => e.stopPropagation()}
+      >
+        <InvoiceActions
+          bill={bill}
+          shopName={shopName}
+          onView={onView}
+          onRefresh={onRefresh}
+        />
+      </div>
+    </article>
   )
 }
 
@@ -983,13 +1089,13 @@ export default function Bills() {
   ======================================================= */
 
   return (
-    <div className="min-h-full bg-[#f7f8fb] px-3 py-4 sm:px-5 lg:px-7">
-      <div className="mx-auto max-w-[1600px] space-y-4">
+    <div className="min-h-full bg-[#f7f8fb] px-2.5 py-3 sm:px-5 sm:py-4 lg:px-7">
+      <div className="mx-auto max-w-[1600px] space-y-4 overflow-x-hidden">
         {/* =================================================
             HEADER
         ================================================= */}
 
-        <div className="flex flex-col gap-4 rounded-2xl border border-gray-200/80 bg-white px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-2xl border border-gray-200/80 bg-white px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div>
             <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold text-gray-400">
               <Receipt size={13} />
@@ -1013,7 +1119,7 @@ export default function Bills() {
             onClick={() =>
               (window.location.href = '/new-bill')
             }
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700 active:scale-[0.98]"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700 active:scale-[0.98] sm:w-auto"
           >
             <Plus size={17} />
             New Bill
@@ -1024,7 +1130,7 @@ export default function Bills() {
             KPI CARDS
         ================================================= */}
 
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
           <StatCard
             icon={IndianRupee}
             label="Total sales"
@@ -1062,28 +1168,8 @@ export default function Bills() {
             FILTER BAR
         ================================================= */}
 
-        <div className="rounded-2xl border border-gray-200/80 bg-white p-3 shadow-sm">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-            {/* Date filters */}
-            <div className="flex overflow-x-auto rounded-xl bg-gray-50 p-1">
-              {DATE_FILTERS.map(filter => (
-                <button
-                  key={filter.value}
-                  onClick={() => {
-                    setDateFilter(filter.value)
-                    setPage(1)
-                  }}
-                  className={`whitespace-nowrap rounded-lg px-3 py-2 text-[11px] font-semibold transition ${
-                    dateFilter === filter.value
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-800'
-                  }`}
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
-
+        <div className="rounded-2xl border border-gray-200/80 bg-white p-2.5 shadow-sm sm:p-3">
+          <div className="flex w-full items-center gap-2">
             {/* Search */}
             <div className="relative min-w-0 flex-1">
               <Search
@@ -1092,7 +1178,7 @@ export default function Bills() {
               />
 
               <input
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-3 text-sm outline-none transition placeholder:text-gray-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-50"
                 placeholder="Search invoice, customer or phone..."
                 value={search}
                 onChange={e => {
@@ -1102,21 +1188,25 @@ export default function Bills() {
               />
             </div>
 
-            {/* Filter button */}
-            <div className="relative">
+            {/* Filter */}
+            <div className="relative shrink-0">
               <button
+                type="button"
                 onClick={e => {
                   e.stopPropagation()
                   setFilterOpen(v => !v)
                 }}
-                className={`inline-flex w-full items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-semibold transition xl:w-auto ${
+                className={`inline-flex h-[42px] items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition ${
                   statusFilter
                     ? 'border-blue-200 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                    : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                 }`}
+                title="Filter invoices"
+                aria-label="Filter invoices"
               >
                 <SlidersHorizontal size={14} />
-                Filters
+                <span className="hidden sm:inline">Filter</span>
+
                 {statusFilter && (
                   <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] text-white">
                     1
@@ -1126,7 +1216,7 @@ export default function Bills() {
 
               {filterOpen && (
                 <div
-                  className="absolute right-0 top-12 z-50 w-48 rounded-2xl border border-gray-200 bg-white p-2 shadow-xl"
+                  className="absolute right-0 top-11 z-50 w-48 max-w-[calc(100vw-1rem)] rounded-2xl border border-gray-200 bg-white p-2 shadow-xl"
                   onClick={e => e.stopPropagation()}
                 >
                   <p className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400">
@@ -1135,6 +1225,7 @@ export default function Bills() {
 
                   {STATUS_FILTERS.map(filter => (
                     <button
+                      type="button"
                       key={filter.value}
                       onClick={() => {
                         setStatusFilter(filter.value)
@@ -1159,14 +1250,14 @@ export default function Bills() {
 
             {/* Refresh */}
             <button
+              type="button"
               onClick={() => load(page)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-3.5 py-2.5 text-xs font-semibold text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
+              className="inline-flex h-[42px] shrink-0 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 transition hover:bg-gray-50 hover:text-gray-900"
               title="Refresh invoices"
+              aria-label="Refresh invoices"
             >
               <RefreshCw size={14} />
-              <span className="hidden sm:inline">
-                Refresh
-              </span>
+              <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
         </div>
@@ -1177,7 +1268,7 @@ export default function Bills() {
 
         <div className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm">
           {/* Table header */}
-          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3.5 sm:px-5">
+          <div className="flex items-center justify-between border-b border-gray-100 px-3.5 py-3 sm:px-5">
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-bold text-gray-900">
@@ -1225,8 +1316,28 @@ export default function Bills() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[1050px]">
+            <>
+              {/* Mobile cards */}
+              <div className="space-y-2.5 p-2.5 sm:hidden">
+                {visibleBills.map(bill => (
+                  <MobileInvoiceCard
+                    key={bill.id}
+                    bill={bill}
+                    shopName={shopName}
+                    onView={setSelected}
+                    onRefresh={(type, id) =>
+                      setConfirm({
+                        type,
+                        id,
+                      })
+                    }
+                  />
+                ))}
+              </div>
+
+              {/* Desktop/tablet table */}
+              <div className="hidden overflow-x-auto sm:block">
+                <table className="w-full min-w-[1050px]">
                 <thead className="bg-gray-50/80">
                   <tr className="border-b border-gray-100 text-left text-[10px] font-bold uppercase tracking-wider text-gray-400">
                     <th className="px-5 py-3.5">
@@ -1374,7 +1485,8 @@ export default function Bills() {
                   ))}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </>
           )}
 
           {/* =================================================
@@ -1382,7 +1494,7 @@ export default function Bills() {
           ================================================= */}
 
           {count > 50 && (
-            <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 sm:px-5">
+            <div className="flex items-center justify-between border-t border-gray-100 px-3 py-3 sm:px-5">
               <p className="text-[11px] text-gray-400">
                 Page {page} · {visibleBills.length}{' '}
                 shown
@@ -1421,7 +1533,7 @@ export default function Bills() {
             FOOTER
         ================================================= */}
 
-        <div className="flex items-center justify-between px-1 pb-2 text-[10px] text-gray-400">
+        <div className="flex flex-col items-start gap-1 px-1 pb-2 text-[10px] text-gray-400 sm:flex-row sm:items-center sm:justify-between">
           <span>{shopName}</span>
 
           <span className="flex items-center gap-1">

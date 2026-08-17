@@ -122,28 +122,28 @@ export default function Expenses() {
   })).filter(c => c.total > 0).sort((a, b) => b.total - a.total).slice(0, 2)
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3 sm:space-y-5">
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl border border-rose-100 p-4 flex flex-col gap-2">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+        <div className="bg-white rounded-xl border border-rose-100 p-3 sm:p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Total Expenses</span>
+            <span className="text-[9px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wide truncate">Total Expenses</span>
             <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
               <IndianRupee size={15} className="text-rose-600" />
             </div>
           </div>
-          <div className="text-xl font-bold text-slate-800">{fmt(totalAll)}</div>
+          <div className="text-base sm:text-xl font-bold text-slate-800">{fmt(totalAll)}</div>
           <div className="text-xs text-slate-400">{expenses.length} records</div>
         </div>
-        <div className="bg-white rounded-xl border border-orange-100 p-4 flex flex-col gap-2">
+        <div className="bg-white rounded-xl border border-orange-100 p-3 sm:p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">This Month</span>
+            <span className="text-[9px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wide truncate">This Month</span>
             <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
               <TrendingDown size={15} className="text-orange-600" />
             </div>
           </div>
-          <div className="text-xl font-bold text-slate-800">{fmt(thisMonth)}</div>
+          <div className="text-base sm:text-xl font-bold text-slate-800">{fmt(thisMonth)}</div>
           <div className="text-xs text-slate-400">Current month spend</div>
         </div>
         {catTotals.map(({ cat, total }) => {
@@ -151,95 +151,269 @@ export default function Expenses() {
           const cls = CAT_COLOR[cat] || 'bg-slate-50 text-slate-600'
           const [bg, tx] = cls.split(' ')
           return (
-            <div key={cat} className="bg-white rounded-xl border border-slate-200 p-4 flex flex-col gap-2">
+            <div key={cat} className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">{cat}</span>
+                <span className="text-[9px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wide truncate">{cat}</span>
                 <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center`}>
                   <Icon size={15} className={tx} />
                 </div>
               </div>
-              <div className="text-xl font-bold text-slate-800">{fmt(total)}</div>
+              <div className="text-base sm:text-xl font-bold text-slate-800">{fmt(total)}</div>
               <div className="text-xs text-slate-400">Top category</div>
             </div>
           )
         })}
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-slate-100">
-          <h2 className="font-semibold text-slate-800 text-sm">All Expenses</h2>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
-              <Search size={13} className="text-slate-400" />
-              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search…"
-                className="bg-transparent text-sm outline-none w-32 text-slate-700 placeholder-slate-400" />
+      {/* =================================================
+          EXPENSES
+      ================================================== */}
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+
+        {/* Header + controls */}
+        <div className="border-b border-slate-100 px-3 py-3 sm:px-5 sm:py-4">
+          <div className="flex items-center gap-2">
+            <h2 className="shrink-0 text-sm font-semibold text-slate-800">
+              All Expenses
+            </h2>
+
+            <div className="ml-auto flex min-w-0 items-center gap-2">
+              {/* Search */}
+              <div className="relative min-w-0 flex-1 sm:w-56 sm:flex-none">
+                <Search
+                  size={13}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+                <input
+                  value={q}
+                  onChange={e => setQ(e.target.value)}
+                  placeholder="Search expenses..."
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-3 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-slate-300 focus:bg-white"
+                />
+              </div>
+
+              {/* Refresh */}
+              <button
+                type="button"
+                onClick={load}
+                disabled={loading}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:opacity-50"
+                title="Refresh expenses"
+                aria-label="Refresh expenses"
+              >
+                <RefreshCw
+                  size={14}
+                  className={loading ? 'animate-spin' : ''}
+                />
+              </button>
+
+              {/* Add */}
+              <button
+                type="button"
+                onClick={openAdd}
+                className="btn-primary flex h-9 shrink-0 items-center justify-center gap-1.5 px-2.5 text-xs sm:px-3"
+              >
+                <Plus size={13} />
+                <span className="hidden sm:inline">Add Expense</span>
+                <span className="sm:hidden">Add</span>
+              </button>
             </div>
-            <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
-              className="text-xs border border-slate-200 rounded-lg px-2.5 py-1.5 bg-slate-50 text-slate-600 outline-none">
+          </div>
+
+          {/* Category filter */}
+          <div className="mt-2.5 flex items-center gap-2">
+            <select
+              value={catFilter}
+              onChange={e => setCatFilter(e.target.value)}
+              className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs text-slate-600 outline-none sm:w-auto"
+            >
               <option value="all">All Categories</option>
-              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              {CATEGORIES.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
             </select>
-            <button onClick={load} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
-              <RefreshCw size={14} />
-            </button>
-            <button onClick={openAdd} className="btn-primary text-xs h-8 px-3 flex items-center gap-1.5">
-              <Plus size={13} /> Add Expense
-            </button>
+
+            {(q || catFilter !== 'all') && (
+              <span className="text-[11px] text-slate-400">
+                {filtered.length} result{filtered.length === 1 ? '' : 's'}
+              </span>
+            )}
           </div>
         </div>
 
-        {loading ? <Spinner /> : (
-          <div className="overflow-x-auto">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Description</th><th>Category</th><th>Date</th><th>Method</th><th>Notes</th><th>Amount</th><th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center py-12">
-                      <div className="flex flex-col items-center gap-2 text-slate-400">
-                        <IndianRupee size={28} className="opacity-30" />
-                        <span className="text-sm">No expenses found</span>
-                        <button onClick={openAdd} className="btn-primary text-xs mt-1">Add First Expense</button>
-                      </div>
-                    </td>
-                  </tr>
-                ) : filtered.map(e => {
-                  const catName = e.category_name || 'Other'
-                  const Icon = CAT_ICON[catName] || IndianRupee
-                  const cls = CAT_COLOR[catName] || 'bg-slate-50 text-slate-600'
-                  const [bg, tx] = cls.split(' ')
-                  return (
-                    <tr key={e.id}>
-                      <td className="font-medium text-slate-800 text-sm">{e.description}</td>
-                      <td>
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${bg} ${tx}`}>
-                          <Icon size={11} /> {catName}
-                        </span>
-                      </td>
-                      <td className="text-sm text-slate-500">{e.expense_date ? new Date(e.expense_date).toLocaleDateString('en-IN') : '—'}</td>
-                      <td className="text-xs capitalize text-slate-500">{e.payment_method}</td>
-                      <td className="text-xs text-slate-400 max-w-[160px] truncate">{e.notes || '—'}</td>
-                      <td className="font-bold text-slate-800 text-sm">{fmt(e.amount)}</td>
-                      <td>
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => openEdit(e)} className="icon-btn"><Pencil size={13} /></button>
-                          <button onClick={() => del(e.id)} disabled={deleting === e.id}
-                            className="icon-btn text-red-400 hover:bg-red-50 hover:text-red-600">
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+        {loading ? (
+          <div className="py-14">
+            <Spinner />
           </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 px-4 py-12 text-slate-400">
+            <IndianRupee size={28} className="opacity-30" />
+            <span className="text-sm">No expenses found</span>
+            <button
+              onClick={openAdd}
+              className="btn-primary mt-1 text-xs"
+            >
+              Add First Expense
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Mobile list */}
+            <div className="divide-y divide-slate-100 sm:hidden">
+              {filtered.map(e => {
+                const catName = e.category_name || 'Other'
+                const Icon = CAT_ICON[catName] || IndianRupee
+                const cls = CAT_COLOR[catName] || 'bg-slate-50 text-slate-600'
+                const [bg, tx] = cls.split(' ')
+
+                return (
+                  <div key={e.id} className="p-3.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-800">
+                          {e.description}
+                        </p>
+
+                        <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[10px] text-slate-400">
+                          <span>
+                            {e.expense_date
+                              ? new Date(e.expense_date).toLocaleDateString('en-IN')
+                              : '—'}
+                          </span>
+                          <span>•</span>
+                          <span className="capitalize">{e.payment_method}</span>
+                        </div>
+                      </div>
+
+                      <p className="shrink-0 text-sm font-bold text-slate-800">
+                        {fmt(e.amount)}
+                      </p>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <span className={`inline-flex min-w-0 items-center gap-1.5 rounded-lg px-2 py-1 text-[10px] font-semibold ${bg} ${tx}`}>
+                        <Icon size={11} />
+                        <span className="truncate">{catName}</span>
+                      </span>
+
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(e)}
+                          className="icon-btn !h-8 !w-8"
+                          title="Edit expense"
+                          aria-label="Edit expense"
+                        >
+                          <Pencil size={13} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => del(e.id)}
+                          disabled={deleting === e.id}
+                          className="icon-btn !h-8 !w-8 text-red-400 hover:bg-red-50 hover:text-red-600"
+                          title="Delete expense"
+                          aria-label="Delete expense"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {e.notes && (
+                      <p className="mt-2 truncate text-[10px] text-slate-400">
+                        {e.notes}
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Desktop/tablet table */}
+            <div className="hidden overflow-x-auto sm:block">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Date</th>
+                    <th>Method</th>
+                    <th>Notes</th>
+                    <th>Amount</th>
+                    <th></th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {filtered.map(e => {
+                    const catName = e.category_name || 'Other'
+                    const Icon = CAT_ICON[catName] || IndianRupee
+                    const cls = CAT_COLOR[catName] || 'bg-slate-50 text-slate-600'
+                    const [bg, tx] = cls.split(' ')
+
+                    return (
+                      <tr key={e.id}>
+                        <td className="font-medium text-sm text-slate-800">
+                          {e.description}
+                        </td>
+
+                        <td>
+                          <span className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold ${bg} ${tx}`}>
+                            <Icon size={11} />
+                            {catName}
+                          </span>
+                        </td>
+
+                        <td className="text-sm text-slate-500">
+                          {e.expense_date
+                            ? new Date(e.expense_date).toLocaleDateString('en-IN')
+                            : '—'}
+                        </td>
+
+                        <td className="text-xs capitalize text-slate-500">
+                          {e.payment_method}
+                        </td>
+
+                        <td className="max-w-[160px] truncate text-xs text-slate-400">
+                          {e.notes || '—'}
+                        </td>
+
+                        <td className="text-sm font-bold text-slate-800">
+                          {fmt(e.amount)}
+                        </td>
+
+                        <td>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => openEdit(e)}
+                              className="icon-btn"
+                              title="Edit expense"
+                              aria-label="Edit expense"
+                            >
+                              <Pencil size={13} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => del(e.id)}
+                              disabled={deleting === e.id}
+                              className="icon-btn text-red-400 hover:bg-red-50 hover:text-red-600"
+                              title="Delete expense"
+                              aria-label="Delete expense"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
@@ -250,7 +424,7 @@ export default function Expenses() {
             <label className="label">Description *</label>
             <input className="input" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="e.g. Office Rent" autoFocus />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="label">Amount (₹) *</label>
               <input className="input" type="number" min="0" step="0.01" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="0.00" />
@@ -260,7 +434,7 @@ export default function Expenses() {
               <input className="input" type="date" value={form.expense_date} onChange={e => setForm(f => ({ ...f, expense_date: e.target.value }))} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="label">Category</label>
               <select className="input" value={form.category_name} onChange={e => setForm(f => ({ ...f, category_name: e.target.value }))}>
@@ -278,7 +452,7 @@ export default function Expenses() {
             <label className="label">Notes</label>
             <textarea className="input" rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional notes…" />
           </div>
-          <div className="flex gap-2 pt-1">
+          <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
             <button onClick={() => setModal(false)} className="btn-secondary flex-1">Cancel</button>
             <button onClick={save} disabled={saving} className="btn-primary flex-1">
               {saving ? 'Saving…' : form.id ? 'Update' : 'Add Expense'}

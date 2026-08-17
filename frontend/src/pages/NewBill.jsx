@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 import {
   Search, Plus, Minus, Trash2, User, Printer, Download, RefreshCw, QrCode,
   Keyboard, CheckCircle2, Share2, Clock, Package, Layers, X, Banknote,
-  CreditCard, Smartphone, Wallet, Receipt
+  CreditCard, Smartphone, Wallet, Receipt, AlertTriangle
 } from 'lucide-react'
 import { Modal } from '../components/UI'
 
@@ -26,10 +26,10 @@ const PAYMENT_METHODS = [
   { id: 'cash', label: 'Cash', icon: Banknote },
   { id: 'upi', label: 'UPI', icon: QrCode },
   { id: 'card', label: 'Card', icon: CreditCard },
-  { id: 'online', label: 'Online', icon: Smartphone },
   { id: 'credit', label: 'Credit', icon: Wallet },
 ]
 const CASH_CHIPS = [50, 100, 200, 500, 1000, 2000]
+const QR_PRESETS = [100, 200, 500, 1000, 2000]
 
 // ---------------------------------------------------------------------------
 // Cart row
@@ -37,59 +37,142 @@ const CASH_CHIPS = [50, 100, 200, 500, 1000, 2000]
 function CartRow({ item, index, onQty, onRemove, showGst, justAdded }) {
   const basic = item.unit_price * item.qty * (1 - item.discount_percent / 100)
   const gst = basic * item.gst_percent / 100
+
   return (
-    <tr className={`border-b border-slate-100 last:border-0 transition-colors ${justAdded ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
-      <td className="py-2 pl-3 pr-1 text-xs text-slate-400 text-center align-middle">{index}</td>
-      <td className="py-2 pr-2 align-middle min-w-[9rem]">
-        <div className="font-medium text-sm text-slate-800 leading-tight">{item.product_name}</div>
-        <div className="text-[11px] text-slate-400">{item.sku}{item.hsn_code ? ` · HSN ${item.hsn_code}` : ''}</div>
-      </td>
-      <td className="py-2 pr-2 text-right align-middle text-xs text-slate-400 whitespace-nowrap">{fmt(item.mrp || item.unit_price)}</td>
-      <td className="py-2 pr-2 text-right align-middle text-sm font-medium text-slate-700 whitespace-nowrap">{fmt(item.unit_price)}</td>
-      <td className="py-2 px-1 align-middle">
-        <div className="flex items-center justify-center gap-1">
-          <button
-            aria-label={`Decrease ${item.product_name} quantity`}
-            onClick={() => onQty(item.id, item.qty - 1)}
-            className="h-7 w-7 rounded-md border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 active:scale-95 transition"
-          ><Minus size={13} /></button>
-          <input
-            aria-label={`${item.product_name} quantity`}
-            type="number" min="0.01" step="0.01" value={item.qty}
-            onChange={e => onQty(item.id, parseFloat(e.target.value) || 0)}
-            className="w-12 h-7 text-center border border-slate-200 rounded-md text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-          <button
-            aria-label={`Increase ${item.product_name} quantity`}
-            onClick={() => onQty(item.id, item.qty + 1)}
-            className="h-7 w-7 rounded-md border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 active:scale-95 transition"
-          ><Plus size={13} /></button>
-        </div>
-      </td>
-      <td className="py-2 px-2 text-right align-middle text-sm text-slate-600 whitespace-nowrap">{fmt(basic)}</td>
-      {showGst && (
-        <td className="py-2 px-2 text-right align-middle whitespace-nowrap">
-          <div className="text-sm text-slate-600">{fmt(gst)}</div>
-          <div className="text-[10px] text-slate-400">{item.gst_percent}%</div>
+    <>
+      {/* Desktop cart row */}
+      <tr className={`hidden sm:table-row border-b border-slate-100 last:border-0 transition-colors ${justAdded ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
+        <td className="py-2 pl-3 pr-1 text-xs text-slate-400 text-center align-middle">{index}</td>
+        <td className="py-2 pr-2 align-middle min-w-[9rem]">
+          <div className="font-medium text-sm text-slate-800 leading-tight">{item.product_name}</div>
+          <div className="text-[11px] text-slate-400">{item.sku}{item.hsn_code ? ` · HSN ${item.hsn_code}` : ''}</div>
         </td>
-      )}
-      <td className="py-2 pl-2 pr-2 text-right align-middle text-sm font-semibold text-slate-900 whitespace-nowrap">{fmt(item.total)}</td>
-      <td className="py-2 pr-3 text-center align-middle">
-        <button
-          aria-label={`Remove ${item.product_name}`}
-          onClick={() => onRemove(item.id)}
-          className="text-slate-300 hover:text-rose-500 p-1 transition"
-        ><Trash2 size={15} /></button>
-      </td>
-    </tr>
+        <td className="py-2 pr-2 text-right align-middle text-xs text-slate-400 whitespace-nowrap">{fmt(item.mrp || item.unit_price)}</td>
+        <td className="py-2 pr-2 text-right align-middle text-sm font-medium text-slate-700 whitespace-nowrap">{fmt(item.unit_price)}</td>
+        <td className="py-2 px-1 align-middle">
+          <div className="flex items-center justify-center gap-1">
+            <button
+              aria-label={`Decrease ${item.product_name} quantity`}
+              onClick={() => onQty(item.id, item.qty - 1)}
+              className="h-8 w-8 rounded-md border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 active:scale-95 transition"
+            ><Minus size={13} /></button>
+            <input
+              aria-label={`${item.product_name} quantity`}
+              type="number" min="0.01" step="0.01" value={item.qty}
+              onChange={e => onQty(item.id, parseFloat(e.target.value) || 0)}
+              className="w-12 h-8 text-center border border-slate-200 rounded-md text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+            <button
+              aria-label={`Increase ${item.product_name} quantity`}
+              onClick={() => onQty(item.id, item.qty + 1)}
+              className="h-8 w-8 rounded-md border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 active:scale-95 transition"
+            ><Plus size={13} /></button>
+          </div>
+        </td>
+        <td className="py-2 px-2 text-right align-middle text-sm text-slate-600 whitespace-nowrap">{fmt(basic)}</td>
+        {showGst && (
+          <td className="py-2 px-2 text-right align-middle whitespace-nowrap">
+            <div className="text-sm text-slate-600">{fmt(gst)}</div>
+            <div className="text-[10px] text-slate-400">{item.gst_percent}%</div>
+          </td>
+        )}
+        <td className="py-2 pl-2 pr-2 text-right align-middle text-sm font-semibold text-slate-900 whitespace-nowrap">{fmt(item.total)}</td>
+        <td className="py-2 pr-3 text-center align-middle">
+          <button
+            aria-label={`Remove ${item.product_name}`}
+            onClick={() => onRemove(item.id)}
+            className="text-slate-300 hover:text-rose-500 p-2 transition"
+          ><Trash2 size={15} /></button>
+        </td>
+      </tr>
+
+      {/* Mobile cart card */}
+      <tr className={`sm:hidden border-b border-slate-100 ${justAdded ? 'bg-indigo-50' : ''}`}>
+        <td colSpan={showGst ? 9 : 8} className="p-0">
+          <div className="p-3.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-semibold text-sm text-slate-800 leading-tight break-words">{item.product_name}</div>
+                <div className="text-[11px] text-slate-400 mt-0.5">
+                  {item.sku}{item.hsn_code ? ` · HSN ${item.hsn_code}` : ''}
+                </div>
+              </div>
+              <button
+                aria-label={`Remove ${item.product_name}`}
+                onClick={() => onRemove(item.id)}
+                className="shrink-0 h-9 w-9 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-500 hover:bg-rose-50 flex items-center justify-center"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
+              <div className="rounded-lg bg-slate-50 px-2.5 py-2">
+                <div className="text-[10px] text-slate-400">Rate</div>
+                <div className="font-semibold text-slate-700 mt-0.5">{fmt(item.unit_price)}</div>
+              </div>
+              <div className="rounded-lg bg-slate-50 px-2.5 py-2">
+                <div className="text-[10px] text-slate-400">MRP</div>
+                <div className="font-semibold text-slate-700 mt-0.5">{fmt(item.mrp || item.unit_price)}</div>
+              </div>
+              <div className="rounded-lg bg-indigo-50 px-2.5 py-2">
+                <div className="text-[10px] text-indigo-500">Total</div>
+                <div className="font-bold text-indigo-700 mt-0.5">{fmt(item.total)}</div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 mt-3">
+              <div className="flex items-center gap-1.5">
+                <button
+                  aria-label={`Decrease ${item.product_name} quantity`}
+                  onClick={() => onQty(item.id, item.qty - 1)}
+                  className="h-10 w-10 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 active:scale-95"
+                ><Minus size={15} /></button>
+                <input
+                  aria-label={`${item.product_name} quantity`}
+                  type="number" min="0.01" step="0.01" value={item.qty}
+                  onChange={e => onQty(item.id, parseFloat(e.target.value) || 0)}
+                  className="w-16 h-10 text-center border border-slate-200 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                />
+                <button
+                  aria-label={`Increase ${item.product_name} quantity`}
+                  onClick={() => onQty(item.id, item.qty + 1)}
+                  className="h-10 w-10 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 active:scale-95"
+                ><Plus size={15} /></button>
+              </div>
+
+              <div className="text-right text-xs text-slate-500">
+                <div>Basic {fmt(basic)}</div>
+                {showGst && <div>GST {fmt(gst)} ({item.gst_percent}%)</div>}
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </>
   )
 }
 
 // ---------------------------------------------------------------------------
-// QR payment modal
+// QR payment modal (Quick Pay)
 // ---------------------------------------------------------------------------
-function QrPaymentModal({ open, onClose, uri, amount, shopName, upiId, invoice, onPaid }) {
+function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, hasCart, onPaid }) {
   const qrRef = useRef(null)
+  const [amount, setAmount] = useState('')
+
+  // Reset the amount every time the modal is opened — default to the bill
+  // total when a cart exists, otherwise leave it blank for manual entry.
+  useEffect(() => {
+    if (open) setAmount(billTotal > 0 ? billTotal.toFixed(2) : '')
+  }, [open, billTotal])
+
+  const numericAmount = Number(amount) || 0
+  const uri = upiUri(upiId, shopName, numericAmount, invoice)
+  const differsFromBill = hasCart && billTotal > 0 && Math.abs(numericAmount - billTotal) > 0.004
+  const canAct = !!upiId && numericAmount > 0
+
+  const applyPreset = v => setAmount(v.toFixed(2))
+  const applyBillTotal = () => setAmount(billTotal.toFixed(2))
 
   const download = () => {
     const svg = qrRef.current?.querySelector('svg')
@@ -108,41 +191,102 @@ function QrPaymentModal({ open, onClose, uri, amount, shopName, upiId, invoice, 
   }
 
   const print = () => {
-    const win = window.open('', '_blank', 'noopener,noreferrer')
+    const svg = qrRef.current?.querySelector('svg')
+    if (!svg || !canAct) {
+      toast.error('Generate a QR before printing')
+      return
+    }
+
+    // Clone the rendered QR and make it completely self-contained for printing.
+    const svgClone = svg.cloneNode(true)
+    svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    svgClone.setAttribute('width', '240')
+    svgClone.setAttribute('height', '240')
+    svgClone.setAttribute('viewBox', svg.getAttribute('viewBox') || '0 0 240 240')
+    const svgMarkup = new XMLSerializer().serializeToString(svgClone)
+
+    const escapeHtml = value => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+
+    // Open synchronously from the button click so mobile browsers are less
+    // likely to block the print window as a popup.
+    const win = window.open('', '_blank', 'width=480,height=760')
     if (!win) {
       toast.error('Allow pop-ups to print the QR')
       return
     }
 
-    const svgMarkup = qrRef.current?.querySelector('svg')?.outerHTML || ''
-    win.document.write(`
-      <!doctype html>
-      <html>
-        <head>
-          <title>UPI Payment QR - ${invoice || 'NEW-BILL'}</title>
-          <style>
-            body{font-family:Arial,sans-serif;text-align:center;padding:32px}
-            h2{margin-bottom:6px}
-            .amount{font-size:30px;font-weight:700;margin:14px 0}
-            .upi{color:#475569}
-          </style>
-        </head>
-        <body>
-          <h2>${shopName}</h2>
-          <div>Scan to pay</div>
-          <div style="margin:20px">${svgMarkup}</div>
-          <div class="amount">${fmt(amount)}</div>
-          <div class="upi">${upiId}</div>
-          <div>Invoice: ${invoice || 'NEW-BILL'}</div>
-          <script>window.onload=function(){window.print();}</script>
-        </body>
-      </html>
-    `)
+    const safeShopName = escapeHtml(shopName)
+    const safeUpiId = escapeHtml(upiId)
+    const safeInvoice = escapeHtml(invoice || 'NEW-BILL')
+    const safeAmount = escapeHtml(fmt(numericAmount))
+
+    win.document.open()
+    win.document.write(`<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>UPI Payment QR - ${safeInvoice}</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:#fff;color:#111827}
+    body{font-family:Arial,Helvetica,sans-serif;min-height:100vh}
+    .page{width:min(100%,480px);margin:0 auto;padding:28px 20px;text-align:center}
+    h1{font-size:22px;line-height:1.25;margin:0 0 6px;font-weight:700}
+    .subtitle{font-size:14px;color:#475569;margin-bottom:20px}
+    .qr{display:flex;justify-content:center;align-items:center;margin:0 auto 18px}
+    .qr svg{display:block;width:240px;height:240px;max-width:72vw;max-height:72vw}
+    .amount{font-size:30px;font-weight:800;line-height:1.1;margin:10px 0}
+    .upi{font-size:14px;color:#475569;word-break:break-all;margin-top:6px}
+    .invoice{font-size:12px;color:#64748b;margin-top:8px}
+    .hint{font-size:12px;color:#64748b;margin-top:18px}
+    @media print{
+      @page{size:auto;margin:10mm}
+      body{min-height:auto}
+      .page{padding:8px 0}
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>${safeShopName}</h1>
+    <div class="subtitle">Scan to pay</div>
+    <div class="qr">${svgMarkup}</div>
+    <div class="amount">${safeAmount}</div>
+    <div class="upi">${safeUpiId}</div>
+    <div class="invoice">Invoice: ${safeInvoice}</div>
+    <div class="hint">Scan this QR using any UPI app</div>
+  </main>
+</body>
+</html>`)
     win.document.close()
+
+    // Give the browser time to parse/layout the inline SVG before print.
+    const triggerPrint = () => {
+      try {
+        win.focus()
+        win.print()
+      } catch {
+        toast.error('Could not open the print dialog')
+      }
+    }
+
+    if (win.document.readyState === 'complete') {
+      setTimeout(triggerPrint, 500)
+    } else {
+      win.addEventListener('load', () => setTimeout(triggerPrint, 300), { once: true })
+      setTimeout(triggerPrint, 900)
+    }
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Quick Customer Payment" size="sm">
+    <Modal open={open} onClose={onClose} title="Quick Customer Payment" size="sm"><div className="mobile-modal-content">
       <div className="text-center space-y-4">
         <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3">
           <div className="flex items-center justify-center gap-2 text-emerald-700 font-bold">
@@ -154,44 +298,95 @@ function QrPaymentModal({ open, onClose, uri, amount, shopName, upiId, invoice, 
           </div>
         </div>
 
-        <div ref={qrRef} className="inline-flex p-4 border-2 border-slate-200 rounded-2xl bg-white shadow-sm">
-          <QRCodeSVG
-            value={uri}
-            size={240}
-            level="M"
-            includeMargin
-            bgColor="#ffffff"
-            fgColor="#111827"
-          />
+        {/* Manual amount entry */}
+        <div className="text-left">
+          <span className="text-xs text-slate-500 font-medium">Amount to collect</span>
+          <div className="relative mt-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base font-semibold">₹</span>
+            <input
+              type="number" min="0" step="0.01" inputMode="decimal"
+              className="w-full h-12 pl-7 pr-3 rounded-lg border border-slate-200 text-lg font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              placeholder="0.00"
+              autoFocus
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {hasCart && billTotal > 0 && (
+              <button
+                onClick={applyBillTotal}
+                className="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100"
+              >
+                🧾 Bill Total · {fmt(billTotal)}
+              </button>
+            )}
+            {QR_PRESETS.map(v => (
+              <button
+                key={v}
+                onClick={() => applyPreset(v)}
+                className="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
+              >
+                ₹{v.toLocaleString('en-IN')}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {differsFromBill && (
+          <div className="flex items-start gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-left">
+            <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+            <span>Bill total is <b>{fmt(billTotal)}</b> but this QR is for <b>{fmt(numericAmount)}</b>.</span>
+          </div>
+        )}
+
+        <div ref={qrRef} className="inline-flex max-w-full p-3 sm:p-4 border-2 border-slate-200 rounded-2xl bg-white shadow-sm">
+          {numericAmount > 0 ? (
+            <QRCodeSVG
+              value={uri}
+              size={240}
+              className="max-w-[70vw] max-h-[70vw] sm:max-w-none sm:max-h-none"
+              level="M"
+              includeMargin
+              bgColor="#ffffff"
+              fgColor="#111827"
+            />
+          ) : (
+            <div className="w-[240px] h-[240px] flex items-center justify-center text-center text-sm text-slate-400 px-6">
+              Enter an amount to generate the QR
+            </div>
+          )}
         </div>
 
         <div>
-          <div className="text-4xl font-extrabold text-slate-900 tabular-nums">{fmt(amount)}</div>
+          <div className="text-4xl font-extrabold text-slate-900 tabular-nums">{fmt(numericAmount)}</div>
           <div className="text-sm font-semibold text-slate-700 mt-1">{shopName}</div>
           <div className="text-xs text-slate-400 mt-1">{upiId || 'UPI ID not configured'}</div>
           <div className="text-xs text-slate-400">Invoice: {invoice || 'NEW-BILL'}</div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <button onClick={download} disabled={!upiId} className="btn-outline">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button onClick={download} disabled={!canAct} className="btn-outline">
             <Download size={15} /> Download QR
           </button>
-          <button onClick={print} disabled={!upiId} className="btn-outline">
+          <button onClick={print} disabled={!canAct} className="btn-outline">
             <Printer size={15} /> Print QR
           </button>
           <button
-            onClick={onPaid}
-            disabled={!upiId}
-            className="btn-solid bg-emerald-600 hover:bg-emerald-700 col-span-2 h-11"
+            onClick={() => onPaid(numericAmount)}
+            disabled={!canAct}
+            className="btn-solid bg-emerald-600 hover:bg-emerald-700 col-span-1 sm:col-span-2 h-11 mobile-safe-button"
           >
-            <CheckCircle2 size={16} /> Payment Received — Mark Paid
+            <CheckCircle2 size={16} /> Payment Received — Mark Paid ({fmt(numericAmount)})
           </button>
-          <button onClick={onClose} className="btn-outline col-span-2">Close</button>
+          <button onClick={onClose} className="btn-outline col-span-1 sm:col-span-2 mobile-safe-button">Close</button>
         </div>
 
         <div className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-2.5 text-left">
           <b>Important:</b> QR generation does not confirm payment. Verify the money is received in the merchant account before marking the bill as paid.
         </div>
+      </div>
       </div>
     </Modal>
   )
@@ -293,32 +488,15 @@ export default function NewBill() {
 
   const shopName = settings.shop_name || 'Dreamwithtech'
   const upiId = settings.shop_upi_id || ''
-  const qrValue = upiUri(
-    upiId,
-    settings.upi_merchant_name || shopName,
-    grandTotal,
-    lastInvoice?.invoice_number || 'NEW-BILL'
-  )
   const showGst = settings.gst_reg_type !== 'unregistered'
 
+  // Quick Pay can now be opened with or without a cart — it only requires
+  // the shop's UPI ID to be configured. The modal itself handles amount entry.
   const openQuickPayment = () => {
-    if (!cart.length) {
-      toast.error('Add products to the cart first')
-      searchRef.current?.focus()
-      return
-    }
     if (!upiId) {
       toast.error('Configure shop UPI ID in Settings first')
       return
     }
-
-    setPayment(x => ({
-      ...x,
-      method: 'upi',
-      amount: grandTotal.toFixed(2),
-      reference: '',
-      status: 'pending'
-    }))
     setShowQr(true)
   }
 
@@ -378,16 +556,88 @@ export default function NewBill() {
     }
 
     const url = getInvoicePdfUrl(invoiceId, thermal)
-    const win = window.open('', '_blank')
-
+    const win = window.open(url, '_blank', 'noopener,noreferrer')
     if (!win) {
       toast.error('Allow pop-ups to view the invoice')
       return
     }
+  }
 
-    // Open a blank tab immediately, then navigate after the browser grants it.
-    win.opener = null
-    win.location.href = url
+  // Open the PDF and automatically invoke the browser print dialog.
+  // The popup is opened synchronously from the button click so Chrome/Edge
+  // are much less likely to block it.
+  const printInvoiceDocument = async (invoiceId, thermal = false, existingWindow = null) => {
+    if (!invoiceId) {
+      toast.error('Save the bill first')
+      return
+    }
+
+    let win = existingWindow
+    if (!win || win.closed) {
+      win = window.open('', '_blank', 'width=900,height=900')
+    }
+
+    if (!win) {
+      toast.error('Allow pop-ups to print the invoice')
+      return
+    }
+
+    const mode = thermal ? 'Thermal Bill' : 'Invoice'
+    win.document.open()
+    win.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>${mode}</title>
+          <style>
+            body{margin:0;font-family:Arial,sans-serif;background:#fff;color:#334155}
+            .loading{display:flex;min-height:100vh;align-items:center;justify-content:center;font-size:16px}
+          </style>
+        </head>
+        <body><div class="loading">Preparing ${mode} for printing…</div></body>
+      </html>
+    `)
+    win.document.close()
+    win.focus()
+
+    try {
+      const token = localStorage.getItem('access_token') || ''
+      const params = new URLSearchParams()
+      if (token) params.set('token', token)
+      if (thermal) params.set('printer', 'thermal')
+
+      const response = await api.get(
+        `/invoices/${invoiceId}/pdf/${params.toString() ? `?${params.toString()}` : ''}`,
+        { responseType: 'blob' }
+      )
+
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const blobUrl = URL.createObjectURL(blob)
+
+      // Navigate the already-approved popup to the authenticated PDF.
+      win.location.href = blobUrl
+
+      // Chrome/Edge PDF viewer needs a little time before print().
+      const trigger = () => {
+        try {
+          win.focus()
+          win.print()
+        } catch {
+          toast.error(`Could not open ${mode} print dialog`)
+        }
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000)
+      }
+
+      setTimeout(trigger, thermal ? 1400 : 1200)
+    } catch (err) {
+      try {
+        win.close()
+      } catch {}
+      toast.error(
+        err.response?.data?.detail ||
+        `Could not print ${thermal ? 'thermal bill' : 'bill'}`
+      )
+    }
   }
 
   const downloadInvoiceDocument = async (invoiceId, thermal = false) => {
@@ -424,10 +674,28 @@ export default function NewBill() {
 
   const saveBill = async print => {
     if (!cart.length) return toast.error('Cart is empty')
-    if (payment.method !== 'credit' && !Number(payment.amount)) return toast.error('Enter payment amount')
+    if (payment.method !== 'credit' && !Number(payment.amount)) {
+      return toast.error('Enter payment amount')
+    }
 
-    // Important: do not open a blank window before the API request.
-    // It can become an unusable blank tab when the request fails.
+    // For Print, create the popup BEFORE the async API request.
+    // This avoids browser popup blockers after the invoice is saved.
+    let printWindow = null
+    if (print) {
+      printWindow = window.open('', '_blank', 'width=900,height=900')
+      if (!printWindow) {
+        toast.error('Allow pop-ups to print the bill')
+        return
+      }
+      printWindow.document.write(`
+        <!doctype html>
+        <html><body style="font-family:Arial;text-align:center;padding:40px">
+          Preparing bill for printing…
+        </body></html>
+      `)
+      printWindow.document.close()
+    }
+
     setSaving(true)
 
     try {
@@ -455,17 +723,30 @@ export default function NewBill() {
       }
 
       const { data } = await api.post('/invoices/', payload)
-      setLastInvoice(data)
+
+      // Preserve customer contact/payment information for Share after
+      // resetBill() clears the current billing form.
+      const savedInvoice = {
+        ...data,
+        customer_phone: data.customer_phone || customer?.mobile || '',
+        customer_name: data.customer_name || customer?.name || 'Walk-in Customer',
+        payment_method: data.payment_method || payment.method,
+        payment_status: data.payment_status || payment.status,
+      }
+
+      setLastInvoice(savedInvoice)
       toast.success(`Bill ${data.invoice_number} saved`)
 
-      // Keep the saved invoice available for PDF / thermal actions.
       if (print) {
-        // Wait until React has committed the invoice state, then open.
-        setTimeout(() => openInvoiceDocument(data.id, false), 50)
+        await printInvoiceDocument(data.id, false, printWindow)
+        printWindow = null
       }
 
       resetBill()
     } catch (err) {
+      if (printWindow && !printWindow.closed) {
+        try { printWindow.close() } catch {}
+      }
       toast.error(err.response?.data?.detail || 'Could not save bill')
     } finally {
       setSaving(false)
@@ -481,13 +762,58 @@ export default function NewBill() {
   }
 
   const shareInvoice = async () => {
-    if (!lastInvoice) return toast.error('Save a bill first')
-    const text = `${shopName} invoice ${lastInvoice.invoice_number} · ${fmt(lastInvoice.grand_total)}`
-    const encoded = encodeURIComponent(`*${shopName}*\nInvoice: ${lastInvoice.invoice_number}\nTotal: ${fmt(lastInvoice.grand_total)}\nThank you!`)
-    const phone = customer?.mobile || ''
-    if (phone) window.open(`https://wa.me/91${phone.replace(/\D/g, '')}?text=${encoded}`, '_blank')
-    else if (navigator.share) { try { await navigator.share({ title: `Invoice ${lastInvoice.invoice_number}`, text }) } catch (err) { if (err.name !== 'AbortError') toast.error('Could not share') } }
-    else { await navigator.clipboard.writeText(text); toast.success('Invoice details copied') }
+    if (!lastInvoice) {
+      toast.error('Save the bill first')
+      return
+    }
+
+    const invoiceNumber = lastInvoice.invoice_number || `INV-${lastInvoice.id}`
+    const total = Number(lastInvoice.grand_total || grandTotal || 0)
+    const phone = String(
+      lastInvoice.customer_phone ||
+      lastInvoice.customer?.mobile ||
+      ''
+    ).replace(/\D/g, '')
+
+    const message =
+      `*${shopName}*\n` +
+      `Invoice: ${invoiceNumber}\n` +
+      `Total: ${fmt(total)}\n` +
+      `Payment: ${(lastInvoice.payment_method || payment.method || 'cash').toUpperCase()}\n` +
+      `Thank you for shopping with us!`
+
+    // WhatsApp is the most useful sharing option for a billing/POS app.
+    if (phone) {
+      const whatsappPhone = phone.length === 10 ? `91${phone}` : phone
+      const waUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`
+      const win = window.open(waUrl, '_blank', 'noopener,noreferrer')
+      if (!win) {
+        toast.error('Allow pop-ups to share through WhatsApp')
+      }
+      return
+    }
+
+    // Use the native share sheet where supported.
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Invoice ${invoiceNumber}`,
+          text: message,
+        })
+        return
+      } catch (err) {
+        if (err?.name === 'AbortError') return
+      }
+    }
+
+    // Clipboard fallback for desktop browsers.
+    try {
+      await navigator.clipboard.writeText(message)
+      toast.success('Invoice details copied — ready to share')
+    } catch {
+      // Last-resort fallback that works even when clipboard permissions are denied.
+      window.prompt('Copy invoice details:', message)
+    }
   }
 
   const setExactCash = () => setPayment(x => ({ ...x, method: 'cash', amount: grandTotal.toFixed(2), status: 'paid' }))
@@ -500,7 +826,11 @@ export default function NewBill() {
       if (e.key === 'F2') { e.preventDefault(); selectPayment('cash') }
       if (e.key === 'F3') { e.preventDefault(); selectPayment('upi') }
       if (e.key === 'F4') { e.preventDefault(); selectPayment('card') }
-      if (e.ctrlKey && e.key.toLowerCase() === 'p') { e.preventDefault(); lastInvoice?.id ? openInvoiceDocument(lastInvoice.id, false) : saveBill(true) }
+      if (e.ctrlKey && e.key.toLowerCase() === 'p') {
+        e.preventDefault()
+        if (lastInvoice?.id) printInvoiceDocument(lastInvoice.id, false)
+        else saveBill(true)
+      }
       if (e.key === 'Escape') setShowQr(false)
     }
     window.addEventListener('keydown', onKey)
@@ -508,7 +838,7 @@ export default function NewBill() {
   }, [grandTotal, payment, cart, lastInvoice, upiId])
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen w-full overflow-x-hidden bg-slate-50 text-slate-900">
       <style>{`
         .btn-solid{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;height:2.5rem;padding:0 .9rem;border-radius:.65rem;background:#4f46e5;color:#fff;font-weight:600;font-size:.8rem;transition:background .15s}
         .btn-solid:hover{background:#4338ca}
@@ -516,9 +846,14 @@ export default function NewBill() {
         .btn-outline{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;height:2.5rem;padding:0 .9rem;border-radius:.65rem;border:1px solid #e2e8f0;background:#fff;color:#334155;font-weight:500;font-size:.78rem;transition:background .15s}
         .btn-outline:hover{background:#f8fafc}
         .btn-outline:disabled{opacity:.45;cursor:not-allowed}
+        @media (max-width: 639px){
+          .mobile-action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+          .mobile-safe-button{min-height:2.75rem}
+          .mobile-modal-content{max-height:calc(100dvh - 1.5rem);overflow-y:auto}
+        }
       `}</style>
 
-      <div className="flex flex-col lg:flex-row gap-4 p-3 lg:p-4 max-w-[1600px] mx-auto">
+      <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 p-2.5 sm:p-3 lg:p-4 max-w-[1600px] mx-auto">
         {/* ============================= MAIN ============================= */}
         <section className="flex-1 min-w-0 flex flex-col gap-3">
 
@@ -541,13 +876,13 @@ export default function NewBill() {
 
                 <button
                   onClick={openQuickPayment}
-                  disabled={!cart.length || !upiId}
+                  disabled={!upiId}
                   title={!upiId ? 'Configure UPI ID in Settings' : 'Show customer payment QR'}
                   className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-xs shadow-sm transition active:scale-[0.98]"
                 >
                   <QrCode size={17} />
                   <span>Quick Pay</span>
-                  <span className="hidden sm:inline">· {fmt(grandTotal)}</span>
+                  {cart.length > 0 && <span className="hidden sm:inline">· {fmt(grandTotal)}</span>}
                 </button>
               </div>
             </div>
@@ -726,7 +1061,7 @@ export default function NewBill() {
           {/* Payment */}
           <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm">
             <b className="text-sm text-slate-800">Payment</b>
-            <div className="grid grid-cols-5 gap-1.5 mt-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2.5">
               {PAYMENT_METHODS.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
@@ -781,7 +1116,7 @@ export default function NewBill() {
                 <button
                   className="btn-solid w-full h-11 bg-emerald-600 hover:bg-emerald-700"
                   onClick={openQuickPayment}
-                  disabled={!upiId || !cart.length}
+                  disabled={!upiId}
                 >
                   <QrCode size={17} /> Show QR & Collect Payment
                 </button>
@@ -833,13 +1168,14 @@ export default function NewBill() {
               {saving ? 'Saving…' : `Save bill · ${fmt(grandTotal)}`}
             </button>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               <button
                 className="btn-outline"
                 onClick={() => saveBill(true)}
                 disabled={saving || !cart.length}
+                title="Save this bill and open the print dialog"
               >
-                <Printer size={14} /> Print
+                <Printer size={14} /> Print Bill
               </button>
 
               <button
@@ -852,18 +1188,19 @@ export default function NewBill() {
 
               <button
                 className="btn-outline"
-                onClick={() => openInvoiceDocument(lastInvoice?.id, true)}
+                onClick={() => printInvoiceDocument(lastInvoice?.id, true)}
                 disabled={!lastInvoice}
+                title="Print the saved bill in thermal format"
               >
-                <Printer size={14} /> Thermal
+                <Printer size={14} /> Thermal Bill
               </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               <button
                 className="btn-outline"
                 onClick={openQuickPayment}
-                disabled={!cart.length || !upiId}
+                disabled={!upiId}
               >
                 <QrCode size={14} /> QR Pay
               </button>
@@ -876,7 +1213,7 @@ export default function NewBill() {
             </div>
 
             {lastInvoice && (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button
                   className="btn-outline"
                   onClick={() => downloadInvoiceDocument(lastInvoice.id, false)}
@@ -906,15 +1243,15 @@ export default function NewBill() {
         </aside>
       </div>
 
-      {/* Fixed quick customer payment action */}
-      {cart.length > 0 && upiId && (
+      {/* Fixed quick customer payment action — available whenever UPI ID is configured */}
+      {upiId && (
         <button
           onClick={openQuickPayment}
           title="Quick customer UPI payment"
-          className="fixed right-5 bottom-5 z-40 hidden sm:inline-flex items-center gap-2 h-12 px-5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-2xl border-2 border-white transition active:scale-[0.98]"
+          className="fixed right-3 bottom-3 sm:right-5 sm:bottom-5 z-40 inline-flex items-center gap-2 h-12 px-4 sm:px-5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-2xl border-2 border-white transition active:scale-[0.98]"
         >
           <QrCode size={18} />
-          Quick Pay · {fmt(grandTotal)}
+          Quick Pay{cart.length > 0 ? ` · ${fmt(grandTotal)}` : ''}
         </button>
       )}
 
@@ -935,14 +1272,23 @@ export default function NewBill() {
       </Modal>
 
       <QrPaymentModal
-        open={showQr} onClose={() => setShowQr(false)} uri={qrValue} amount={grandTotal} shopName={shopName} upiId={upiId}
+        open={showQr}
+        onClose={() => setShowQr(false)}
+        upiId={upiId}
+        shopName={settings.upi_merchant_name || shopName}
         invoice={lastInvoice?.invoice_number || 'NEW-BILL'}
-        onPaid={() => { setPayment(x => ({ ...x, method: 'upi', amount: grandTotal.toFixed(2), status: 'paid' })); setShowQr(false); toast.success('UPI payment marked paid') }}
+        billTotal={grandTotal}
+        hasCart={cart.length > 0}
+        onPaid={(amount) => {
+          setPayment(x => ({ ...x, method: 'upi', amount: amount.toFixed(2), status: 'paid' }))
+          setShowQr(false)
+          toast.success(`UPI payment of ${fmt(amount)} marked paid`)
+        }}
       />
 
       <Modal open={showShortcuts} onClose={() => setShowShortcuts(false)} title="Keyboard shortcuts" size="sm">
         <div className="grid grid-cols-2 gap-3 text-sm">
-          {[['Ctrl + K', 'Product search'], ['Enter', 'Add selected product'], ['Ctrl + Enter', 'Save bill'], ['F2', 'Cash'], ['F3', 'UPI'], ['F4', 'Card'], ['Ctrl + P', 'Print bill'], ['Esc', 'Close modal']].map(([key, text]) => (
+          {[['Ctrl + K', 'Product search'], ['Enter', 'Add selected product'], ['Ctrl + Enter', 'Save bill'], ['F2', 'Cash'], ['F3', 'UPI'], ['F4', 'Card'], ['Ctrl + P', 'Print bill'], ['Credit', 'Customer credit'], ['Esc', 'Close modal']].map(([key, text]) => (
             <div key={key} className="contents">
               <kbd className="border border-slate-200 rounded px-2 py-1 text-center bg-slate-50">{key}</kbd>
               <span className="text-slate-600">{text}</span>

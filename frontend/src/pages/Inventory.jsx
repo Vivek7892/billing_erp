@@ -2,7 +2,107 @@ import { useState, useEffect } from 'react'
 import api from '../api'
 import { Badge, Card, PageHeader, Modal, Spinner, EmptyState } from '../components/UI'
 import toast from 'react-hot-toast'
-import { Search, ArrowUpCircle, ArrowDownCircle, Settings, Layers, Upload, Download } from 'lucide-react'
+import { Search, ArrowUpCircle, ArrowDownCircle, Settings, Layers, Upload, Download, RefreshCw } from 'lucide-react'
+
+
+function MobileStockCard({ product }) {
+  const current = Number(product.current_stock || 0)
+  const minimum = Number(product.minimum_stock || 0)
+
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-3.5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-gray-900">{product.name}</p>
+          <p className="mt-1 font-mono text-[11px] text-gray-500">{product.sku || 'No SKU'}</p>
+        </div>
+        <Badge status={product.stock_status} />
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="rounded-xl bg-gray-50 p-2.5">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Current</p>
+          <p className={`mt-1 text-sm font-bold ${
+            current <= 0 ? 'text-red-600' :
+            current <= minimum ? 'text-yellow-600' :
+            'text-green-600'
+          }`}>
+            {product.current_stock} {product.unit}
+          </p>
+        </div>
+
+        <div className="rounded-xl bg-gray-50 p-2.5">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Minimum</p>
+          <p className="mt-1 text-sm font-semibold text-gray-700">{product.minimum_stock}</p>
+        </div>
+
+        <div className="rounded-xl bg-gray-50 p-2.5">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Purchase</p>
+          <p className="mt-1 text-sm font-semibold text-gray-700">₹{product.purchase_price}</p>
+        </div>
+
+        <div className="rounded-xl bg-gray-50 p-2.5">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Selling</p>
+          <p className="mt-1 text-sm font-semibold text-gray-700">₹{product.selling_price}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MobileTransactionCard({ transaction }) {
+  const qty = Number(transaction.quantity || 0)
+  const isSale = transaction.transaction_type === 'sale'
+
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-3.5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-gray-900">
+            {transaction.product_name}
+          </p>
+          <p className="mt-1 text-[11px] text-gray-500">
+            {new Date(transaction.created_at).toLocaleDateString('en-IN')}
+          </p>
+        </div>
+
+        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold ${
+          isSale
+            ? 'bg-red-100 text-red-700'
+            : transaction.transaction_type === 'purchase'
+              ? 'bg-green-100 text-green-700'
+              : 'bg-blue-100 text-blue-700'
+        }`}>
+          {isSale ? <ArrowDownCircle size={11} /> : <ArrowUpCircle size={11} />}
+          {transaction.transaction_type.replace('_', ' ')}
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-gray-50 p-2.5">
+        <div>
+          <p className="text-[9px] uppercase tracking-wide text-gray-400">Qty</p>
+          <p className={`mt-1 text-xs font-bold ${qty < 0 ? 'text-red-600' : 'text-green-600'}`}>
+            {qty > 0 ? '+' : ''}{transaction.quantity}
+          </p>
+        </div>
+        <div>
+          <p className="text-[9px] uppercase tracking-wide text-gray-400">Before</p>
+          <p className="mt-1 text-xs font-semibold text-gray-700">{transaction.before_stock}</p>
+        </div>
+        <div>
+          <p className="text-[9px] uppercase tracking-wide text-gray-400">After</p>
+          <p className="mt-1 text-xs font-semibold text-gray-700">{transaction.after_stock}</p>
+        </div>
+      </div>
+
+      {transaction.reference && (
+        <p className="mt-2 truncate text-[10px] text-gray-400">
+          Ref: {transaction.reference}
+        </p>
+      )}
+    </div>
+  )
+}
 
 export default function Inventory() {
   const [products, setProducts] = useState([])
@@ -79,13 +179,47 @@ export default function Inventory() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Inventory" subtitle="Stock management"
-        action={<div className="flex gap-2"><button onClick={() => setImportModal(true)} className="btn-secondary flex items-center gap-2"><Upload size={16} />Import File</button><button onClick={() => setBulkModal(true)} className="btn-secondary flex items-center gap-2"><Layers size={16} />Bulk Stock</button><button onClick={() => setAdjustModal(true)} className="btn-primary flex items-center gap-2"><Settings size={16} />Adjust Stock</button></div>} />
+      <PageHeader
+        title="Inventory"
+        subtitle="Stock management"
+        action={
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <button
+              onClick={() => setImportModal(true)}
+              className="btn-secondary flex items-center justify-center gap-2 text-xs sm:text-sm"
+            >
+              <Upload size={16} />
+              <span>Import File</span>
+            </button>
+            <button
+              onClick={() => setBulkModal(true)}
+              className="btn-secondary flex items-center justify-center gap-2 text-xs sm:text-sm"
+            >
+              <Layers size={16} />
+              <span>Bulk Stock</span>
+            </button>
+            <button
+              onClick={() => setAdjustModal(true)}
+              className="btn-primary col-span-2 flex items-center justify-center gap-2 text-xs sm:col-span-1 sm:text-sm"
+            >
+              <Settings size={16} />
+              <span>Adjust Stock</span>
+            </button>
+          </div>
+        }
+      />
 
-      <div className="flex gap-2">
+      <div className="flex w-full gap-2 rounded-xl bg-gray-100 p-1 sm:w-fit">
         {['stock', 'transactions'].map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${tab === t ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-medium capitalize transition sm:flex-none sm:px-4 ${
+              tab === t
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-gray-600 hover:bg-white'
+            }`}
+          >
             {t === 'stock' ? 'Current Stock' : 'Transactions'}
           </button>
         ))}
@@ -93,35 +227,58 @@ export default function Inventory() {
 
       {tab === 'stock' && (
         <>
-          <Card className="p-4">
-            <div className="relative">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input className="input pl-8 text-sm" placeholder="Search products..."
-                value={search} onChange={e => setSearch(e.target.value)} />
+          <Card className="p-2.5 sm:p-3">
+            <div className="flex items-center gap-2">
+              <div className="relative min-w-0 flex-1">
+                <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  className="input w-full pl-8 pr-3 text-sm"
+                  placeholder="Search products..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => loadProducts()}
+                className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                title="Refresh stock"
+                aria-label="Refresh stock"
+              >
+                <RefreshCw size={14} />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
             </div>
           </Card>
           <Card>
             {loading ? <Spinner /> : products.length === 0 ? <EmptyState /> : (
-              <div className="overflow-x-auto">
-                <table className="table">
-                  <thead><tr><th>Product</th><th>SKU</th><th>Current Stock</th><th>Min Stock</th><th>Purchase Price</th><th>Selling Price</th><th>Status</th></tr></thead>
-                  <tbody>
-                    {products.map(p => (
-                      <tr key={p.id}>
-                        <td className="font-medium">{p.name}</td>
-                        <td className="font-mono text-sm">{p.sku}</td>
-                        <td className={`font-bold ${p.current_stock <= 0 ? 'text-red-600' : p.current_stock <= p.minimum_stock ? 'text-yellow-600' : 'text-green-600'}`}>
-                          {p.current_stock} {p.unit}
-                        </td>
-                        <td>{p.minimum_stock}</td>
-                        <td>₹{p.purchase_price}</td>
-                        <td>₹{p.selling_price}</td>
-                        <td><Badge status={p.stock_status} /></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <>
+                <div className="space-y-2.5 p-2.5 sm:hidden">
+                  {products.map(p => <MobileStockCard key={p.id} product={p} />)}
+                </div>
+
+                <div className="hidden overflow-x-auto sm:block">
+                  <table className="table">
+                    <thead><tr><th>Product</th><th>SKU</th><th>Current Stock</th><th>Min Stock</th><th>Purchase Price</th><th>Selling Price</th><th>Status</th></tr></thead>
+                    <tbody>
+                      {products.map(p => (
+                        <tr key={p.id}>
+                          <td className="font-medium">{p.name}</td>
+                          <td className="font-mono text-sm">{p.sku}</td>
+                          <td className={`font-bold ${p.current_stock <= 0 ? 'text-red-600' : p.current_stock <= p.minimum_stock ? 'text-yellow-600' : 'text-green-600'}`}>
+                            {p.current_stock} {p.unit}
+                          </td>
+                          <td>{p.minimum_stock}</td>
+                          <td>₹{p.purchase_price}</td>
+                          <td>₹{p.selling_price}</td>
+                          <td><Badge status={p.stock_status} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </Card>
         </>
@@ -130,32 +287,38 @@ export default function Inventory() {
       {tab === 'transactions' && (
         <Card>
           {loading ? <Spinner /> : transactions.length === 0 ? <EmptyState message="No transactions" /> : (
-            <div className="overflow-x-auto">
-              <table className="table">
-                <thead><tr><th>Date</th><th>Product</th><th>Type</th><th>Qty</th><th>Before</th><th>After</th><th>Reference</th></tr></thead>
-                <tbody>
-                  {transactions.map(t => (
-                    <tr key={t.id}>
-                      <td className="text-sm text-gray-500">{new Date(t.created_at).toLocaleDateString('en-IN')}</td>
-                      <td className="font-medium text-sm">{t.product_name}</td>
-                      <td>
-                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
-                          t.transaction_type === 'sale' ? 'bg-red-100 text-red-700' :
-                          t.transaction_type === 'purchase' ? 'bg-green-100 text-green-700' :
-                          'bg-blue-100 text-blue-700'}`}>
-                          {t.transaction_type === 'sale' ? <ArrowDownCircle size={11} /> : <ArrowUpCircle size={11} />}
-                          {t.transaction_type.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className={`font-semibold ${t.quantity < 0 ? 'text-red-600' : 'text-green-600'}`}>{t.quantity > 0 ? '+' : ''}{t.quantity}</td>
-                      <td className="text-sm">{t.before_stock}</td>
-                      <td className="text-sm font-medium">{t.after_stock}</td>
-                      <td className="text-xs text-gray-500">{t.reference}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <div className="space-y-2.5 p-2.5 sm:hidden">
+                {transactions.map(t => <MobileTransactionCard key={t.id} transaction={t} />)}
+              </div>
+
+              <div className="hidden overflow-x-auto sm:block">
+                <table className="table">
+                  <thead><tr><th>Date</th><th>Product</th><th>Type</th><th>Qty</th><th>Before</th><th>After</th><th>Reference</th></tr></thead>
+                  <tbody>
+                    {transactions.map(t => (
+                      <tr key={t.id}>
+                        <td className="text-sm text-gray-500">{new Date(t.created_at).toLocaleDateString('en-IN')}</td>
+                        <td className="font-medium text-sm">{t.product_name}</td>
+                        <td>
+                          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                            t.transaction_type === 'sale' ? 'bg-red-100 text-red-700' :
+                            t.transaction_type === 'purchase' ? 'bg-green-100 text-green-700' :
+                            'bg-blue-100 text-blue-700'}`}>
+                            {t.transaction_type === 'sale' ? <ArrowDownCircle size={11} /> : <ArrowUpCircle size={11} />}
+                            {t.transaction_type.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className={`font-semibold ${t.quantity < 0 ? 'text-red-600' : 'text-green-600'}`}>{t.quantity > 0 ? '+' : ''}{t.quantity}</td>
+                        <td className="text-sm">{t.before_stock}</td>
+                        <td className="text-sm font-medium">{t.after_stock}</td>
+                        <td className="text-xs text-gray-500">{t.reference}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </Card>
       )}
@@ -185,10 +348,59 @@ export default function Inventory() {
 
       <Modal open={bulkModal} onClose={() => setBulkModal(false)} title="Bulk Stock Update" size="lg">
         <p className="text-sm text-gray-500 mb-3">Enter quantities to add or remove. The current stock stays visible for every product.</p>
-        <div className="border border-gray-200 rounded-lg max-h-[50vh] overflow-y-auto">
-          <table className="table text-sm"><thead><tr><th>Product</th><th>SKU</th><th className="text-right">Current</th><th className="text-right">Add / Remove</th></tr></thead><tbody>{products.map(product => <tr key={product.id}><td className="font-medium">{product.name}</td><td className="text-xs text-gray-500">{product.sku}</td><td className="text-right">{product.current_stock} {product.unit}</td><td><input aria-label={`Stock adjustment for ${product.name}`} type="number" step="0.01" placeholder="0" value={bulkQuantities[product.id] || ''} onChange={e => setBulkQuantities(previous => ({ ...previous, [product.id]: e.target.value }))} className="input h-8 text-right text-sm" /></td></tr>)}</tbody></table>
+        <div className="max-h-[55vh] overflow-y-auto rounded-xl border border-gray-200">
+          <div className="space-y-2 p-2 sm:hidden">
+            {products.map(product => (
+              <div key={product.id} className="rounded-xl bg-gray-50 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold text-gray-800">{product.name}</p>
+                    <p className="mt-1 truncate text-[10px] text-gray-500">{product.sku}</p>
+                  </div>
+                  <p className="shrink-0 text-xs font-semibold text-gray-700">
+                    {product.current_stock} {product.unit}
+                  </p>
+                </div>
+                <input
+                  aria-label={`Stock adjustment for ${product.name}`}
+                  type="number"
+                  step="0.01"
+                  placeholder="Add / Remove"
+                  value={bulkQuantities[product.id] || ''}
+                  onChange={e => setBulkQuantities(previous => ({ ...previous, [product.id]: e.target.value }))}
+                  className="input mt-2 h-9 w-full text-right text-sm"
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto sm:block">
+            <table className="table text-sm">
+              <thead><tr><th>Product</th><th>SKU</th><th className="text-right">Current</th><th className="text-right">Add / Remove</th></tr></thead>
+              <tbody>
+                {products.map(product => (
+                  <tr key={product.id}>
+                    <td className="font-medium">{product.name}</td>
+                    <td className="text-xs text-gray-500">{product.sku}</td>
+                    <td className="text-right">{product.current_stock} {product.unit}</td>
+                    <td>
+                      <input
+                        aria-label={`Stock adjustment for ${product.name}`}
+                        type="number"
+                        step="0.01"
+                        placeholder="0"
+                        value={bulkQuantities[product.id] || ''}
+                        onChange={e => setBulkQuantities(previous => ({ ...previous, [product.id]: e.target.value }))}
+                        className="input h-8 text-right text-sm"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div className="flex gap-3 mt-4"><button onClick={submitBulkStock} className="btn-primary flex-1">Update Stock</button><button onClick={() => setBulkModal(false)} className="btn-secondary flex-1">Cancel</button></div>
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2"><button onClick={submitBulkStock} className="btn-primary w-full">Update Stock</button><button onClick={() => setBulkModal(false)} className="btn-secondary w-full">Cancel</button></div>
       </Modal>
 
       <Modal open={importModal} onClose={() => !importing && setImportModal(false)} title="Import Stock from File" size="md">
@@ -201,7 +413,7 @@ export default function Inventory() {
           <button type="button" onClick={downloadImportTemplate} className="text-sm text-blue-700 inline-flex items-center gap-1 hover:underline"><Download size={15} /> Download CSV template</button>
           <input type="file" accept=".csv,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={e => setImportFile(e.target.files?.[0] || null)} className="block w-full text-sm" disabled={importing} />
           {importFile && <p className="text-xs text-gray-500">Selected: {importFile.name}</p>}
-          <div className="flex gap-3"><button onClick={importStock} disabled={importing} className="btn-primary flex-1">{importing ? 'Importing...' : 'Import Stock'}</button><button onClick={() => setImportModal(false)} disabled={importing} className="btn-secondary flex-1">Cancel</button></div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2"><button onClick={importStock} disabled={importing} className="btn-primary w-full">{importing ? 'Importing...' : 'Import Stock'}</button><button onClick={() => setImportModal(false)} disabled={importing} className="btn-secondary w-full">Cancel</button></div>
         </div>
       </Modal>
     </div>

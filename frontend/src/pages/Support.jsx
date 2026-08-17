@@ -102,9 +102,9 @@ function FAQItem({ q, a, searchTerm }) {
         type="button"
         aria-expanded={open}
         onClick={() => setOpen(value => !value)}
-        className="flex w-full items-center justify-between gap-4 bg-white px-4 py-3.5 text-left transition hover:bg-gray-50"
+        className="flex min-h-12 w-full items-center justify-between gap-3 bg-white px-3.5 py-3.5 text-left transition hover:bg-gray-50 sm:gap-4 sm:px-4"
       >
-        <span className="text-sm font-medium leading-5 text-gray-800">{highlight(q)}</span>
+        <span className="min-w-0 pr-1 text-sm font-medium leading-5 text-gray-800">{highlight(q)}</span>
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gray-50">
           {open
             ? <ChevronUp size={16} className="text-blue-600" />
@@ -113,7 +113,7 @@ function FAQItem({ q, a, searchTerm }) {
       </button>
 
       {open && (
-        <div className="border-t border-gray-100 bg-gray-50/80 px-4 py-3.5 text-sm leading-6 text-gray-600">
+        <div className="border-t border-gray-100 bg-gray-50/80 px-3.5 py-3.5 text-sm leading-6 text-gray-600 sm:px-4">
           {highlight(a)}
         </div>
       )}
@@ -145,14 +145,62 @@ export default function Support() {
   const totalQuestions = faqs.reduce((total, section) => total + section.items.length, 0)
 
   return (
-    <div className="min-h-full space-y-5 pb-8">
-      <PageHeader
-        title="Help & Support"
-        subtitle="Find quick answers, billing guidance, and support contact details."
-      />
+    <div className="min-h-full space-y-4 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:space-y-5">
+      <div className="-mx-1 sm:mx-0">
+        <PageHeader
+          title="Help & Support"
+          subtitle="Get quick answers, contact our support team, or explore billing and inventory guidance."
+        />
+      </div>
+
+      {/* Developer / product support identity */}
+      <section className="overflow-hidden rounded-2xl border border-indigo-100 bg-white shadow-sm">
+        <div className="flex flex-col gap-4 bg-gradient-to-r from-indigo-50 via-white to-blue-50 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-blue-600 text-sm font-bold text-white shadow-sm">
+              VV
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-bold text-gray-900">Vivek V</span>
+                <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">
+                  Developer
+                </span>
+                
+              </div>
+            
+            </div>
+          </div>
+
+          <a
+            href="https://vivekv.me/"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-2 text-xs font-semibold text-indigo-700 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50"
+          >
+            Meet the developer
+            <ExternalLink size={13} />
+          </a>
+        </div>
+      </section>
+
+      {/* Contact support */}
+      <section>
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold text-gray-900">Contact Support</h2>
+            <p className="mt-0.5 text-xs text-gray-500">
+              Choose the fastest way to reach us.
+            </p>
+          </div>
+          <span className="hidden rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 sm:inline-flex">
+            We're here to help
+          </span>
+        </div>
+      </section>
 
       {/* Hero / Search */}
-      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-700 p-5 text-white shadow-sm sm:p-7">
+      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-700 p-4 text-white shadow-sm sm:p-7">
         <div className="max-w-3xl">
           <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur">
             <ShieldCheck size={14} />
@@ -163,14 +211,14 @@ export default function Support() {
             Search billing, inventory, invoices, reports, payments, and settings.
           </p>
 
-          <div className="relative mt-5 max-w-2xl">
+          <div className="relative mt-4 max-w-2xl sm:mt-5">
             <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={searchTerm}
               onChange={event => setSearchTerm(event.target.value)}
               placeholder="Search your question..."
               aria-label="Search help articles"
-              className="w-full rounded-xl border border-white/20 bg-white py-3 pl-11 pr-11 text-sm text-gray-800 outline-none ring-0 placeholder:text-gray-400 focus:border-white focus:ring-2 focus:ring-white/30"
+              className="w-full rounded-xl border border-white/20 bg-white py-3.5 pl-11 pr-11 text-sm text-gray-800 outline-none ring-0 placeholder:text-gray-400 focus:border-white focus:ring-2 focus:ring-white/30 sm:py-3"
             />
             {searchTerm && (
               <button
@@ -187,10 +235,10 @@ export default function Support() {
       </section>
 
       {/* Contact cards */}
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <section className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-3">
         <a
           href="mailto:dreamwithtech.dev@gmail.com"
-          className="group rounded-xl border border-gray-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-sm"
+          className="group relative rounded-2xl border border-blue-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md sm:p-5"
         >
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
@@ -213,7 +261,7 @@ export default function Support() {
           href="https://wa.me/917892409872"
           target="_blank"
           rel="noreferrer"
-          className="group rounded-xl border border-gray-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-sm"
+          className="group relative rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md sm:p-5"
         >
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
@@ -232,7 +280,7 @@ export default function Support() {
 
         <a
           href="tel:+917892409872"
-          className="group rounded-xl border border-gray-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-sm"
+          className="group relative rounded-2xl border border-orange-100 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-orange-200 hover:shadow-md sm:p-5"
         >
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
@@ -251,8 +299,8 @@ export default function Support() {
       </section>
 
       {/* FAQ */}
-      <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
-        <div className="flex flex-col gap-4">
+      <section className="rounded-2xl border border-gray-200 bg-white p-3.5 shadow-sm sm:p-5">
+        <div className="flex flex-col gap-3.5 sm:gap-4">
           <div className="flex items-start gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
               <HelpCircle size={18} />
@@ -265,11 +313,17 @@ export default function Support() {
             </div>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div
+            className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            role="tablist"
+            aria-label="FAQ categories"
+          >
             <button
               type="button"
+              role="tab"
+              aria-selected={activeCategory === 'all'}
               onClick={() => setActiveCategory('all')}
-              className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium transition ${
+              className={`min-h-10 shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium transition ${
                 activeCategory === 'all'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -282,8 +336,10 @@ export default function Support() {
               <button
                 key={section.category}
                 type="button"
+                role="tab"
+                aria-selected={activeCategory === section.category}
                 onClick={() => setActiveCategory(section.category)}
-                className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium transition ${
+                className={`min-h-10 shrink-0 whitespace-nowrap rounded-lg px-3 py-2 text-xs font-medium transition ${
                   activeCategory === section.category
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -295,10 +351,10 @@ export default function Support() {
           </div>
 
           {visibleFaqs.length > 0 ? (
-            <div className="space-y-5">
+            <div className="space-y-4 sm:space-y-5">
               {visibleFaqs.map(section => (
                 <div key={section.category}>
-                  <div className={`mb-3 inline-flex items-center gap-2 rounded-lg px-3 py-1.5 ${section.bg}`}>
+                  <div className={`mb-2.5 inline-flex items-center gap-2 rounded-lg px-3 py-1.5 ${section.bg}`}>
                     <section.icon size={14} className={section.color} />
                     <span className={`text-xs font-semibold ${section.color}`}>{section.category}</span>
                   </div>
@@ -337,7 +393,7 @@ export default function Support() {
       </section>
 
       {/* Keyboard shortcuts */}
-      <section className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 sm:p-5">
+      <section className="rounded-2xl border border-blue-100 bg-blue-50/70 p-3.5 sm:p-5">
         <div className="flex items-start gap-3">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm">
             <BookOpen size={17} />
@@ -348,29 +404,20 @@ export default function Support() {
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:grid-cols-4">
           {shortcuts.map(([key, description]) => (
-            <div key={key} className="rounded-xl border border-blue-100 bg-white p-2.5">
-              <kbd className="block truncate rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-center text-[11px] font-mono font-semibold text-gray-700">
+            <div key={key} className="min-w-0 rounded-xl border border-blue-100 bg-white p-2.5">
+              <kbd className="block truncate rounded-md border border-gray-200 bg-gray-50 px-1.5 py-1.5 text-center text-[10px] font-mono font-semibold text-gray-700 sm:px-2 sm:py-1 sm:text-[11px]">
                 {key}
               </kbd>
-              <span className="mt-1.5 block truncate text-center text-[11px] text-gray-500">{description}</span>
+              <span className="mt-1.5 block truncate text-center text-[10px] text-gray-500 sm:text-[11px]">{description}</span>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Developer footer */}
-      <div className="flex flex-col items-center justify-between gap-2 border-t border-gray-200 pt-4 text-xs text-gray-400 sm:flex-row">
-        <span>Need more help? Contact the support team.</span>
-        <a
-          href="https://vivekv.me/"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1 text-indigo-500 hover:text-indigo-600 hover:underline"
-        >
-          Developed by Vivek V <ExternalLink size={12} />
-        </a>
+      <div className="border-t border-gray-200 pt-4 text-center text-xs text-gray-400">
+        Need more help? Our support team is ready to assist.
       </div>
     </div>
   )

@@ -418,23 +418,21 @@ export default function Customers() {
           FILTERS
       ====================================================== */}
 
-      <Card className="p-3 sm:p-4">
-        <div className="flex flex-col lg:flex-row lg:items-center gap-2.5 sm:gap-3">
+      <Card className="p-2.5 sm:p-4">
+        <div className="flex w-full items-center gap-2">
 
-          <div className="relative flex-1">
-
+          {/* Search */}
+          <div className="relative min-w-0 flex-1">
             <Search
               size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
             />
 
             <input
-              className="input pl-9 pr-9 text-sm"
+              className="input w-full pl-9 pr-9 text-sm"
               placeholder="Search by customer name, mobile, email..."
               value={search}
-              onChange={event =>
-                setSearch(event.target.value)
-              }
+              onChange={event => setSearch(event.target.value)}
             />
 
             {search && (
@@ -443,48 +441,45 @@ export default function Customers() {
                 onClick={() => setSearch('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
                 title="Clear search"
+                aria-label="Clear search"
               >
                 <X size={15} />
               </button>
             )}
           </div>
 
-          <div className="flex items-center justify-between gap-3">
+          {/* Refresh */}
+          <button
+            type="button"
+            onClick={() => load()}
+            disabled={loading}
+            className="icon-btn shrink-0"
+            title="Refresh customers"
+            aria-label="Refresh customers"
+          >
+            <RefreshCw
+              size={15}
+              className={loading ? 'animate-spin' : ''}
+            />
+          </button>
 
-            <label className="flex items-center gap-2 text-xs sm:text-sm font-medium text-gray-600 cursor-pointer whitespace-nowrap">
-
-              <input
-                type="checkbox"
-                checked={onlyCredit}
-                onChange={event =>
-                  setOnlyCredit(event.target.checked)
-                }
-                className="accent-red-500"
-              />
-
-              Credit Due Only
-            </label>
-
-            <button
-              type="button"
-              onClick={() => load()}
-              disabled={loading}
-              className="icon-btn"
-              title="Refresh customers"
-            >
-              <RefreshCw
-                size={15}
-                className={
-                  loading ? 'animate-spin' : ''
-                }
-              />
-            </button>
-          </div>
+          {/* Credit filter */}
+          <label className="form-check shrink-0 cursor-pointer whitespace-nowrap">
+            <input
+              type="checkbox"
+              checked={onlyCredit}
+              onChange={event => setOnlyCredit(event.target.checked)}
+              className="form-check-input"
+            />
+            <span className="form-check-label text-xs sm:text-sm">
+              <span className="hidden sm:inline">Credit Due Only</span>
+              <span className="sm:hidden">Credit Due only </span>
+            </span>
+          </label>
         </div>
 
         {(hasSearch || onlyCredit) && (
           <div className="flex items-center gap-2 mt-3 text-xs text-gray-500">
-
             <span>
               Showing {displayed.length} result(s)
             </span>
