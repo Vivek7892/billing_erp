@@ -59,73 +59,191 @@ def _report_response(filename, content, content_type):
 
 
 def _export_report_xlsx(title, headers, rows, filename, summary_rows=None):
+    """
+    Professional spreadsheet export used by every report.
+    Keeps a consistent ShopEase-style hierarchy across Sales, Product,
+    Profit, GST, Customer Credit, Payment and Expense reports.
+    """
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = title[:31]
-    row_index = 1
-    sheet.cell(row=row_index, column=1, value=title)
-    sheet.cell(row=row_index, column=1).font = Font(bold=True, size=14)
-    row_index += 2
+
+    # Palette
+    NAVY = '1E3A8A'
+    BLUE = '2563EB'
+    LIGHT_BLUE = 'EFF6FF'
+    SLATE = '475569'
+    BORDER = 'CBD5E1'
+    WHITE = 'FFFFFF'
+    ALT = 'F8FAFC'
+    GREEN = '166534'
+    RED = 'B91C1C'
+
+    max_cols = max(len(headers), 2)
+    last_col = max_cols
+
+    # Title bar
+    sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=last_col)
+    title_cell = sheet.cell(row=1, column=1, value=title.upper())
+    title_cell.font = Font(name='Calibri', bold=True, size=18, color=WHITE)
+    title_cell.fill = PatternFill('solid', fgColor=NAVY)
+    title_cell.alignment = Alignment(horizontal='left', vertical='center')
+    sheet.row_dimensions[1].height = 30
+
+    # Generated timestamp
+    sheet.merge_cells(start_row=2, start_column=1, end_row=2, end_column=last_col)
+    generated_cell = sheet.cell(
+        row=2,
+        column=1,
+        value=f"Generated: {timezone.localtime(timezone.now()).strftime('%d-%m-%Y %I:%M %p')}"
+    )
+    generated_cell.font = Font(name='Calibri', italic=True, size=9, color=SLATE)
+    generated_cell.fill = PatternFill('solid', fgColor=LIGHT_BLUE)
+    generated_cell.alignment = Alignment(horizontal='left', vertical='center')
+    sheet.row_dimensions[2].height = 20
+
+    row_index = 4
+
+    # KPI / summary block
     if summary_rows:
-        for label, value in summary_rows:
-            sheet.cell(row=row_index, column=1, value=label)
-            sheet.cell(row=row_index, column=2, value=_report_value(value))
-            sheet.cell(row=row_index, column=1).font = Font(bold=True)
-            row_index += 1
-        row_index += 1
+        summary_count = len(summary_rows)
+        summary_width = max(1, last_col // summary_count)
+        for i, (label, value) in enumerate(summary_rows):
+            col = 1 + i * summary_width
+            end_col = min(last_col, col + summary_width - 1)
+
+            sheet.merge_cells(
+                start_row=row_index,
+                start_column=col,
+                end_row=row_index,
+                end_column=end_col,
+            )
+            label_cell = sheet.cell(row=row_index, column=col, value=str(label).upper())
+            label_cell.font = Font(bold=True, size=9, color=SLATE)
+            label_cell.fill = PatternFill('solid', fgColor=LIGHT_BLUE)
+            label_cell.alignment = Alignment(horizontal='left', vertical='center')
+
+            sheet.merge_cells(
+                start_row=row_index + 1,
+                start_column=col,
+                end_row=row_index + 1,
+                end_column=end_col,
+            )
+            value_cell = sheet.cell(
+                row=row_index + 1,
+                column=col,
+                value=_report_value(value),
+            )
+            value_cell.font = Font(bold=True, size=13, color=NAVY)
+            value_cell.fill = PatternFill('solid', fgColor='FFFFFF')
+            value_cell.alignment = Alignment(horizontal='left', vertical='center')
+
+            for r in (row_index, row_index + 1):
+                for c in range(col, end_col + 1):
+                    sheet.cell(row=r, column=c).border = Border(
+                        left=Side(style='thin', color=BORDER),
+                        right=Side(style='thin', color=BORDER),
+                        top=Side(style='thin', color=BORDER),
+                        bottom=Side(style='thin', color=BORDER),
+                    )
+
+        sheet.row_dimensions[row_index].height = 20
+        sheet.row_dimensions[row_index + 1].height = 25
+        row_index += 4
+
+    # Report table header
     for col_index, header in enumerate(headers, 1):
         cell = sheet.cell(row=row_index, column=col_index, value=header)
-        cell.font = Font(bold=True, color='FFFFFF')
-        cell.fill = PatternFill('solid', fgColor='000000')
-        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.font = Font(bold=True, size=10, color=WHITE)
+        cell.fill = PatternFill('solid', fgColor=BLUE)
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
         cell.border = Border(
-            left=Side(style='thin', color='000000'),
-            right=Side(style='thin', color='000000'),
-            top=Side(style='thin', color='000000'),
-            bottom=Side(style='thin', color='000000'),
+            left=Side(style='thin', color=WHITE),
+            right=Side(style='thin', color=WHITE),
+            top=Side(style='thin', color=WHITE),
+            bottom=Side(style='thin', color=WHITE),
         )
+    sheet.row_dimensions[row_index].height = 24
     header_row = row_index
     row_index += 1
-    for row in rows:
+
+    # Data rows
+    for data_index, row in enumerate(rows):
         for col_index, value in enumerate(row, 1):
             cell = sheet.cell(row=row_index, column=col_index, value=_report_value(value))
-            cell.alignment = Alignment(horizontal='left' if col_index == 1 else 'right', vertical='center')
-            cell.border = Border(
-                left=Side(style='thin', color='000000'),
-                right=Side(style='thin', color='000000'),
-                top=Side(style='thin', color='000000'),
-                bottom=Side(style='thin', color='000000'),
+            cell.font = Font(name='Calibri', size=10, color='1E293B')
+            cell.alignment = Alignment(
+                horizontal='left' if col_index == 1 else 'right',
+                vertical='center',
+                wrap_text=True,
             )
+            if data_index % 2 == 1:
+                cell.fill = PatternFill('solid', fgColor=ALT)
+            cell.border = Border(
+                bottom=Side(style='hair', color=BORDER),
+            )
+        sheet.row_dimensions[row_index].height = 21
         row_index += 1
-    for col in sheet.columns:
-        width = max(len(_report_value(cell.value)) for cell in col if cell.value is not None)
-        sheet.column_dimensions[col[0].column_letter].width = min(max(width + 2, 12), 30)
+
+    # Total/footer row emphasis when summary exists.
+    if rows and summary_rows:
+        for col in range(1, last_col + 1):
+            cell = sheet.cell(row=row_index - 1, column=col)
+            cell.border = Border(
+                bottom=Side(style='thin', color=BORDER),
+            )
+
+    # Freeze table header and enable filters.
     sheet.freeze_panes = f'A{header_row + 1}'
+    sheet.auto_filter.ref = f"A{header_row}:{sheet.cell(row=max(header_row, row_index - 1), column=last_col).coordinate}"
+
+    # Print / page setup.
+    sheet.sheet_view.showGridLines = False
+    sheet.page_setup.orientation = 'landscape' if len(headers) >= 5 else 'portrait'
+    sheet.page_setup.fitToWidth = 1
+    sheet.page_setup.fitToHeight = 0
+    sheet.sheet_properties.pageSetUpPr.fitToPage = True
+    sheet.print_title_rows = f'{header_row}:{header_row}'
+    sheet.page_margins.left = 0.3
+    sheet.page_margins.right = 0.3
+    sheet.page_margins.top = 0.5
+    sheet.page_margins.bottom = 0.5
+
+    # Sensible widths.
+    for col_index in range(1, last_col + 1):
+        values = [
+            _report_value(sheet.cell(row=r, column=col_index).value)
+            for r in range(header_row, row_index)
+        ]
+        width = max([len(v) for v in values if v] + [12])
+        if col_index == 1:
+            width = min(max(width + 3, 18), 34)
+        else:
+            width = min(max(width + 3, 12), 24)
+        sheet.column_dimensions[sheet.cell(row=1, column=col_index).column_letter].width = width
+
     buffer = BytesIO()
     workbook.save(buffer)
-    return _report_response(filename, buffer.getvalue(), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    return _report_response(
+        filename,
+        buffer.getvalue(),
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
 
 
 def _export_report_pdf(title, headers, rows, filename, summary_rows=None, request_user=None):
     """
-    Generate a clean A4 report PDF with a compact, non-repeating header/footer.
-
-    Header:
-      - Shop logo (when available)
-      - Shop name
-      - Address / phone / email / GSTIN
-      - Report title
-      - One combined generated date & time line
-
-    Footer:
-      - Page number only
-
-    Date/time and contact information are intentionally shown only once in the
-    header so the PDF does not repeat the same details unnecessarily.
+    Professional A4 report PDF:
+      - Branded two-column header
+      - Report title and generated timestamp
+      - Compact KPI summary cards
+      - Clean table with alternating rows
+      - Minimal footer with page number and shop contact
     """
     from .models import Setting
     import os
-    from datetime import datetime
+    import glob
+    from reportlab.platypus import Image as RLImage
 
     def get_setting(key, default=''):
         if request_user is not None and getattr(request_user, 'business', None):
@@ -147,15 +265,15 @@ def _export_report_pdf(title, headers, rows, filename, summary_rows=None, reques
     now = timezone.localtime(timezone.now())
     generated_at = now.strftime('%d-%m-%Y %I:%M %p')
 
-    # ---------------------------------------------------------
-    # COLORS
-    # ---------------------------------------------------------
-    HEADER_BLUE = colors.HexColor('#1e40af')
-    HEADER_BG = colors.HexColor('#eff6ff')
-    ROW_ALT = colors.HexColor('#f8fafc')
-    BORDER = colors.HexColor('#cbd5e1')
-    TEXT = colors.HexColor('#1e293b')
-    SUBTLE = colors.HexColor('#64748b')
+    # Consistent report palette.
+    NAVY = colors.HexColor('#1E3A8A')
+    BLUE = colors.HexColor('#2563EB')
+    LIGHT_BLUE = colors.HexColor('#EFF6FF')
+    ROW_ALT = colors.HexColor('#F8FAFC')
+    BORDER = colors.HexColor('#CBD5E1')
+    TEXT = colors.HexColor('#1E293B')
+    SUBTLE = colors.HexColor('#64748B')
+    WHITE = colors.white
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
@@ -164,103 +282,72 @@ def _export_report_pdf(title, headers, rows, filename, summary_rows=None, reques
         leftMargin=12 * mm,
         rightMargin=12 * mm,
         topMargin=10 * mm,
-        bottomMargin=14 * mm,
+        bottomMargin=17 * mm,
         title=title,
         author=shop_name,
+        subject=f'{title} generated by {shop_name}',
     )
 
     story = []
     body_w = A4[0] - 24 * mm
 
-    # ---------------------------------------------------------
-    # LOGO
-    # ---------------------------------------------------------
+    # Logo
     logo_img = None
     try:
         from django.conf import settings as django_settings
-        from reportlab.platypus import Image as RLImage
-        import glob
-
         media_root = str(django_settings.MEDIA_ROOT)
         media_url = django_settings.MEDIA_URL
 
         if shop_logo_url and shop_logo_url.startswith(media_url):
             rel = shop_logo_url[len(media_url):]
             full = os.path.join(media_root, rel)
-
             if os.path.exists(full):
-                logo_img = RLImage(
-                    full,
-                    width=14 * mm,
-                    height=14 * mm,
-                )
+                logo_img = RLImage(full, width=16 * mm, height=16 * mm)
 
         if not logo_img:
-            matches = glob.glob(
-                os.path.join(media_root, 'shop_logos', '*')
-            )
+            matches = glob.glob(os.path.join(media_root, 'shop_logos', '*'))
             if matches:
-                logo_img = RLImage(
-                    matches[0],
-                    width=14 * mm,
-                    height=14 * mm,
-                )
+                logo_img = RLImage(matches[0], width=16 * mm, height=16 * mm)
     except Exception:
         logo_img = None
 
-    # ---------------------------------------------------------
-    # STYLES
-    # ---------------------------------------------------------
-    name_style = ParagraphStyle(
-        'report_shop_name',
+    # Styles
+    shop_style = ParagraphStyle(
+        'report_shop_name_v2',
         fontName='Helvetica-Bold',
         fontSize=15,
         leading=17,
         alignment=TA_LEFT,
-        textColor=HEADER_BLUE,
+        textColor=NAVY,
     )
-
-    sub_style = ParagraphStyle(
-        'report_shop_sub',
+    shop_sub = ParagraphStyle(
+        'report_shop_sub_v2',
         fontName='Helvetica',
-        fontSize=7.5,
-        leading=10,
+        fontSize=7,
+        leading=9,
         alignment=TA_LEFT,
         textColor=SUBTLE,
     )
-
-    title_style = ParagraphStyle(
-        'report_title',
+    report_title = ParagraphStyle(
+        'report_title_v2',
         fontName='Helvetica-Bold',
-        fontSize=13,
-        leading=15,
+        fontSize=15,
+        leading=17,
         alignment=TA_RIGHT,
         textColor=TEXT,
     )
-
-    meta_style = ParagraphStyle(
-        'report_meta',
+    report_meta = ParagraphStyle(
+        'report_meta_v2',
         fontName='Helvetica',
-        fontSize=7.5,
-        leading=10,
+        fontSize=7,
+        leading=9,
         alignment=TA_RIGHT,
         textColor=SUBTLE,
     )
 
-    # ---------------------------------------------------------
-    # HEADER
-    # ---------------------------------------------------------
-    shop_lines = [
-        Paragraph(shop_name or 'ShopEase POS', name_style)
-    ]
-
+    shop_lines = [Paragraph(shop_name or 'ShopEase POS', shop_style)]
     if shop_address:
-        shop_lines.append(
-            Paragraph(
-                shop_address.replace('\n', ', '),
-                sub_style,
-            )
-        )
+        shop_lines.append(Paragraph(shop_address.replace('\n', ', '), shop_sub))
 
     contact_parts = []
     if shop_phone:
@@ -269,164 +356,153 @@ def _export_report_pdf(title, headers, rows, filename, summary_rows=None, reques
         contact_parts.append(f'Email: {shop_email}')
     if shop_gstin:
         contact_parts.append(f'GSTIN: {shop_gstin}')
-
     if contact_parts:
-        shop_lines.append(
-            Paragraph(
-                '  |  '.join(contact_parts),
-                sub_style,
-            )
-        )
+        shop_lines.append(Paragraph(' | '.join(contact_parts), shop_sub))
 
-    # Date and time appear ONCE, as a single compact line.
     right_lines = [
-        Paragraph(title, title_style),
-        Spacer(1, 1.5 * mm),
-        Paragraph(f'Generated: {generated_at}', meta_style),
+        Paragraph(title.upper(), report_title),
+        Spacer(1, 1 * mm),
+        Paragraph(f'Generated: {generated_at}', report_meta),
     ]
 
     if logo_img:
-        logo_col_w = 16 * mm
-        info_col_w = body_w * 0.57
-        right_col_w = body_w - logo_col_w - info_col_w
-
         header_tbl = Table(
             [[logo_img, shop_lines, right_lines]],
-            colWidths=[
-                logo_col_w,
-                info_col_w,
-                right_col_w,
-            ],
+            colWidths=[18 * mm, body_w * 0.56, body_w * 0.44 - 18 * mm],
         )
-
-        header_tbl.setStyle(
-            TableStyle([
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-                ('TOPPADDING', (0, 0), (-1, -1), 0),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-                ('LEFTPADDING', (1, 0), (1, 0), 5),
-            ])
-        )
+        header_style = [
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (0, 0), 4),
+        ]
     else:
         header_tbl = Table(
             [[shop_lines, right_lines]],
-            colWidths=[
-                body_w * 0.60,
-                body_w * 0.40,
-            ],
+            colWidths=[body_w * 0.58, body_w * 0.42],
         )
-
-        header_tbl.setStyle(
-            TableStyle([
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-                ('TOPPADDING', (0, 0), (-1, -1), 0),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-            ])
-        )
-
-    story.append(header_tbl)
-    story.append(Spacer(1, 2.5 * mm))
-
-    rule_tbl = Table([['']], colWidths=[body_w])
-    rule_tbl.setStyle(
-        TableStyle([
-            ('LINEBELOW', (0, 0), (-1, -1), 1.0, HEADER_BLUE),
+        header_style = [
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
             ('TOPPADDING', (0, 0), (-1, -1), 0),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-        ])
-    )
-
-    story.append(rule_tbl)
-    story.append(Spacer(1, 4 * mm))
-
-    # ---------------------------------------------------------
-    # SUMMARY
-    # ---------------------------------------------------------
-    if summary_rows:
-        s_style = ParagraphStyle(
-            'report_summary_label',
-            fontName='Helvetica',
-            fontSize=8.5,
-            leading=11,
-            textColor=TEXT,
-        )
-
-        s_bold = ParagraphStyle(
-            'report_summary_value',
-            fontName='Helvetica-Bold',
-            fontSize=8.5,
-            leading=11,
-            alignment=TA_RIGHT,
-            textColor=TEXT,
-        )
-
-        summary_data = [
-            [
-                Paragraph(str(label), s_style),
-                Paragraph(_rupee(_report_value(value)), s_bold),
-            ]
-            for label, value in summary_rows
         ]
 
-        summary_tbl = Table(
-            summary_data,
-            colWidths=[80 * mm, 60 * mm],
-        )
+    header_tbl.setStyle(TableStyle(header_style))
+    story.append(header_tbl)
+    story.append(Spacer(1, 3 * mm))
 
-        summary_tbl.setStyle(
-            TableStyle([
-                ('BACKGROUND', (0, 0), (-1, -1), HEADER_BG),
-                ('BOX', (0, 0), (-1, -1), 0.5, BORDER),
-                ('LINEBELOW', (0, 0), (-1, -2), 0.3, BORDER),
-                ('LEFTPADDING', (0, 0), (-1, -1), 6),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-                ('TOPPADDING', (0, 0), (-1, -1), 3),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+    # Full-width branded divider.
+    rule = Table([['']], colWidths=[body_w])
+    rule.setStyle(TableStyle([
+        ('LINEBELOW', (0, 0), (-1, -1), 1.1, BLUE),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    story.append(rule)
+    story.append(Spacer(1, 4 * mm))
+
+    # Summary cards.
+    if summary_rows:
+        count = len(summary_rows)
+        gap = 3 * mm
+        card_w = (body_w - gap * (count - 1)) / count
+
+        card_data = []
+        for label, value in summary_rows:
+            card_data.append([
+                Paragraph(
+                    str(label).upper(),
+                    ParagraphStyle(
+                        f'summary_label_{len(card_data)}',
+                        fontName='Helvetica-Bold',
+                        fontSize=6.8,
+                        leading=8,
+                        textColor=SUBTLE,
+                        alignment=TA_LEFT,
+                    ),
+                ),
+                Paragraph(
+                    _rupee(_report_value(value)),
+                    ParagraphStyle(
+                        f'summary_value_{len(card_data)}',
+                        fontName='Helvetica-Bold',
+                        fontSize=10,
+                        leading=12,
+                        textColor=NAVY,
+                        alignment=TA_LEFT,
+                    ),
+                ),
             ])
+
+        cards = []
+        for i, card in enumerate(card_data):
+            card_tbl = Table(
+                [[card[0]], [card[1]]],
+                colWidths=[card_w],
+                rowHeights=[7 * mm, 8 * mm],
+            )
+            card_tbl.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), LIGHT_BLUE),
+                ('BOX', (0, 0), (-1, -1), 0.5, BORDER),
+                ('LEFTPADDING', (0, 0), (-1, -1), 5),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+                ('TOPPADDING', (0, 0), (-1, -1), 2),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ]))
+            cards.append(card_tbl)
+
+        summary_tbl = Table(
+            [cards],
+            colWidths=[card_w] * count,
+            hAlign='LEFT',
         )
+        summary_tbl.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), gap),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        # Remove gap after final card.
+        summary_tbl.setStyle(TableStyle([
+            ('RIGHTPADDING', (-1, 0), (-1, 0), 0),
+        ]))
 
         story.append(summary_tbl)
         story.append(Spacer(1, 5 * mm))
 
-    # ---------------------------------------------------------
-    # DATA TABLE
-    # ---------------------------------------------------------
+    # Table styles.
     h_style = ParagraphStyle(
-        'report_table_header',
+        'report_table_header_v2',
         fontName='Helvetica-Bold',
-        fontSize=7.5,
-        leading=9,
+        fontSize=7.2,
+        leading=8.5,
         alignment=TA_CENTER,
-        textColor=colors.white,
+        textColor=WHITE,
     )
-
     c_style = ParagraphStyle(
-        'report_table_cell',
+        'report_table_cell_v2',
         fontName='Helvetica',
-        fontSize=7.5,
-        leading=9,
+        fontSize=7.2,
+        leading=8.5,
+        alignment=TA_LEFT,
         textColor=TEXT,
     )
-
     c_right = ParagraphStyle(
-        'report_table_cell_right',
+        'report_table_cell_right_v2',
         fontName='Helvetica',
-        fontSize=7.5,
-        leading=9,
+        fontSize=7.2,
+        leading=8.5,
         alignment=TA_RIGHT,
         textColor=TEXT,
     )
 
-    header_row = [
-        Paragraph(str(h), h_style)
-        for h in headers
-    ]
-
-    # Currency is applied only to columns whose header indicates an amount.
+    header_row = [Paragraph(str(h), h_style) for h in headers]
     currency_keywords = (
         'amount', 'revenue', 'cost', 'profit', 'total',
         'sales', 'discount', 'tax', 'gst', 'outstanding',
@@ -435,141 +511,102 @@ def _export_report_pdf(title, headers, rows, filename, summary_rows=None, reques
 
     data_rows = []
     for row in rows:
-        formatted_row = []
-
+        formatted = []
         for j, value in enumerate(row):
             header_name = str(headers[j]).lower() if j < len(headers) else ''
-            is_currency = any(
-                keyword in header_name
-                for keyword in currency_keywords
+            is_currency = any(keyword in header_name for keyword in currency_keywords)
+            display = _rupee(_report_value(value)) if is_currency else _report_value(value)
+            formatted.append(
+                Paragraph(display, c_right if j > 0 else c_style)
             )
-
-            display_value = _rupee(_report_value(value)) if is_currency else _report_value(value)
-
-            formatted_row.append(
-                Paragraph(
-                    display_value,
-                    c_right if j > 0 else c_style,
-                )
-            )
-
-        data_rows.append(formatted_row)
+        data_rows.append(formatted)
 
     if headers:
-        col_width = body_w / len(headers)
+        # Give the first column slightly more room for product/customer descriptions.
+        n = len(headers)
+        if n == 3:
+            widths = [body_w * 0.28, body_w * 0.22, body_w * 0.50]
+        elif n == 4:
+            widths = [body_w * 0.28, body_w * 0.20, body_w * 0.26, body_w * 0.26]
+        elif n == 5:
+            widths = [body_w * 0.25, body_w * 0.15, body_w * 0.20, body_w * 0.20, body_w * 0.20]
+        else:
+            widths = [body_w / n] * n
+
         table = Table(
             [header_row] + data_rows,
-            colWidths=[col_width] * len(headers),
+            colWidths=widths,
             repeatRows=1,
+            repeatCols=0,
             splitByRow=1,
+            hAlign='LEFT',
         )
 
-        tbl_style = [
-            ('BACKGROUND', (0, 0), (-1, 0), HEADER_BLUE),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 7.5),
+        style = [
+            ('BACKGROUND', (0, 0), (-1, 0), NAVY),
             ('BOX', (0, 0), (-1, -1), 0.5, BORDER),
-            ('LINEBELOW', (0, 0), (-1, 0), 0.5, BORDER),
-            ('LINEBELOW', (0, 1), (-1, -1), 0.3, BORDER),
+            ('LINEBELOW', (0, 0), (-1, 0), 0.6, NAVY),
+            ('LINEBELOW', (0, 1), (-1, -1), 0.25, BORDER),
             ('LEFTPADDING', (0, 0), (-1, -1), 4),
             ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('TOPPADDING', (0, 0), (-1, -1), 3.5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]
 
         for i in range(1, len(data_rows) + 1):
             if i % 2 == 0:
-                tbl_style.append(
-                    (
-                        'BACKGROUND',
-                        (0, i),
-                        (-1, i),
-                        ROW_ALT,
-                    )
-                )
+                style.append(('BACKGROUND', (0, i), (-1, i), ROW_ALT))
 
-        table.setStyle(TableStyle(tbl_style))
+        table.setStyle(TableStyle(style))
         story.append(table)
     else:
-        story.append(
-            Paragraph('No report data available.', c_style)
-        )
+        story.append(Paragraph('No report data available.', c_style))
 
-    # ---------------------------------------------------------
-    # PAGE FOOTER
-    # ---------------------------------------------------------
+    # Footer.
     def draw_page_footer(canvas, doc):
         canvas.saveState()
-
         page_width, _ = A4
 
         canvas.setStrokeColor(BORDER)
         canvas.setLineWidth(0.5)
-        canvas.line(
-            12 * mm,
-            8 * mm,
-            page_width - 12 * mm,
-            8 * mm,
-        )
+        canvas.line(12 * mm, 9 * mm, page_width - 12 * mm, 9 * mm)
 
         footer_style = ParagraphStyle(
-            'page_footer',
+            'report_footer_v2',
             fontName='Helvetica',
-            fontSize=7,
+            fontSize=6.5,
             leading=8,
-            alignment=TA_CENTER,
+            alignment=TA_LEFT,
             textColor=SUBTLE,
         )
 
-        # Footer contains shop name, address and contact details.
-        # Date/time and report title are intentionally not repeated here.
-        contact_parts = []
-
+        contact = []
         if shop_name:
-            contact_parts.append(shop_name)
-
-        if shop_address:
-            contact_parts.append(shop_address.replace('\n', ', '))
-
+            contact.append(shop_name)
         if shop_phone:
-            contact_parts.append(f'Phone: {shop_phone}')
-
+            contact.append(f'Phone: {shop_phone}')
         if shop_email:
-            contact_parts.append(f'Email: {shop_email}')
+            contact.append(f'Email: {shop_email}')
 
-        contact_text = '  |  '.join(contact_parts)
+        footer_contact = Paragraph(' | '.join(contact), footer_style)
+        footer_contact.wrapOn(canvas, body_w - 20 * mm, 5 * mm)
+        footer_contact.drawOn(canvas, 12 * mm, 5 * mm)
 
-        footer_contact = Paragraph(
-            contact_text,
-            footer_style,
+        page_style = ParagraphStyle(
+            'report_page_number_v2',
+            fontName='Helvetica-Bold',
+            fontSize=6.5,
+            leading=8,
+            alignment=TA_RIGHT,
+            textColor=SUBTLE,
         )
-
-        footer_contact.wrapOn(canvas, body_w, 8 * mm)
-        footer_contact.drawOn(
-            canvas,
-            12 * mm,
-            5 * mm,
-        )
-
-        # Page number only below the contact line.
-        page_text = Paragraph(
-            f'Page {doc.page}',
-            footer_style,
-        )
-
-        page_text.wrapOn(canvas, body_w, 4 * mm)
-        page_text.drawOn(
-            canvas,
-            12 * mm,
-            2 * mm,
-        )
+        page_text = Paragraph(f'Page {doc.page}', page_style)
+        page_text.wrapOn(canvas, 20 * mm, 5 * mm)
+        page_text.drawOn(canvas, page_width - 32 * mm, 5 * mm)
 
         canvas.restoreState()
 
-    # ---------------------------------------------------------
-    # BUILD PDF
-    # ---------------------------------------------------------
     doc.build(
         story,
         onFirstPage=draw_page_footer,
@@ -577,7 +614,6 @@ def _export_report_pdf(title, headers, rows, filename, summary_rows=None, reques
     )
 
     buffer.seek(0)
-
     return _report_response(
         filename,
         buffer.getvalue(),
