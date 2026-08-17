@@ -30,13 +30,13 @@ for _dir in ("/usr/share/fonts/truetype/dejavu/", "C:/Windows/Fonts/"):
         FONT_R, FONT_B = "DejaVuSans", "DejaVuSans-Bold"
         break
 
-# ── Pure black & white palette ───────────────────────────────────────────────
+# ── Pure black & white palette (no other colors are used anywhere) ────────────
 INK = colors.HexColor("#000000")          # primary text / values — true black
-SUBTLE = colors.HexColor("#333333")       # labels, secondary text, footer notes (darkened for legibility)
-FAINT = colors.HexColor("#6e6e6e")        # least emphasis (placeholders only)
+SUBTLE = colors.HexColor("#333333")       # labels, secondary text, footer notes
+FAINT = colors.HexColor("#6e6e6e")        # least emphasis (page number only)
 LINE = colors.HexColor("#d9d9d9")         # hairline divider
 LINE_STRONG = colors.HexColor("#000000")  # section-defining rule
-HEAD_TINT = colors.HexColor("#f0f0f0")    # table header band (very light — prints fine in pure B/W)
+HEAD_TINT = colors.HexColor("#f0f0f0")    # table header band (light gray, B/W safe)
 BLK = INK
 
 PAGE_W, PAGE_H = A4
@@ -44,7 +44,7 @@ L_MAR = 12 * mm
 R_MAR = 12 * mm
 BODY_W = PAGE_W - L_MAR - R_MAR  # ~186 mm
 
-SECTION_GAP = Spacer(1, 2.0 * mm)
+SECTION_GAP = Spacer(1, 2.4 * mm)
 TIGHT_GAP = Spacer(1, 1.1 * mm)
 
 
@@ -57,18 +57,45 @@ def setting_value(settings, key, default=""):
     return settings.get(key, default)
 
 
+def _flag(settings, key, default=True):
+    """Boolean setting reader — treats missing keys as `default`."""
+    raw = settings.get(key, None)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() == "true"
+
+
 def money(value):
     try:
         value = Decimal(str(value or 0))
     except Exception:
         value = Decimal("0")
-    negative = value < 0
-    formatted = f"{abs(value):,.2f}"
-    return f"-{formatted}" if negative else formatted
+    return f"{abs(value):,.2f}"
 
 
 def currency(value):
-    return f"Rs.{money(value)}"
+    """Rs.<amount>, with the minus sign (if any) placed BEFORE the currency
+    marker — e.g. -Rs.0.15 — never Rs.-0.15."""
+    try:
+        v = Decimal(str(value or 0))
+    except Exception:
+        v = Decimal("0")
+    sign = "-" if v < 0 else ""
+    return f"{sign}Rs.{money(v)}"
+
+
+def has_val(value):
+    """True when a value is meaningfully present — used to decide whether a
+    field/row is printed at all. We never print placeholders like '—',
+    'None', 'N/A' or 'null' — an absent field is simply omitted."""
+    if value is None:
+        return False
+    if isinstance(value, Decimal):
+        return value != 0
+    text = str(value).strip()
+    if text == "" or text.lower() in ("none", "null", "n/a", "na", "-", "—"):
+        return False
+    return True
 
 
 def mask_account_number(value, keep_last=4):
@@ -76,7 +103,7 @@ def mask_account_number(value, keep_last=4):
     bills — the rest is masked with asterisks."""
     digits = str(value or "").strip()
     if not digits:
-        return "—"
+        return ""
     if len(digits) <= keep_last:
         return digits
     return "*" * (len(digits) - keep_last) + digits[-keep_last:]
@@ -145,6 +172,50 @@ def _label_block(text, width):
     )
 
 
+def _pair_block(title, pairs, width, label_w_ratio=0.30):
+    """A titled block of (label, value) rows — only rows with real values are
+    passed in by the caller, so nothing empty is ever rendered. Falls back to
+    a single quiet line when there are no rows at all."""
+    label_w = width * label_w_ratio
+    value_w = width - label_w
+    if not pairs:
+        body = para("—", size=7.3, color=FAINT)  # never actually reached in practice
+        rows = [[body]]
+        widths = [width]
+        line_cmds = []
+    else:
+        rows = []
+        for label, value in pairs:
+            rows.append([
+                para(label, size=6.9, color=SUBTLE),
+                para(str(value), size=7.5, color=INK),
+            ])
+        widths = [label_w, value_w]
+        line_cmds = [("LINEBELOW", (0, 0), (-1, -2), 0.35, LINE)]
+    body_tbl = _tbl(
+        rows,
+        widths,
+        line_cmds + [
+            ("TOPPADDING", (0, 0), (-1, -1), 1.7),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.7),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ],
+    )
+    return _tbl(
+        [[_label_block(title, width)], [body_tbl]],
+        [width],
+        [
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ],
+    )
+
+
 # ── Amount in words ────────────────────────────────────────────────────────────
 _ONES = [
     "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
@@ -205,7 +276,7 @@ def make_upi_qr(upi_id, shop_name, amount, size_mm=24, invoice_number=None):
         return None
 
 
-def _fmt_value(value, default="—"):
+def _fmt_value(value, default=""):
     if value is None:
         return default
     if isinstance(value, str):
@@ -217,7 +288,7 @@ def _fmt_value(value, default="—"):
 
 def _date_text(value):
     if not value:
-        return "—"
+        return ""
     try:
         return value.strftime("%d-%m-%Y")
     except AttributeError:
@@ -235,85 +306,89 @@ def _page_chrome(canvas, doc):
 
 def build_header(shop_name, shop_address, shop_phone, shop_email, shop_gstin, shop_pan,
                   upi_id, grand_total, document_title="Tax Invoice",
-                  registration_type="regular", invoice_number="", invoice_date="—"):
-    """Text-only masthead — no logo. The shop name carries the visual weight
-    on its own, set large and bold; everything else is quiet supporting text."""
+                  registration_type="regular", invoice_number="", invoice_date="",
+                  show_pan=True):
+    """Centered, text-only masthead — no logo. The shop name carries the
+    visual weight on its own, set large and bold and centered; everything
+    else is quiet supporting text, also centered, beneath it."""
     brand_name = _fmt_value(shop_name, "YOUR KIRANA STORE")
 
-    title_w = BODY_W * 0.32
-    info_w = BODY_W - title_w
-
-    info_rows = [
-        [para(brand_name.upper(), bold=True, size=17, align=TA_LEFT, color=INK)],
-        [para(
-            "GST Registered Business" if registration_type == "regular" else "General / Kirana Store",
-            size=7.0, color=SUBTLE,
-        )],
-    ]
+    id_rows = [[para(brand_name.upper(), bold=True, size=18, align=TA_CENTER, color=INK)]]
+    id_rows.append([para(
+        "GST Registered Business" if registration_type == "regular" else "General / Kirana Store",
+        size=7.2, align=TA_CENTER, color=SUBTLE,
+    )])
     for line in (shop_address or "").split("\n"):
         line = line.strip()
         if line:
-            info_rows.append([para(line, size=7.3, color=SUBTLE)])
+            id_rows.append([para(line, size=7.4, align=TA_CENTER, color=SUBTLE)])
     contact_bits = []
-    if shop_phone:
+    if has_val(shop_phone):
         contact_bits.append(f"Ph: {shop_phone}")
-    if shop_email:
+    if has_val(shop_email):
         contact_bits.append(shop_email)
     if contact_bits:
-        info_rows.append([para(" &nbsp;|&nbsp; ".join(contact_bits), size=7.3, color=SUBTLE)])
+        id_rows.append([para(" &nbsp;|&nbsp; ".join(contact_bits), size=7.4, align=TA_CENTER, color=SUBTLE)])
     gst_bits = []
-    if shop_gstin:
+    if has_val(shop_gstin):
         gst_bits.append(f"GSTIN: {shop_gstin}")
-    if shop_pan:
+    if show_pan and has_val(shop_pan):
         gst_bits.append(f"PAN: {shop_pan}")
     if gst_bits:
-        info_rows.append([para(" &nbsp;|&nbsp; ".join(gst_bits), size=7.3, bold=True, color=INK)])
+        id_rows.append([para(" &nbsp;|&nbsp; ".join(gst_bits), size=7.4, bold=True, align=TA_CENTER, color=INK)])
 
-    info_tbl = _tbl(
-        info_rows,
-        [info_w],
+    id_tbl = _tbl(
+        id_rows,
+        [BODY_W],
         [
             ("LEFTPADDING", (0, 0), (-1, -1), 0),
             ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ("TOPPADDING", (0, 0), (-1, -1), 1.3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.3),
+            ("TOPPADDING", (0, 0), (-1, -1), 1.1),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.1),
         ],
     )
 
-    title_tbl = _tbl(
+    title_row = _tbl(
+        [[
+            para(document_title.upper(), size=12.5, bold=True, align=TA_LEFT, color=INK),
+            para("Original for Recipient", size=7.0, align=TA_RIGHT, color=SUBTLE),
+        ]],
+        [BODY_W * 0.5, BODY_W * 0.5],
         [
-            [para(document_title.upper(), size=13.5, bold=True, align=TA_RIGHT, color=INK)],
-            [para("Original for Recipient", size=6.9, align=TA_RIGHT, color=SUBTLE)],
-            [Spacer(1, 1.4 * mm)],
-            [para(f"<b>No.</b> {_fmt_value(invoice_number)}", size=8.2, align=TA_RIGHT, color=INK)],
-            [para(f"<b>Date</b> {invoice_date}", size=8.2, align=TA_RIGHT, color=INK)],
-        ],
-        [title_w],
-        [
-            ("TOPPADDING", (0, 0), (-1, -1), 1.3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.3),
-        ],
-    )
-
-    header_row = _tbl(
-        [[info_tbl, title_tbl]],
-        [info_w, title_w],
-        [
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
             ("TOPPADDING", (0, 0), (-1, -1), 0),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
         ],
     )
 
-    return [header_row, *_rule(color=LINE_STRONG, weight=1.1, gap_above=2.4 * mm)]
+    meta_row = _tbl(
+        [[
+            para(f"<b>Invoice No:</b> {_fmt_value(invoice_number)}", size=8.2, align=TA_LEFT, color=INK),
+            para(f"<b>Date:</b> {invoice_date}", size=8.2, align=TA_RIGHT, color=INK),
+        ]],
+        [BODY_W * 0.5, BODY_W * 0.5],
+        [
+            ("TOPPADDING", (0, 0), (-1, -1), 1.6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ],
+    )
+
+    return [
+        id_tbl,
+        *_rule(gap_above=2.0 * mm, gap_below=1.6 * mm),
+        title_row,
+        meta_row,
+        *_rule(color=LINE_STRONG, weight=1.1, gap_above=2.0 * mm),
+    ]
 
 
 def build_meta_and_customer(invoice):
-    """Invoice details (left) and Bill To (right), side by side. No outer
-    boxes — each panel is set off by its own underlined label and a single
-    vertical hairline between the two columns."""
+    """Invoice details (left) and Bill To (right), side by side. Only fields
+    that actually have a value are printed — empty fields are skipped
+    entirely rather than shown as a dash or placeholder."""
     order_no = getattr(invoice, "order_number", "") or getattr(invoice, "order_no", "")
     order_date = getattr(invoice, "order_date", None)
     vehicle_no = getattr(invoice, "vehicle_number", "") or getattr(invoice, "vehicle_no", "")
@@ -331,90 +406,42 @@ def build_meta_and_customer(invoice):
     cust_state_code = getattr(cust, "state_code", "") if cust else ""
     is_walk_in = not cust
 
-    def lbl(text):
-        return para(text, size=6.8, color=SUBTLE)
-
-    def val(text):
-        return para(text, size=7.5, color=INK)
-
     col_gap = 6 * mm
     left_w = BODY_W * 0.50
     right_w = BODY_W - left_w - col_gap
 
     # Payment Status is intentionally NOT repeated here — it lives once,
     # alongside Paid/Balance/Change, in the Payment Summary near the totals.
-    meta_ratios = [26, 74, 26, 74]
-    meta_scale = left_w / sum(meta_ratios)
-    meta_widths = [r * meta_scale for r in meta_ratios]
-    meta_rows = [
-        [lbl("Invoice No"), val(_fmt_value(invoice.invoice_number)), lbl("Order No"), val(_fmt_value(order_no))],
-        [lbl("Invoice Date"), val(inv_date), lbl("Order Date"), val(_date_text(order_date))],
-        [lbl("Payment Mode"), val(pay_mode), lbl("Vehicle No"), val(_fmt_value(vehicle_no))],
-    ]
-    if _fmt_value(route_name) != "—":
-        meta_rows.append([lbl("Route Name"), val(_fmt_value(route_name)), para(""), para("")])
-    meta_tbl = _tbl(
-        meta_rows,
-        meta_widths,
-        [
-            ("LINEBELOW", (0, 0), (-1, -2), 0.35, LINE),
-            ("TOPPADDING", (0, 0), (-1, -1), 1.7),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.7),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ],
-    )
-    meta_col = _tbl(
-        [[_label_block("Invoice Details", left_w)], [meta_tbl]],
-        [left_w],
-        [
-            ("TOPPADDING", (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ],
-    )
+    meta_pairs = [("Invoice No", _fmt_value(invoice.invoice_number)), ("Invoice Date", inv_date),
+                  ("Payment Mode", pay_mode)]
+    if has_val(order_no):
+        meta_pairs.append(("Order No", order_no))
+    if order_date:
+        meta_pairs.append(("Order Date", _date_text(order_date)))
+    if has_val(vehicle_no):
+        meta_pairs.append(("Vehicle No", vehicle_no))
+    if has_val(route_name):
+        meta_pairs.append(("Route Name", route_name))
+    meta_col = _pair_block("Invoice Details", meta_pairs, left_w, label_w_ratio=0.34)
 
     if is_walk_in:
-        cust_rows = [
-            [lbl("Customer Name"), val(_fmt_value(cust_name))],
-            [lbl("Phone"), val(_fmt_value(cust_phone))],
-        ]
+        cust_pairs = [("Customer", _fmt_value(cust_name, "Walk-in Customer"))]
+        if has_val(cust_phone):
+            cust_pairs.append(("Phone", cust_phone))
     else:
-        cust_rows = [
-            [lbl("Name"), val(_fmt_value(cust_name))],
-            [lbl("Code"), val(_fmt_value(cust_code))],
-            [lbl("Address"), val(_fmt_value((cust_addr or "").replace(chr(10), ", ")))],
-            [lbl("Phone"), val(_fmt_value(cust_phone))],
-            [lbl("GSTIN"), val(_fmt_value(cust_gstin))],
-            [lbl("State"), val(f"{_fmt_value(cust_state)} ({_fmt_value(cust_state_code)})")],
-        ]
-    cust_widths = [right_w * 0.28, right_w * 0.72]
-    cust_tbl = _tbl(
-        cust_rows,
-        cust_widths,
-        [
-            ("LINEBELOW", (0, 0), (-1, -2), 0.35, LINE),
-            ("TOPPADDING", (0, 0), (-1, -1), 1.7),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.7),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 3),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ],
-    )
-    cust_col = _tbl(
-        [[_label_block("Bill To", right_w)], [cust_tbl]],
-        [right_w],
-        [
-            ("TOPPADDING", (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ],
-    )
+        cust_pairs = [("Name", _fmt_value(cust_name))]
+        if has_val(cust_code):
+            cust_pairs.append(("Code", cust_code))
+        if has_val(cust_addr):
+            cust_pairs.append(("Address", (cust_addr or "").replace("\n", ", ")))
+        if has_val(cust_phone):
+            cust_pairs.append(("Phone", cust_phone))
+        if has_val(cust_gstin):
+            cust_pairs.append(("GSTIN", cust_gstin))
+        if has_val(cust_state):
+            state_txt = f"{cust_state} ({cust_state_code})" if has_val(cust_state_code) else cust_state
+            cust_pairs.append(("State", state_txt))
+    cust_col = _pair_block("Bill To", cust_pairs, right_w, label_w_ratio=0.30)
 
     row = _tbl(
         [[meta_col, cust_col]],
@@ -432,14 +459,25 @@ def build_meta_and_customer(invoice):
     return [row, *_rule(gap_above=2.2 * mm, gap_below=1.6 * mm)]
 
 
+def any_item_has_hsn(invoice):
+    return any(has_val(item.hsn_code) for item in invoice.items.all())
+
+
+def any_item_has_discount(invoice):
+    return any(Decimal(str(item.discount_percent or 0)) != 0 for item in invoice.items.all())
+
+
 def build_items_table(invoice, show_hsn=True, show_discount=False, show_mrp=False, show_basic=False):
     """Item lines. Default column set is the lean, recommended one:
-    Sl | Item Description | HSN | Qty | Rate | GST | Amount.
-    MRP, pre-tax Basic Price, and Discount are opt-in extras controlled by
-    Settings — most kirana bills don't need them and they just add clutter."""
+    Sl | Item Description | Qty | Rate | GST | Amount.
+    HSN, MRP, pre-tax Basic Price, and Discount are opt-in extras, and are
+    only actually shown when the caller has already confirmed there is real
+    data to display (e.g. HSN is only requested when at least one item
+    carries an HSN code, discount only when at least one item has a
+    non-zero discount)."""
     items = list(invoice.items.all())
 
-    # (key, header, ratio, align, cell_fn) — cell_fn(item) -> Paragraph
+    # (key, header, ratio, align, cell_fn) — cell_fn(item, idx) -> Paragraph
     def cell(text, size=7.5, align=TA_RIGHT, color=INK, bold=False, leading=None):
         return para(text, size=size, align=align, color=color, bold=bold, leading=leading)
 
@@ -449,7 +487,7 @@ def build_items_table(invoice, show_hsn=True, show_discount=False, show_mrp=Fals
                      lambda i, idx: cell(_fmt_value(i.product_name), align=TA_LEFT)))
     if show_hsn:
         columns.append(("hsn", "HSN", 13, TA_CENTER,
-                         lambda i, idx: cell(_fmt_value(i.hsn_code), size=7.3, align=TA_CENTER, color=SUBTLE)))
+                         lambda i, idx: cell(_fmt_value(i.hsn_code, ""), size=7.3, align=TA_CENTER, color=SUBTLE)))
     if show_mrp:
         columns.append(("mrp", "MRP/pc", 16, TA_RIGHT,
                          lambda i, idx: cell(currency(i.mrp or i.unit_price), size=7.3, color=SUBTLE)))
@@ -463,9 +501,11 @@ def build_items_table(invoice, show_hsn=True, show_discount=False, show_mrp=Fals
     if show_basic:
         columns.append(("basic", "Basic", 18, TA_RIGHT,
                          lambda i, idx: cell(currency(_basic_price(i)))))
-    columns.append(("gst", "GST", 18, TA_RIGHT,
-                     lambda i, idx: cell(f"{currency(i.gst_amount or 0)}<br/>({Decimal(str(i.gst_percent or 0))}%)",
-                                          size=6.8, leading=8.3, color=SUBTLE)))
+    # GST column shows the RATE, not the amount — keeps rows compact and
+    # readable (the rupee value is already reflected in the line Amount and
+    # is broken out fully in the GST Summary below).
+    columns.append(("gst", "GST", 13, TA_RIGHT,
+                     lambda i, idx: cell(f"{Decimal(str(i.gst_percent or 0))}%", size=7.4, color=INK)))
     columns.append(("total", "Amount", 20, TA_RIGHT,
                      lambda i, idx: cell(currency(i.total), size=7.7, bold=True)))
 
@@ -509,62 +549,77 @@ def _basic_price(item):
     return (rate * qty - disc_amt).quantize(Decimal("0.01"))
 
 
-def any_item_has_hsn(invoice):
-    return any(_fmt_value(item.hsn_code) != "—" for item in invoice.items.all())
-
-
-def build_gst_summary(invoice):
-    """A simplified per-HSN GST breakup: HSN, taxable amount, combined GST
-    rate, CGST, SGST, and the total tax for that group. IGST is dropped —
-    this template targets local, intrastate kirana billing where IGST is
-    always zero and only added clutter."""
+def build_gst_summary(invoice, show_hsn=False):
+    """GST Summary grouped by GST rate (and by HSN too, only when the item
+    table itself is already showing an HSN column with real data). Rows with
+    no taxable value are never produced, and the table is entirely omitted
+    by the caller when there is nothing meaningful to show."""
     gst_groups = defaultdict(lambda: {"taxable": Decimal("0"), "gst": Decimal("0")})
     for item in invoice.items.all():
-        hsn = item.hsn_code or "—"
         gst_pct = Decimal(str(item.gst_percent or 0))
         gst_amt = Decimal(str(item.gst_amount or 0))
         taxable = _basic_price(item)
-        key = (hsn, gst_pct)
+        key = (item.hsn_code or "") if show_hsn else None
+        key = (key, gst_pct)
         gst_groups[key]["taxable"] += taxable
         gst_groups[key]["gst"] += gst_amt
 
-    rows = [[
-        para("HSN Code", size=7.0, bold=True, align=TA_CENTER, color=INK),
-        para("Taxable Amt", size=7.0, bold=True, align=TA_RIGHT, color=INK),
+    header_cells = []
+    if show_hsn:
+        header_cells.append(para("HSN Code", size=7.0, bold=True, align=TA_CENTER, color=INK))
+    header_cells += [
         para("GST Rate", size=7.0, bold=True, align=TA_CENTER, color=INK),
+        para("Taxable Amt", size=7.0, bold=True, align=TA_RIGHT, color=INK),
         para("CGST", size=7.0, bold=True, align=TA_RIGHT, color=INK),
         para("SGST", size=7.0, bold=True, align=TA_RIGHT, color=INK),
-        para("Total Tax", size=7.0, bold=True, align=TA_RIGHT, color=INK),
-    ]]
+        para("Total GST", size=7.0, bold=True, align=TA_RIGHT, color=INK),
+    ]
+    rows = [header_cells]
 
     total_taxable = total_cgst = total_sgst = total_tax = Decimal("0")
-    for (hsn, rate_pct), group in sorted(gst_groups.items(), key=lambda x: (x[0][0], x[0][1])):
+    for key, group in sorted(gst_groups.items(), key=lambda x: (x[0][0] or "", x[0][1])):
+        hsn, rate_pct = key
+        if group["gst"] == 0:
+            # A 0%-GST line (or group) contributes nothing to CGST/SGST —
+            # showing it here would just be a row of zeros, so skip it.
+            # (Non-GST bills end up with no groups at all, so the whole
+            # summary is omitted below.)
+            continue
         cgst = (group["gst"] / 2).quantize(Decimal("0.01"))
         sgst = group["gst"] - cgst
         total_taxable += group["taxable"]
         total_cgst += cgst
         total_sgst += sgst
         total_tax += group["gst"]
-        rows.append([
-            para(_fmt_value(hsn), size=7.2, align=TA_CENTER, color=SUBTLE),
-            para(currency(group["taxable"]), size=7.2, align=TA_RIGHT, color=INK),
+        row = []
+        if show_hsn:
+            row.append(para(_fmt_value(hsn, ""), size=7.2, align=TA_CENTER, color=SUBTLE))
+        row += [
             para(f"{rate_pct}%", size=7.2, align=TA_CENTER, color=SUBTLE),
+            para(currency(group["taxable"]), size=7.2, align=TA_RIGHT, color=INK),
             para(currency(cgst), size=7.2, align=TA_RIGHT, color=INK),
             para(currency(sgst), size=7.2, align=TA_RIGHT, color=INK),
             para(currency(group["gst"]), size=7.2, align=TA_RIGHT, bold=True, color=INK),
-        ])
+        ]
+        rows.append(row)
+
+    if len(rows) <= 1:
+        return None  # nothing meaningful to show
 
     if len(rows) > 2:
-        rows.append([
+        total_row = []
+        if show_hsn:
+            total_row.append(para("", size=7.3))
+        total_row += [
             para("Total", size=7.3, bold=True, align=TA_CENTER, color=INK),
             para(currency(total_taxable), size=7.3, bold=True, align=TA_RIGHT, color=INK),
-            para("", size=7.3),
             para(currency(total_cgst), size=7.3, bold=True, align=TA_RIGHT, color=INK),
             para(currency(total_sgst), size=7.3, bold=True, align=TA_RIGHT, color=INK),
             para(currency(total_tax), size=7.3, bold=True, align=TA_RIGHT, color=INK),
-        ])
+        ]
+        rows.append(total_row)
 
-    col_ratios = [20, 30, 16, 22, 22, 24]
+    col_ratios = ([20] if show_hsn else []) + [16, 30, 22, 22, 24]
     scale = BODY_W / (sum(col_ratios) * mm)
     col_widths = [c * mm * scale for c in col_ratios]
 
@@ -610,13 +665,19 @@ def build_totals(invoice, show_discount=True, show_round_off=True):
     def val(text, align=TA_RIGHT):
         return para(text, size=7.5, color=INK, align=align)
 
+    # Payment Summary: Payment Status + Paid always shown; Balance Due and
+    # Change Returned only appear when they are actually non-zero.
+    pay_rows = []
+    if has_val(payment_status):
+        pay_rows.append([lbl("Payment Status"), val(payment_status, TA_LEFT)])
+    pay_rows.append([lbl("Paid Amount"), val(currency(paid_amount))])
+    if balance_due > 0:
+        pay_rows.append([lbl("Balance Due"), val(currency(balance_due))])
+    if change_returned > 0:
+        pay_rows.append([lbl("Change Returned"), val(currency(change_returned))])
+
     payment_summary_tbl = _tbl(
-        [
-            [lbl("Payment Status"), val(payment_status, TA_LEFT)],
-            [lbl("Paid Amount"), val(currency(paid_amount))],
-            [lbl("Balance Due"), val(currency(balance_due))],
-            [lbl("Change Returned"), val(currency(change_returned))],
-        ],
+        pay_rows,
         [34 * mm, 42 * mm],
         [
             ("LINEBELOW", (0, 0), (-1, -2), 0.35, LINE),
@@ -648,34 +709,37 @@ def build_totals(invoice, show_discount=True, show_round_off=True):
     )
 
     # Rows are conditional: a zero discount, zero round-off, or non-applicable
-    # IGST no longer earn a line on the bill — each optional row is only
+    # tax line no longer earns a line on the bill — each optional row is only
     # added when it's actually non-zero (or explicitly enabled).
     right_rows = [[lbl("Sub Total"), val(currency(subtotal))]]
     if show_discount and discount != 0:
         right_rows.append([lbl("Discount"), val(currency(discount))])
     right_rows.append([lbl("Taxable Amount"), val(currency(taxable_amt))])
-    right_rows.append([lbl("CGST"), val(currency(total_cgst))])
-    right_rows.append([lbl("SGST"), val(currency(total_sgst))])
+    if total_cgst != 0:
+        right_rows.append([lbl("CGST"), val(currency(total_cgst))])
+    if total_sgst != 0:
+        right_rows.append([lbl("SGST"), val(currency(total_sgst))])
     if show_round_off and round_off != 0:
         right_rows.append([lbl("Round Off"), val(currency(round_off))])
     grand_row_index = len(right_rows)
     right_rows.append([
-        para("GRAND TOTAL", size=12.5, bold=True, color=INK),
-        para(f"<b>{currency(grand)}</b>", size=12.5, align=TA_RIGHT, color=INK),
+        para("GRAND TOTAL", size=14, bold=True, color=INK),
+        para(f"<b>{currency(grand)}</b>", size=14, align=TA_RIGHT, color=INK),
     ])
 
-    # Grand Total is set off purely with typography and one strong rule
-    # above it — no shaded box, per the clean-minimal direction.
+    # Grand Total is the single strongest element on the page — largest
+    # type, boldest weight, and a heavy double rule above it. No shaded
+    # box, per the clean black-and-white direction.
     right_box = _tbl(
         right_rows,
         [40 * mm, 44 * mm],
         [
             ("LINEBELOW", (0, 0), (-1, grand_row_index - 1), 0.35, LINE),
-            ("LINEABOVE", (0, grand_row_index), (-1, grand_row_index), 1.3, LINE_STRONG),
+            ("LINEABOVE", (0, grand_row_index), (-1, grand_row_index), 1.8, LINE_STRONG),
             ("TOPPADDING", (0, 0), (-1, -1), 1.8),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 1.8),
-            ("TOPPADDING", (0, grand_row_index), (-1, grand_row_index), 3.2),
-            ("BOTTOMPADDING", (0, grand_row_index), (-1, grand_row_index), 1.0),
+            ("TOPPADDING", (0, grand_row_index), (-1, grand_row_index), 3.6),
+            ("BOTTOMPADDING", (0, grand_row_index), (-1, grand_row_index), 1.4),
             ("LEFTPADDING", (0, 0), (-1, -1), 3),
             ("RIGHTPADDING", (0, 0), (-1, -1), 0),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
@@ -699,90 +763,106 @@ def build_payment_section(shop_name, bank_name, bank_branch, bank_account, bank_
                            grand, invoice_number=None, show_qr=True, show_bank=True):
     """Bank details on the left, QR on the right — separated by a single
     vertical hairline, no boxes around either block. The account number is
-    masked (only the last 4 digits shown) since this is a customer-facing
-    document."""
+    masked (only the last 4 digits shown). Returns None when there is
+    nothing to show (bank details disabled/absent AND no UPI/QR), so the
+    caller can skip the section — and its heading and surrounding rule —
+    entirely rather than print an empty panel."""
     bank_rows = []
     if show_bank:
-        if bank_name:
+        if has_val(bank_name):
             bank_rows.append([para("Bank Name", size=7.0, color=SUBTLE), para(bank_name, size=7.5, color=INK)])
-        if bank_branch:
+        if has_val(bank_branch):
             bank_rows.append([para("Branch", size=7.0, color=SUBTLE), para(bank_branch, size=7.5, color=INK)])
-        if bank_account:
+        if has_val(bank_account):
             bank_rows.append([para("A/C No.", size=7.0, color=SUBTLE),
                                para(mask_account_number(bank_account), size=7.5, color=INK)])
-        if bank_ifsc:
+        if has_val(bank_ifsc):
             bank_rows.append([para("IFSC", size=7.0, color=SUBTLE), para(bank_ifsc, size=7.5, color=INK)])
-    if upi_id:
+    if has_val(upi_id):
         bank_rows.append([para("UPI ID", size=7.0, color=SUBTLE), para(upi_id, size=7.5, bold=True, color=INK)])
 
-    bank_body = _tbl(
-        bank_rows,
-        [30 * mm, BODY_W * 0.55 - 30 * mm],
-        [
-            ("LINEBELOW", (0, 0), (-1, -2), 0.35, LINE),
-            ("TOPPADDING", (0, 0), (-1, -1), 1.6),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.6),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
-        ],
-    ) if bank_rows else para("No bank details on record.", size=7.5, color=FAINT)
+    show_qr = show_qr and has_val(upi_id)
+    if not bank_rows and not show_qr:
+        return None
 
-    bank_col = _tbl(
-        [[_label_block("Bank / Payment Details", BODY_W * 0.55)], [bank_body]],
-        [BODY_W * 0.55],
-        [
-            ("TOPPADDING", (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ],
-    )
-
+    has_bank_col = bool(bank_rows)
     qr_img = make_upi_qr(upi_id, shop_name, grand, size_mm=24, invoice_number=invoice_number) if show_qr else None
 
-    qr_rows = [[_label("Scan to Pay")]]
-    qr_rows.append([qr_img] if qr_img else [para("QR unavailable", size=7.3, align=TA_CENTER, color=FAINT)])
-    qr_rows.append([para(_fmt_value(upi_id), size=7.1, align=TA_CENTER, color=SUBTLE)])
-    qr_col = _tbl(
-        qr_rows,
-        [BODY_W * 0.45],
-        [
-            ("TOPPADDING", (0, 0), (-1, -1), 1.3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.3),
-            ("LEFTPADDING", (0, 0), (-1, -1), 6),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ],
-    )
+    if has_bank_col and qr_img:
+        bank_w, qr_w = BODY_W * 0.55, BODY_W * 0.45
+    elif has_bank_col:
+        bank_w, qr_w = BODY_W, 0
+    else:
+        bank_w, qr_w = 0, BODY_W
 
-    return _tbl(
-        [[bank_col, qr_col]],
-        [BODY_W * 0.55, BODY_W * 0.45],
-        [
-            ("LINEBEFORE", (1, 0), (1, -1), 0.4, LINE),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("TOPPADDING", (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ],
-    )
+    parts, widths, style_cmds = [], [], [
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+    ]
+
+    if has_bank_col:
+        bank_body = _tbl(
+            bank_rows,
+            [30 * mm, bank_w - 30 * mm],
+            [
+                ("LINEBELOW", (0, 0), (-1, -2), 0.35, LINE),
+                ("TOPPADDING", (0, 0), (-1, -1), 1.6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 1.6),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+            ],
+        )
+        bank_col = _tbl(
+            [[_label_block("Payment Details", bank_w)], [bank_body]],
+            [bank_w],
+            [
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6 if qr_img else 0),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ],
+        )
+        parts.append(bank_col)
+        widths.append(bank_w)
+
+    if qr_img:
+        qr_col = _tbl(
+            [
+                [_label("Scan to Pay")],
+                [qr_img],
+                [para(_fmt_value(upi_id), size=7.1, align=TA_CENTER, color=SUBTLE)],
+            ],
+            [qr_w],
+            [
+                ("TOPPADDING", (0, 0), (-1, -1), 1.3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 1.3),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6 if has_bank_col else 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ],
+        )
+        parts.append(qr_col)
+        widths.append(qr_w)
+
+    if len(parts) == 2:
+        style_cmds.append(("LINEBEFORE", (1, 0), (1, -1), 0.4, LINE))
+
+    return _tbl([parts], widths, style_cmds)
 
 
 def build_footer(terms="", footer_text="", document_title="Tax Invoice", show_declaration=True):
-    declaration = (
-        "Declaration: I / We hereby certify that the particulars given above are true and correct and that the "
-        "goods/services described above have been supplied as stated."
-    )
+    declaration = "Declaration: The above particulars are true and correct."
     signature_row = _tbl(
         [[
-            para("Customer Signature", size=7.4, align=TA_LEFT, color=SUBTLE),
-            Spacer(1, 5 * mm),
+            para("", size=7.4),
             para("Authorized Signatory", size=7.4, align=TA_RIGHT, color=SUBTLE),
         ]],
-        [BODY_W * 0.34, BODY_W * 0.32, BODY_W * 0.34],
+        [BODY_W * 0.5, BODY_W * 0.5],
         [
             ("TOPPADDING", (0, 0), (-1, -1), 3),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
@@ -792,14 +872,16 @@ def build_footer(terms="", footer_text="", document_title="Tax Invoice", show_de
         ],
     )
     content = [*_rule(color=LINE_STRONG, weight=0.9, gap_below=1.6 * mm)]
-    if show_declaration:
+    if show_declaration and has_val(terms or declaration):
         content.append(para(terms or declaration, size=6.9, color=SUBTLE))
     content.append(signature_row)
     content.extend(_rule(gap_above=1.2 * mm, gap_below=1.2 * mm))
     content.append(para(
-        footer_text or f"This is a computer generated {document_title.lower()} and does not require a signature. "
-        "Thank you for shopping with us!",
+        footer_text or f"Thank you for shopping with us! Visit again.",
         size=7.2, align=TA_CENTER, color=SUBTLE,
+    ))
+    content.append(para(
+        f"Computer generated {document_title.lower()}.", size=6.2, align=TA_CENTER, color=FAINT,
     ))
     return content
 
@@ -830,44 +912,55 @@ def generate_invoice_pdf(invoice):
     grand = Decimal(str(invoice.grand_total or 0))
     inv_date = _date_text(getattr(invoice, "created_at", None) or getattr(invoice, "date", None))
 
-    # HSN summary only earns its place on the page when items actually carry
-    # an HSN code — otherwise it is a table of "—" rows and pure clutter.
-    show_hsn_summary = value("hsn_summary_on_invoice", "true") == "true" and any_item_has_hsn(invoice)
+    # Columns/sections only earn their place on the page when there is real
+    # data behind them — settings enable a feature, but an empty result set
+    # (no HSN codes, no discounts applied) still hides the column/section.
+    show_hsn = _flag(settings, "show_hsn_col", True) and any_item_has_hsn(invoice)
+    show_discount_col = _flag(settings, "show_discount_col", False) and any_item_has_discount(invoice)
+    show_hsn_summary = _flag(settings, "hsn_summary_on_invoice", True)
+
+    gst_summary_parts = build_gst_summary(invoice, show_hsn=show_hsn) if show_hsn_summary else None
+
+    payment_section = build_payment_section(
+        shop_name, bank_name, bank_branch, bank_account, bank_ifsc, upi_id, grand,
+        invoice.invoice_number,
+        _flag(settings, "show_upi_qr_on_invoice", True) and _flag(settings, "upi_qr_enabled", True),
+        _flag(settings, "show_bank_details", True),
+    )
 
     story = [
         *build_header(
             shop_name, shop_address, shop_phone, shop_email, shop_gstin, shop_pan, upi_id, grand,
             document_title, value("gst_reg_type", "regular"),
             invoice_number=invoice.invoice_number, invoice_date=inv_date,
+            show_pan=_flag(settings, "show_pan", True),
         ),
         SECTION_GAP,
         *build_meta_and_customer(invoice),
         build_items_table(
             invoice,
-            show_hsn=value("show_hsn_col", "true") == "true",
-            show_discount=value("show_discount_col", "false") == "true",
-            show_mrp=value("show_mrp_col", "false") == "true",
-            show_basic=value("show_basic_price_col", "false") == "true",
+            show_hsn=show_hsn,
+            show_discount=show_discount_col,
+            show_mrp=_flag(settings, "show_mrp_col", False),
+            show_basic=_flag(settings, "show_basic_price_col", False),
         ),
         SECTION_GAP,
-        *(build_gst_summary(invoice) + [SECTION_GAP] if show_hsn_summary else []),
-        build_totals(
-            invoice,
-            show_discount=value("show_discount_total", "true") == "true",
-            show_round_off=value("show_round_off", "true") == "true",
-        ),
-        SECTION_GAP,
-        build_payment_section(
-            shop_name, bank_name, bank_branch, bank_account, bank_ifsc, upi_id, grand,
-            invoice.invoice_number,
-            value("show_upi_qr_on_invoice", "true") == "true" and value("upi_qr_enabled", "true") == "true",
-            value("show_bank_details", "true") == "true",
-        ),
-        *build_footer(
-            value("invoice_terms"), value("invoice_footer"), document_title,
-            show_declaration=value("show_declaration", "true") == "true",
-        ),
     ]
+    if gst_summary_parts:
+        story.extend(gst_summary_parts)
+        story.append(SECTION_GAP)
+    story.append(build_totals(
+        invoice,
+        show_discount=_flag(settings, "show_discount_total", True),
+        show_round_off=_flag(settings, "show_round_off", True),
+    ))
+    if payment_section:
+        story.append(SECTION_GAP)
+        story.append(payment_section)
+    story.extend(build_footer(
+        value("invoice_terms"), value("invoice_footer"), document_title,
+        show_declaration=_flag(settings, "show_declaration", True),
+    ))
 
     doc.build(story, onFirstPage=_page_chrome, onLaterPages=_page_chrome)
     buffer.seek(0)
@@ -885,14 +978,27 @@ def generate_thermal_invoice_pdf(invoice):
     shop_gstin, upi_id = value("shop_gstin"), value("shop_upi_id")
     template = value("invoice_template", "gst_a4")
     document_title = "Bill of Supply" if template == "supply_a4" else "Tax Invoice"
-    show_declaration = value("show_declaration_thermal", "false") == "true"
-    show_signature = value("show_signature_thermal", "false") == "true"
+    show_declaration = _flag(settings, "show_declaration_thermal", False)
+    show_signature = _flag(settings, "show_signature_thermal", False)
 
-    show_qr = value("show_upi_qr_on_thermal", "true") == "true" and value("upi_qr_enabled", "true") == "true" and bool(upi_id)
+    show_qr = _flag(settings, "show_upi_qr_on_thermal", True) and _flag(settings, "upi_qr_enabled", True) and has_val(upi_id)
+    # Height is calculated from the actual content that will be printed —
+    # not a fixed A4-style page — so the receipt ends right after the
+    # footer instead of leaving a large blank tail.
     address_lines = len([l for l in (shop_address or "").split("\n") if l.strip()])
-    page_height = (128 + address_lines * 4 + len(invoice.items.all()) * 10 + (40 if show_qr else 0)
-                   + (8 if show_declaration else 0) + (7 if show_signature else 0)) * mm
-    page_height = max(120 * mm, page_height)
+    has_contact_line = bool(has_val(shop_phone) or has_val(shop_email))
+    has_gstin_line = has_val(shop_gstin)
+    page_height = (
+        72
+        + address_lines * 4
+        + (4 if has_contact_line else 0)
+        + (4 if has_gstin_line else 0)
+        + len(invoice.items.all()) * 9
+        + (42 if show_qr else 0)
+        + (10 if show_declaration else 0)
+        + (8 if show_signature else 0)
+    ) * mm
+    page_height = max(85 * mm, page_height)
     doc = SimpleDocTemplate(
         buffer,
         pagesize=portrait((80 * mm, page_height)),
@@ -922,7 +1028,7 @@ def generate_thermal_invoice_pdf(invoice):
                                  dash=(2, 1.4), spaceBefore=0, spaceAfter=0, hAlign="CENTER"))
         story.append(Spacer(1, gap_below))
 
-    # ── Masthead — text only, no logo ──
+    # ── Masthead — text only, no logo, centered ──
     story.append(para(f"<b>{shop_name.upper()}</b>", size=11.5, align=TA_CENTER, color=INK))
     story.append(para(
         "GST Registered Business" if value("gst_reg_type", "regular") == "regular" else "General / Kirana Store",
@@ -932,39 +1038,26 @@ def generate_thermal_invoice_pdf(invoice):
         if line.strip():
             story.append(para(line.strip(), size=6.4, align=TA_CENTER, color=SUBTLE))
     contact_bits = []
-    if shop_phone:
+    if has_val(shop_phone):
         contact_bits.append(f"Ph: {shop_phone}")
-    if shop_email:
+    if has_val(shop_email):
         contact_bits.append(shop_email)
     if contact_bits:
         story.append(para(" | ".join(contact_bits), size=6.4, align=TA_CENTER, color=SUBTLE))
-    if shop_gstin:
+    if has_val(shop_gstin):
         story.append(para(f"GSTIN: {shop_gstin}", size=6.4, align=TA_CENTER, color=INK))
     dashed_rule(gap_above=1.2 * mm)
 
     story.append(para(document_title.upper(), size=10.5, bold=True, align=TA_CENTER, color=INK))
-    story.append(Spacer(1, 0.8 * mm))
+    story.append(para(_fmt_value(invoice.invoice_number), size=7.2, bold=True, align=TA_CENTER, color=INK))
+    story.append(para(f"Date: {inv_date}", size=6.6, align=TA_CENTER, color=SUBTLE))
+    story.append(para(f"Payment: {(invoice.payment_method or 'cash').upper()}", size=6.6, align=TA_CENTER, color=SUBTLE))
+    dashed_rule()
 
-    meta_tbl = _tbl(
-        [
-            [para("Invoice No", size=6.3, color=SUBTLE), para(_fmt_value(invoice.invoice_number), size=6.3, bold=True, color=INK)],
-            [para("Date", size=6.3, color=SUBTLE), para(inv_date, size=6.3, color=INK)],
-            [para("Mode", size=6.3, color=SUBTLE), para((invoice.payment_method or "cash").upper(), size=6.3, color=INK)],
-        ],
-        [17 * mm, content_w - 17 * mm],
-        [
-            ("LINEBELOW", (0, 0), (-1, -2), 0.3, LINE),
-            ("TOPPADDING", (0, 0), (-1, -1), 1.2),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.2),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 1.5),
-        ],
-    )
-    story.append(meta_tbl)
-    story.append(para(
-        f"Customer: {_fmt_value(cust_name)}" + (f"  |  {_fmt_value(cust_phone)}" if cust_phone else ""),
-        size=6.4, color=SUBTLE,
-    ))
+    cust_line = f"Customer: {_fmt_value(cust_name, 'Walk-in Customer')}"
+    if has_val(cust_phone):
+        cust_line += f"  |  {cust_phone}"
+    story.append(para(cust_line, size=6.4, color=SUBTLE))
     dashed_rule()
 
     item_rows = [[
@@ -1002,11 +1095,12 @@ def generate_thermal_invoice_pdf(invoice):
     totals_rows = [[para("Sub Total", size=6.6, color=SUBTLE), para(currency(invoice.subtotal), size=6.6, align=TA_RIGHT, color=INK)]]
     if discount_amt != 0:
         totals_rows.append([para("Discount", size=6.6, color=SUBTLE), para(currency(discount_amt), size=6.6, align=TA_RIGHT, color=INK)])
-    totals_rows.append([para("GST", size=6.6, color=SUBTLE), para(currency(invoice.tax_amount), size=6.6, align=TA_RIGHT, color=INK)])
+    if Decimal(str(invoice.tax_amount or 0)) != 0:
+        totals_rows.append([para("GST", size=6.6, color=SUBTLE), para(currency(invoice.tax_amount), size=6.6, align=TA_RIGHT, color=INK)])
     if round_off_amt != 0:
         totals_rows.append([para("Round Off", size=6.6, color=SUBTLE), para(currency(round_off_amt), size=6.6, align=TA_RIGHT, color=INK)])
     grand_row_index = len(totals_rows)
-    totals_rows.append([para("GRAND TOTAL", size=10.5, bold=True, color=INK), para(f"<b>{currency(grand)}</b>", size=10.5, align=TA_RIGHT, color=INK)])
+    totals_rows.append([para("GRAND TOTAL", size=11, bold=True, color=INK), para(f"<b>{currency(grand)}</b>", size=11, align=TA_RIGHT, color=INK)])
 
     # Same box-free treatment as the A4 template: one heavy rule sets the
     # Grand Total apart, typography does the rest.
@@ -1015,10 +1109,10 @@ def generate_thermal_invoice_pdf(invoice):
         [35 * mm, 39 * mm],
         [
             ("LINEBELOW", (0, 0), (-1, grand_row_index - 1), 0.3, LINE),
-            ("LINEABOVE", (0, grand_row_index), (-1, grand_row_index), 1.1, LINE_STRONG),
+            ("LINEABOVE", (0, grand_row_index), (-1, grand_row_index), 1.3, LINE_STRONG),
             ("TOPPADDING", (0, 0), (-1, -1), 1.2),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 1.2),
-            ("TOPPADDING", (0, grand_row_index), (-1, grand_row_index), 2.4),
+            ("TOPPADDING", (0, grand_row_index), (-1, grand_row_index), 2.6),
             ("LEFTPADDING", (0, 0), (-1, -1), 0),
             ("RIGHTPADDING", (0, 0), (-1, -1), 0),
         ],
@@ -1029,15 +1123,15 @@ def generate_thermal_invoice_pdf(invoice):
     story.append(para(f"<i>{amount_in_words(grand)}</i>", size=6.2, color=SUBTLE))
     story.append(Spacer(1, 0.8 * mm))
 
-    # Payment status compressed into a single line rather than a full block —
-    # skip Balance Due / Change entirely when both are zero.
+    # Payment status compressed into a single line — Balance Due / Change
+    # only appear when they are actually non-zero.
     pay_bits = [f"Paid: {currency(paid_amount)}"]
     if balance_due != 0:
         pay_bits.append(f"Balance: {currency(balance_due)}")
     if change_returned != 0:
         pay_bits.append(f"Change: {currency(change_returned)}")
     story.append(para(
-        f"<b>{(invoice.payment_status or 'PAID').upper()}</b> &nbsp;·&nbsp; " + " &nbsp;|&nbsp; ".join(pay_bits),
+        f"<b>{(invoice.payment_status or 'PAID').upper()}</b> &nbsp;\u00b7&nbsp; " + " &nbsp;|&nbsp; ".join(pay_bits),
         size=6.3, align=TA_CENTER, color=INK,
     ))
 
@@ -1064,14 +1158,13 @@ def generate_thermal_invoice_pdf(invoice):
     dashed_rule(gap_above=1.2 * mm, gap_below=1.0 * mm)
     if show_declaration:
         story.append(para(
-            value("invoice_terms") or
-            "Declaration: I / We certify that the particulars given above are true and correct.",
+            value("invoice_terms") or "Declaration: The above particulars are true and correct.",
             size=6.0, color=SUBTLE,
         ))
         story.append(Spacer(1, 1.2 * mm))
     if show_signature:
         story.append(_tbl(
-            [[para("Customer Sign.", size=6.1, color=SUBTLE), para("Authorized Sign.", size=6.1, align=TA_RIGHT, color=SUBTLE)]],
+            [[para("", size=6.1), para("Authorized Sign.", size=6.1, align=TA_RIGHT, color=SUBTLE)]],
             [content_w / 2, content_w / 2],
             [
                 ("LINEABOVE", (0, 0), (-1, 0), 0.4, LINE),
@@ -1082,7 +1175,7 @@ def generate_thermal_invoice_pdf(invoice):
         ))
         story.append(Spacer(1, 1.0 * mm))
     story.append(para(
-        value("receipt_footer") or value("invoice_footer") or "Thank you, visit again!",
+        value("receipt_footer") or value("invoice_footer") or "Thank you for shopping with us!",
         size=6.6, align=TA_CENTER, color=SUBTLE,
     ))
     story.append(para("Computer generated invoice.", size=5.6, align=TA_CENTER, color=FAINT))
