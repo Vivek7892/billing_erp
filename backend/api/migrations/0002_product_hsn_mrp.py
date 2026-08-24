@@ -9,24 +9,20 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='product',
-            name='hsn_code',
-            field=models.CharField(blank=True, max_length=20),
+        migrations.RunSQL(
+            sql="ALTER TABLE api_product ADD COLUMN IF NOT EXISTS hsn_code varchar(20) NOT NULL DEFAULT '';",
+            reverse_sql="ALTER TABLE api_product DROP COLUMN IF EXISTS hsn_code;",
         ),
-        migrations.AddField(
-            model_name='product',
-            name='mrp',
-            field=models.DecimalField(decimal_places=2, default=0, max_digits=10, validators=[django.core.validators.MinValueValidator(0)]),
+        migrations.RunSQL(
+            sql="ALTER TABLE api_product ADD COLUMN IF NOT EXISTS mrp numeric(10,2) NOT NULL DEFAULT 0;",
+            reverse_sql="ALTER TABLE api_product DROP COLUMN IF EXISTS mrp;",
         ),
-        migrations.AddField(
-            model_name='invoiceitem',
-            name='hsn_code',
-            field=models.CharField(blank=True, max_length=20),
+        migrations.RunSQL(
+            sql="ALTER TABLE api_invoiceitem ADD COLUMN IF NOT EXISTS hsn_code varchar(20) NOT NULL DEFAULT '';",
+            reverse_sql="ALTER TABLE api_invoiceitem DROP COLUMN IF EXISTS hsn_code;",
         ),
-        migrations.AddField(
-            model_name='invoiceitem',
-            name='mrp',
-            field=models.DecimalField(decimal_places=2, default=0, max_digits=10),
+        migrations.RunSQL(
+            sql="ALTER TABLE api_invoiceitem ADD COLUMN IF NOT EXISTS mrp numeric(10,2) NOT NULL DEFAULT 0;",
+            reverse_sql="ALTER TABLE api_invoiceitem DROP COLUMN IF EXISTS mrp;",
         ),
     ]
