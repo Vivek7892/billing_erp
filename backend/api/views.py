@@ -2,6 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.http import HttpResponse
@@ -24,7 +25,13 @@ from .models import *
 from .serializers import *
 from .permissions import IsAdmin, IsAdminOrReadOnly, IsCashierOrAdmin
 from .supabase_storage import SupabaseStorageError, upload_shop_logo
+from .pagination import NoPagination
 from django_filters.rest_framework import DjangoFilterBackend
+
+
+class LoginRateThrottle(AnonRateThrottle):
+    rate = '10/min'
+    scope = 'login'
 
 
 def _report_value(value):
@@ -619,6 +626,7 @@ def _export_report_pdf(title, headers, rows, filename, summary_rows=None, reques
 
 class LoginView(APIView):
     permission_classes = []
+    throttle_classes = [LoginRateThrottle]
 
     def post(self, request):
         username = request.data.get('username')
@@ -636,6 +644,7 @@ class LoginView(APIView):
 
 class SuperAdminLoginView(APIView):
     permission_classes = []
+    throttle_classes = [LoginRateThrottle]
 
     def post(self, request):
         username = request.data.get('username')
@@ -738,6 +747,7 @@ class SupplierViewSet(viewsets.ModelViewSet):
 class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
     permission_classes = [IsAdminOrReadOnly]
+    pagination_class = NoPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category', 'status', 'supplier']
     search_fields = ['name', 'sku', 'barcode', 'brand']
@@ -1167,9 +1177,11 @@ class SalesReportView(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request):
+        biz = request.user.business
         start = request.query_params.get('start_date', str(timezone.now().date().replace(day=1)))
         end = request.query_params.get('end_date', str(timezone.now().date()))
         invoices = Invoice.objects.filter(
+            business=biz,
             created_at__date__gte=start,
             created_at__date__lte=end,
             status='completed'
@@ -1204,9 +1216,11 @@ class ProductReportView(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request):
+        biz = request.user.business
         start = request.query_params.get('start_date', str(timezone.now().date().replace(day=1)))
         end = request.query_params.get('end_date', str(timezone.now().date()))
         data = InvoiceItem.objects.filter(
+            invoice__business=biz,
             invoice__created_at__date__gte=start,
             invoice__created_at__date__lte=end,
             invoice__status='completed'
@@ -1229,9 +1243,11 @@ class ProfitReportView(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request):
+        biz = request.user.business
         start = request.query_params.get('start_date', str(timezone.now().date().replace(day=1)))
         end = request.query_params.get('end_date', str(timezone.now().date()))
         items = InvoiceItem.objects.filter(
+            invoice__business=biz,
             invoice__created_at__date__gte=start,
             invoice__created_at__date__lte=end,
             invoice__status='completed'
@@ -1274,9 +1290,11 @@ class GSTReportView(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request):
+        biz = request.user.business
         start = request.query_params.get('start_date', str(timezone.now().date().replace(day=1)))
         end = request.query_params.get('end_date', str(timezone.now().date()))
         data = InvoiceItem.objects.filter(
+            invoice__business=biz,
             invoice__created_at__date__gte=start,
             invoice__created_at__date__lte=end,
             invoice__status='completed'
@@ -1285,6 +1303,7 @@ class GSTReportView(APIView):
             gst_collected=Sum('gst_amount'),
         ).order_by('gst_percent')
         total_gst = Invoice.objects.filter(
+            business=biz,
             created_at__date__gte=start,
             created_at__date__lte=end,
             status='completed'
@@ -1305,10 +1324,11 @@ class CustomerCreditReportView(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request):
-        customers = Customer.objects.filter(outstanding_amount__gt=0).values(
+        biz = request.user.business
+        customers = Customer.objects.filter(business=biz, outstanding_amount__gt=0).values(
             'id', 'name', 'mobile', 'outstanding_amount', 'credit_limit'
         )
-        total = Customer.objects.aggregate(total=Sum('outstanding_amount'))['total'] or 0
+        total = Customer.objects.filter(business=biz).aggregate(total=Sum('outstanding_amount'))['total'] or 0
         report_format = request.query_params.get('export')
         if report_format in ['pdf', 'xlsx']:
             headers = ['Customer', 'Mobile', 'Outstanding', 'Credit Limit']
@@ -1325,9 +1345,11 @@ class PaymentReportView(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request):
+        biz = request.user.business
         start = request.query_params.get('start_date', str(timezone.now().date().replace(day=1)))
         end = request.query_params.get('end_date', str(timezone.now().date()))
         data = Payment.objects.filter(
+            invoice__business=biz,
             invoice__created_at__date__gte=start,
             invoice__created_at__date__lte=end,
             invoice__status='completed',
@@ -1397,9 +1419,11 @@ class ExpenseReportView(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request):
+        biz = request.user.business
         start = request.query_params.get('start_date', str(timezone.now().date().replace(day=1)))
         end = request.query_params.get('end_date', str(timezone.now().date()))
         expenses = Expense.objects.filter(
+            business=biz,
             expense_date__gte=start,
             expense_date__lte=end,
         ).select_related('category').order_by('-expense_date')
@@ -1863,3 +1887,141 @@ class StockImportView(APIView):
                 )
                 imported += 1
         return Response({'status': 'updated', 'imported': imported, 'rows': len(prepared)})
+
+
+class CustomerPaymentViewSet(viewsets.ModelViewSet):
+    serializer_class = CustomerPaymentSerializer
+    permission_classes = [IsCashierOrAdmin]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['customer', 'method']
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        return CustomerPayment.objects.select_related('customer').filter(
+            business=self.request.user.business
+        )
+
+    def perform_create(self, serializer):
+        from django.db import transaction
+        with transaction.atomic():
+            payment = serializer.save(
+                business=self.request.user.business,
+                created_by=self.request.user,
+            )
+            # Reduce customer outstanding
+            customer = payment.customer
+            customer.outstanding_amount = max(
+                Decimal('0'), customer.outstanding_amount - payment.amount
+            )
+            customer.save(update_fields=['outstanding_amount'])
+
+
+class PurchaseReturnViewSet(viewsets.ModelViewSet):
+    serializer_class = PurchaseReturnSerializer
+    permission_classes = [IsCashierOrAdmin]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['purchase']
+    search_fields = ['return_number', 'reason']
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        return PurchaseReturn.objects.select_related('purchase').prefetch_related('items').filter(
+            business=self.request.user.business
+        )
+
+    def create(self, request, *args, **kwargs):
+        from django.db import transaction
+        purchase_id = request.data.get('purchase')
+        reason = request.data.get('reason', '')
+        items_data = request.data.get('items', [])
+
+        try:
+            purchase = Purchase.objects.prefetch_related('items__product').get(
+                pk=purchase_id, business=request.user.business
+            )
+        except Purchase.DoesNotExist:
+            return Response({'detail': 'Purchase not found.'}, status=404)
+
+        if not items_data:
+            return Response({'detail': 'Select at least one item to return.'}, status=400)
+
+        with transaction.atomic():
+            last = PurchaseReturn.objects.filter(business=request.user.business).order_by('-id').first()
+            seq = (last.id + 1) if last else 1
+            return_number = f"PRET-{seq:04d}"
+
+            debit_total = Decimal('0')
+            return_obj = PurchaseReturn.objects.create(
+                business=request.user.business,
+                purchase=purchase,
+                return_number=return_number,
+                reason=reason,
+                created_by=request.user,
+            )
+
+            for rd in items_data:
+                try:
+                    p_item = PurchaseItem.objects.select_related('product').get(
+                        pk=rd['purchase_item_id'], purchase=purchase
+                    )
+                except (PurchaseItem.DoesNotExist, KeyError):
+                    return Response({'detail': f'Invalid item id {rd.get("purchase_item_id")}.'}, status=400)
+
+                ret_qty = Decimal(str(rd.get('quantity', p_item.quantity)))
+                if ret_qty <= 0 or ret_qty > p_item.quantity:
+                    return Response({'detail': f'Invalid return qty for {p_item.product.name}.'}, status=400)
+
+                line_total = (p_item.total / p_item.quantity * ret_qty).quantize(Decimal('0.01'))
+                debit_total += line_total
+
+                PurchaseReturnItem.objects.create(
+                    purchase_return=return_obj,
+                    purchase_item=p_item,
+                    product=p_item.product,
+                    product_name=p_item.product.name,
+                    quantity=ret_qty,
+                    purchase_price=p_item.purchase_price,
+                    total=line_total,
+                )
+
+                # Reduce stock
+                if p_item.product:
+                    before = p_item.product.current_stock
+                    p_item.product.current_stock = max(Decimal('0'), p_item.product.current_stock - ret_qty)
+                    p_item.product.save()
+                    InventoryTransaction.objects.create(
+                        business=request.user.business,
+                        product=p_item.product,
+                        transaction_type='stock_out',
+                        quantity=-ret_qty,
+                        before_stock=before,
+                        after_stock=p_item.product.current_stock,
+                        reference=return_number,
+                        created_by=request.user,
+                    )
+
+            return_obj.debit_amount = debit_total
+            return_obj.save()
+
+            # Reduce supplier outstanding
+            if purchase.supplier and debit_total > 0:
+                purchase.supplier.outstanding_amount = max(
+                    Decimal('0'), purchase.supplier.outstanding_amount - debit_total
+                )
+                purchase.supplier.save(update_fields=['outstanding_amount'])
+
+        return Response(PurchaseReturnSerializer(return_obj).data, status=201)
+
+
+class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = AuditLogSerializer
+    permission_classes = [IsAdmin]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['module', 'action', 'result']
+    search_fields = ['action', 'entity', 'entity_id']
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        return AuditLog.objects.select_related('user').filter(
+            business=self.request.user.business
+        )

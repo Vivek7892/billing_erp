@@ -16,6 +16,10 @@ router.register('settings', views.SettingViewSet, basename='setting')
 router.register('expenses', views.ExpenseViewSet, basename='expense')
 router.register('expense-categories', views.ExpenseCategoryViewSet, basename='expense-category')
 router.register('sales-returns', views.SalesReturnViewSet, basename='sales-return')
+router.register('purchase-returns', views.PurchaseReturnViewSet, basename='purchase-return')
+router.register('customer-payments', views.CustomerPaymentViewSet, basename='customer-payment')
+router.register('supplier-payments', views.SupplierPaymentViewSet, basename='supplier-payment')
+router.register('audit-logs', views.AuditLogViewSet, basename='audit-log')
 
 urlpatterns = [
     path('auth/login/', views.LoginView.as_view(), name='login'),

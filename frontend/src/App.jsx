@@ -22,6 +22,7 @@ import Users from './pages/Users'
 import Settings from './pages/Settings'
 import Support from './pages/Support'
 import InvoicePreview from './pages/InvoicePreview'
+
 function Guard({ children, adminOnly }) {
   const { user, loading } = useAuth()
   if (loading) return (
