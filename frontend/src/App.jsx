@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './AuthContext'
@@ -23,8 +22,6 @@ import Users from './pages/Users'
 import Settings from './pages/Settings'
 import Support from './pages/Support'
 import InvoicePreview from './pages/InvoicePreview'
-import { supabase } from './utils/supabase'
-
 function Guard({ children, adminOnly }) {
   const { user, loading } = useAuth()
   if (loading) return (
@@ -38,18 +35,6 @@ function Guard({ children, adminOnly }) {
 }
 
 export default function App() {
-  const [_todos, setTodos] = useState([])
-
-  useEffect(() => {
-    async function getTodos() {
-      const { data } = await supabase.from('todos').select()
-
-      if (data) setTodos(data)
-    }
-
-    getTodos()
-  }, [])
-
   return (
     <ThemeProvider>
     <AuthProvider>

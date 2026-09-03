@@ -10,9 +10,12 @@ import axios from 'axios'
 // Do NOT add a trailing slash.
 // ------------------------------------------------------
 
-const API_BASE_URL = (
+const _base = (
   import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 ).replace(/\/+$/, '')
+
+// Always route through /api — works locally and on Render
+const API_BASE_URL = _base.endsWith('/api') ? _base : `${_base}/api`
 
 export { API_BASE_URL }
 
