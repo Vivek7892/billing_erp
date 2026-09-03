@@ -189,11 +189,8 @@ TEMPLATES = [
 #
 # ============================================================
 
-USE_SQLITE = config(
-    'USE_SQLITE',
-    default=False,
-    cast=bool
-)
+USE_SQLITE = config('USE_SQLITE', default=False, cast=bool)
+USE_LOCAL_PG = config('USE_LOCAL_PG', default=False, cast=bool)
 
 
 if USE_SQLITE:
@@ -209,16 +206,30 @@ if USE_SQLITE:
         }
     }
 
+elif USE_LOCAL_PG:
+
+    # --------------------------------------------------------
+    # LOCAL POSTGRESQL DATABASE
+    # --------------------------------------------------------
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('LOCAL_DB_NAME', default='billing_pos'),
+            'USER': config('LOCAL_DB_USER', default='postgres'),
+            'PASSWORD': config('LOCAL_DB_PASSWORD', default=''),
+            'HOST': config('LOCAL_DB_HOST', default='localhost'),
+            'PORT': config('LOCAL_DB_PORT', default='5432'),
+        }
+    }
+
 else:
 
     # --------------------------------------------------------
-    # SUPABASE POSTGRESQL DATABASE
+    # SUPABASE POSTGRESQL DATABASE (DATABASE_URL)
     # --------------------------------------------------------
 
-    DATABASE_URL = config(
-        'DATABASE_URL',
-        default=''
-    ).strip()
+    DATABASE_URL = config('DATABASE_URL', default='').strip()
 
     if not DATABASE_URL:
         raise RuntimeError(
@@ -265,8 +276,6 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'Asia/Kolkata'
-
-USE_I18N = True
 
 USE_TZ = True
 

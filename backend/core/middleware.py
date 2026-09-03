@@ -23,17 +23,4 @@ class TenantMiddleware:
             except (Business.DoesNotExist, Exception):
                 pass
 
-        # 2. Subdomain routing
-        if not request.tenant_business:
-            host = request.get_host().split(':')[0]  # strip port
-            parts = host.split('.')
-            if len(parts) >= 3:  # subdomain.domain.tld
-                subdomain = parts[0]
-                try:
-                    from superadmin.models import Subscription
-                    sub = Subscription.objects.select_related('business').get(subdomain=subdomain)
-                    request.tenant_business = sub.business
-                except Exception:
-                    pass
-
         return self.get_response(request)

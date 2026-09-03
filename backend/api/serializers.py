@@ -1,7 +1,7 @@
-from rest_framework import serializers
-from django.contrib.auth.password_validation import validate_password
-from .models import *
 from decimal import Decimal
+from django.db.models import Sum
+from rest_framework import serializers
+from .models import *
 
 
 class BusinessSerializer(serializers.ModelSerializer):
@@ -403,4 +403,3 @@ class AuditLogSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-from django.db.models import Sum  # noqa: E402 — needed by CustomerSerializer

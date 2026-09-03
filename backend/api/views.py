@@ -7,11 +7,9 @@ from django.contrib.auth import authenticate
 from django.http import HttpResponse
 from django.db.models import Sum, Count, Q, F, Avg
 from django.utils import timezone
-from datetime import timedelta, date
+from datetime import timedelta
 from decimal import Decimal
 from io import BytesIO
-import json
-
 import csv
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -76,8 +74,6 @@ def _export_report_xlsx(title, headers, rows, filename, summary_rows=None):
     BORDER = 'CBD5E1'
     WHITE = 'FFFFFF'
     ALT = 'F8FAFC'
-    GREEN = '166534'
-    RED = 'B91C1C'
 
     max_cols = max(len(headers), 2)
     last_col = max_cols
@@ -970,74 +966,122 @@ class DashboardView(APIView):
         month_start = today.replace(day=1)
         last_month_start = (month_start - timedelta(days=1)).replace(day=1)
         last_month_end = month_start - timedelta(days=1)
+        week_start = today - timedelta(days=6)
 
-        today_invoices = Invoice.objects.filter(business=biz, created_at__date=today, status='completed')
-        today_sales = today_invoices.aggregate(total=Sum('grand_total'))['total'] or 0
-        today_bills = today_invoices.count()
-        today_discount = today_invoices.aggregate(total=Sum('discount_amount'))['total'] or 0
-        today_tax = today_invoices.aggregate(total=Sum('tax_amount'))['total'] or 0
+        # --- Single aggregated query for today / yesterday / month / last-month ---
+        inv_agg = Invoice.objects.filter(
+            business=biz, status='completed'
+        ).aggregate(
+            today_sales=Sum('grand_total', filter=Q(created_at__date=today)),
+            today_bills=Count('id', filter=Q(created_at__date=today)),
+            today_discount=Sum('discount_amount', filter=Q(created_at__date=today)),
+            today_tax=Sum('tax_amount', filter=Q(created_at__date=today)),
+            yest_sales=Sum('grand_total', filter=Q(created_at__date=yesterday)),
+            yest_bills=Count('id', filter=Q(created_at__date=yesterday)),
+            month_sales=Sum('grand_total', filter=Q(created_at__date__gte=month_start)),
+            month_bills=Count('id', filter=Q(created_at__date__gte=month_start)),
+            month_discount=Sum('discount_amount', filter=Q(created_at__date__gte=month_start)),
+            month_tax=Sum('tax_amount', filter=Q(created_at__date__gte=month_start)),
+            last_month_sales=Sum('grand_total', filter=Q(
+                created_at__date__gte=last_month_start,
+                created_at__date__lte=last_month_end,
+            )),
+        )
 
-        yest_invoices = Invoice.objects.filter(business=biz, created_at__date=yesterday, status='completed')
-        yesterday_sales = yest_invoices.aggregate(total=Sum('grand_total'))['total'] or 0
-        yesterday_bills = yest_invoices.count()
+        today_sales = inv_agg['today_sales'] or 0
+        today_bills = inv_agg['today_bills'] or 0
+        today_discount = inv_agg['today_discount'] or 0
+        today_tax = inv_agg['today_tax'] or 0
+        yesterday_sales = inv_agg['yest_sales'] or 0
+        yesterday_bills = inv_agg['yest_bills'] or 0
+        month_sales = inv_agg['month_sales'] or 0
+        month_bills = inv_agg['month_bills'] or 0
+        month_discount = inv_agg['month_discount'] or 0
+        month_tax = inv_agg['month_tax'] or 0
+        last_month_sales = inv_agg['last_month_sales'] or 0
 
-        month_invoices = Invoice.objects.filter(business=biz, created_at__date__gte=month_start, status='completed')
-        month_sales = month_invoices.aggregate(total=Sum('grand_total'))['total'] or 0
-        month_bills = month_invoices.count()
-        month_discount = month_invoices.aggregate(total=Sum('discount_amount'))['total'] or 0
-        month_tax = month_invoices.aggregate(total=Sum('tax_amount'))['total'] or 0
+        # --- Profit via DB (avoid Python-level loops) ---
+        def _profit_qs(date_filter):
+            return InvoiceItem.objects.filter(
+                invoice__business=biz, invoice__status='completed', **date_filter
+            ).annotate(
+                line_profit=F('total') - F('quantity') * F('product__purchase_price')
+            ).aggregate(total=Sum('line_profit'))['total'] or 0
 
-        last_month_sales = Invoice.objects.filter(
-            business=biz,
-            created_at__date__gte=last_month_start,
-            created_at__date__lte=last_month_end,
-            status='completed'
-        ).aggregate(total=Sum('grand_total'))['total'] or 0
+        today_profit = float(_profit_qs({'invoice__created_at__date': today}))
+        yesterday_profit = float(_profit_qs({'invoice__created_at__date': yesterday}))
+        month_profit = float(_profit_qs({'invoice__created_at__date__gte': month_start}))
 
-        def calc_profit(items_qs):
-            items = items_qs.select_related('product')
-            return sum(
-                (float(i.unit_price) - float(i.product.purchase_price if i.product else 0)) * float(i.quantity)
-                for i in items
-            )
+        # --- Inventory / customer counts (single queries) ---
+        product_agg = Product.objects.filter(business=biz, status='active').aggregate(
+            total=Count('id'),
+            out_of_stock=Count('id', filter=Q(current_stock__lte=0)),
+            low_stock=Count('id', filter=Q(current_stock__gt=0, current_stock__lte=F('minimum_stock'))),
+        )
+        total_products = product_agg['total'] or 0
+        out_of_stock = product_agg['out_of_stock'] or 0
+        low_stock_count = product_agg['low_stock'] or 0
 
-        today_profit = calc_profit(InvoiceItem.objects.filter(
-            invoice__business=biz, invoice__created_at__date=today, invoice__status='completed'))
-        month_profit = calc_profit(InvoiceItem.objects.filter(
-            invoice__business=biz, invoice__created_at__date__gte=month_start, invoice__status='completed'))
-        yesterday_profit = calc_profit(InvoiceItem.objects.filter(
-            invoice__business=biz, invoice__created_at__date=yesterday, invoice__status='completed'))
+        customer_agg = Customer.objects.filter(business=biz).aggregate(
+            total=Count('id'),
+            new_today=Count('id', filter=Q(created_at__date=today)),
+            pending_credit=Sum('outstanding_amount'),
+        )
+        total_customers = customer_agg['total'] or 0
+        new_customers_today = customer_agg['new_today'] or 0
+        pending_credit = customer_agg['pending_credit'] or 0
 
-        total_products = Product.objects.filter(business=biz, status='active').count()
-        out_of_stock = Product.objects.filter(business=biz, current_stock__lte=0, status='active').count()
-        low_stock_count = Product.objects.filter(
-            business=biz, current_stock__gt=0, current_stock__lte=F('minimum_stock'), status='active').count()
-        total_customers = Customer.objects.filter(business=biz).count()
-        new_customers_today = Customer.objects.filter(business=biz, created_at__date=today).count()
-        pending_credit = Customer.objects.filter(business=biz).aggregate(total=Sum('outstanding_amount'))['total'] or 0
         total_suppliers = Supplier.objects.filter(business=biz).count()
         pending_purchases = Purchase.objects.filter(business=biz, payment_status='pending').aggregate(
             total=Sum('total_amount'))['total'] or 0
 
+        # --- 7-day sales + profit (2 queries instead of 14) ---
+        daily_inv = (
+            Invoice.objects.filter(business=biz, status='completed', created_at__date__gte=week_start)
+            .values('created_at__date')
+            .annotate(sales=Sum('grand_total'), bills=Count('id'))
+        )
+        daily_inv_map = {row['created_at__date']: row for row in daily_inv}
+
+        daily_profit_qs = (
+            InvoiceItem.objects.filter(
+                invoice__business=biz, invoice__status='completed',
+                invoice__created_at__date__gte=week_start,
+            )
+            .annotate(line_profit=F('total') - F('quantity') * F('product__purchase_price'))
+            .values('invoice__created_at__date')
+            .annotate(profit=Sum('line_profit'))
+        )
+        daily_profit_map = {row['invoice__created_at__date']: float(row['profit'] or 0) for row in daily_profit_qs}
+
         sales_7days = []
         for i in range(6, -1, -1):
             d = today - timedelta(days=i)
-            day_inv = Invoice.objects.filter(business=biz, created_at__date=d, status='completed')
-            day_sales = day_inv.aggregate(total=Sum('grand_total'))['total'] or 0
-            day_profit = calc_profit(InvoiceItem.objects.filter(
-                invoice__business=biz, invoice__created_at__date=d, invoice__status='completed'))
-            sales_7days.append({'date': str(d), 'sales': float(day_sales), 'profit': float(day_profit)})
+            row = daily_inv_map.get(d, {})
+            sales_7days.append({
+                'date': str(d),
+                'sales': float(row.get('sales') or 0),
+                'profit': daily_profit_map.get(d, 0),
+            })
 
+        # --- Monthly sales (1 query instead of 12) ---
+        six_months_ago = (month_start - timedelta(days=150)).replace(day=1)
+        monthly_raw = (
+            Invoice.objects.filter(business=biz, status='completed', created_at__date__gte=six_months_ago)
+            .values('created_at__year', 'created_at__month')
+            .annotate(total=Sum('grand_total'), bills=Count('id'))
+            .order_by('created_at__year', 'created_at__month')
+        )
+        monthly_map = {(r['created_at__year'], r['created_at__month']): r for r in monthly_raw}
         monthly_sales = []
         for i in range(5, -1, -1):
             m = (month_start - timedelta(days=i * 30)).replace(day=1)
-            total = Invoice.objects.filter(
-                business=biz, created_at__year=m.year, created_at__month=m.month, status='completed'
-            ).aggregate(total=Sum('grand_total'))['total'] or 0
-            bills = Invoice.objects.filter(
-                business=biz, created_at__year=m.year, created_at__month=m.month, status='completed'
-            ).count()
-            monthly_sales.append({'month': m.strftime('%b %Y'), 'total': float(total), 'bills': bills})
+            row = monthly_map.get((m.year, m.month), {})
+            monthly_sales.append({
+                'month': m.strftime('%b %Y'),
+                'total': float(row.get('total') or 0),
+                'bills': row.get('bills') or 0,
+            })
 
         top_products = list(InvoiceItem.objects.filter(
             invoice__business=biz, invoice__status='completed'
@@ -1058,16 +1102,17 @@ class DashboardView(APIView):
             invoice__business=biz, invoice__status='completed'
         ).values('method').annotate(total=Sum('amount'), count=Count('id')))
 
-        hourly_sales = []
-        for h in range(0, 24, 2):
-            total = Invoice.objects.filter(
-                business=biz,
-                created_at__date=today,
-                created_at__hour__gte=h,
-                created_at__hour__lt=h + 2,
-                status='completed'
-            ).aggregate(total=Sum('grand_total'))['total'] or 0
-            hourly_sales.append({'hour': f'{h:02d}:00', 'total': float(total)})
+        # --- Hourly sales (1 query instead of 12) ---
+        hourly_raw = (
+            Invoice.objects.filter(business=biz, created_at__date=today, status='completed')
+            .values('created_at__hour')
+            .annotate(total=Sum('grand_total'))
+        )
+        hourly_map = {row['created_at__hour']: float(row['total'] or 0) for row in hourly_raw}
+        hourly_sales = [
+            {'hour': f'{h:02d}:00', 'total': hourly_map.get(h, 0) + hourly_map.get(h + 1, 0)}
+            for h in range(0, 24, 2)
+        ]
 
         low_stock_products = list(Product.objects.filter(
             business=biz, current_stock__lte=F('minimum_stock'), status='active'
@@ -1083,15 +1128,15 @@ class DashboardView(APIView):
         return Response({
             'today_sales': float(today_sales),
             'today_bills': today_bills,
-            'today_profit': float(today_profit),
+            'today_profit': today_profit,
             'today_discount': float(today_discount),
             'today_tax': float(today_tax),
             'yesterday_sales': float(yesterday_sales),
             'yesterday_bills': yesterday_bills,
-            'yesterday_profit': float(yesterday_profit),
+            'yesterday_profit': yesterday_profit,
             'month_sales': float(month_sales),
             'month_bills': month_bills,
-            'month_profit': float(month_profit),
+            'month_profit': month_profit,
             'month_discount': float(month_discount),
             'month_tax': float(month_tax),
             'last_month_sales': float(last_month_sales),
@@ -1103,10 +1148,10 @@ class DashboardView(APIView):
             'total_customers': total_customers,
             'new_customers_today': new_customers_today,
             'pending_credit': float(pending_credit),
-            'avg_bill_today': float(avg_bill_today),
-            'avg_bill_month': float(avg_bill_month),
-            'sales_growth': float(sales_growth),
-            'profit_margin': float(profit_margin),
+            'avg_bill_today': avg_bill_today,
+            'avg_bill_month': avg_bill_month,
+            'sales_growth': sales_growth,
+            'profit_margin': profit_margin,
             'sales_7days': sales_7days,
             'monthly_sales': monthly_sales,
             'hourly_sales': hourly_sales,
@@ -1516,10 +1561,11 @@ class BillsListView(APIView):
     permission_classes = [IsCashierOrAdmin]
 
     def get(self, request):
-        qs = Invoice.objects.select_related('customer', 'created_by').prefetch_related('items', 'payments').all()
-        user = request.user
-        if user.role == 'cashier':
-            qs = qs.filter(created_by=user)
+        qs = Invoice.objects.select_related('customer', 'created_by').prefetch_related('items', 'payments').filter(
+            business=request.user.business
+        )
+        if request.user.role == 'cashier':
+            qs = qs.filter(created_by=request.user)
         status_filter = request.query_params.get('status')
         payment_status = request.query_params.get('payment_status')
         if status_filter:
