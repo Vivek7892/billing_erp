@@ -10,8 +10,12 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem('access_token')
     if (token) {
-      api.get('/auth/me/').then(r => setUser(r.data)).catch(() => {
-        localStorage.clear()
+      api.get('/auth/me/').then(r => setUser(r.data)).catch(error => {
+        const status = error.response?.status
+        if ([401, 403].includes(status)) {
+          localStorage.removeItem('access_token')
+          localStorage.removeItem('refresh_token')
+        }
       }).finally(() => setLoading(false))
     } else {
       setLoading(false)
@@ -27,7 +31,8 @@ export function AuthProvider({ children }) {
   }
 
   const logout = () => {
-    localStorage.clear()
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
     setUser(null)
   }
 

@@ -532,6 +532,34 @@ function SalesReport({ data }) {
           </div>
         </Card>
 
+        <Card className="p-3 sm:p-4 text-center">
+          <div className="text-lg sm:text-2xl font-bold text-indigo-600 break-words">
+            {fmt(data.summary?.net_sales)}
+          </div>
+          <div className="text-sm text-gray-500">Net Sales</div>
+        </Card>
+
+        <Card className="p-3 sm:p-4 text-center">
+          <div className="text-lg sm:text-2xl font-bold text-amber-600 break-words">
+            {fmt(data.summary?.returns)}
+          </div>
+          <div className="text-sm text-gray-500">Returns</div>
+        </Card>
+
+        <Card className="p-3 sm:p-4 text-center">
+          <div className="text-lg sm:text-2xl font-bold text-emerald-600 break-words">
+            {fmt(data.summary?.collection)}
+          </div>
+          <div className="text-sm text-gray-500">Collection</div>
+        </Card>
+
+        <Card className="p-3 sm:p-4 text-center">
+          <div className="text-lg sm:text-2xl font-bold text-rose-600 break-words">
+            {fmt(data.summary?.outstanding)}
+          </div>
+          <div className="text-sm text-gray-500">Outstanding</div>
+        </Card>
+
       </div>
 
       {/* DAILY SALES CHART */}

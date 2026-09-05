@@ -104,6 +104,7 @@ const EMPTY_DATA = {
 
   today_profit: 0,
   yesterday_profit: 0,
+  today_collection: 0,
 
   today_bills: 0,
   avg_bill_today: 0,
@@ -138,7 +139,9 @@ const EMPTY_DATA = {
   category_sales: [],
   payment_distribution: [],
   low_stock_products: [],
-  recent_bills: []
+  recent_bills: [],
+  top_customers: [],
+  action_required: [],
 }
 
 /* =====================================================
@@ -292,7 +295,7 @@ function Stat({
         bg-white
         rounded-2xl
         border border-slate-200/80
-        ${highlight ? 'ring-2 ring-slate-900/10' : ''}
+        ${highlight ? 'ring-2 ring-blue-200 border-blue-300' : ''}
         p-4 sm:p-5
         flex flex-col gap-3
         shadow-[0_6px_24px_rgba(15,23,42,0.045)]
@@ -652,10 +655,6 @@ export default function Dashboard() {
 
         setLoadError(false)
       } catch (error) {
-        console.error(
-          'Dashboard API error:',
-          error
-        )
 
         /*
           IMPORTANT:
@@ -752,6 +751,9 @@ export default function Dashboard() {
 
   const recentBills =
     dashboard.recent_bills || []
+
+  const topCustomers = dashboard.top_customers || []
+  const actionRequired = (dashboard.action_required || []).filter(item => Number(item.count || 0) > 0)
 
   const maxRevenue = useMemo(() => {
     return Math.max(
@@ -1154,12 +1156,7 @@ export default function Dashboard() {
         </p>
 
         <div
-          className="
-            grid
-            grid-cols-2
-            xl:grid-cols-4
-            gap-3
-          "
+            className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3"
         >
           <Stat
             label="Today's Sales"
@@ -1202,15 +1199,11 @@ export default function Dashboard() {
           />
 
           <Stat
-            label="Tax Collected"
-            value={fmt(
-              dashboard.today_tax
-            )}
-            icon={Percent}
+            label="Today's Collection"
+            value={fmt(dashboard.today_collection)}
+            icon={CreditCard}
             color="orange"
-            sub={`Discount: ${fmt(
-              dashboard.today_discount
-            )}`}
+            sub={`Tax: ${fmt(dashboard.today_tax)}`}
           />
         </div>
       </section>
@@ -1294,6 +1287,30 @@ export default function Dashboard() {
           />
         </div>
       </section>
+
+      {actionRequired.length > 0 && (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 sm:p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle size={16} className="text-amber-600" />
+            <h2 className="text-sm font-bold text-amber-900">Action Required</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
+            {actionRequired.map(item => (
+              <button
+                key={item.key}
+                onClick={() => navigate(item.route)}
+                className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-white px-3 py-3 text-left hover:border-amber-400 hover:shadow-sm transition"
+              >
+                <span className="text-xs font-medium text-slate-700">
+                  <strong className="text-base text-slate-950 mr-1">{item.count}</strong>
+                  {item.label}
+                </span>
+                <ArrowUpRight size={15} className="text-amber-600 shrink-0" />
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* =================================================
           BUSINESS INSIGHTS
@@ -2138,7 +2155,7 @@ export default function Dashboard() {
             </h3>
 
             <p className="text-xs text-slate-500">
-              All-time revenue by payment type
+              Today's collection by payment type
             </p>
           </div>
 
@@ -2275,7 +2292,7 @@ export default function Dashboard() {
         className="
           grid
           grid-cols-1
-          xl:grid-cols-2
+          xl:grid-cols-3
           gap-5
         "
       >
@@ -2622,6 +2639,32 @@ export default function Dashboard() {
               )
             )}
           </div>
+        </div>
+
+        {/* TOP CUSTOMERS */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_8px_30px_rgba(15,23,42,0.05)] p-5 sm:p-6">
+          <div className="mb-3">
+            <h3 className="font-bold text-slate-900 text-sm tracking-tight">Top Customers</h3>
+            <p className="text-xs text-slate-500">Highest completed sales</p>
+          </div>
+          {topCustomers.length === 0 ? (
+            <p className="text-sm text-gray-400 py-8 text-center">No customer sales yet</p>
+          ) : (
+            <div className="space-y-3">
+              {topCustomers.map((customer, index) => (
+                <div key={customer.customer_id} className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-400 w-4">#{index + 1}</span>
+                    <span className="text-sm font-medium text-slate-700 truncate">{customer.customer__name}</span>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-sm font-bold text-slate-800">{fmt(customer.total)}</div>
+                    <div className="text-[10px] text-slate-400">{customer.bills} bills</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

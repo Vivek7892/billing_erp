@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import api from '../api'
 import { Badge, Card, PageHeader, Modal, ConfirmDialog, Spinner, EmptyState } from '../components/UI'
 import toast from 'react-hot-toast'
@@ -23,21 +23,21 @@ export default function Products() {
   const [form, setForm] = useState(emptyForm)
   const [editId, setEditId] = useState(null)
   const [deleteId, setDeleteId] = useState(null)
-  const [page, setPage] = useState(1)
   const [count, setCount] = useState(0)
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true)
-    const params = new URLSearchParams({ page })
+    const params = new URLSearchParams()
     if (search) params.set('search', search)
     if (catFilter) params.set('category', catFilter)
     api.get(`/products/?${params}`).then(r => {
-      setProducts(r.data.results || r.data)
-      setCount(r.data.count || 0)
-    }).finally(() => setLoading(false))
-  }
+      const data = r.data.results || r.data
+      setProducts(Array.isArray(data) ? data : [])
+      setCount(r.data.count || (Array.isArray(data) ? data.length : 0))
+    }).catch(() => toast.error('Failed to load products')).finally(() => setLoading(false))
+  }, [search, catFilter])
 
-  useEffect(() => { load() }, [search, catFilter, page])
+  useEffect(() => { load() }, [load])
   useEffect(() => {
     api.get('/categories/?page_size=100').then(r => setCategories(r.data.results || r.data))
     api.get('/suppliers/?page_size=100').then(r => setSuppliers(r.data.results || r.data))
@@ -69,7 +69,7 @@ export default function Products() {
       }
       setModal(null); load()
     } catch (e) {
-      toast.error(JSON.stringify(e.response?.data) || 'Error')
+      toast.error(e.response?.data?.detail || e.response?.data?.name?.[0] || 'Failed to save product')
     }
   }
 
@@ -84,7 +84,7 @@ export default function Products() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Products" subtitle={`${count} products`}
+      <PageHeader title="Products" subtitle={`${count} product${count !== 1 ? 's' : ''}`}
         action={<button onClick={openAdd} className="btn-primary flex items-center gap-2"><Plus size={16} />Add Product</button>} />
 
       <Card className="p-4">
@@ -92,9 +92,9 @@ export default function Products() {
           <div className="relative flex-1 min-w-48">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input className="input pl-8 text-sm" placeholder="Search name, SKU, barcode..."
-              value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
+              value={search} onChange={e => { setSearch(e.target.value) }} />
           </div>
-          <select className="input w-44 text-sm" value={catFilter} onChange={e => { setCatFilter(e.target.value); setPage(1) }}>
+          <select className="input w-44 text-sm" value={catFilter} onChange={e => { setCatFilter(e.target.value) }}>
             <option value="">All Categories</option>
             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
@@ -138,11 +138,9 @@ export default function Products() {
             </table>
           </div>
         )}
-        {count > 50 && (
-          <div className="flex justify-center gap-2 p-4">
-            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="btn-secondary text-sm">Prev</button>
-            <span className="text-sm text-gray-500 py-2">Page {page} of {Math.ceil(count / 50)}</span>
-            <button disabled={products.length < 50} onClick={() => setPage(p => p + 1)} className="btn-secondary text-sm">Next</button>
+        {count > 0 && (
+          <div className="px-4 py-2 text-xs text-gray-400 border-t border-gray-100">
+            {count} product{count !== 1 ? 's' : ''} total
           </div>
         )}
       </Card>

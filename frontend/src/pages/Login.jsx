@@ -55,11 +55,17 @@ export default function Login() {
       await login(form.username.trim(), form.password)
       toast.success('Welcome back!')
       navigate('/')
-    } catch {
+    } catch (error) {
+      const status = error.response?.status
+      const message = !error.response
+        ? 'Unable to reach the server. Check that the backend is running and try again.'
+        : status === 429
+          ? 'Too many login attempts. Please wait a minute and try again.'
+          : error.response?.data?.error || 'Invalid username or password. Please try again.'
       setErrors({
-        form: 'Invalid username or password. Please try again.',
+        form: message,
       })
-      toast.error('Unable to sign in')
+      toast.error(message)
     } finally {
       setLoading(false)
     }
@@ -215,7 +221,7 @@ export default function Login() {
                   <button
                     type="button"
                     className="text-xs font-semibold text-blue-600 transition hover:text-blue-700"
-                    onClick={() => toast('Please contact your administrator to reset your password.')}
+                    onClick={() => toast('Please contact your administrator to reset your password Developer-Vivek V-7892409872.')}
                   >
                     Forgot password?
                   </button>

@@ -30,6 +30,7 @@ urlpatterns = [
     path('me/', views.MeView.as_view(), name='me-alias'),
     path('me/change-password/', views.ChangePasswordView.as_view(), name='change-password'),
     path('dashboard/', views.DashboardView.as_view(), name='dashboard'),
+    path('search/', views.GlobalSearchView.as_view(), name='global-search'),
     path('reports/sales/', views.SalesReportView.as_view(), name='sales-report'),
     path('reports/products/', views.ProductReportView.as_view(), name='product-report'),
     path('reports/profit/', views.ProfitReportView.as_view(), name='profit-report'),

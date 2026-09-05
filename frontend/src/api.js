@@ -170,6 +170,12 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
 
+    // Login failures are credential errors, not expired-session errors.
+    // Do not let a stale refresh token interfere with a new login attempt.
+    if (originalRequest?.url?.includes('/auth/login/')) {
+      return Promise.reject(error)
+    }
+
     // --------------------------------------------------
     // Prevent infinite retry loop
     // --------------------------------------------------
@@ -228,8 +234,12 @@ api.interceptors.response.use(
       // Reject waiting requests
       onRefreshFailed(refreshError)
 
-      // Refresh token expired/invalid
-      forceLogout()
+      // Only clear credentials when the server explicitly rejects the
+      // refresh token. A network outage must not sign the user out.
+      const refreshStatus = refreshError?.response?.status
+      if ([400, 401, 403].includes(refreshStatus)) {
+        forceLogout()
+      }
 
       return Promise.reject(refreshError)
     }

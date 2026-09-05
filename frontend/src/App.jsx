@@ -12,7 +12,6 @@ import Returns from './pages/Returns'
 import Payments from './pages/Payments'
 import Products from './pages/Products'
 import Stock from './pages/Stock'
-import Inventory from './pages/Inventory'
 import Purchases from './pages/Purchases'
 import Customers from './pages/Customers'
 import Suppliers from './pages/Suppliers'
@@ -23,7 +22,7 @@ import Settings from './pages/Settings'
 import Support from './pages/Support'
 import InvoicePreview from './pages/InvoicePreview'
 
-function Guard({ children, adminOnly }) {
+function Guard({ children, adminOnly, roles }) {
   const { user, loading } = useAuth()
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -32,6 +31,7 @@ function Guard({ children, adminOnly }) {
   )
   if (!user) return <Navigate to="/login" replace />
   if (adminOnly && user.role !== 'admin') return <Navigate to="/" replace />
+  if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />
   return <Layout>{children}</Layout>
 }
 
@@ -65,7 +65,7 @@ export default function App() {
 
           {/* Finance */}
           <Route path="/expenses" element={<Guard><Expenses /></Guard>} />
-          <Route path="/reports" element={<Guard adminOnly><Reports /></Guard>} />
+          <Route path="/reports" element={<Guard roles={['owner', 'admin', 'manager', 'accountant']}><Reports /></Guard>} />
 
           {/* System */}
           <Route path="/users" element={<Guard adminOnly><Users /></Guard>} />

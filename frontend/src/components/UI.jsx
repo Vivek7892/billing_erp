@@ -53,11 +53,13 @@ export function Modal({ open, onClose, title, children, size = 'md' }) {
   if (!open) return null
   const sizes = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl', full: 'max-w-6xl' }
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className={`bg-white rounded-2xl shadow-2xl w-full ${sizes[size]} max-h-[90vh] flex flex-col`}>
+    <div className="modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/45" role="presentation" onMouseDown={e => e.target === e.currentTarget && onClose()}>
+      <div className={`modal-shell bg-white rounded-2xl shadow-2xl w-full ${sizes[size]} max-h-[90vh] flex flex-col`} role="dialog" aria-modal="true" aria-label={title}>
         <div className="flex items-center justify-between p-5 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+          <button onClick={onClose} aria-label="Close dialog" className="icon-btn min-w-10 min-h-10 justify-center text-gray-400 hover:text-gray-700">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
         </div>
         <div className="overflow-y-auto flex-1 p-5">{children}</div>
       </div>

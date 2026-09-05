@@ -1,13 +1,13 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
-import api, { API_BASE_URL } from '../api'
+import api from '../api'
 import logoImg from '../assets/logo.png'
 
 import {
   LayoutDashboard, ShoppingCart, FileText, Package, Users, BarChart2,
   UserCog, Settings, LogOut, ChevronDown, ChevronUp, ChevronRight,
   Search, Bell, RotateCcw, CreditCard, Boxes, ShoppingBag, Building2,
-  IndianRupee, HelpCircle, Layers, Activity, Zap, X
+  IndianRupee, HelpCircle, Layers, Activity, X
 } from 'lucide-react'
 
 import { useEffect, useState, createContext, useContext, useRef } from 'react'
@@ -76,7 +76,7 @@ const NAV_GROUPS = [
     label: 'Finance',
     items: [
       { to: '/expenses', icon: IndianRupee, label: 'Expenses' },
-      { to: '/reports', icon: BarChart2, label: 'Reports', adminOnly: true }
+      { to: '/reports', icon: BarChart2, label: 'Reports', roles: ['owner', 'admin', 'manager', 'accountant'] }
     ]
   },
   {
@@ -114,9 +114,9 @@ const GROUP_ACCENT = {
 }
 
 const ACTIVE_BG = {
-  Overview: 'bg-blue-600', Billing: 'bg-emerald-600', Sales: 'bg-violet-600',
-  Inventory: 'bg-amber-500', Parties: 'bg-cyan-600', Finance: 'bg-rose-600',
-  System: 'bg-slate-600', Help: 'bg-slate-600'
+  Overview: 'bg-blue-600', Billing: 'bg-blue-600', Sales: 'bg-blue-600',
+  Inventory: 'bg-blue-600', Parties: 'bg-blue-600', Finance: 'bg-blue-600',
+  System: 'bg-blue-600', Help: 'bg-blue-600'
 }
 
 // Solid hex per group, used for the topbar accent bar (can't use Tailwind bg-* via JS string there)
@@ -135,7 +135,10 @@ function NavGroup({ group, collapsed, user, onNav }) {
   const location = useLocation()
   const [open, setOpen] = useState(true)
 
-  const visibleItems = group.items.filter(item => !item.adminOnly || user?.role === 'admin')
+  const visibleItems = group.items.filter(item => {
+    if (item.roles && !item.roles.includes(user?.role)) return false
+    return !item.adminOnly || user?.role === 'admin'
+  })
   if (!visibleItems.length) return null
   if (group.adminOnly && user?.role !== 'admin') return null
 
@@ -320,13 +323,56 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
 function GlobalSearch() {
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
+  const [results, setResults] = useState([])
+  const [searching, setSearching] = useState(false)
   const ref = useRef()
+  const navigate = useNavigate()
 
   useEffect(() => {
     const handleClickOutside = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  useEffect(() => {
+    const value = q.trim()
+    if (value.length < 2) {
+      setResults([])
+      return undefined
+    }
+    const timer = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const response = await api.get('/search/', { params: { q: value } })
+        setResults(response.data?.results || [])
+      } catch {
+        setResults([])
+      } finally {
+        setSearching(false)
+      }
+    }, 180)
+    return () => clearTimeout(timer)
+  }, [q])
+
+  useEffect(() => {
+    const onShortcut = event => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        ref.current?.querySelector('input')?.focus()
+        setOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onShortcut)
+    return () => window.removeEventListener('keydown', onShortcut)
+  }, [])
+
+  const handleKeyDown = e => {
+    if (e.key === 'Enter' && q.trim()) {
+      navigate(`/inventory/products?search=${encodeURIComponent(q.trim())}`)
+      setQ('')
+      setOpen(false)
+    }
+  }
 
   return (
     <div ref={ref} className="relative">
@@ -339,11 +385,13 @@ function GlobalSearch() {
           onChange={e => { setQ(e.target.value); setOpen(e.target.value.length > 0) }}
           onFocus={() => setOpen(true)}
           onBlur={() => { if (!q) setOpen(false) }}
-          placeholder="Search invoices, products…"
+          onKeyDown={handleKeyDown}
+          placeholder="Search products… (Enter)"
+          aria-label="Search products"
           className="bg-transparent text-sm outline-none w-full text-slate-700 placeholder-slate-400"
         />
         {q ? (
-          <button onClick={() => { setQ(''); setOpen(false) }}>
+          <button onClick={() => { setQ(''); setOpen(false) }} aria-label="Clear search">
             <X size={13} className="text-slate-400 hover:text-slate-600" />
           </button>
         ) : (
@@ -351,21 +399,19 @@ function GlobalSearch() {
         )}
       </div>
 
-      {open && (
+      {open && q && (
         <div className="absolute top-full mt-2 left-0 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-100">
-            <p className="text-xs text-slate-500">
-              {q ? <>Searching for <span className="font-semibold text-slate-800">"{q}"</span>…</> : 'Start typing to search'}
-            </p>
-          </div>
-          <div className="px-3 py-2">
-            {['Invoices', 'Products', 'Customers'].map(category => (
-              <div key={category} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
-                <Search size={12} className="text-slate-300" />
-                <span className="text-xs text-slate-500">Search in <span className="font-medium text-slate-700">{category}</span></span>
-              </div>
-            ))}
-          </div>
+          {searching ? <div className="px-4 py-3 text-xs text-slate-500">Searching...</div> : results.length ? (
+            results.map(result => (
+              <button key={`${result.type}-${result.id}`} onClick={() => { navigate(result.route); setQ(''); setOpen(false) }} className="w-full px-4 py-2.5 text-left hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold text-slate-800 truncate">{result.label}</span>
+                  <span className="text-[10px] uppercase text-slate-400">{result.type}</span>
+                </div>
+                <div className="text-xs text-slate-500 truncate mt-0.5">{result.subtitle}</div>
+              </button>
+            ))
+          ) : <div className="px-4 py-3 text-xs text-slate-500">No matching records</div>}
         </div>
       )}
     </div>
@@ -376,14 +422,9 @@ function GlobalSearch() {
    NOTIFICATION BELL
 ========================================================= */
 
-const NOTIFICATIONS = [
-  { icon: Activity, color: 'text-orange-500 bg-orange-50', title: 'Low stock alert', desc: '5 products running low', time: '2m ago' },
-  { icon: ShoppingCart, color: 'text-blue-500 bg-blue-50', title: 'New bill created', desc: 'INV-0042 · ₹4,500', time: '18m ago' },
-  { icon: Zap, color: 'text-violet-500 bg-violet-50', title: 'Daily report ready', desc: "Today's summary available", time: '1h ago' }
-]
-
 function NotificationBell() {
   const [open, setOpen] = useState(false)
+  const [notifications, setNotifications] = useState([])
   const ref = useRef()
 
   useEffect(() => {
@@ -392,25 +433,39 @@ function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    api.get('/dashboard/').then(({ data }) => {
+      const iconMap = { stock: Activity, credit: CreditCard, purchases: ShoppingBag, invoices: FileText }
+      const colorMap = { stock: 'text-orange-500 bg-orange-50', credit: 'text-red-500 bg-red-50', purchases: 'text-blue-500 bg-blue-50', invoices: 'text-violet-500 bg-violet-50' }
+      setNotifications((data.action_required || []).filter(item => Number(item.count || 0) > 0).map(item => ({
+        ...item,
+        icon: iconMap[item.key] || Bell,
+        color: colorMap[item.key] || 'text-slate-500 bg-slate-50',
+        title: 'Action required',
+        desc: `${item.count} ${item.label}`,
+      })))
+    }).catch(() => setNotifications([]))
+  }, [])
+
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(v => !v)}
+      <button onClick={() => setOpen(v => !v)} aria-label="Notifications"
         className="relative flex items-center justify-center w-9 h-9 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-all">
         <Bell size={17} />
-        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+        <span aria-hidden="true" className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
       </button>
 
       {open && (
         <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
             <span className="font-semibold text-slate-800 text-sm">Notifications</span>
-            <span className="text-[10px] font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">3 new</span>
+            <span className="text-[10px] font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{notifications.length}</span>
           </div>
           <div className="divide-y divide-slate-50">
-            {NOTIFICATIONS.map((n, i) => {
+            {notifications.map((n, i) => {
               const Icon = n.icon
               return (
-                <div key={i} className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors">
+                <button key={i} onClick={() => { window.location.href = n.route }} className="w-full flex items-start gap-3 px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors text-left">
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${n.color}`}>
                     <Icon size={14} />
                   </div>
@@ -419,9 +474,10 @@ function NotificationBell() {
                     <div className="text-xs text-slate-500 truncate">{n.desc}</div>
                   </div>
                   <span className="text-[10px] text-slate-400 flex-shrink-0 mt-0.5">{n.time}</span>
-                </div>
+                </button>
               )
             })}
+            {notifications.length === 0 && <div className="px-4 py-5 text-xs text-slate-500 text-center">No action required</div>}
           </div>
           <div className="px-4 py-2.5 border-t border-slate-100 text-center">
             <button className="text-xs font-semibold text-blue-600 hover:text-blue-700">View all notifications</button>
@@ -569,9 +625,7 @@ export default function Layout({ children }) {
     navigate('/login')
   }
 
-  const logoSrc = shopLogo
-    ? (shopLogo.startsWith('http') ? shopLogo : `${API_BASE_URL.replace(/\/api$/, '')}${shopLogo}`)
-    : logoImg
+  const logoSrc = shopLogo || logoImg
 
   return (
     <ShopContext.Provider value={{ logoSrc, shopName }}>

@@ -5,9 +5,10 @@ import toast from 'react-hot-toast'
 import {
   Search, Plus, Minus, Trash2, User, Printer, Download, RefreshCw, QrCode,
   Keyboard, CheckCircle2, Share2, Clock, Package, Layers, X, Banknote,
-  CreditCard, Smartphone, Wallet, Receipt, AlertTriangle
+  CreditCard, Wallet, Receipt, AlertTriangle
 } from 'lucide-react'
 import { Modal } from '../components/UI'
+import { useNavigate } from 'react-router-dom'
 
 // ---------------------------------------------------------------------------
 // Local drafts (parked bills) — unchanged storage contract
@@ -396,6 +397,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
 // Main billing page
 // ---------------------------------------------------------------------------
 export default function NewBill() {
+  const navigate = useNavigate()
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [customers, setCustomers] = useState([])
@@ -409,17 +411,23 @@ export default function NewBill() {
   const [customer, setCustomer] = useState(null)
   const [customerSearch, setCustomerSearch] = useState('')
   const [payment, setPayment] = useState({ method: 'cash', amount: '', reference: '', status: 'pending' })
+  const [billDiscountInput, setBillDiscountInput] = useState('')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [lastInvoice, setLastInvoice] = useState(null)
   const [showCustomerModal, setShowCustomerModal] = useState(false)
   const [showQr, setShowQr] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [cartOpen, setCartOpen] = useState(false)
   const [newCustomer, setNewCustomer] = useState({ name: '', mobile: '', email: '' })
   const [now, setNow] = useState(new Date())
   const searchRef = useRef()
+  const customerRef = useRef()
+  const paymentRef = useRef()
+  const billDiscountRef = useRef()
 
-  useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t) }, [])
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 30000); return () => clearInterval(t) }, [])
   const fmtDate = d => d.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
   const fmtTime = d => d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
 
@@ -461,16 +469,15 @@ export default function NewBill() {
       (!catFilter || String(p.category) === catFilter)
   }), [products, search, catFilter])
 
-  const availableProducts = useMemo(() => products.filter(p =>
-    p.current_stock > 0 &&
-    (!catFilter || String(p.category) === catFilter) &&
-    (!search || p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()) || (p.barcode || '').includes(search))
-  ), [products, search, catFilter])
+  const availableProducts = useMemo(() => filtered.filter(p => p.current_stock > 0), [filtered])
 
   const subtotal = cart.reduce((sum, item) => sum + item.unit_price * item.qty, 0)
   const discount = cart.reduce((sum, item) => sum + item.unit_price * item.qty * item.discount_percent / 100, 0)
-  const tax = cart.reduce((sum, item) => sum + item.unit_price * item.qty * (1 - item.discount_percent / 100) * item.gst_percent / 100, 0)
-  const raw = subtotal - discount + tax
+  const taxableBeforeBillDiscount = Math.max(0, subtotal - discount)
+  const billDiscount = Math.min(Math.max(0, Number(billDiscountInput) || 0), taxableBeforeBillDiscount)
+  const itemTax = cart.reduce((sum, item) => sum + item.unit_price * item.qty * (1 - item.discount_percent / 100) * item.gst_percent / 100, 0)
+  const tax = taxableBeforeBillDiscount ? itemTax * ((taxableBeforeBillDiscount - billDiscount) / taxableBeforeBillDiscount) : 0
+  const raw = taxableBeforeBillDiscount - billDiscount + tax
   const roundOff = Math.round(raw) - raw
   const grandTotal = raw + roundOff
 
@@ -503,7 +510,7 @@ export default function NewBill() {
   const resetBill = () => {
     setCart([]); setCustomer(null); setCustomerSearch('')
     setPayment({ method: 'cash', amount: '', reference: '', status: 'pending' })
-    setNotes(''); setLastAddedId(null)
+    setBillDiscountInput(''); setNotes(''); setLastAddedId(null); setShowSuccess(false)
     searchRef.current?.focus()
   }
 
@@ -512,7 +519,7 @@ export default function NewBill() {
     const draft = {
       id: Date.now(), savedAt: new Date().toISOString(),
       customerName: customer?.name || customerSearch || 'Walk-in Customer',
-      cart, customer, customerSearch, payment, notes,
+      cart, customer, customerSearch, payment, billDiscountInput, notes,
     }
     saveDraftsStore([draft, ...loadDrafts().slice(0, 19)])
     toast.success('Bill parked as draft')
@@ -528,6 +535,7 @@ export default function NewBill() {
         setCustomer(d.customer || null)
         setCustomerSearch(d.customerSearch || '')
         setPayment(d.payment || { method: 'cash', amount: '', reference: '', status: 'pending' })
+        setBillDiscountInput(d.billDiscountInput || '')
         setNotes(d.notes || '')
         saveDraftsStore(loadDrafts().filter(x => x.id !== d.id))
         toast.success('Draft resumed')
@@ -674,7 +682,13 @@ export default function NewBill() {
 
   const saveBill = async print => {
     if (!cart.length) return toast.error('Cart is empty')
-    if (payment.method !== 'credit' && !Number(payment.amount)) {
+    const receivedAmount = payment.method === 'cash'
+      ? (Number(payment.amount) || grandTotal)
+      : Number(payment.amount || 0)
+    const effectivePaymentStatus = payment.method === 'cash' && payment.status === 'pending'
+      ? 'paid'
+      : payment.status
+    if (payment.method !== 'credit' && !receivedAmount) {
       return toast.error('Enter payment amount')
     }
 
@@ -704,7 +718,8 @@ export default function NewBill() {
         customer_name: customer?.name || 'Walk-in Customer',
         customer_phone: customer?.mobile || '',
         payment_method: payment.method,
-        payment_status: payment.status,
+        payment_status: effectivePaymentStatus,
+        bill_discount: billDiscount,
         notes,
         items: cart.map(i => ({
           product_id: i.id,
@@ -717,7 +732,9 @@ export default function NewBill() {
           ? []
           : [{
               method: payment.method,
-              amount: Number(payment.amount),
+              amount: payment.method === 'cash'
+                ? Math.min(receivedAmount, grandTotal)
+                : Number(payment.amount),
               reference: payment.reference
             }]
       }
@@ -731,7 +748,8 @@ export default function NewBill() {
         customer_phone: data.customer_phone || customer?.mobile || '',
         customer_name: data.customer_name || customer?.name || 'Walk-in Customer',
         payment_method: data.payment_method || payment.method,
-        payment_status: data.payment_status || payment.status,
+        payment_status: data.payment_status || effectivePaymentStatus,
+        amount_received: receivedAmount,
       }
 
       setLastInvoice(savedInvoice)
@@ -743,11 +761,16 @@ export default function NewBill() {
       }
 
       resetBill()
+      setShowSuccess(true)
     } catch (err) {
       if (printWindow && !printWindow.closed) {
         try { printWindow.close() } catch {}
       }
-      toast.error(err.response?.data?.detail || 'Could not save bill')
+      const responseData = err.response?.data
+      const validationMessage = responseData && typeof responseData === 'object'
+        ? Object.values(responseData).flat().find(value => typeof value === 'string')
+        : null
+      toast.error(validationMessage || responseData?.detail || err.message || 'Could not save bill')
     } finally {
       setSaving(false)
     }
@@ -821,21 +844,25 @@ export default function NewBill() {
 
   useEffect(() => {
     const onKey = e => {
-      if (e.ctrlKey && e.key.toLowerCase() === 'k') { e.preventDefault(); searchRef.current?.focus() }
-      if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); saveBill(false) }
-      if (e.key === 'F2') { e.preventDefault(); selectPayment('cash') }
-      if (e.key === 'F3') { e.preventDefault(); selectPayment('upi') }
-      if (e.key === 'F4') { e.preventDefault(); selectPayment('card') }
-      if (e.ctrlKey && e.key.toLowerCase() === 'p') {
+      const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); searchRef.current?.focus() }
+      if (e.key === 'F1') { e.preventDefault(); navigate('/billing/new') }
+      if (e.key === 'F2') { e.preventDefault(); searchRef.current?.focus() }
+      if (e.key === 'F3') { e.preventDefault(); customerRef.current?.focus() }
+      if (e.key === 'F4') { e.preventDefault(); paymentRef.current?.focus() }
+      if (e.key === 'F5') { e.preventDefault(); saveDraft() }
+      if (e.key === 'F6') { e.preventDefault(); billDiscountRef.current?.focus() }
+      if (e.key === 'F7' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p')) {
         e.preventDefault()
         if (lastInvoice?.id) printInvoiceDocument(lastInvoice.id, false)
         else saveBill(true)
       }
-      if (e.key === 'Escape') setShowQr(false)
+      if (e.key === 'F8' || (e.ctrlKey && e.key === 'Enter')) { e.preventDefault(); saveBill(false) }
+      if (e.key === 'Escape') { setShowQr(false); setShowCustomerModal(false); setShowShortcuts(false); if (!typing) setShowSuccess(false) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [grandTotal, payment, cart, lastInvoice, upiId])
+  }, [grandTotal, payment, cart, lastInvoice, upiId, billDiscount, navigate])
 
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-slate-50 text-slate-900">
@@ -853,7 +880,7 @@ export default function NewBill() {
         }
       `}</style>
 
-      <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 p-2.5 sm:p-3 lg:p-4 max-w-[1600px] mx-auto">
+      <div className="flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_minmax(300px,36%)] lg:flex lg:flex-row gap-3 lg:gap-4 p-2.5 sm:p-3 lg:p-4 max-w-[1600px] mx-auto">
         {/* ============================= MAIN ============================= */}
         <section className="flex-1 min-w-0 flex flex-col gap-3">
 
@@ -1006,7 +1033,11 @@ export default function NewBill() {
         </section>
 
         {/* ============================ SIDEBAR ============================ */}
-        <aside className="w-full lg:w-[380px] shrink-0 flex flex-col gap-3 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+        <aside className={`w-full md:w-auto lg:w-[380px] shrink-0 flex-col gap-3 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto ${cartOpen ? 'flex' : 'hidden'} md:flex max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:max-h-[90dvh] max-md:overflow-y-auto max-md:rounded-t-2xl max-md:bg-slate-50 max-md:p-3 max-md:shadow-2xl`}>
+          <div className="md:hidden flex items-center justify-between rounded-xl bg-white border border-slate-200 px-3 py-2">
+            <b className="text-sm text-slate-800">Cart and checkout</b>
+            <button type="button" onClick={() => setCartOpen(false)} aria-label="Close cart" className="icon-btn min-w-10 min-h-10 justify-center"><X size={18} /></button>
+          </div>
 
           {/* Customer */}
           <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm">
@@ -1019,6 +1050,7 @@ export default function NewBill() {
             <div className="relative">
               <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
+                ref={customerRef}
                 className="w-full h-9 pl-8 pr-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 placeholder="Walk-in customer, or search"
                 value={customerSearch}
@@ -1048,7 +1080,21 @@ export default function NewBill() {
             <b className="text-sm text-slate-800">Bill summary</b>
             <div className="mt-2 space-y-1 text-sm text-slate-600">
               <div className="flex justify-between"><span>Subtotal</span><span className="tabular-nums">{fmt(subtotal)}</span></div>
-              <div className="flex justify-between"><span>Discount</span><span className="tabular-nums text-rose-500">-{fmt(discount)}</span></div>
+              <div className="flex justify-between"><span>Item discount</span><span className="tabular-nums text-rose-500">-{fmt(discount)}</span></div>
+              <label className="flex items-center justify-between gap-3">
+                <span>Bill discount</span>
+                <input
+                  ref={billDiscountRef}
+                  type="number"
+                  min="0"
+                  max={taxableBeforeBillDiscount}
+                  step="0.01"
+                  value={billDiscountInput}
+                  onChange={e => setBillDiscountInput(e.target.value)}
+                  className="w-24 h-7 px-2 text-right text-xs rounded border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  placeholder="0.00"
+                />
+              </label>
               {showGst && <div className="flex justify-between"><span>GST</span><span className="tabular-nums">{fmt(tax)}</span></div>}
               <div className="flex justify-between"><span>Round off</span><span className="tabular-nums">{fmt(roundOff)}</span></div>
             </div>
@@ -1078,6 +1124,7 @@ export default function NewBill() {
                 <label className="block">
                   <span className="text-xs text-slate-500">Amount received</span>
                   <input
+                    ref={paymentRef}
                     type="number" className="w-full h-10 mt-1 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                     value={payment.amount} placeholder={grandTotal.toFixed(2)}
                     onChange={e => setPayment(x => ({ ...x, amount: e.target.value, status: 'paid' }))}
@@ -1243,6 +1290,16 @@ export default function NewBill() {
         </aside>
       </div>
 
+      {cartOpen && <button type="button" aria-label="Close cart" onClick={() => setCartOpen(false)} className="md:hidden fixed inset-0 z-30 bg-slate-950/35" />}
+      <button
+        type="button"
+        onClick={() => setCartOpen(true)}
+        className="md:hidden fixed bottom-3 inset-x-3 z-20 min-h-12 rounded-xl bg-indigo-600 text-white px-4 shadow-xl flex items-center justify-between font-semibold text-sm"
+      >
+        <span className="flex items-center gap-2"><Receipt size={17} /> Cart ({cart.reduce((count, item) => count + Number(item.qty || 0), 0)})</span>
+        <span>{fmt(grandTotal)}</span>
+      </button>
+
       {/* Fixed quick customer payment action — available whenever UPI ID is configured */}
       {upiId && (
         <button
@@ -1271,6 +1328,30 @@ export default function NewBill() {
         </div>
       </Modal>
 
+      <Modal open={showSuccess && Boolean(lastInvoice)} onClose={() => setShowSuccess(false)} title="Payment Successful" size="sm">
+        <div className="space-y-4">
+          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-center">
+            <CheckCircle2 size={34} className="mx-auto text-emerald-600" />
+            <div className="mt-2 text-2xl font-bold text-emerald-800">{fmt(lastInvoice?.grand_total)}</div>
+            <div className="text-xs text-emerald-700 mt-1">Invoice {lastInvoice?.invoice_number}</div>
+          </div>
+          <dl className="grid grid-cols-2 gap-2 text-sm">
+            <dt className="text-slate-500">Payment method</dt>
+            <dd className="text-right font-semibold text-slate-800 capitalize">{lastInvoice?.payment_method || 'cash'}</dd>
+            <dt className="text-slate-500">Amount received</dt>
+            <dd className="text-right font-semibold text-slate-800">{fmt(lastInvoice?.amount_received ?? lastInvoice?.paid_amount)}</dd>
+            <dt className="text-slate-500">Change</dt>
+            <dd className="text-right font-semibold text-slate-800">{fmt(Math.max(0, Number(lastInvoice?.amount_received || 0) - Number(lastInvoice?.grand_total || 0)))}</dd>
+          </dl>
+          <div className="grid grid-cols-2 gap-2">
+            <button className="btn-outline" onClick={() => printInvoiceDocument(lastInvoice?.id)}><Printer size={14} /> Print</button>
+            <button className="btn-outline" onClick={() => downloadInvoiceDocument(lastInvoice?.id)}><Download size={14} /> PDF</button>
+            <button className="btn-outline" onClick={shareInvoice}><Share2 size={14} /> Share</button>
+            <button className="btn-solid" onClick={() => { setShowSuccess(false); resetBill() }}><RefreshCw size={14} /> New Bill</button>
+          </div>
+        </div>
+      </Modal>
+
       <QrPaymentModal
         open={showQr}
         onClose={() => setShowQr(false)}
@@ -1288,7 +1369,7 @@ export default function NewBill() {
 
       <Modal open={showShortcuts} onClose={() => setShowShortcuts(false)} title="Keyboard shortcuts" size="sm">
         <div className="grid grid-cols-2 gap-3 text-sm">
-          {[['Ctrl + K', 'Product search'], ['Enter', 'Add selected product'], ['Ctrl + Enter', 'Save bill'], ['F2', 'Cash'], ['F3', 'UPI'], ['F4', 'Card'], ['Ctrl + P', 'Print bill'], ['Credit', 'Customer credit'], ['Esc', 'Close modal']].map(([key, text]) => (
+          {[['F1', 'New bill'], ['F2', 'Product search'], ['F3', 'Customer'], ['F4', 'Payment'], ['F5', 'Hold bill'], ['F6', 'Bill discount'], ['F7', 'Print'], ['F8', 'Save'], ['Ctrl/Cmd + K', 'Global search'], ['Esc', 'Close modal']].map(([key, text]) => (
             <div key={key} className="contents">
               <kbd className="border border-slate-200 rounded px-2 py-1 text-center bg-slate-50">{key}</kbd>
               <span className="text-slate-600">{text}</span>

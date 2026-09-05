@@ -23,9 +23,13 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 
 from .models import *
 from .serializers import *
-from .permissions import IsAdmin, IsAdminOrReadOnly, IsCashierOrAdmin
+from .permissions import (
+    IsAdmin, IsAdminOrReadOnly, IsCashierOrAdmin, IsFinanceStaff,
+    IsManagerOrAdmin, IsManagerOrReadOnly,
+)
 from .supabase_storage import SupabaseStorageError, upload_shop_logo
 from .pagination import NoPagination
+from .utils import audit
 from django_filters.rest_framework import DjangoFilterBackend
 
 
@@ -633,7 +637,7 @@ class LoginView(APIView):
         password = request.data.get('password')
         user = authenticate(username=username, password=password)
         if not user or not user.is_active:
-            return Response({'error': 'Invalid credentials'}, status=400)
+            return Response({'error': 'Invalid username or password.', 'code': 'invalid_credentials'}, status=401)
         refresh = RefreshToken.for_user(user)
         return Response({
             'access': str(refresh.access_token),
@@ -686,7 +690,10 @@ class MeView(APIView):
         return Response(UserSerializer(request.user).data)
 
     def put(self, request):
-        serializer = UserSerializer(request.user, data=request.data, partial=True)
+        profile_data = request.data.copy()
+        for field in ('role', 'is_active', 'business', 'is_verified'):
+            profile_data.pop(field, None)
+        serializer = UserSerializer(request.user, data=profile_data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
@@ -715,12 +722,13 @@ class UserViewSet(viewsets.ModelViewSet):
         return User.objects.filter(business=self.request.user.business)
 
     def perform_create(self, serializer):
-        serializer.save(business=self.request.user.business)
+        user = serializer.save(business=self.request.user.business)
+        audit(self.request, 'create', 'users', 'User', user.id, new=user.username)
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
     serializer_class = CategorySerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsManagerOrReadOnly]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name']
 
@@ -733,7 +741,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 class SupplierViewSet(viewsets.ModelViewSet):
     serializer_class = SupplierSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsManagerOrReadOnly]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'phone', 'email']
 
@@ -746,7 +754,7 @@ class SupplierViewSet(viewsets.ModelViewSet):
 
 class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsManagerOrReadOnly]
     pagination_class = NoPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category', 'status', 'supplier']
@@ -759,12 +767,24 @@ class ProductViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        serializer.save(business=self.request.user.business)
+        product = serializer.save(business=self.request.user.business)
+        audit(self.request, 'create', 'products', 'Product', product.id, new=product.name)
+
+    def perform_update(self, serializer):
+        previous = f'{serializer.instance.purchase_price}|{serializer.instance.selling_price}|{serializer.instance.gst_percent}'
+        product = serializer.save(business=self.request.user.business)
+        current = f'{product.purchase_price}|{product.selling_price}|{product.gst_percent}'
+        audit(self.request, 'update', 'products', 'Product', product.id, prev=previous, new=current)
 
     def destroy(self, request, *args, **kwargs):
-        if request.user.role != 'admin':
+        if request.user.role not in ('owner', 'admin', 'manager'):
             return Response({'error': 'Permission denied'}, status=403)
-        return super().destroy(request, *args, **kwargs)
+        product = self.get_object()
+        previous = product.status
+        product.status = 'inactive'
+        product.save(update_fields=['status', 'updated_at'])
+        audit(self.request, 'archive', 'products', 'Product', product.id, prev=previous, new=product.status)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CustomerViewSet(viewsets.ModelViewSet):
@@ -823,7 +843,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
 class PurchaseViewSet(viewsets.ModelViewSet):
     serializer_class = PurchaseSerializer
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsManagerOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['supplier', 'payment_status']
     search_fields = ['invoice_number']
@@ -834,7 +854,14 @@ class PurchaseViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user, business=self.request.user.business)
+        purchase = serializer.save(created_by=self.request.user, business=self.request.user.business)
+        audit(self.request, 'create', 'purchases', 'Purchase', purchase.id, new=purchase.total_amount)
+
+    def update(self, request, *args, **kwargs):
+        return Response({'detail': 'Purchases are immutable after creation.'}, status=405)
+
+    def destroy(self, request, *args, **kwargs):
+        return Response({'detail': 'Use a purchase return for reversal.'}, status=405)
 
 
 class InvoiceViewSet(viewsets.ModelViewSet):
@@ -855,7 +882,22 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         return [IsCashierOrAdmin()]
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user, business=self.request.user.business)
+        invoice = serializer.save(created_by=self.request.user, business=self.request.user.business)
+        audit(self.request, 'create', 'invoices', 'Invoice', invoice.id, new=invoice.invoice_number)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        response_serializer = InvoiceSerializer(serializer.instance, context=self.get_serializer_context())
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def update(self, request, *args, **kwargs):
+        return Response({'detail': 'Invoices are immutable after creation.'}, status=405)
+
+    def destroy(self, request, *args, **kwargs):
+        return Response({'detail': 'Use cancel or refund for invoice reversal.'}, status=405)
 
     def get_queryset(self):
         qs = Invoice.objects.select_related('customer', 'created_by').prefetch_related(
@@ -906,8 +948,13 @@ class SettingViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def bulk_update(self, request):
+        previous = {
+            setting.key: setting.value
+            for setting in self.get_queryset().filter(key__in=request.data.keys())
+        }
         for key, value in request.data.items():
             Setting.objects.update_or_create(business=request.user.business, key=key, defaults={'value': str(value)})
+        audit(request, 'update', 'settings', 'Setting', request.user.business_id, prev=previous, new=request.data)
         return Response({'status': 'updated'})
 
     @action(detail=False, methods=['post'], url_path='upload-logo')
@@ -927,7 +974,18 @@ class SettingViewSet(viewsets.ModelViewSet):
             return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         Setting.objects.update_or_create(business=request.user.business, key='shop_logo', defaults={'value': url})
+        audit(request, 'update', 'settings', 'Setting', request.user.business_id, new={'shop_logo': url})
         return Response({'url': url})
+
+    @action(detail=False, methods=['post'], url_path='remove-logo')
+    def remove_logo(self, request):
+        Setting.objects.update_or_create(
+            business=request.user.business,
+            key='shop_logo',
+            defaults={'value': ''},
+        )
+        audit(request, 'update', 'settings', 'Setting', request.user.business_id, new={'shop_logo': ''})
+        return Response({'url': ''})
 
     @action(detail=False, methods=['get'], permission_classes=[IsCashierOrAdmin])
     def all(self, request):
@@ -969,6 +1027,7 @@ class SettingViewSet(viewsets.ModelViewSet):
 
 
 class DashboardView(APIView):
+    permission_classes = [IsCashierOrAdmin]
     def get(self, request):
         biz = request.user.business
         today = timezone.now().date()
@@ -1010,12 +1069,12 @@ class DashboardView(APIView):
         month_tax = inv_agg['month_tax'] or 0
         last_month_sales = inv_agg['last_month_sales'] or 0
 
-        # --- Profit via DB (avoid Python-level loops) ---
+        # --- Profit via DB (revenue excludes GST, minus COGS) ---
         def _profit_qs(date_filter):
             return InvoiceItem.objects.filter(
                 invoice__business=biz, invoice__status='completed', **date_filter
             ).annotate(
-                line_profit=F('total') - F('quantity') * F('product__purchase_price')
+                line_profit=(F('total') - F('gst_amount')) - F('quantity') * F('cost_price')
             ).aggregate(total=Sum('line_profit'))['total'] or 0
 
         today_profit = float(_profit_qs({'invoice__created_at__date': today}))
@@ -1058,7 +1117,7 @@ class DashboardView(APIView):
                 invoice__business=biz, invoice__status='completed',
                 invoice__created_at__date__gte=week_start,
             )
-            .annotate(line_profit=F('total') - F('quantity') * F('product__purchase_price'))
+            .annotate(line_profit=(F('total') - F('gst_amount')) - F('quantity') * F('cost_price'))
             .values('invoice__created_at__date')
             .annotate(profit=Sum('line_profit'))
         )
@@ -1108,9 +1167,69 @@ class DashboardView(APIView):
             total_revenue=Sum('total'), total_qty=Sum('quantity')
         ).order_by('-total_revenue')[:6])
 
-        payment_dist = list(Payment.objects.filter(
-            invoice__business=biz, invoice__status='completed'
-        ).values('method').annotate(total=Sum('amount'), count=Count('id')))
+        today_payments = Payment.objects.filter(
+            invoice__business=biz,
+            invoice__status='completed',
+            created_at__date=today,
+        ).values('method').annotate(total=Sum('amount'), count=Count('id'))
+        today_customer_payments = CustomerPayment.objects.filter(
+            business=biz,
+            created_at__date=today,
+        ).values('method').annotate(total=Sum('amount'), count=Count('id'))
+        payment_totals = {}
+        for row in list(today_payments) + list(today_customer_payments):
+            entry = payment_totals.setdefault(row['method'], {'method': row['method'], 'total': Decimal('0'), 'count': 0})
+            entry['total'] += row['total'] or Decimal('0')
+            entry['count'] += row['count'] or 0
+        payment_dist = list(payment_totals.values())
+        today_collection = sum((row['total'] for row in payment_dist), Decimal('0'))
+
+        top_customers = list(Invoice.objects.filter(
+            business=biz,
+            status='completed',
+            customer__isnull=False,
+        ).values('customer_id', 'customer__name').annotate(
+            total=Sum('grand_total'), bills=Count('id')
+        ).order_by('-total')[:5])
+        unpaid_invoices = Invoice.objects.filter(
+            business=biz,
+            status='completed',
+            payment_status__in=('pending', 'partial', 'credit'),
+        ).count()
+        pending_purchase_count = Purchase.objects.filter(
+            business=biz,
+            payment_status__in=('pending', 'partial'),
+        ).count()
+        credit_customer_count = Customer.objects.filter(
+            business=biz,
+            outstanding_amount__gt=0,
+        ).count()
+        action_required = [
+            {
+                'key': 'stock',
+                'count': out_of_stock + low_stock_count,
+                'label': 'products need restocking',
+                'route': '/inventory/stock',
+            },
+            {
+                'key': 'credit',
+                'count': credit_customer_count,
+                'label': 'customers have pending credit',
+                'route': '/parties/customers?credit_due=1',
+            },
+            {
+                'key': 'purchases',
+                'count': pending_purchase_count,
+                'label': 'purchases pending',
+                'route': '/inventory/purchases',
+            },
+            {
+                'key': 'invoices',
+                'count': unpaid_invoices,
+                'label': 'invoices unpaid',
+                'route': '/sales/invoices?payment_status=credit',
+            },
+        ]
 
         # --- Hourly sales (1 query instead of 12) ---
         hourly_raw = (
@@ -1139,6 +1258,7 @@ class DashboardView(APIView):
             'today_sales': float(today_sales),
             'today_bills': today_bills,
             'today_profit': today_profit,
+            'today_collection': float(today_collection),
             'today_discount': float(today_discount),
             'today_tax': float(today_tax),
             'yesterday_sales': float(yesterday_sales),
@@ -1168,13 +1288,82 @@ class DashboardView(APIView):
             'top_products': top_products,
             'category_sales': category_sales,
             'payment_distribution': payment_dist,
+            'top_customers': top_customers,
+            'action_required': action_required,
             'low_stock_products': low_stock_products,
             'recent_bills': InvoiceSerializer(recent_bills, many=True).data,
         })
 
 
+class GlobalSearchView(APIView):
+    permission_classes = [IsCashierOrAdmin]
+
+    def get(self, request):
+        query = request.query_params.get('q', '').strip()
+        if len(query) < 2:
+            return Response({'results': []})
+
+        business = request.user.business
+        contains = query[:100]
+        results = []
+        for product in Product.objects.filter(
+            business=business,
+            status='active',
+        ).filter(
+            Q(name__icontains=contains) | Q(sku__icontains=contains) | Q(barcode__icontains=contains)
+        ).order_by('name')[:8]:
+            results.append({
+                'type': 'product',
+                'id': product.id,
+                'label': product.name,
+                'subtitle': f'SKU {product.sku} · Stock {product.current_stock}',
+                'route': f'/inventory/products?search={product.sku}',
+            })
+
+        for invoice in Invoice.objects.filter(
+            business=business,
+        ).filter(
+            Q(invoice_number__icontains=contains) | Q(customer_name__icontains=contains)
+        ).order_by('-created_at')[:8]:
+            results.append({
+                'type': 'invoice',
+                'id': invoice.id,
+                'label': invoice.invoice_number,
+                'subtitle': f'{invoice.customer_name} · Rs.{invoice.grand_total}',
+                'route': f'/sales/invoices?search={invoice.invoice_number}',
+            })
+
+        for customer in Customer.objects.filter(
+            business=business,
+        ).filter(
+            Q(name__icontains=contains) | Q(mobile__icontains=contains) | Q(email__icontains=contains)
+        ).order_by('name')[:8]:
+            results.append({
+                'type': 'customer',
+                'id': customer.id,
+                'label': customer.name,
+                'subtitle': customer.mobile or customer.email or 'Customer',
+                'route': f'/parties/customers?search={customer.name}',
+            })
+
+        for supplier in Supplier.objects.filter(
+            business=business,
+        ).filter(
+            Q(name__icontains=contains) | Q(phone__icontains=contains) | Q(email__icontains=contains)
+        ).order_by('name')[:8]:
+            results.append({
+                'type': 'supplier',
+                'id': supplier.id,
+                'label': supplier.name,
+                'subtitle': supplier.phone or supplier.email or 'Supplier',
+                'route': f'/parties/suppliers?search={supplier.name}',
+            })
+
+        return Response({'results': results[:20]})
+
+
 class SalesReportView(APIView):
-    permission_classes = [IsAdmin]
+    permission_classes = [IsFinanceStaff]
 
     def get(self, request):
         biz = request.user.business
@@ -1192,6 +1381,29 @@ class SalesReportView(APIView):
             total_tax=Sum('tax_amount'),
             count=Count('id'),
         )
+        returns_total = SalesReturn.objects.filter(
+            business=biz,
+            created_at__date__gte=start,
+            created_at__date__lte=end,
+        ).aggregate(total=Sum('refund_amount'))['total'] or Decimal('0')
+        collection = Payment.objects.filter(
+            invoice__business=biz,
+            invoice__status='completed',
+            created_at__date__gte=start,
+            created_at__date__lte=end,
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        collection += CustomerPayment.objects.filter(
+            business=biz,
+            created_at__date__gte=start,
+            created_at__date__lte=end,
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        outstanding = invoices.aggregate(total=Sum('balance_due'))['total'] or Decimal('0')
+        summary.update({
+            'returns': returns_total,
+            'net_sales': (summary['total_sales'] or Decimal('0')) - returns_total,
+            'collection': collection,
+            'outstanding': outstanding,
+        })
         daily = invoices.values('created_at__date').annotate(
             total=Sum('grand_total'), count=Count('id')
         ).order_by('created_at__date')
@@ -1202,7 +1414,11 @@ class SalesReportView(APIView):
             summary_rows = [
                 ('Total Sales', summary['total_sales'] or 0),
                 ('Total Discount', summary['total_discount'] or 0),
+                ('Returns', summary['returns'] or 0),
+                ('Net Sales', summary['net_sales'] or 0),
                 ('Total Tax', summary['total_tax'] or 0),
+                ('Collection', summary['collection'] or 0),
+                ('Outstanding', summary['outstanding'] or 0),
                 ('Invoice Count', summary['count'] or 0),
             ]
             filename = f'sales-report.{report_format}'
@@ -1213,7 +1429,7 @@ class SalesReportView(APIView):
 
 
 class ProductReportView(APIView):
-    permission_classes = [IsAdmin]
+    permission_classes = [IsFinanceStaff]
 
     def get(self, request):
         biz = request.user.business
@@ -1240,39 +1456,90 @@ class ProductReportView(APIView):
 
 
 class ProfitReportView(APIView):
-    permission_classes = [IsAdmin]
+    permission_classes = [IsFinanceStaff]
 
     def get(self, request):
         biz = request.user.business
         start = request.query_params.get('start_date', str(timezone.now().date().replace(day=1)))
         end = request.query_params.get('end_date', str(timezone.now().date()))
+
+        # Expenses in period
+        expense_total = Expense.objects.filter(
+            business=biz, expense_date__gte=start, expense_date__lte=end
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+
+        # Sales returns in period
+        returns_total = SalesReturn.objects.filter(
+            business=biz, created_at__date__gte=start, created_at__date__lte=end
+        ).aggregate(total=Sum('refund_amount'))['total'] or Decimal('0')
+
+        agg = InvoiceItem.objects.filter(
+            invoice__business=biz,
+            invoice__created_at__date__gte=start,
+            invoice__created_at__date__lte=end,
+            invoice__status='completed',
+        ).annotate(
+            net_revenue=F('total') - F('gst_amount'),
+            cogs=F('quantity') * F('cost_price'),
+        ).aggregate(
+            total_net_revenue=Sum('net_revenue'),
+            total_cogs=Sum('cogs'),
+            total_gst=Sum('gst_amount'),
+            total_discount=Sum('discount_amount'),
+        )
+
+        gross_sales = float(
+            InvoiceItem.objects.filter(
+                invoice__business=biz,
+                invoice__created_at__date__gte=start,
+                invoice__created_at__date__lte=end,
+                invoice__status='completed',
+            ).aggregate(s=Sum(F('unit_price') * F('quantity')))['s'] or 0
+        )
+        total_discount = float(agg['total_discount'] or 0)
+        total_gst = float(agg['total_gst'] or 0)
+        net_revenue = float(agg['total_net_revenue'] or 0)
+        total_cogs = float(agg['total_cogs'] or 0)
+        gross_profit = net_revenue - total_cogs
+        net_profit = gross_profit - float(expense_total) - float(returns_total)
+        gross_margin = round(gross_profit / net_revenue * 100, 1) if net_revenue else 0
+        net_margin = round(net_profit / net_revenue * 100, 1) if net_revenue else 0
+
+        # Per-product breakdown
         items = InvoiceItem.objects.filter(
             invoice__business=biz,
             invoice__created_at__date__gte=start,
             invoice__created_at__date__lte=end,
-            invoice__status='completed'
-        ).select_related('product')
-        result = []
-        for item in items:
-            cost = float(item.product.purchase_price if item.product else 0) * float(item.quantity)
-            revenue = float(item.total)
-            result.append({
-                'product': item.product_name,
-                'qty': float(item.quantity),
-                'revenue': revenue,
-                'cost': cost,
-                'profit': revenue - cost,
-            })
-        total_revenue = sum(r['revenue'] for r in result)
-        total_cost = sum(r['cost'] for r in result)
+            invoice__status='completed',
+        ).values('product_name', 'sku').annotate(
+            total_qty=Sum('quantity'),
+            total_revenue=Sum(F('total') - F('gst_amount')),
+            total_cost=Sum(F('quantity') * F('cost_price')),
+        ).order_by('-total_revenue')
+
+        result = [
+            {
+                'product': row['product_name'],
+                'sku': row['sku'],
+                'qty': float(row['total_qty'] or 0),
+                'revenue': float(row['total_revenue'] or 0),
+                'cost': float(row['total_cost'] or 0),
+                'profit': float((row['total_revenue'] or 0) - (row['total_cost'] or 0)),
+            }
+            for row in items
+        ]
+
         report_format = request.query_params.get('export')
         if report_format in ['pdf', 'xlsx']:
-            headers = ['Product', 'Qty', 'Revenue', 'Cost', 'Profit']
-            rows = [[row['product'], row['qty'], row['revenue'], row['cost'], row['profit']] for row in result]
+            headers = ['Product', 'SKU', 'Qty', 'Revenue', 'Cost', 'Profit']
+            rows = [[r['product'], r['sku'], r['qty'], r['revenue'], r['cost'], r['profit']] for r in result]
             summary_rows = [
-                ('Total Revenue', total_revenue),
-                ('Total Cost', total_cost),
-                ('Total Profit', total_revenue - total_cost),
+                ('Gross Sales', gross_sales),
+                ('Net Revenue', net_revenue),
+                ('Total COGS', total_cogs),
+                ('Gross Profit', gross_profit),
+                ('Expenses', float(expense_total)),
+                ('Net Profit', net_profit),
             ]
             filename = f'profit-report.{report_format}'
             if report_format == 'pdf':
@@ -1280,14 +1547,22 @@ class ProfitReportView(APIView):
             return _export_report_xlsx('Profit Report', headers, rows, filename, summary_rows=summary_rows)
         return Response({
             'items': result,
-            'total_revenue': total_revenue,
-            'total_cost': total_cost,
-            'total_profit': total_revenue - total_cost,
+            'gross_sales': gross_sales,
+            'total_discount': total_discount,
+            'total_gst': total_gst,
+            'net_revenue': net_revenue,
+            'total_cogs': total_cogs,
+            'gross_profit': gross_profit,
+            'expenses': float(expense_total),
+            'sales_returns': float(returns_total),
+            'net_profit': net_profit,
+            'gross_margin': gross_margin,
+            'net_margin': net_margin,
         })
 
 
 class GSTReportView(APIView):
-    permission_classes = [IsAdmin]
+    permission_classes = [IsFinanceStaff]
 
     def get(self, request):
         biz = request.user.business
@@ -1321,7 +1596,7 @@ class GSTReportView(APIView):
 
 
 class CustomerCreditReportView(APIView):
-    permission_classes = [IsAdmin]
+    permission_classes = [IsFinanceStaff]
 
     def get(self, request):
         biz = request.user.business
@@ -1342,7 +1617,7 @@ class CustomerCreditReportView(APIView):
 
 
 class PaymentReportView(APIView):
-    permission_classes = [IsAdmin]
+    permission_classes = [IsFinanceStaff]
 
     def get(self, request):
         biz = request.user.business
@@ -1394,7 +1669,8 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        serializer.save(business=self.request.user.business, created_by=self.request.user)
+        expense = serializer.save(business=self.request.user.business, created_by=self.request.user)
+        audit(self.request, 'create', 'expenses', 'Expense', expense.id, new=expense.amount)
 
     def perform_update(self, serializer):
         serializer.save(business=self.request.user.business)
@@ -1412,11 +1688,19 @@ class SupplierPaymentViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        serializer.save(business=self.request.user.business, created_by=self.request.user)
+        from django.db import transaction
+        with transaction.atomic():
+            payment = serializer.save(business=self.request.user.business, created_by=self.request.user)
+            supplier = Supplier.objects.select_for_update().get(pk=payment.supplier_id)
+            supplier.outstanding_amount = max(
+                Decimal('0'), supplier.outstanding_amount - payment.amount
+            )
+            supplier.save(update_fields=['outstanding_amount'])
+            audit(self.request, 'create', 'payments', 'SupplierPayment', payment.id, new=payment.amount)
 
 
 class ExpenseReportView(APIView):
-    permission_classes = [IsAdmin]
+    permission_classes = [IsFinanceStaff]
 
     def get(self, request):
         biz = request.user.business
@@ -1506,12 +1790,16 @@ class SalesReturnViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Select at least one item to return.'}, status=400)
 
         with transaction.atomic():
+            invoice = Invoice.objects.select_for_update().get(
+                pk=invoice.pk, business=request.user.business
+            )
             # Generate return number
             last = SalesReturn.objects.filter(business=request.user.business).order_by('-id').first()
             seq = (last.id + 1) if last else 1
             return_number = f"RET-{seq:04d}"
 
             refund_total = Decimal('0')
+            requested_by_item = {}
             return_obj = SalesReturn.objects.create(
                 business=request.user.business,
                 invoice=invoice,
@@ -1530,7 +1818,12 @@ class SalesReturnViewSet(viewsets.ModelViewSet):
                     return Response({'detail': f'Invalid item id {rd.get("invoice_item_id")}.'}, status=400)
 
                 ret_qty = Decimal(str(rd.get('quantity', inv_item.quantity)))
-                if ret_qty <= 0 or ret_qty > inv_item.quantity:
+                already_returned = SalesReturnItem.objects.filter(
+                    invoice_item=inv_item
+                ).aggregate(total=Sum('quantity'))['total'] or Decimal('0')
+                requested_by_item[inv_item.pk] = requested_by_item.get(inv_item.pk, Decimal('0')) + ret_qty
+                remaining_qty = inv_item.quantity - already_returned
+                if ret_qty <= 0 or requested_by_item[inv_item.pk] > remaining_qty:
                     return Response({'detail': f'Invalid return qty for {inv_item.product_name}.'}, status=400)
 
                 line_total = (inv_item.total / inv_item.quantity * ret_qty).quantize(Decimal('0.01'))
@@ -1548,22 +1841,24 @@ class SalesReturnViewSet(viewsets.ModelViewSet):
 
                 # Restore stock
                 if inv_item.product:
-                    before = inv_item.product.current_stock
-                    inv_item.product.current_stock += ret_qty
-                    inv_item.product.save()
+                    product = Product.objects.select_for_update().get(pk=inv_item.product_id)
+                    before = product.current_stock
+                    product.current_stock += ret_qty
+                    product.save(update_fields=['current_stock', 'updated_at'])
                     InventoryTransaction.objects.create(
                         business=request.user.business,
-                        product=inv_item.product,
+                        product=product,
                         transaction_type='returned',
                         quantity=ret_qty,
                         before_stock=before,
-                        after_stock=inv_item.product.current_stock,
+                        after_stock=product.current_stock,
                         reference=return_number,
                         created_by=request.user,
                     )
 
             return_obj.refund_amount = refund_total
             return_obj.save()
+            audit(request, 'create', 'returns', 'SalesReturn', return_obj.id, new=refund_total)
 
             # Mark invoice as refunded if full return
             total_returned = sum(
@@ -1576,6 +1871,15 @@ class SalesReturnViewSet(viewsets.ModelViewSet):
                 invoice.status = 'refunded'
                 invoice.payment_status = 'refunded'
                 invoice.save()
+
+            # Reduce customer outstanding proportionally
+            if invoice.customer and invoice.balance_due > 0 and invoice.grand_total > 0:
+                proportion = refund_total / invoice.grand_total
+                credit_reduction = (invoice.balance_due * proportion).quantize(Decimal('0.01'))
+                invoice.customer.outstanding_amount = max(
+                    Decimal('0'), invoice.customer.outstanding_amount - credit_reduction
+                )
+                invoice.customer.save()
 
         return Response(SalesReturnSerializer(return_obj).data, status=201)
 
@@ -1649,7 +1953,9 @@ class CancelInvoiceView(APIView):
     def post(self, request, pk):
         from django.db import transaction
         try:
-            invoice = Invoice.objects.get(pk=pk)
+            invoice = Invoice.objects.select_related('customer').prefetch_related('items__product').get(
+                pk=pk, business=request.user.business
+            )
         except Invoice.DoesNotExist:
             return Response({'error': 'Not found'}, status=404)
         if invoice.status != 'completed':
@@ -1664,6 +1970,7 @@ class CancelInvoiceView(APIView):
                     item.product.current_stock += item.quantity
                     item.product.save()
                     InventoryTransaction.objects.create(
+                        business=invoice.business,
                         product=item.product,
                         transaction_type='returned',
                         quantity=item.quantity,
@@ -1686,7 +1993,9 @@ class RefundInvoiceView(APIView):
 
     def post(self, request, pk):
         try:
-            invoice = Invoice.objects.get(pk=pk)
+            invoice = Invoice.objects.select_related('customer').prefetch_related('items__product').get(
+                pk=pk, business=request.user.business
+            )
         except Invoice.DoesNotExist:
             return Response({'error': 'Not found'}, status=404)
         if invoice.status != 'completed':
@@ -1694,6 +2003,7 @@ class RefundInvoiceView(APIView):
         from django.db import transaction
         with transaction.atomic():
             invoice.status = 'refunded'
+            invoice.payment_status = 'refunded'
             invoice.save()
             for item in invoice.items.all():
                 if item.product:
@@ -1701,6 +2011,7 @@ class RefundInvoiceView(APIView):
                     item.product.current_stock += item.quantity
                     item.product.save()
                     InventoryTransaction.objects.create(
+                        business=invoice.business,
                         product=item.product,
                         transaction_type='returned',
                         quantity=item.quantity,
@@ -1709,6 +2020,12 @@ class RefundInvoiceView(APIView):
                         reference=f"REFUND-{invoice.invoice_number}",
                         created_by=request.user,
                     )
+            # Reverse customer outstanding on full refund
+            if invoice.customer and invoice.balance_due > 0:
+                invoice.customer.outstanding_amount = max(
+                    Decimal('0'), invoice.customer.outstanding_amount - invoice.balance_due
+                )
+                invoice.customer.save()
         return Response({'status': 'refunded'})
 
 
@@ -1716,28 +2033,38 @@ class StockAdjustView(APIView):
     permission_classes = [IsAdmin]
 
     def post(self, request):
+        from django.db import transaction
         product_id = request.data.get('product_id')
-        quantity = Decimal(str(request.data.get('quantity', 0)))
+        try:
+            quantity = Decimal(str(request.data.get('quantity', 0)))
+        except (ValueError, TypeError):
+            return Response({'error': 'Quantity must be a number.'}, status=400)
+        if quantity == 0:
+            return Response({'error': 'Quantity cannot be zero.'}, status=400)
         transaction_type = request.data.get('transaction_type', 'adjustment')
         notes = request.data.get('notes', '')
-        try:
-            product = Product.objects.get(pk=product_id)
-        except Product.DoesNotExist:
-            return Response({'error': 'Product not found'}, status=404)
-        before = product.current_stock
-        product.current_stock += quantity
-        if product.current_stock < 0:
-            product.current_stock = 0
-        product.save()
-        InventoryTransaction.objects.create(
-            product=product,
-            transaction_type=transaction_type,
-            quantity=quantity,
-            before_stock=before,
-            after_stock=product.current_stock,
-            notes=notes,
-            created_by=request.user,
-        )
+        with transaction.atomic():
+            try:
+                product = Product.objects.select_for_update().get(
+                    pk=product_id, business=request.user.business
+                )
+            except Product.DoesNotExist:
+                return Response({'error': 'Product not found'}, status=404)
+            before = product.current_stock
+            product.current_stock += quantity
+            if product.current_stock < 0:
+                return Response({'error': 'Insufficient stock.'}, status=400)
+            product.save(update_fields=['current_stock', 'updated_at'])
+            InventoryTransaction.objects.create(
+                business=product.business,
+                product=product,
+                transaction_type=transaction_type,
+                quantity=quantity,
+                before_stock=before,
+                after_stock=product.current_stock,
+                notes=notes,
+                created_by=request.user,
+            )
         return Response(ProductSerializer(product).data)
 
 
@@ -1753,7 +2080,9 @@ class BulkStockAdjustView(APIView):
         with transaction.atomic():
             for item in items:
                 try:
-                    product = Product.objects.select_for_update().get(pk=item['product_id'])
+                    product = Product.objects.select_for_update().get(
+                        pk=item['product_id'], business=request.user.business
+                    )
                     quantity = Decimal(str(item['quantity']))
                 except (Product.DoesNotExist, KeyError, ValueError, TypeError):
                     return Response({'detail': 'One or more stock rows are invalid.'}, status=400)
@@ -1765,6 +2094,7 @@ class BulkStockAdjustView(APIView):
                     return Response({'detail': f'Insufficient stock for {product.name}.'}, status=400)
                 product.save()
                 InventoryTransaction.objects.create(
+                    business=request.user.business,
                     product=product,
                     transaction_type='stock_in' if quantity > 0 else 'stock_out',
                     quantity=quantity,
@@ -1876,6 +2206,7 @@ class StockImportView(APIView):
                 product.current_stock = after
                 product.save(update_fields=['current_stock', 'updated_at'])
                 InventoryTransaction.objects.create(
+                    business=request.user.business,
                     product=product,
                     transaction_type='stock_in' if quantity > 0 else 'stock_out',
                     quantity=quantity,
@@ -1909,11 +2240,12 @@ class CustomerPaymentViewSet(viewsets.ModelViewSet):
                 created_by=self.request.user,
             )
             # Reduce customer outstanding
-            customer = payment.customer
+            customer = Customer.objects.select_for_update().get(pk=payment.customer_id)
             customer.outstanding_amount = max(
                 Decimal('0'), customer.outstanding_amount - payment.amount
             )
             customer.save(update_fields=['outstanding_amount'])
+            audit(self.request, 'create', 'payments', 'CustomerPayment', payment.id, new=payment.amount)
 
 
 class PurchaseReturnViewSet(viewsets.ModelViewSet):
@@ -1946,11 +2278,15 @@ class PurchaseReturnViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Select at least one item to return.'}, status=400)
 
         with transaction.atomic():
+            purchase = Purchase.objects.select_for_update().get(
+                pk=purchase.pk, business=request.user.business
+            )
             last = PurchaseReturn.objects.filter(business=request.user.business).order_by('-id').first()
             seq = (last.id + 1) if last else 1
             return_number = f"PRET-{seq:04d}"
 
             debit_total = Decimal('0')
+            requested_by_item = {}
             return_obj = PurchaseReturn.objects.create(
                 business=request.user.business,
                 purchase=purchase,
@@ -1968,7 +2304,12 @@ class PurchaseReturnViewSet(viewsets.ModelViewSet):
                     return Response({'detail': f'Invalid item id {rd.get("purchase_item_id")}.'}, status=400)
 
                 ret_qty = Decimal(str(rd.get('quantity', p_item.quantity)))
-                if ret_qty <= 0 or ret_qty > p_item.quantity:
+                already_returned = PurchaseReturnItem.objects.filter(
+                    purchase_item=p_item
+                ).aggregate(total=Sum('quantity'))['total'] or Decimal('0')
+                requested_by_item[p_item.pk] = requested_by_item.get(p_item.pk, Decimal('0')) + ret_qty
+                remaining_qty = p_item.quantity - already_returned
+                if ret_qty <= 0 or requested_by_item[p_item.pk] > remaining_qty:
                     return Response({'detail': f'Invalid return qty for {p_item.product.name}.'}, status=400)
 
                 line_total = (p_item.total / p_item.quantity * ret_qty).quantize(Decimal('0.01'))
@@ -1986,22 +2327,26 @@ class PurchaseReturnViewSet(viewsets.ModelViewSet):
 
                 # Reduce stock
                 if p_item.product:
-                    before = p_item.product.current_stock
-                    p_item.product.current_stock = max(Decimal('0'), p_item.product.current_stock - ret_qty)
-                    p_item.product.save()
+                    product = Product.objects.select_for_update().get(pk=p_item.product_id)
+                    before = product.current_stock
+                    if product.current_stock < ret_qty:
+                        return Response({'detail': f'Insufficient stock for {p_item.product.name}.'}, status=400)
+                    product.current_stock -= ret_qty
+                    product.save(update_fields=['current_stock', 'updated_at'])
                     InventoryTransaction.objects.create(
                         business=request.user.business,
-                        product=p_item.product,
+                        product=product,
                         transaction_type='stock_out',
                         quantity=-ret_qty,
                         before_stock=before,
-                        after_stock=p_item.product.current_stock,
+                        after_stock=product.current_stock,
                         reference=return_number,
                         created_by=request.user,
                     )
 
             return_obj.debit_amount = debit_total
             return_obj.save()
+            audit(request, 'create', 'returns', 'PurchaseReturn', return_obj.id, new=debit_total)
 
             # Reduce supplier outstanding
             if purchase.supplier and debit_total > 0:

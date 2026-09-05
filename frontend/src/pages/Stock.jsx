@@ -17,7 +17,7 @@ export default function Stock() {
 
   const getStatus = p => {
     if (p.current_stock <= 0) return 'out_of_stock'
-    if (p.current_stock <= (p.minimum_stock || 5)) return 'low_stock'
+    if (p.current_stock <= p.minimum_stock) return 'low_stock'
     return 'in_stock'
   }
 

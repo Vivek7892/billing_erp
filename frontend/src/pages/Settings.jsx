@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import api, { API_BASE_URL } from '../api'
+import api from '../api'
 import { Card, PageHeader } from '../components/UI'
 import toast from 'react-hot-toast'
-import { useAuth } from '../AuthContext'
 import {
   Building2, FileText, Percent, CreditCard, Printer, Upload, CheckCircle2, Info, XCircle, Trash2, ImageIcon
 } from 'lucide-react'
@@ -85,14 +84,12 @@ function Section({ title, children }) {
 // ══════════════════════════════════════════════════════════════════════════════
 // 3.1 Business Profile
 // ══════════════════════════════════════════════════════════════════════════════
-function BusinessTab({ s, set, onLogoUpload, uploading, onUploadSuccess }) {
+function BusinessTab({ s, set, onLogoUpload, onLogoRemove, uploading, removing }) {
   const fileRef = useRef()
   const [localPreview, setLocalPreview] = useState(null)
   const [fileInfo, setFileInfo] = useState(null)
 
-  const savedLogoUrl = s.shop_logo
-    ? (s.shop_logo.startsWith('http') ? s.shop_logo : `${API_BASE_URL.replace(/\/api$/, '')}${s.shop_logo}`)
-    : null
+  const savedLogoUrl = s.shop_logo || null
   const previewUrl = localPreview || savedLogoUrl
 
   // Once upload finishes and s.shop_logo is updated, drop the local blob
@@ -114,8 +111,8 @@ function BusinessTab({ s, set, onLogoUpload, uploading, onUploadSuccess }) {
   const handleRemove = () => {
     setLocalPreview(null)
     setFileInfo(null)
-    set('shop_logo', '')
     if (fileRef.current) fileRef.current.value = ''
+    onLogoRemove()
   }
 
   return (
@@ -176,7 +173,7 @@ function BusinessTab({ s, set, onLogoUpload, uploading, onUploadSuccess }) {
                 <Upload size={13} /> {previewUrl ? 'Change logo' : 'Upload logo'}
               </button>
               {previewUrl && (
-                <button type="button" onClick={handleRemove} className="btn-secondary text-xs text-red-600 hover:bg-red-50 hover:border-red-200">
+                <button type="button" onClick={handleRemove} disabled={removing} className="btn-secondary text-xs text-red-600 hover:bg-red-50 hover:border-red-200">
                   <Trash2 size={13} /> Remove
                 </button>
               )}
@@ -486,6 +483,7 @@ export default function Settings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [removing, setRemoving] = useState(false)
 
   useEffect(() => {
     api.get('/settings/all/').then(r => setS(r.data)).finally(() => setLoading(false))
@@ -506,19 +504,42 @@ export default function Settings() {
   const uploadLogo = async e => {
     const file = e.target.files?.[0]
     if (!file) return
+
+    const MAX_SIZE = 2 * 1024 * 1024 // 2 MB
+    if (file.size > MAX_SIZE) {
+      toast.error('Logo must be under 2 MB')
+      return
+    }
+
     setUploading(true)
     try {
-      const fd = new FormData()
-      fd.append('logo', file)
-      const { data } = await api.post('/settings/upload-logo/', fd)
-      const urlWithBust = data.url + '?t=' + Date.now()
-      setS(p => ({ ...p, shop_logo: urlWithBust }))
-      window.dispatchEvent(new CustomEvent('shop-settings-updated', { detail: { shop_logo: urlWithBust } }))
-      toast.success('Logo uploaded')
+      const formData = new FormData()
+      formData.append('logo', file)
+      const { data } = await api.post('/settings/upload-logo/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      const publicUrl = data.url
+      setS(p => ({ ...p, shop_logo: publicUrl }))
+      window.dispatchEvent(new CustomEvent('shop-settings-updated', { detail: { shop_logo: publicUrl } }))
+      toast.success('Logo uploaded successfully')
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Upload failed')
+      toast.error(err.response?.data?.detail || 'Logo upload failed. Check storage configuration.')
     } finally {
       setUploading(false)
+    }
+  }
+
+  const removeLogo = async () => {
+    setRemoving(true)
+    try {
+      await api.post('/settings/remove-logo/')
+      setS(p => ({ ...p, shop_logo: '' }))
+      window.dispatchEvent(new CustomEvent('shop-settings-updated', { detail: { shop_logo: '' } }))
+      toast.success('Logo removed')
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not remove logo')
+    } finally {
+      setRemoving(false)
     }
   }
 
@@ -563,7 +584,7 @@ export default function Settings() {
 
         {/* Right content */}
         <div className="min-w-0">
-          {tab === 'business' && <BusinessTab {...tabProps} onLogoUpload={uploadLogo} uploading={uploading} />}
+          {tab === 'business' && <BusinessTab {...tabProps} onLogoUpload={uploadLogo} onLogoRemove={removeLogo} uploading={uploading} removing={removing} />}
           {tab === 'invoice'  && <InvoiceTab  {...tabProps} />}
           {tab === 'gst'      && <GstTab      {...tabProps} />}
           {tab === 'payment'  && <PaymentTab  {...tabProps} />}

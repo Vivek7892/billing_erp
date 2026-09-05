@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api, { API_BASE_URL } from '../api'
 import { Badge, Spinner, EmptyState, ConfirmDialog } from '../components/UI'
 import toast from 'react-hot-toast'
@@ -921,6 +922,7 @@ function MobileInvoiceCard({ bill, shopName, onView, onRefresh }) {
 ========================================================= */
 
 export default function Bills() {
+  const navigate = useNavigate()
   const [bills, setBills] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -1116,9 +1118,7 @@ export default function Bills() {
           </div>
 
           <button
-            onClick={() =>
-              (window.location.href = '/new-bill')
-            }
+            onClick={() => navigate('/billing/new')}
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700 active:scale-[0.98] sm:w-auto"
           >
             <Plus size={17} />

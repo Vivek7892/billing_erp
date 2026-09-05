@@ -199,7 +199,7 @@ class Invoice(models.Model):
     STATUS_CHOICES = [('completed', 'Completed'), ('cancelled', 'Cancelled'), ('refunded', 'Refunded')]
     PAYMENT_STATUS_CHOICES = [
         ('pending', 'Pending'), ('paid', 'Paid'), ('failed', 'Failed'),
-        ('partial', 'Partial'), ('credit', 'Credit'),
+        ('partial', 'Partial'), ('credit', 'Credit'), ('refunded', 'Refunded'),
     ]
     business = models.ForeignKey(Business, on_delete=models.CASCADE, null=True, blank=True)
     invoice_number = models.CharField(max_length=50)
@@ -237,6 +237,7 @@ class InvoiceItem(models.Model):
     mrp = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
+    cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     gst_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
