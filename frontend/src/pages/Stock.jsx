@@ -86,7 +86,7 @@ export default function Stock() {
                 </button>
               ))}
             </div>
-            <button onClick={load} className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--muted-light)] hover:bg-slate-100 transition-colors">
+            <button onClick={load} className="icon-btn">
               <RefreshCw size={14} />
             </button>
           </div>

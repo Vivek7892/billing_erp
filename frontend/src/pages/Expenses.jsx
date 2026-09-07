@@ -208,15 +208,15 @@ export default function Expenses() {
               </button>
 
               {/* Add */}
-              <button
-                type="button"
-                onClick={openAdd}
-                className="btn-primary flex h-9 shrink-0 items-center justify-center gap-1.5 px-2.5 text-xs sm:px-3"
-              >
-                <Plus size={13} />
-                <span className="hidden sm:inline">Add Expense</span>
-                <span className="sm:hidden">Add</span>
-              </button>
+<button
+  type="button"
+  onClick={openAdd}
+  className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white transition hover:bg-blue-700"
+>
+  <Plus size={14} strokeWidth={2} />
+  <span className="hidden sm:inline">Add Expense</span>
+  <span className="sm:hidden">Add</span>
+</button>
             </div>
           </div>
 
@@ -246,12 +246,12 @@ export default function Expenses() {
             <Spinner />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 px-4 py-12 text-[var(--muted-light)]">
+          <div className="flex flex-col items-center gap-2 px-10 py-20 text-[var(--muted-light)]">
             <IndianRupee size={28} className="opacity-30" />
             <span className="text-sm">No expenses found</span>
             <button
               onClick={openAdd}
-              className="btn-primary mt-1 text-xs"
+             className="mt-2 btn-primary btn-base"
             >
               Add First Expense
             </button>
@@ -454,8 +454,8 @@ export default function Expenses() {
           </div>
           <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
             <button onClick={() => setModal(false)} className="btn-secondary flex-1">Cancel</button>
-            <button onClick={save} disabled={saving} className="btn-primary flex-1">
-              {saving ? 'Saving…' : form.id ? 'Update' : 'Add Expense'}
+            <button onClick={save} disabled={saving} className="btn-primary flex-1 gap-2">
+              {saving ? <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Saving…</> : (form.id ? 'Update Expense' : 'Add Expense')}
             </button>
           </div>
         </div>

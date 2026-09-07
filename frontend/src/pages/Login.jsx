@@ -108,7 +108,7 @@ export default function Login() {
   // ============================================================
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
+    <main className="min-h-screen bg-[var(--app-bg)] text-[var(--ink)]">
 
       <div className="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
 
@@ -219,7 +219,7 @@ export default function Login() {
             RIGHT LOGIN PANEL
         ====================================================== */}
 
-        <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-50 px-5 py-8 sm:px-8">
+        <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--app-bg)] px-5 py-8 sm:px-8">
 
           {/* Background glow */}
           <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-blue-100/60 blur-[90px]" />
@@ -239,7 +239,7 @@ export default function Login() {
                 LOGIN CARD
             ================================================== */}
 
-            <div className="rounded-[30px] border border-slate-200 bg-white p-7 shadow-[0_30px_80px_-30px_rgba(15,23,42,0.25)] sm:p-10">
+            <div className="rounded-[30px] border border-[var(--line)] bg-[var(--surface)] p-7 shadow-[0_30px_80px_-30px_rgba(15,23,42,0.25)] sm:p-10">
 
               {/* Header */}
               <div className="mb-8">
@@ -256,13 +256,13 @@ export default function Login() {
 
                 </p>
 
-                <h2 className="text-3xl font-bold tracking-[-0.04em] text-slate-900">
+                <h2 className="text-3xl font-bold tracking-[-0.04em] text-[var(--ink)]">
 
                   Welcome back
 
                 </h2>
 
-                <p className="mt-2 text-sm leading-6 text-slate-500">
+                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
 
                   Sign in to access your ERP workspace.
 
@@ -328,7 +328,7 @@ export default function Login() {
 
                   <label
                     htmlFor="password"
-                    className="mb-2 block text-sm font-semibold text-slate-800"
+                    className="mb-2 block text-sm font-semibold text-[var(--ink-secondary)]"
                   >
                     Password
                   </label>
@@ -361,7 +361,7 @@ export default function Login() {
                           ? 'password-error'
                           : undefined
                       }
-                      className={`h-12 w-full rounded-2xl border bg-slate-50 px-4 pr-12 text-sm text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-400 hover:bg-white focus:bg-white focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 ${
+                      className={`h-12 w-full rounded-2xl border bg-[var(--surface-elevated)] px-4 pr-12 text-sm text-[var(--ink)] outline-none transition-all duration-200 placeholder:text-[var(--muted-light)] hover:bg-[var(--surface)] focus:bg-[var(--surface)] focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 ${
                         errors.password
                           ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10'
                           : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/10'
@@ -388,7 +388,7 @@ export default function Login() {
                           ? 'Hide password'
                           : 'Show password'
                       }
-                      className="absolute right-0 top-0 flex h-12 w-12 items-center justify-center rounded-r-2xl text-slate-400 transition hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed"
+                      className="absolute right-0 top-0 flex h-12 w-12 items-center justify-center rounded-r-2xl text-[var(--muted-light)] transition hover:text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed"
                     >
 
                       {showPassword ? (
@@ -420,7 +420,7 @@ export default function Login() {
                 {/* Remember / Forgot */}
                 <div className="flex items-center justify-between pt-1">
 
-                  <label className="flex cursor-pointer items-center gap-2.5 text-xs font-medium text-slate-500">
+                  <label className="flex cursor-pointer items-center gap-2.5 text-xs font-medium text-[var(--muted)]">
 
                     <input
                       type="checkbox"
@@ -488,7 +488,7 @@ export default function Login() {
                   SECURITY MESSAGE
               ================================================= */}
 
-              <div className="mt-7 flex items-center justify-center gap-2 text-xs font-medium text-slate-400">
+              <div className="mt-7 flex items-center justify-center gap-2 text-xs font-medium text-[var(--muted-light)]">
 
                 <LockIcon />
 
@@ -502,7 +502,7 @@ export default function Login() {
 
 
             {/* Bottom footer */}
-            <p className="mt-6 text-center text-[11px] font-medium text-slate-400">
+            <p className="mt-6 text-center text-[11px] font-medium text-[var(--muted-light)]">
 
               © {new Date().getFullYear()} DreamWithTech · Secure ERP access
 
@@ -627,7 +627,7 @@ function Field({
 
       <label
         htmlFor={id}
-        className="mb-2 block text-sm font-semibold text-slate-800"
+        className="mb-2 block text-sm font-semibold text-[var(--ink-secondary)]"
       >
         {label}
       </label>
@@ -648,7 +648,7 @@ function Field({
             ? errorId
             : undefined
         }
-        className={`h-12 w-full rounded-2xl border bg-slate-50 px-4 text-sm text-slate-900 outline-none transition-all duration-200 placeholder:text-slate-400 hover:bg-white focus:bg-white focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 ${
+        className={`h-12 w-full rounded-2xl border bg-[var(--surface-elevated)] px-4 text-sm text-[var(--ink)] outline-none transition-all duration-200 placeholder:text-[var(--muted-light)] hover:bg-[var(--surface)] focus:bg-[var(--surface)] focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 ${
           error
             ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10'
             : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/10'

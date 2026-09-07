@@ -9,7 +9,7 @@ import toast from 'react-hot-toast'
 import {
   Search, Plus, Minus, Trash2, User, Printer, Download, RefreshCw, QrCode,
   Keyboard, CheckCircle2, Share2, Clock, Package, Layers, X, Banknote,
-  CreditCard, Wallet, Receipt, AlertTriangle, FileText
+  CreditCard, Wallet, Receipt, AlertTriangle
 } from 'lucide-react'
 import { ErrorState, Modal, Skeleton } from '../components/UI'
 import { useNavigate } from 'react-router-dom'
@@ -797,11 +797,19 @@ export default function NewBill() {
   }
 
   const addCustomer = async () => {
+    if (!newCustomer.name.trim()) return toast.error('Customer name is required')
     try {
       const data = await customerService.createCustomer(newCustomer)
       setCustomers(x => [...x, data]); setCustomer(data); setCustomerSearch(data.name)
       setShowCustomerModal(false); setNewCustomer({ name: '', mobile: '', email: '' })
-    } catch { toast.error('Failed to add customer') }
+      toast.success(`Customer "${data.name}" added`)
+    } catch (err) {
+      const msg = err?.response?.data
+      const detail = typeof msg === 'object'
+        ? Object.values(msg).flat().find(v => typeof v === 'string')
+        : msg?.detail
+      toast.error(detail || 'Failed to add customer')
+    }
   }
 
   const getShortPdfUrl = async (invoiceId) => {
@@ -809,7 +817,7 @@ export default function NewBill() {
     return link.url
   }
 
-  const shareInvoice = async ({ sharePdf = false } = {}) => {
+  const shareInvoice = async () => {
     if (!lastInvoice) {
       toast.error('Save the bill first')
       return
@@ -822,49 +830,50 @@ export default function NewBill() {
       lastInvoice.customer?.mobile ||
       ''
     ).replace(/\D/g, '')
-    let pdfUrl
+    const customerName = lastInvoice.customer_name || lastInvoice.customer?.name || 'Walk-in Customer'
+    const items = Array.isArray(lastInvoice.items)
+      ? lastInvoice.items
+      : cart.map(item => ({
+          product_name: item.product_name,
+          quantity: item.qty,
+          total: item.total,
+        }))
+
+    let pdfUrl = ''
     try {
       pdfUrl = await getShortPdfUrl(lastInvoice.id)
     } catch {
-      toast.error('Could not create a share link')
+      toast.error('Could not prepare the bill PDF')
       return
     }
 
-    const message =
-      `*${shopName}*\n` +
-      `Invoice: ${invoiceNumber}\n` +
-      `Total: ${fmt(total)}\n` +
-      `Payment: ${(lastInvoice.payment_method || payment.method || 'cash').toUpperCase()}\n` +
-      `Thank you for shopping with us!\n\nDownload PDF: ${pdfUrl}`
+    const itemDescription = items.length
+      ? items.map(item => `${item.product_name} × ${item.quantity} — ${fmt(item.total)}`).join('\n')
+      : 'Bill details are available in the attached PDF.'
 
-    // Share PDF file directly via Web Share API
-    if (sharePdf) {
-      try {
-        const res = await fetch(pdfUrl)
-        if (!res.ok) throw new Error('fetch failed')
-        const blob = await res.blob()
-        const file = new File([blob], `invoice-${invoiceNumber}.pdf`, { type: 'application/pdf' })
-        if (navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ files: [file], title: `Invoice ${invoiceNumber}` })
-          return
-        }
-        // Fallback: download the PDF
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `invoice-${invoiceNumber}.pdf`
-        a.click()
-        setTimeout(() => URL.revokeObjectURL(url), 1000)
-        toast.success('PDF downloaded')
-        return
-      } catch (err) {
-        if (err?.name === 'AbortError') return
-        toast.error('Could not share PDF')
-        return
-      }
+    const message =
+      `*${shopName}*\n\n` +
+      `*Bill / Invoice:* ${invoiceNumber}\n` +
+      `Customer: ${customerName}\n\n` +
+      `*Items:*\n${itemDescription}\n\n` +
+      `*Total: ${fmt(total)}*\n` +
+      `Payment: ${(lastInvoice.payment_method || payment.method || 'cash').toUpperCase()}\n` +
+      (lastInvoice.notes ? `Notes: ${lastInvoice.notes}\n` : '') +
+      `\nThank you for shopping with us! 🙏\n` +
+      `We appreciate your business.\n\n` +
+      `Bill PDF: ${pdfUrl}`
+
+    let pdfFile = null
+    try {
+      const res = await fetch(pdfUrl)
+      if (!res.ok) throw new Error('fetch failed')
+      const blob = await res.blob()
+      pdfFile = new File([blob], `invoice-${invoiceNumber}.pdf`, { type: 'application/pdf' })
+    } catch {
+      // Continue with the shareable bill description/link.
     }
 
-    // WhatsApp with PDF link
+    // WhatsApp gets the complete bill description and PDF link.
     if (phone) {
       const whatsappPhone = phone.length === 10 ? `91${phone}` : phone
       const waUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`
@@ -873,23 +882,27 @@ export default function NewBill() {
       return
     }
 
-    // Native share sheet
+    // Native share sheet: share both the bill description and PDF file.
     if (navigator.share) {
       try {
-        await navigator.share({ title: `Invoice ${invoiceNumber}`, text: message })
+        if (pdfFile && navigator.canShare?.({ files: [pdfFile] })) {
+          await navigator.share({
+            title: `Bill ${invoiceNumber}`,
+            text: message,
+            files: [pdfFile],
+          })
+        } else {
+          await navigator.share({ title: `Bill ${invoiceNumber}`, text: message })
+        }
         return
       } catch (err) {
         if (err?.name === 'AbortError') return
       }
     }
 
-    // Clipboard fallback
-    try {
-      await navigator.clipboard.writeText(message)
-      toast.success('Invoice details copied — ready to share')
-    } catch {
-      window.prompt('Copy invoice details:', message)
-    }
+    // No clipboard/copy-link fallback. Open the PDF for manual sharing.
+    const win = window.open(pdfUrl, '_blank', 'noopener,noreferrer')
+    if (!win) toast.error('Could not open the bill PDF')
   }
 
   const setExactCash = () => setPayment(x => ({ ...x, method: 'cash', amount: grandTotal.toFixed(2), status: 'paid' }))
@@ -1307,11 +1320,8 @@ export default function NewBill() {
               >
                 <QrCode size={14} /> QR Pay
               </button>
-              <button className="btn-outline" onClick={() => shareInvoice()}>
-                <Share2 size={14} /> Share
-              </button>
-              <button className="btn-outline" onClick={() => shareInvoice({ sharePdf: true })} disabled={!lastInvoice}>
-                <FileText size={14} /> Share PDF
+              <button className="btn-outline w-full" onClick={shareInvoice} disabled={!lastInvoice}>
+                <Share2 size={14} /> Share Bill + PDF
               </button>
               <button className="btn-outline border-amber-300 text-amber-700 hover:border-amber-500 hover:bg-amber-50 hover:text-amber-800" onClick={saveDraft}>
                 <Layers size={14} /> Draft
@@ -1387,7 +1397,7 @@ export default function NewBill() {
         </div>
       </Modal>
 
-      <Modal open={showSuccess && Boolean(lastInvoice)} onClose={() => setShowSuccess(false)} title="Payment Successful" size="sm">
+      <Modal open={showSuccess && Boolean(lastInvoice)} onClose={() => setShowSuccess(false)} title="Bill Saved Successfully" size="sm">
         <div className="space-y-4">
           <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 p-4 text-center">
             <CheckCircle2 size={34} className="mx-auto text-emerald-600 dark:text-emerald-400" />
@@ -1405,8 +1415,7 @@ export default function NewBill() {
           <div className="grid grid-cols-2 gap-2">
             <button className="btn-outline" onClick={() => printInvoiceDocument(lastInvoice?.id)}><Printer size={14} /> Print</button>
             <button className="btn-outline" onClick={() => downloadInvoiceDocument(lastInvoice?.id)}><Download size={14} /> PDF</button>
-            <button className="btn-outline" onClick={() => shareInvoice()}><Share2 size={14} /> Share</button>
-            <button className="btn-outline" onClick={() => shareInvoice({ sharePdf: true })}><FileText size={14} /> Share PDF</button>
+            <button className="btn-outline col-span-2" onClick={shareInvoice}><Share2 size={14} /> Share Bill + PDF</button>
             <button className="btn-solid col-span-2" onClick={() => { setShowSuccess(false); resetBill() }}><RefreshCw size={14} /> New Bill</button>
           </div>
         </div>

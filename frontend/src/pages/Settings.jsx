@@ -557,8 +557,8 @@ export default function Settings() {
         title="Settings"
         subtitle="Configure your business, invoicing, GST, payments and printer"
         action={
-          <button onClick={save} disabled={saving} className="btn-primary px-5">
-            {saving ? 'Saving…' : 'Save Changes'}
+          <button onClick={save} disabled={saving} className="btn-primary px-5 gap-2">
+            {saving ? <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Saving…</> : 'Save Changes'}
           </button>
         }
       />
@@ -572,7 +572,7 @@ export default function Settings() {
               onClick={() => setTab(id)}
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-left transition-colors ${
                 tab === id
-                  ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-medium'
+                  ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-medium'
                   : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
               }`}
             >

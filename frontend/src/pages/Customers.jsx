@@ -303,7 +303,7 @@ export default function Customers() {
         action={
           <button
             onClick={openAdd}
-            className="btn-primary flex items-center justify-center gap-2 text-xs sm:text-sm px-3 sm:px-4"
+            className="mt-2 btn-primary btn-base"
           >
             <Plus size={16} />
             <span>Add Customer</span>

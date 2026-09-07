@@ -25,8 +25,9 @@ import InvoicePreview from './pages/InvoicePreview'
 function Guard({ children, adminOnly, roles }) {
   const { user, loading } = useAuth()
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: 'var(--app-bg)' }}>
+      <div className="w-9 h-9 border-[3px] border-[var(--line)] border-t-[var(--primary)] rounded-full animate-spin" />
+      <span className="text-xs font-medium text-[var(--muted)]">Loading…</span>
     </div>
   )
   if (!user) return <Navigate to="/login" replace />
@@ -40,7 +41,31 @@ export default function App() {
     <ThemeProvider>
     <AuthProvider>
       <BrowserRouter>
-        <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              borderRadius: '0.875rem',
+              padding: '0.75rem 1rem',
+              boxShadow: '0 10px 30px rgba(15,23,42,0.12), 0 4px 8px rgba(15,23,42,0.06)',
+              border: '1.5px solid var(--line)',
+              background: 'var(--surface)',
+              color: 'var(--ink)',
+            },
+            success: {
+              iconTheme: { primary: '#16a34a', secondary: '#f0fdf4' },
+              style: { borderColor: '#bbf7d0' },
+            },
+            error: {
+              iconTheme: { primary: '#dc2626', secondary: '#fef2f2' },
+              style: { borderColor: '#fecaca' },
+            },
+          }}
+        />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Guard><Dashboard /></Guard>} />

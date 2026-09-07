@@ -270,12 +270,12 @@ export default function Reports() {
             className="
               text-xs
               sm:text-sm
-              text-blue-700
+              text-blue-700 dark:text-blue-300
               border
-              border-blue-100
+              border-blue-200 dark:border-blue-800
               bg-blue-50 dark:bg-blue-950/60
-              hover:bg-blue-100
-              active:bg-blue-100
+              hover:bg-blue-100 dark:hover:bg-blue-900/60
+              active:bg-blue-100 dark:active:bg-blue-900/60
               rounded-lg
               px-3
               py-2
@@ -283,6 +283,7 @@ export default function Reports() {
               flex-shrink-0
               whitespace-nowrap
               transition-colors
+              font-medium
             "
             onClick={() => {
               setStart(from)
@@ -295,7 +296,7 @@ export default function Reports() {
       </div>
 
       {/* DATE / CALENDAR FILTER */}
-      {tab !== 'customers' && tab !== 'expenses' && (
+      {tab !== 'customers' && (
         <Card className="p-3 sm:p-4">
           <div className="
             flex

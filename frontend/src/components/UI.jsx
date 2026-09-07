@@ -29,19 +29,19 @@ export function StatCard({ label, value, icon: Icon, color = 'blue', sub, trend,
   return (
     <Tag
       onClick={onClick}
-      className={`kpi-card border-l-4 ${c.accent} flex flex-col gap-3 w-full text-left ${onClick ? 'cursor-pointer hover:ring-2 hover:ring-[var(--primary-border)]' : 'cursor-default'}`}
+      className={`kpi-card border-l-[3px] ${c.accent} flex flex-col gap-2 w-full text-left ${onClick ? 'cursor-pointer hover:ring-2 hover:ring-[var(--primary-border)]' : 'cursor-default'}`}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--muted-light)] leading-tight">{label}</p>
-        <div className={`p-2 rounded-lg flex-shrink-0 ring-1 ${c.bg} ${c.ring}`}>
-          <Icon size={17} className={c.icon} />
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--muted-light)] leading-tight">{label}</p>
+        <div className={`p-1.5 rounded-lg flex-shrink-0 ring-1 ${c.bg} ${c.ring}`}>
+          <Icon size={15} className={c.icon} />
         </div>
       </div>
       <div>
-        <p className="text-xl sm:text-2xl font-extrabold text-[var(--ink)] tracking-tight truncate">{value}</p>
-        {sub && <p className="text-xs text-[var(--muted)] mt-0.5 truncate">{sub}</p>}
+        <p className="text-[1.875rem] font-bold text-[var(--ink)] tracking-tight truncate leading-none" style={{fontVariantNumeric:'tabular-nums',fontFeatureSettings:'"tnum"'}}>{value}</p>
+        {sub && <p className="text-xs text-[var(--muted)] mt-1 truncate">{sub}</p>}
         {trend !== undefined && (
-          <div className={`mt-1 text-xs font-semibold flex items-center gap-0.5 ${trend > 0 ? 'text-green-600 dark:text-green-400' : trend < 0 ? 'text-red-500' : 'text-[var(--muted-light)]'}`}>
+          <div className={`mt-1.5 text-xs font-semibold flex items-center gap-0.5 ${trend > 0 ? 'text-green-600 dark:text-green-400' : trend < 0 ? 'text-red-500' : 'text-[var(--muted-light)]'}`}>
             <span>{trend > 0 ? '↑' : trend < 0 ? '↓' : '—'}</span>
             <span>{trend !== 0 ? `${Math.abs(trend)}%` : 'No change'}</span>
           </div>
@@ -63,7 +63,14 @@ export function Badge({ status }) {
   }
   const label = status?.replace(/_/g, ' ')
   const type = map[status] || 'neutral'
-  return <span className={`status-badge status-${type}`}>{label}</span>
+  const styles = {
+    success: 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/50 dark:text-green-300 dark:border-green-800',
+    warning: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
+    danger:  'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/50 dark:text-red-300 dark:border-red-800',
+    info:    'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800',
+    neutral: 'bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-800/50 dark:text-slate-400 dark:border-slate-700',
+  }
+  return <span className={`status-badge ${styles[type]}`}>{label}</span>
 }
 
 /* ============================================================
@@ -269,12 +276,12 @@ export function CardSkeleton({ count = 4 }) {
   return (
     <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="kpi-card border-l-4 border-l-[var(--line)] space-y-3">
+        <div key={i} className="kpi-card border-l-[3px] border-l-[var(--line)] space-y-3">
           <div className="flex justify-between items-start">
             <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-8 w-8 rounded-lg" />
+            <Skeleton className="h-7 w-7 rounded-lg" />
           </div>
-          <Skeleton className="h-7 w-28" />
+          <Skeleton className="h-8 w-28" />
           <Skeleton className="h-3 w-16" />
         </div>
       ))}
@@ -335,8 +342,8 @@ export function PageHeader({ title, subtitle, action, className = '' }) {
   return (
     <div className={`flex items-start justify-between gap-4 mb-5 ${className}`}>
       <div className="min-w-0">
-        <h1 className="text-xl sm:text-2xl font-bold text-[var(--ink)] tracking-tight">{title}</h1>
-        {subtitle && <p className="text-[var(--muted)] text-sm mt-0.5">{subtitle}</p>}
+        <h1 className="text-xl sm:text-2xl font-bold text-[var(--ink)] tracking-tight leading-tight">{title}</h1>
+        {subtitle && <p className="text-[var(--muted)] text-sm mt-1 leading-relaxed">{subtitle}</p>}
       </div>
       {action && <div className="shrink-0">{action}</div>}
     </div>

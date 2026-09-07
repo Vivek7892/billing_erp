@@ -249,117 +249,39 @@ function Stat({
   trend,
   highlight
 }) {
-  const colors = {
-    blue: {
-      bg: 'bg-blue-50 dark:bg-blue-950/60',
-      icon: 'text-blue-600 dark:text-blue-400'
-    },
-
-    green: {
-      bg: 'bg-green-50 dark:bg-green-950/60',
-      icon: 'text-green-600 dark:text-green-400'
-    },
-
-    orange: {
-      bg: 'bg-orange-50 dark:bg-orange-950/60',
-      icon: 'text-orange-500'
-    },
-
-    red: {
-      bg: 'bg-red-50 dark:bg-red-950/60',
-      icon: 'text-red-500'
-    },
-
-    purple: {
-      bg: 'bg-purple-50',
-      icon: 'text-purple-600'
-    },
-
-    cyan: {
-      bg: 'bg-cyan-50',
-      icon: 'text-cyan-600'
-    },
-
-    indigo: {
-      bg: 'bg-indigo-50 dark:bg-indigo-950/60',
-      icon: 'text-indigo-600'
-    }
+  const palette = {
+    blue:   { bg: 'bg-blue-50 dark:bg-blue-950/50',    icon: 'text-blue-600 dark:text-blue-400',    ring: 'ring-blue-100 dark:ring-blue-900/40',    accent: 'border-l-blue-500' },
+    green:  { bg: 'bg-green-50 dark:bg-green-950/50',  icon: 'text-green-600 dark:text-green-400',  ring: 'ring-green-100 dark:ring-green-900/40',  accent: 'border-l-green-500' },
+    orange: { bg: 'bg-orange-50 dark:bg-orange-950/50',icon: 'text-orange-500 dark:text-orange-400',ring: 'ring-orange-100 dark:ring-orange-900/40',accent: 'border-l-orange-500' },
+    red:    { bg: 'bg-red-50 dark:bg-red-950/50',      icon: 'text-red-500 dark:text-red-400',      ring: 'ring-red-100 dark:ring-red-900/40',      accent: 'border-l-red-500' },
+    purple: { bg: 'bg-purple-50 dark:bg-purple-950/50',icon: 'text-purple-600 dark:text-purple-400',ring: 'ring-purple-100 dark:ring-purple-900/40',accent: 'border-l-purple-500' },
+    cyan:   { bg: 'bg-cyan-50 dark:bg-cyan-950/50',    icon: 'text-cyan-600 dark:text-cyan-400',    ring: 'ring-cyan-100 dark:ring-cyan-900/40',    accent: 'border-l-cyan-500' },
+    indigo: { bg: 'bg-indigo-50 dark:bg-indigo-950/50',icon: 'text-indigo-600 dark:text-indigo-400',ring: 'ring-indigo-100 dark:ring-indigo-900/40',accent: 'border-l-indigo-500' },
   }
 
-  const style = colors[color] || colors.blue
+  const style = palette[color] || palette.blue
 
   return (
-    <div
-      className={`
-        group
-        bg-[var(--surface)]
-        rounded-2xl
-        border border-[var(--line)]/80
-        ${highlight ? 'ring-2 ring-blue-200 border-blue-300' : ''}
-        p-4 sm:p-5
-        flex flex-col gap-3
-        shadow-[0_6px_24px_rgba(15,23,42,0.045)]
-        hover:-translate-y-0.5
-        hover:shadow-[0_12px_32px_rgba(15,23,42,0.08)]
-        transition-all
-      `}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <span
-          className="
-            text-[10px]
-            font-bold
-            text-[var(--muted-light)]
-            uppercase
-            tracking-[0.14em]
-            leading-tight
-          "
-        >
+    <div className={`kpi-card border-l-[3px] ${style.accent} flex flex-col gap-2 ${highlight ? 'ring-2 ring-blue-100 dark:ring-blue-900/40' : ''}`}>
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-[10px] font-semibold text-[var(--muted-light)] uppercase tracking-[0.1em] leading-tight">
           {label}
         </span>
-
-        <div
-          className={`
-            w-9 h-9
-            rounded-xl
-            ${style.bg}
-            flex
-            items-center
-            justify-center
-            flex-shrink-0
-            ring-1
-            ring-black/5
-          `}
-        >
-          <Icon
-            size={16}
-            className={style.icon}
-          />
+        <div className={`p-1.5 rounded-lg flex-shrink-0 ring-1 ${style.bg} ${style.ring}`}>
+          <Icon size={15} className={style.icon} />
         </div>
       </div>
 
       <div
-        className="
-          text-xl
-          sm:text-2xl
-          font-extrabold
-          tracking-tight
-          text-[var(--ink)]
-          truncate
-        "
+        className="text-[1.875rem] font-bold tracking-tight text-[var(--ink)] truncate leading-none"
+        style={{fontVariantNumeric:'tabular-nums',fontFeatureSettings:'"tnum"'}}
       >
         {value}
       </div>
 
-      {sub && (
-        <div className="text-xs text-[var(--muted)] truncate">
-          {sub}
-        </div>
-      )}
+      {sub && <div className="text-xs text-[var(--muted)] truncate">{sub}</div>}
 
-      {trend !== undefined && (
-        <Trend value={trend} />
-      )}
+      {trend !== undefined && <Trend value={trend} />}
     </div>
   )
 }
@@ -375,59 +297,34 @@ function Insight({
   color,
   note
 }) {
-  const colors = {
-    green:
-      'bg-green-50 dark:bg-green-950/60 border-green-100 text-green-700',
-
-    blue:
-      'bg-blue-50 dark:bg-blue-950/60 border-blue-100 text-blue-700',
-
-    orange:
-      'bg-orange-50 dark:bg-orange-950/60 border-orange-100 text-orange-700',
-
-    purple:
-      'bg-purple-50 border-purple-100 text-purple-700'
+  const palette = {
+    blue:   { bg: 'bg-blue-50 dark:bg-blue-950/50',    icon: 'text-blue-600 dark:text-blue-400',    ring: 'ring-blue-100 dark:ring-blue-900/40',    accent: 'border-l-blue-500' },
+    green:  { bg: 'bg-green-50 dark:bg-green-950/50',  icon: 'text-green-600 dark:text-green-400',  ring: 'ring-green-100 dark:ring-green-900/40',  accent: 'border-l-green-500' },
+    orange: { bg: 'bg-orange-50 dark:bg-orange-950/50',icon: 'text-orange-500 dark:text-orange-400',ring: 'ring-orange-100 dark:ring-orange-900/40',accent: 'border-l-orange-500' },
+    purple: { bg: 'bg-purple-50 dark:bg-purple-950/50',icon: 'text-purple-600 dark:text-purple-400',ring: 'ring-purple-100 dark:ring-purple-900/40',accent: 'border-l-purple-500' },
   }
 
-  return (
-    <div
-      className={`
-        rounded-xl
-        border
-        p-4
-        ${colors[color] || colors.blue}
-      `}
-    >
-      <div className="flex items-center gap-2 mb-1">
-        <Icon size={15} />
+  const c = palette[color] || palette.blue
 
-        <span
-          className="
-            text-xs
-            font-semibold
-            uppercase
-            tracking-wide
-          "
-        >
+  return (
+    <div className={`kpi-card border-l-[3px] ${c.accent} flex flex-col gap-2`}>
+      <div className="flex items-start justify-between gap-3">
+        <span className="text-[10px] font-semibold text-[var(--muted-light)] uppercase tracking-[0.1em] leading-tight">
           {label}
         </span>
+        <div className={`p-1.5 rounded-lg flex-shrink-0 ring-1 ${c.bg} ${c.ring}`}>
+          <Icon size={14} className={c.icon} />
+        </div>
       </div>
 
       <div
-        className="
-          text-2xl
-          font-extrabold
-          tracking-tight
-        "
+        className={`text-[1.875rem] font-bold tracking-tight leading-none ${c.icon}`}
+        style={{fontVariantNumeric:'tabular-nums',fontFeatureSettings:'"tnum"'}}
       >
         {value}
       </div>
 
-      {note && (
-        <div className="text-xs mt-1 opacity-70">
-          {note}
-        </div>
-      )}
+      {note && <div className="text-xs text-[var(--muted)]">{note}</div>}
     </div>
   )
 }
@@ -503,8 +400,8 @@ function BackgroundLoading() {
         flex
         items-center
         gap-2
-        bg-slate-900
-        text-white
+        bg-[var(--ink)]
+        text-[var(--surface)]
         text-xs
         font-medium
         px-3
@@ -1033,95 +930,34 @@ export default function Dashboard() {
       {(dashboard.out_of_stock > 0 ||
         dashboard.low_stock_count > 0) && (
         <div
-          className={`
-            flex
-            flex-wrap
-            items-center
-            justify-between
-            gap-3
-            rounded-2xl
-            border
-            px-4
-            py-3
-            ${
-              dashboard.out_of_stock > 0
-                ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900'
-                : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900'
-            }
-          `}
+          className="
+            flex flex-wrap items-center justify-between gap-3
+            rounded-2xl px-4 py-3
+            bg-[var(--danger-light)] border border-[var(--danger-border)]
+          "
         >
           <div className="flex items-center gap-2">
-            <AlertTriangle
-              size={16}
-              className={
-                dashboard.out_of_stock > 0
-                  ? 'text-red-500'
-                  : 'text-orange-500'
-              }
-            />
-
-            <span
-              className={`
-                text-sm
-                font-semibold
-                ${
-                  dashboard.out_of_stock > 0
-                    ? 'text-red-700'
-                    : 'text-orange-700'
-                }
-              `}
-            >
+            <AlertTriangle size={15} className="text-[var(--danger)] shrink-0" />
+            <span className="text-sm font-semibold text-[var(--danger-text)]">
               Stock Alert:
-
-              {dashboard.out_of_stock >
-                0 && (
+              {dashboard.out_of_stock > 0 && (
                 <span className="ml-1">
-                  {dashboard.out_of_stock}{' '}
-                  product
-                  {dashboard.out_of_stock >
-                  1
-                    ? 's'
-                    : ''}{' '}
-                  out of stock
+                  {dashboard.out_of_stock} product{dashboard.out_of_stock > 1 ? 's' : ''} out of stock
                 </span>
               )}
-
-              {dashboard.out_of_stock >
-                0 &&
-                dashboard.low_stock_count >
-                  0 && (
-                  <span className="mx-1">
-                    ·
-                  </span>
-                )}
-
-              {dashboard.low_stock_count >
-                0 && (
+              {dashboard.out_of_stock > 0 && dashboard.low_stock_count > 0 && (
+                <span className="mx-1">·</span>
+              )}
+              {dashboard.low_stock_count > 0 && (
                 <span>
-                  {
-                    dashboard.low_stock_count
-                  }{' '}
-                  product
-                  {dashboard.low_stock_count >
-                  1
-                    ? 's'
-                    : ''}{' '}
-                  running low
+                  {dashboard.low_stock_count} product{dashboard.low_stock_count > 1 ? 's' : ''} running low
                 </span>
               )}
             </span>
           </div>
-
           <button
-            onClick={() =>
-              navigate('/inventory')
-            }
-            className="
-              text-xs
-              font-semibold
-              underline
-              text-blue-600 dark:text-blue-400
-            "
+            onClick={() => navigate('/inventory')}
+            className="text-xs font-semibold text-[var(--danger-text)] underline underline-offset-2 hover:text-[var(--danger)] transition-colors"
           >
             View Inventory →
           </button>
@@ -1247,7 +1083,7 @@ export default function Dashboard() {
       </section>
 
       {actionRequired.length > 0 && (
-        <section className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 sm:p-5">
+        <section className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/70 dark:bg-amber-950/20 p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle size={16} className="text-amber-600" />
             <h2 className="text-sm font-bold text-amber-900 dark:text-amber-400">Action Required</h2>
@@ -1257,7 +1093,7 @@ export default function Dashboard() {
               <button
                 key={item.key}
                 onClick={() => navigate(item.route)}
-                className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-[var(--surface)] px-3 py-3 text-left hover:border-amber-400 hover:shadow-[var(--shadow-card)] transition"
+                className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-[var(--surface)] px-3 py-3 text-left hover:border-amber-400 hover:shadow-[var(--shadow-card)] transition"
               >
                 <span className="text-xs font-medium text-[var(--ink-secondary)]">
                    <strong className="text-base text-[var(--ink)] mr-1">{item.count}</strong>
@@ -1539,8 +1375,8 @@ export default function Dashboard() {
             <span
               className="
                 text-[11px]
-                bg-violet-50
-                text-violet-700
+                bg-violet-50 dark:bg-violet-950/60
+                text-violet-700 dark:text-violet-300
                 font-bold
                 px-2.5
                 py-1.5
@@ -1683,7 +1519,7 @@ export default function Dashboard() {
               className="
                 text-[11px]
                 bg-emerald-50 dark:bg-emerald-950/60
-                text-emerald-700
+                text-emerald-700 dark:text-emerald-300
                 font-bold
                 px-2.5
                 py-1.5
@@ -2024,7 +1860,7 @@ export default function Dashboard() {
                       <div
                         className="
                           h-1.5
-                          bg-gray-100
+                          bg-[var(--line)]
                           rounded-full
                           overflow-hidden
                         "
@@ -2344,7 +2180,7 @@ export default function Dashboard() {
                       justify-between
                       py-1.5
                       border-b
-                      border-gray-50
+                      border-[var(--line-subtle)]
                       last:border-0
                     "
                   >
@@ -2478,7 +2314,7 @@ export default function Dashboard() {
                       justify-between
                       py-1.5
                       border-b
-                      border-gray-50
+                      border-[var(--line-subtle)]
                       last:border-0
                     "
                   >
@@ -2612,7 +2448,7 @@ export default function Dashboard() {
             className="
               w-2
               h-2
-              bg-blue-50 dark:bg-blue-950/600
+              bg-blue-400
               rounded-full
               animate-pulse
             "

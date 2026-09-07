@@ -155,21 +155,26 @@ function NavGroupItems({ items, collapsed, activeBg, accent, groupLabel, open, s
           isGroupActive ? accent : 'text-slate-500 hover:text-slate-300'
         }`}
       >
-        <span className="text-[9px] font-bold uppercase tracking-[0.14em]">{groupLabel}</span>
-        {open ? <ChevronUp size={9} className="opacity-50" /> : <ChevronRight size={9} className="opacity-50" />}
+        <span className="text-[9.5px] font-bold uppercase tracking-[0.12em]">{groupLabel}</span>
+        {open ? <ChevronUp size={9} className="opacity-40" /> : <ChevronRight size={9} className="opacity-40" />}
       </button>
       {open && (
         <div className="space-y-0.5 px-2">
           {items.map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} end={to === '/'} onClick={onNav}
               className={({ isActive }) =>
-                `flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[13px] font-medium transition-all duration-150 ${
-                  isActive ? `${activeBg} text-white shadow-sm` : 'text-slate-400 hover:bg-white/8 hover:text-slate-100'
+                `relative flex items-center gap-2.5 px-2.5 py-[7px] rounded-xl text-[13px] font-medium transition-all duration-150 ${
+                  isActive ? `${activeBg} text-white shadow-sm` : 'text-slate-400 hover:bg-white/[0.07] hover:text-slate-100'
                 }`
               }
             >
-              <Icon size={15} className="flex-shrink-0" />
-              <span className="truncate">{label}</span>
+              {({ isActive }) => (
+                <>
+                  {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] rounded-r-full bg-white/60" />}
+                  <Icon size={15} className="flex-shrink-0" />
+                  <span className="truncate">{label}</span>
+                </>
+              )}
             </NavLink>
           ))}
         </div>
@@ -186,7 +191,7 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
       className={`flex flex-col h-full transition-all duration-300 ease-in-out ${
         mobile ? 'w-64' : collapsed ? 'w-[62px]' : 'w-[220px]'
       }`}
-      style={{ background: 'linear-gradient(180deg, #0f172a 0%, #111827 100%)' }}
+      style={{ background: 'linear-gradient(180deg, #0d1526 0%, #0f172a 55%, #111827 100%)' }}
     >
       <div
         onMouseEnter={() => setHeaderHovered(true)}
@@ -245,7 +250,7 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
           </button>
         ) : (
           <div className="flex items-center gap-2.5 px-1">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 shadow-sm">
               {((user?.first_name?.[0] || '') + (user?.last_name?.[0] || '')) || user?.username?.[0]?.toUpperCase() || 'U'}
             </div>
             <div className="min-w-0 flex-1">
@@ -454,7 +459,7 @@ function ProfileMenu({ user, onLogout }) {
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(v => !v)} className="flex items-center gap-2 hover:bg-[var(--surface-hover)] rounded-xl px-2 py-1.5 transition-all">
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 shadow-sm">
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 shadow-sm">
           {initials}
         </div>
         <div className="text-left hidden sm:block">
@@ -468,7 +473,7 @@ function ProfileMenu({ user, onLogout }) {
         <div className="absolute right-0 top-full mt-2 w-56 bg-[var(--surface)] rounded-2xl shadow-[var(--shadow-lg)] border border-[var(--line)] z-50 overflow-hidden">
           <div className="px-4 py-3 bg-[var(--surface-elevated)] border-b border-[var(--line)]">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-sm font-bold flex items-center justify-center shadow">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-sm font-bold flex items-center justify-center shadow">
                 {initials}
               </div>
               <div className="min-w-0">
@@ -508,18 +513,18 @@ function PageHeading({ shopName, pathname }) {
   const accentHex = ACCENT_HEX[meta?.group] || '#6366f1'
 
   return (
-    <div className="flex items-center gap-3 min-w-0 flex-shrink">
+    <div className="flex items-center gap-2.5 min-w-0 flex-shrink">
       <div
-        className="hidden sm:flex w-9 h-9 rounded-xl items-center justify-center flex-shrink-0"
-        style={{ background: `${accentHex}1a`, color: accentHex }}
+        className="hidden sm:flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0"
+        style={{ background: `${accentHex}18`, color: accentHex }}
       >
-        <Icon size={17} />
+        <Icon size={16} />
       </div>
       <div className="min-w-0 flex flex-col justify-center leading-tight">
-        <div className="text-[10px] sm:text-[11px] text-[var(--muted)] font-semibold uppercase tracking-[0.08em] truncate">
-          {shopName || 'Dreamwithtech'}
+        <div className="text-[10px] text-[var(--muted)] font-semibold uppercase tracking-[0.1em] truncate hidden sm:block">
+          {shopName || 'ShopEase'}
         </div>
-        <h1 className="font-extrabold text-[var(--ink)] text-[16px] sm:text-[18px] md:text-[19px] tracking-tight truncate max-w-[150px] sm:max-w-[260px] lg:max-w-[360px]">
+        <h1 className="font-bold text-[var(--ink)] text-[15px] sm:text-[17px] tracking-tight truncate max-w-[130px] sm:max-w-[240px] lg:max-w-[340px]">
           {title}
         </h1>
       </div>
@@ -562,7 +567,7 @@ export default function Layout({ children }) {
 
   return (
     <ShopContext.Provider value={{ logoSrc, shopName }}>
-      <div className="flex h-screen overflow-hidden" style={{ background: '#f1f5f9' }}>
+      <div className="flex h-screen overflow-hidden" style={{ background: 'var(--app-bg)' }}>
 
         <div className={`hidden md:flex flex-shrink-0 shadow-[2px_0_12px_rgba(0,0,0,0.15)] transition-all duration-300 ease-in-out ${collapsed ? 'w-[62px]' : 'w-[220px]'}`}>
           <Sidebar
@@ -585,7 +590,7 @@ export default function Layout({ children }) {
           <header className="flex-shrink-0 z-10 bg-[var(--surface)] border-b border-[var(--line)] shadow-[0_1px_0_rgba(15,23,42,0.05)]">
             <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 h-14">
               <button onClick={() => setMobileOpen(true)} title="Open menu" aria-label="Open menu"
-                className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all duration-200">
+                className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-all duration-200">
                 <MenuIcon size={20} />
               </button>
 
@@ -608,7 +613,7 @@ export default function Layout({ children }) {
           </header>
 
           <main ref={mainRef} className="flex-1 overflow-y-auto bg-[var(--app-bg)]">
-            <div className="p-3 sm:p-4 md:p-5 max-w-[1600px] mx-auto page-enter">
+            <div className="p-3 sm:p-4 md:p-6 max-w-[1600px] mx-auto page-enter">
               {children}
             </div>
           </main>

@@ -274,7 +274,7 @@ export default function Suppliers() {
             className="bg-transparent text-sm outline-none w-full text-[var(--ink-secondary)] placeholder-slate-400" />
         </div>
         <div className="flex gap-2">
-          <button onClick={load} className="w-9 h-9 flex items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--muted-light)] hover:bg-[var(--surface-elevated)] transition-colors">
+          <button onClick={load} className="icon-btn" title="Refresh">
             <RefreshCw size={14} />
           </button>
           <button onClick={openAdd} className="btn-primary flex items-center gap-2 text-sm">

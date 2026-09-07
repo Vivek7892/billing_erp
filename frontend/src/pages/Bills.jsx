@@ -1184,7 +1184,7 @@ export default function Bills() {
 
           <button
             onClick={() => navigate('/billing/new')}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--shadow-card)] shadow-blue-200 transition hover:bg-blue-700 active:scale-[0.98] sm:w-auto"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.98] sm:w-auto"
           >
             <Plus size={17} />
             New Bill
