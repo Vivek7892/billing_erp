@@ -12,29 +12,42 @@ export function Card({ children, className = '' }) {
 }
 
 /* ============================================================
-   STAT CARD
+   KPI / STAT CARD
 ============================================================ */
-export function StatCard({ label, value, icon: Icon, color = 'blue', sub }) {
-  const colors = {
-    blue:   'bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400',
-    green:  'bg-green-50 text-green-600 dark:bg-green-950/60 dark:text-green-400',
-    orange: 'bg-orange-50 text-orange-500 dark:bg-orange-950/60 dark:text-orange-400',
-    red:    'bg-red-50 text-red-500 dark:bg-red-950/60 dark:text-red-400',
-    purple: 'bg-purple-50 text-purple-600 dark:bg-purple-950/60 dark:text-purple-400',
+export function StatCard({ label, value, icon: Icon, color = 'blue', sub, trend, onClick }) {
+  const palette = {
+    blue:   { bg: 'bg-blue-50 dark:bg-blue-950/50',    icon: 'text-blue-600 dark:text-blue-400',    ring: 'ring-blue-100 dark:ring-blue-900/40',    accent: 'border-l-blue-500' },
+    green:  { bg: 'bg-green-50 dark:bg-green-950/50',  icon: 'text-green-600 dark:text-green-400',  ring: 'ring-green-100 dark:ring-green-900/40',  accent: 'border-l-green-500' },
+    amber:  { bg: 'bg-amber-50 dark:bg-amber-950/50',  icon: 'text-amber-600 dark:text-amber-400',  ring: 'ring-amber-100 dark:ring-amber-900/40',  accent: 'border-l-amber-500' },
+    red:    { bg: 'bg-red-50 dark:bg-red-950/50',      icon: 'text-red-500 dark:text-red-400',      ring: 'ring-red-100 dark:ring-red-900/40',      accent: 'border-l-red-500' },
+    purple: { bg: 'bg-purple-50 dark:bg-purple-950/50',icon: 'text-purple-600 dark:text-purple-400',ring: 'ring-purple-100 dark:ring-purple-900/40',accent: 'border-l-purple-500' },
+    orange: { bg: 'bg-orange-50 dark:bg-orange-950/50',icon: 'text-orange-500 dark:text-orange-400',ring: 'ring-orange-100 dark:ring-orange-900/40',accent: 'border-l-orange-500' },
+    cyan:   { bg: 'bg-cyan-50 dark:bg-cyan-950/50',    icon: 'text-cyan-600 dark:text-cyan-400',    ring: 'ring-cyan-100 dark:ring-cyan-900/40',    accent: 'border-l-cyan-500' },
   }
+  const c = palette[color] || palette.blue
+  const Tag = onClick ? 'button' : 'div'
   return (
-    <Card className="p-4 sm:p-5 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] transition-all duration-200">
+    <Tag
+      onClick={onClick}
+      className={`kpi-card border-l-4 ${c.accent} flex flex-col gap-3 w-full text-left ${onClick ? 'cursor-pointer hover:ring-2 hover:ring-[var(--primary-border)]' : 'cursor-default'}`}
+    >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--muted)]">{label}</p>
-          <p className="text-xl sm:text-2xl font-extrabold text-[var(--ink)] mt-1.5 tracking-tight truncate">{value}</p>
-          {sub && <p className="text-xs text-[var(--muted)] mt-1">{sub}</p>}
-        </div>
-        <div className={`p-2.5 rounded-xl flex-shrink-0 ${colors[color]}`}>
-          <Icon size={20} />
+        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--muted-light)] leading-tight">{label}</p>
+        <div className={`p-2 rounded-lg flex-shrink-0 ring-1 ${c.bg} ${c.ring}`}>
+          <Icon size={17} className={c.icon} />
         </div>
       </div>
-    </Card>
+      <div>
+        <p className="text-xl sm:text-2xl font-extrabold text-[var(--ink)] tracking-tight truncate">{value}</p>
+        {sub && <p className="text-xs text-[var(--muted)] mt-0.5 truncate">{sub}</p>}
+        {trend !== undefined && (
+          <div className={`mt-1 text-xs font-semibold flex items-center gap-0.5 ${trend > 0 ? 'text-green-600 dark:text-green-400' : trend < 0 ? 'text-red-500' : 'text-[var(--muted-light)]'}`}>
+            <span>{trend > 0 ? '↑' : trend < 0 ? '↓' : '—'}</span>
+            <span>{trend !== 0 ? `${Math.abs(trend)}%` : 'No change'}</span>
+          </div>
+        )}
+      </div>
+    </Tag>
   )
 }
 
@@ -50,9 +63,7 @@ export function Badge({ status }) {
   }
   const label = status?.replace(/_/g, ' ')
   const type = map[status] || 'neutral'
-  return (
-    <span className={`status-badge status-${type}`}>{label}</span>
-  )
+  return <span className={`status-badge status-${type}`}>{label}</span>
 }
 
 /* ============================================================
@@ -70,7 +81,7 @@ export function Tabs({ tabs, active, onChange, className = '' }) {
           role="tab"
           aria-selected={active === tab.value}
           onClick={() => onChange(tab.value)}
-          className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 whitespace-nowrap ${
+          className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 whitespace-nowrap ${
             active === tab.value
               ? 'bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-xs)]'
               : 'text-[var(--muted)] hover:text-[var(--ink-secondary)]'
@@ -116,7 +127,7 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }) {
 
   return (
     <div
-      className="modal-backdrop fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/50 backdrop-blur-sm"
+      className="modal-backdrop fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/55 backdrop-blur-sm"
       role="presentation"
       onMouseDown={e => e.target === e.currentTarget && onClose()}
     >
@@ -127,14 +138,14 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }) {
         aria-modal="true"
         aria-labelledby={titleId}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--line)] flex-shrink-0">
-          <h2 id={titleId} className="text-base font-bold text-[var(--ink)]">{title}</h2>
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--line)] flex-shrink-0 bg-[var(--surface-elevated)] rounded-t-2xl sm:rounded-t-2xl">
+          <h2 id={titleId} className="text-sm font-bold text-[var(--ink)]">{title}</h2>
           <button
             onClick={onClose}
             aria-label="Close dialog"
-            className="icon-btn"
+            className="icon-btn -mr-1"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
             </svg>
           </button>
@@ -190,11 +201,12 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, message, danger
 /* ============================================================
    SPINNER
 ============================================================ */
-export function Spinner({ size = 'md' }) {
+export function Spinner({ size = 'md', label = 'Loading…' }) {
   const s = size === 'sm' ? 'w-5 h-5 border-2' : 'w-8 h-8 border-[3px]'
   return (
-    <div className="flex items-center justify-center py-12">
+    <div className="flex flex-col items-center justify-center py-12 gap-3" role="status" aria-label={label}>
       <div className={`${s} border-[var(--line)] border-t-[var(--primary)] rounded-full animate-spin`} />
+      <span className="text-xs text-[var(--muted-light)] sr-only">{label}</span>
     </div>
   )
 }
@@ -210,8 +222,8 @@ export function InlineSpinner({ className = '' }) {
 ============================================================ */
 export function EmptyState({ message = 'No data found', description, action, icon }) {
   return (
-    <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
-      <div className="w-14 h-14 rounded-2xl bg-[var(--surface-elevated)] border border-[var(--line)] flex items-center justify-center mb-4 text-[var(--muted)]">
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+      <div className="w-14 h-14 rounded-2xl bg-[var(--surface-elevated)] border border-[var(--line)] flex items-center justify-center mb-4 text-[var(--muted-light)]">
         {icon || (
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <rect width="20" height="14" x="2" y="7" rx="2"/>
@@ -233,18 +245,18 @@ export function Skeleton({ className = '' }) {
   return (
     <div
       aria-hidden="true"
-      className={`animate-pulse rounded-lg bg-[var(--line)] ${className}`}
+      className={`shimmer rounded-lg ${className}`}
     />
   )
 }
 
 export function TableSkeleton({ rows = 5, columns = 5 }) {
   return (
-    <div className="space-y-3 p-4" aria-label="Loading data" role="status">
+    <div className="space-y-0" aria-label="Loading data" role="status">
       {Array.from({ length: rows }, (_, row) => (
-        <div key={row} className="flex gap-3">
+        <div key={row} className="flex gap-3 px-4 py-3 border-b border-[var(--line-subtle)] last:border-0">
           {Array.from({ length: columns }, (_, col) => (
-            <Skeleton key={col} className={`h-8 flex-1 ${col === 0 ? 'max-w-10' : ''}`} />
+            <Skeleton key={col} className={`h-5 flex-1 ${col === 0 ? 'max-w-8' : col === columns - 1 ? 'max-w-20' : ''}`} />
           ))}
         </div>
       ))}
@@ -257,13 +269,13 @@ export function CardSkeleton({ count = 4 }) {
   return (
     <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="bg-[var(--surface)] rounded-xl border border-[var(--line)] p-5 space-y-3">
-          <div className="flex justify-between">
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-9 w-9 rounded-xl" />
+        <div key={i} className="kpi-card border-l-4 border-l-[var(--line)] space-y-3">
+          <div className="flex justify-between items-start">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-8 w-8 rounded-lg" />
           </div>
-          <Skeleton className="h-7 w-32" />
-          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-7 w-28" />
+          <Skeleton className="h-3 w-16" />
         </div>
       ))}
     </div>
@@ -275,7 +287,7 @@ export function CardSkeleton({ count = 4 }) {
 ============================================================ */
 export function ErrorState({ title = 'Unable to load data', message = 'Something went wrong. Please try again.', onRetry }) {
   return (
-    <div role="alert" className="flex flex-col items-center justify-center py-16 text-center px-6">
+    <div role="alert" className="flex flex-col items-center justify-center py-14 text-center px-6">
       <div className="mb-4 w-12 h-12 rounded-2xl bg-[var(--danger-light)] flex items-center justify-center">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
@@ -294,6 +306,24 @@ export function ErrorState({ title = 'Unable to load data', message = 'Something
           Try again
         </button>
       )}
+    </div>
+  )
+}
+
+/* ============================================================
+   SUCCESS STATE
+============================================================ */
+export function SuccessState({ title = 'Done!', message, action }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-14 text-center px-6">
+      <div className="mb-4 w-12 h-12 rounded-2xl bg-[var(--success-light)] flex items-center justify-center">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 6 9 17l-5-5"/>
+        </svg>
+      </div>
+      <h2 className="text-sm font-bold text-[var(--ink)]">{title}</h2>
+      {message && <p className="mt-1 max-w-sm text-sm text-[var(--muted)] leading-relaxed">{message}</p>}
+      {action && <div className="mt-4">{action}</div>}
     </div>
   )
 }
@@ -319,7 +349,7 @@ export function PageHeader({ title, subtitle, action, className = '' }) {
 export function SearchInput({ value, onChange, placeholder = 'Search…', className = '', autoFocus }) {
   return (
     <div className={`relative ${className}`}>
-      <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)] pointer-events-none" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)] pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
       </svg>
       <input
@@ -333,10 +363,10 @@ export function SearchInput({ value, onChange, placeholder = 'Search…', classN
         <button
           type="button"
           onClick={() => onChange({ target: { value: '' } })}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--ink)] transition-colors"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted-light)] hover:text-[var(--ink)] transition-colors p-0.5 rounded"
           aria-label="Clear search"
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
           </svg>
         </button>
@@ -362,15 +392,44 @@ export function DateFilterBar({ active, onChange, className = '' }) {
         <button
           key={f.value}
           onClick={() => onChange(f.value)}
-          className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all duration-150 ${
-            active === f.value
-              ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-[var(--shadow-primary)]'
-              : 'bg-[var(--surface)] border-[var(--line)] text-[var(--muted)] hover:border-[var(--primary-border)] hover:text-[var(--primary-text)]'
-          }`}
+          className={`filter-pill ${active === f.value ? 'active' : ''}`}
         >
           {f.label}
         </button>
       ))}
+    </div>
+  )
+}
+
+/* ============================================================
+   ALERT BANNER
+============================================================ */
+export function AlertBanner({ type = 'info', title, message, onDismiss }) {
+  const styles = {
+    info:    { wrap: 'bg-blue-50 border-blue-200 dark:bg-blue-950/40 dark:border-blue-800',    icon: 'text-blue-500',  text: 'text-blue-800 dark:text-blue-200' },
+    success: { wrap: 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800', icon: 'text-green-500', text: 'text-green-800 dark:text-green-200' },
+    warning: { wrap: 'bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800', icon: 'text-amber-500', text: 'text-amber-800 dark:text-amber-200' },
+    danger:  { wrap: 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800',         icon: 'text-red-500',   text: 'text-red-800 dark:text-red-200' },
+  }
+  const s = styles[type] || styles.info
+  return (
+    <div className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${s.wrap}`} role="alert">
+      <svg className={`shrink-0 mt-0.5 ${s.icon}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {type === 'success'
+          ? <><path d="M20 6 9 17l-5-5"/></>
+          : <><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></>}
+      </svg>
+      <div className="flex-1 min-w-0">
+        {title && <p className={`text-sm font-semibold ${s.text}`}>{title}</p>}
+        {message && <p className={`text-xs mt-0.5 ${s.text} opacity-80`}>{message}</p>}
+      </div>
+      {onDismiss && (
+        <button onClick={onDismiss} className={`shrink-0 ${s.icon} hover:opacity-70 transition-opacity`} aria-label="Dismiss">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          </svg>
+        </button>
+      )}
     </div>
   )
 }

@@ -46,7 +46,7 @@ function CartRow({ item, index, onQty, onRemove, showGst, justAdded }) {
   return (
     <>
       {/* Desktop cart row */}
-      <tr className={`hidden sm:table-row border-b border-[var(--line-subtle)] last:border-0 transition-colors ${justAdded ? 'bg-indigo-50 dark:bg-indigo-950/60' : 'hover:bg-[var(--surface-elevated)]'}`}>
+      <tr className={`hidden sm:table-row border-b border-[var(--line-subtle)] last:border-0 transition-colors ${justAdded ? 'bg-blue-50 dark:bg-blue-950/30' : 'hover:bg-[var(--surface-elevated)]'}`}>
         <td className="py-2 pl-3 pr-1 text-xs text-[var(--muted-light)] text-center align-middle">{index}</td>
         <td className="py-2 pr-2 align-middle min-w-[9rem]">
           <div className="font-medium text-sm text-[var(--ink)] leading-tight">{item.product_name}</div>
@@ -65,7 +65,7 @@ function CartRow({ item, index, onQty, onRemove, showGst, justAdded }) {
               aria-label={`${item.product_name} quantity`}
               type="number" min="0.01" step="0.01" value={item.qty}
               onChange={e => onQty(item.id, parseFloat(e.target.value) || 0)}
-              className="w-12 h-8 text-center border border-[var(--line)] rounded-md text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="w-12 h-8 text-center border border-[var(--line)] rounded-md text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
             />
             <button
               aria-label={`Increase ${item.product_name} quantity`}
@@ -92,7 +92,7 @@ function CartRow({ item, index, onQty, onRemove, showGst, justAdded }) {
       </tr>
 
       {/* Mobile cart card */}
-      <tr className={`sm:hidden border-b border-[var(--line-subtle)] ${justAdded ? 'bg-indigo-50 dark:bg-indigo-950/60' : ''}`}>
+      <tr className={`sm:hidden border-b border-[var(--line-subtle)] ${justAdded ? 'bg-blue-50 dark:bg-blue-950/30' : ''}`}>
         <td colSpan={showGst ? 9 : 8} className="p-0">
           <div className="p-3.5">
             <div className="flex items-start justify-between gap-3">
@@ -120,9 +120,9 @@ function CartRow({ item, index, onQty, onRemove, showGst, justAdded }) {
                 <div className="text-[10px] text-[var(--muted-light)]">MRP</div>
                 <div className="font-semibold text-[var(--ink-secondary)] mt-0.5">{fmt(item.mrp || item.unit_price)}</div>
               </div>
-              <div className="rounded-lg bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-2">
-                <div className="text-[10px] text-indigo-500 dark:text-indigo-400">Total</div>
-                <div className="font-bold text-indigo-700 dark:text-indigo-300 mt-0.5">{fmt(item.total)}</div>
+              <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 px-2.5 py-2">
+                <div className="text-[10px] text-blue-500 dark:text-blue-400">Total</div>
+                <div className="font-bold text-blue-700 dark:text-blue-300 mt-0.5">{fmt(item.total)}</div>
               </div>
             </div>
 
@@ -137,7 +137,7 @@ function CartRow({ item, index, onQty, onRemove, showGst, justAdded }) {
                   aria-label={`${item.product_name} quantity`}
                   type="number" min="0.01" step="0.01" value={item.qty}
                   onChange={e => onQty(item.id, parseFloat(e.target.value) || 0)}
-                  className="w-16 h-10 text-center border border-[var(--line)] rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="w-16 h-10 text-center border border-[var(--line)] rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                 />
                 <button
                   aria-label={`Increase ${item.product_name} quantity`}
@@ -310,7 +310,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)] text-base font-semibold">₹</span>
             <input
               type="number" min="0" step="0.01" inputMode="decimal"
-              className="w-full h-12 pl-7 pr-3 rounded-lg border border-[var(--line)] text-lg font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="w-full h-12 pl-7 pr-3 rounded-lg border border-[var(--line)] text-lg font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-[var(--success)] focus:border-[var(--success)]"
               value={amount}
               onChange={e => setAmount(e.target.value)}
               placeholder="0.00"
@@ -918,17 +918,17 @@ export default function NewBill() {
   }, [grandTotal, payment, cart, lastInvoice, upiId, billDiscount, navigate])
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-[var(--surface-elevated)] text-[var(--ink)]">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[var(--app-bg)] text-[var(--ink)]">
       <style>{`
-        .btn-solid{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;min-height:2.75rem;padding:0 .9rem;border-radius:.625rem;background:var(--primary);color:#fff;font-weight:600;font-size:.8rem;transition:background .15s,transform .15s}
-        .btn-solid:hover{background:var(--primary-hover)}
-        .btn-solid:active{transform:translateY(1px)}
+        .btn-solid{display:inline-flex;align-items:center;justify-content:center;gap:.375rem;min-height:2.375rem;padding:0 1rem;border-radius:var(--radius);background:var(--primary);color:#fff;font-weight:600;font-size:.8125rem;letter-spacing:.01em;transition:all .15s ease;border:1.5px solid var(--primary);box-shadow:var(--shadow-primary)}
+        .btn-solid:hover:not(:disabled){background:var(--primary-hover);border-color:var(--primary-hover)}
+        .btn-solid:active:not(:disabled){transform:translateY(1px) scale(.99)}
         .btn-solid:disabled{opacity:.5;cursor:not-allowed}
-        .btn-outline{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;min-height:2.75rem;padding:0 .9rem;border-radius:.625rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:600;font-size:.78rem;transition:background .15s,border-color .15s}
-        .btn-outline:hover{background:color-mix(in srgb,var(--primary) 6%,var(--surface));border-color:var(--primary);color:var(--primary)}
+        .btn-outline{display:inline-flex;align-items:center;justify-content:center;gap:.375rem;min-height:2.375rem;padding:0 .875rem;border-radius:var(--radius);border:1.5px solid var(--line);background:var(--surface);color:var(--ink-secondary);font-weight:600;font-size:.8125rem;letter-spacing:.01em;transition:all .15s ease;box-shadow:var(--shadow-xs)}
+        .btn-outline:hover:not(:disabled){background:var(--surface-hover);border-color:var(--muted-light);color:var(--ink)}
+        .btn-outline:active:not(:disabled){transform:translateY(1px)}
         .btn-outline:disabled{opacity:.45;cursor:not-allowed}
         @media (max-width: 639px){
-          .mobile-action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
           .mobile-safe-button{min-height:2.75rem}
           .mobile-modal-content{max-height:calc(100dvh - 1.5rem);overflow-y:auto}
         }
@@ -942,9 +942,9 @@ export default function NewBill() {
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl px-3 py-2 shadow-[var(--shadow-card)]">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-                <Clock size={13} className="text-indigo-500 dark:text-indigo-400" />
+                <Clock size={13} className="text-blue-500 dark:text-blue-400" />
                 <span className="font-medium text-[var(--ink-secondary)]">{fmtDate(now)}</span>
-                <span className="font-mono text-indigo-600 font-semibold tracking-wide">{fmtTime(now)}</span>
+                <span className="font-mono text-blue-600 dark:text-blue-400 font-semibold tracking-wide">{fmtTime(now)}</span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -975,7 +975,7 @@ export default function NewBill() {
               <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" />
               <input
                 ref={searchRef}
-                className="w-full h-11 pl-10 pr-16 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="w-full h-11 pl-10 pr-16 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]"
                 placeholder="Scan barcode, or search product / SKU"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -986,7 +986,7 @@ export default function NewBill() {
               {search && (
                 <div className="absolute z-20 mt-1 w-full bg-[var(--surface)] border border-[var(--line)] rounded-lg shadow-lg max-h-72 overflow-y-auto">
                   {filtered.length ? filtered.slice(0, 10).map(p => (
-                    <button key={p.id} onClick={() => addToCart(p)} className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-indigo-50 dark:bg-indigo-950/60 border-b border-slate-50 last:border-0">
+                    <button key={p.id} onClick={() => addToCart(p)} className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-blue-50 dark:hover:bg-blue-950/30 border-b border-[var(--line-subtle)] last:border-0 transition-colors">
                       <span>
                         <span className="block text-sm font-medium text-[var(--ink)]">{p.name}</span>
                         <span className="block text-[11px] text-[var(--muted-light)]">SKU {p.sku} · Stock {p.current_stock}</span>
@@ -1010,7 +1010,7 @@ export default function NewBill() {
                 <button
                   key={c.id}
                   onClick={() => setCatFilter(String(c.id))}
-                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition ${catFilter === String(c.id) ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-[var(--surface)] border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'}`}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition ${catFilter === String(c.id) ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-[var(--shadow-primary)]' : 'bg-[var(--surface)] border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'}`}
                 >{c.name}</button>
               ))}
             </div>
@@ -1029,13 +1029,13 @@ export default function NewBill() {
                   <button
                     key={p.id}
                     onClick={() => addToCart(p)}
-                    className={`relative text-left border rounded-lg p-2.5 transition-colors ${inCart ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-950/60' : 'border-[var(--line)] hover:border-indigo-300 hover:bg-indigo-50 dark:bg-indigo-950/60/50'}`}
+                    className={`relative text-left border rounded-lg p-2.5 transition-colors ${inCart ? 'border-blue-300 bg-blue-50 dark:bg-blue-950/40' : 'border-[var(--line)] hover:border-blue-200 hover:bg-blue-50/50 dark:hover:bg-blue-950/20'}`}
                   >
-                    {inCart && <span className="absolute top-1.5 right-1.5 bg-indigo-600 text-white text-[10px] font-bold rounded-full h-4 min-w-4 px-1 flex items-center justify-center">{inCart.qty}</span>}
+                    {inCart && <span className="absolute top-1.5 right-1.5 bg-[var(--primary)] text-white text-[10px] font-bold rounded-full h-4 min-w-4 px-1 flex items-center justify-center">{inCart.qty}</span>}
                     <div className="text-xs font-medium text-[var(--ink)] truncate pr-4">{p.name}</div>
                     <div className="text-[10px] text-[var(--muted-light)] truncate">{p.sku}</div>
                     <div className="flex items-center justify-between mt-1.5">
-                      <span className="text-xs font-semibold text-indigo-600">{fmt(p.selling_price)}</span>
+                      <span className="text-xs font-semibold text-[var(--primary-text)]">{fmt(p.selling_price)}</span>
                       <span className={`text-[10px] px-1.5 py-0.5 rounded ${p.current_stock <= 5 ? 'bg-rose-100 text-rose-600 dark:text-rose-400' : 'bg-emerald-100 text-emerald-600 dark:text-emerald-400'}`}>{p.current_stock}</span>
                     </div>
                   </button>
@@ -1099,7 +1099,7 @@ export default function NewBill() {
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3.5 shadow-[var(--shadow-card)]">
             <div className="flex justify-between items-center mb-2">
               <b className="text-sm text-[var(--ink)]">Customer</b>
-              <button className="text-xs text-indigo-600 font-medium flex items-center gap-0.5" onClick={() => setShowCustomerModal(true)}>
+              <button className="text-xs text-[var(--primary-text)] font-semibold flex items-center gap-0.5 hover:underline" onClick={() => setShowCustomerModal(true)}>
                 <Plus size={13} /> New
               </button>
             </div>
@@ -1107,7 +1107,7 @@ export default function NewBill() {
               <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" />
               <input
                 ref={customerRef}
-                className="w-full h-9 pl-8 pr-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="w-full h-9 pl-8 pr-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]"
                 placeholder="Walk-in customer, or search"
                 value={customerSearch}
                 onChange={e => { setCustomerSearch(e.target.value); if (!e.target.value) setCustomer(null) }}
@@ -1120,9 +1120,9 @@ export default function NewBill() {
             </div>
             {customerSearch && !customer && (
               <div className="mt-1.5 border border-[var(--line)] rounded-lg overflow-hidden divide-y divide-slate-50 max-h-40 overflow-y-auto">
-                <button onClick={() => { setCustomer(null); setCustomerSearch('Walk-in Customer') }} className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 dark:bg-indigo-950/60">Walk-in Customer</button>
+                <button onClick={() => { setCustomer(null); setCustomerSearch('Walk-in Customer') }} className="w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors">Walk-in Customer</button>
                 {filteredCustomers.slice(0, 6).map(c => (
-                  <button key={c.id} onClick={() => { setCustomer(c); setCustomerSearch(c.name) }} className="w-full text-left px-3 py-2 hover:bg-indigo-50 dark:bg-indigo-950/60">
+                  <button key={c.id} onClick={() => { setCustomer(c); setCustomerSearch(c.name) }} className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors">
                     <div className="text-sm font-medium text-[var(--ink)]">{c.name}</div>
                     <div className="text-[11px] text-[var(--muted-light)]">{c.mobile}</div>
                   </button>
@@ -1147,7 +1147,7 @@ export default function NewBill() {
                   step="0.01"
                   value={billDiscountInput}
                   onChange={e => setBillDiscountInput(e.target.value)}
-                  className="w-24 h-7 px-2 text-right text-xs rounded border border-[var(--line)] focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="w-24 h-7 px-2 text-right text-xs rounded border border-[var(--line)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]"
                   placeholder="0.00"
                 />
               </label>
@@ -1168,7 +1168,7 @@ export default function NewBill() {
                 <button
                   key={id}
                   onClick={() => selectPayment(id)}
-                  className={`flex flex-col items-center justify-center gap-1 rounded-lg border py-2 text-[11px] font-medium transition ${payment.method === id ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'}`}
+                  className={`flex flex-col items-center justify-center gap-1 rounded-lg border py-2 text-[11px] font-medium transition ${payment.method === id ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-[var(--shadow-primary)]' : 'border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:border-[var(--primary-border)]'}`}
                 >
                   <Icon size={15} />{label}
                 </button>
@@ -1181,7 +1181,7 @@ export default function NewBill() {
                   <span className="text-xs text-[var(--muted)]">Amount received</span>
                   <input
                     ref={paymentRef}
-                    type="number" className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    type="number" className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]"
                     value={payment.amount} placeholder={grandTotal.toFixed(2)}
                     onChange={e => setPayment(x => ({ ...x, amount: e.target.value, status: 'paid' }))}
                   />
@@ -1230,11 +1230,11 @@ export default function NewBill() {
               <div className="mt-3 space-y-2.5">
                 <label className="block">
                   <span className="text-xs text-[var(--muted)]">Amount</span>
-                  <input type="number" className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={payment.amount} onChange={e => setPayment(x => ({ ...x, amount: e.target.value }))} />
+                  <input type="number" className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]" value={payment.amount} onChange={e => setPayment(x => ({ ...x, amount: e.target.value }))} />
                 </label>
                 <label className="block">
                   <span className="text-xs text-[var(--muted)]">Reference (optional)</span>
-                  <input className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={payment.reference} onChange={e => setPayment(x => ({ ...x, reference: e.target.value }))} />
+                  <input className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]" value={payment.reference} onChange={e => setPayment(x => ({ ...x, reference: e.target.value }))} />
                 </label>
               </div>
             )}
@@ -1264,7 +1264,7 @@ export default function NewBill() {
           {/* Actions */}
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3.5 shadow-[var(--shadow-card)] space-y-2">
             <button
-              className="btn-solid w-full h-12 text-sm"
+              className="btn-solid w-full h-12 text-sm font-bold tracking-wide"
               onClick={() => saveBill(false)}
               disabled={saving || !cart.length}
             >
@@ -1353,7 +1353,7 @@ export default function NewBill() {
       <button
         type="button"
         onClick={() => setCartOpen(true)}
-        className="md:hidden fixed bottom-3 inset-x-3 z-20 min-h-12 rounded-xl bg-indigo-600 text-white px-4 shadow-xl flex items-center justify-between font-semibold text-sm"
+        className="md:hidden fixed bottom-3 inset-x-3 z-20 min-h-12 rounded-xl bg-[var(--primary)] text-white px-4 shadow-xl flex items-center justify-between font-semibold text-sm"
       >
         <span className="flex items-center gap-2"><Receipt size={17} /> Cart ({cart.reduce((count, item) => count + Number(item.qty || 0), 0)})</span>
         <span>{fmt(grandTotal)}</span>
@@ -1375,13 +1375,13 @@ export default function NewBill() {
       <Modal open={showCustomerModal} onClose={() => setShowCustomerModal(false)} title="Add new customer" size="sm">
         <div className="space-y-3">
           <label className="block text-sm text-[var(--muted)]">Name *
-            <input className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={newCustomer.name} onChange={e => setNewCustomer(x => ({ ...x, name: e.target.value }))} />
+            <input className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]" value={newCustomer.name} onChange={e => setNewCustomer(x => ({ ...x, name: e.target.value }))} />
           </label>
           <label className="block text-sm text-[var(--muted)]">Mobile
-            <input className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={newCustomer.mobile} onChange={e => setNewCustomer(x => ({ ...x, mobile: e.target.value }))} />
+            <input className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]" value={newCustomer.mobile} onChange={e => setNewCustomer(x => ({ ...x, mobile: e.target.value }))} />
           </label>
           <label className="block text-sm text-[var(--muted)]">Email
-            <input className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={newCustomer.email} onChange={e => setNewCustomer(x => ({ ...x, email: e.target.value }))} />
+            <input className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]" value={newCustomer.email} onChange={e => setNewCustomer(x => ({ ...x, email: e.target.value }))} />
           </label>
           <button className="btn-solid w-full" onClick={addCustomer}>Add customer</button>
         </div>

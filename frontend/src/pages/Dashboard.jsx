@@ -448,16 +448,15 @@ const ChartTooltip = ({
   return (
     <div
       className="
-        bg-[var(--app-bg)]
-        border border-slate-800
+        bg-[var(--surface)]
+        border border-[var(--line)]
         rounded-xl
-        shadow-2xl
+        shadow-[var(--shadow-lg)]
         px-3 py-2.5
         text-xs
-        text-white
       "
     >
-      <div className="font-semibold text-slate-300 mb-1">
+      <div className="font-semibold text-[var(--muted)] mb-1">
         {label}
       </div>
 
@@ -473,11 +472,11 @@ const ChartTooltip = ({
             }}
           />
 
-          <span className="text-[var(--muted-light)]">
+          <span className="text-[var(--muted)]">
             {item.name}:
           </span>
 
-          <span className="font-bold text-white">
+          <span className="font-bold text-[var(--ink)]">
             ₹
             {Number(
               item.value || 0
@@ -848,13 +847,7 @@ export default function Dashboard() {
     <div
       className="
         min-h-full
-        space-y-6
-        bg-[var(--surface-elevated)]/80
-        -m-2
-        sm:-m-4
-        p-2
-        sm:p-4
-        rounded-2xl
+        space-y-5
       "
     >
 
@@ -865,11 +858,11 @@ export default function Dashboard() {
       <div
         className="
           w-full
-          bg-[var(--app-bg)]
+          bg-[var(--surface)]
           border border-[var(--line)]
           rounded-2xl
           px-4 sm:px-5
-          py-3
+          py-3.5
           shadow-[var(--shadow-card)]
         "
       >
@@ -1050,11 +1043,10 @@ export default function Dashboard() {
             border
             px-4
             py-3
-            shadow-[var(--shadow-card)]
             ${
               dashboard.out_of_stock > 0
-                ? 'bg-red-50 dark:bg-red-950/60 border-red-200'
-                : 'bg-orange-50 dark:bg-orange-950/60 border-orange-200'
+                ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900'
+                : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900'
             }
           `}
         >
@@ -1141,22 +1133,8 @@ export default function Dashboard() {
       ================================================= */}
 
       <section>
-        <p
-          className="
-            text-[10px]
-            font-bold
-            text-[var(--muted-light)]
-            uppercase
-            tracking-[0.18em]
-            mb-3
-          "
-        >
-          Today's Performance
-        </p>
-
-        <div
-            className="grid grid-cols-2 xl:grid-cols-4 gap-3"
-        >
+        <p className="section-label">Today's Performance</p>
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
           <Stat
             label="Today's Sales"
             value={fmt(
@@ -1212,27 +1190,8 @@ export default function Dashboard() {
       ================================================= */}
 
       <section>
-        <p
-          className="
-            text-[10px]
-            font-bold
-            text-[var(--muted-light)]
-            uppercase
-            tracking-[0.18em]
-            mb-3
-          "
-        >
-          This Month
-        </p>
-
-        <div
-          className="
-            grid
-            grid-cols-2
-            xl:grid-cols-4
-            gap-3
-          "
-        >
+        <p className="section-label">This Month</p>
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
           <Stat
             label="Month Sales"
             value={fmt(
@@ -1316,27 +1275,8 @@ export default function Dashboard() {
       ================================================= */}
 
       <section>
-        <p
-          className="
-            text-[10px]
-            font-bold
-            text-[var(--muted-light)]
-            uppercase
-            tracking-[0.18em]
-            mb-3
-          "
-        >
-          Business Insights
-        </p>
-
-        <div
-          className="
-            grid
-            grid-cols-2
-            xl:grid-cols-4
-            gap-3
-          "
-        >
+        <p className="section-label">Business Insights</p>
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
           <Insight
             label="Sales Growth"
             value={`${
@@ -1396,27 +1336,9 @@ export default function Dashboard() {
           ANALYTICS DIVIDER
       ================================================= */}
 
-      <div
-        className="
-          flex
-          items-center
-          gap-3
-          pt-2
-        "
-      >
-        <span
-          className="
-            text-[10px]
-            font-bold
-            uppercase
-            tracking-[0.18em]
-            text-[var(--muted-light)]
-          "
-        >
-          Analytics
-        </span>
-
-        <div className="h-px flex-1 bg-slate-200" />
+      <div className="flex items-center gap-3 pt-1">
+        <span className="section-label mb-0">Analytics</span>
+        <div className="h-px flex-1 bg-[var(--line)]" />
       </div>
 
       {/* =================================================
@@ -1437,8 +1359,8 @@ export default function Dashboard() {
           className="
             bg-[var(--surface)]
             rounded-2xl
-            border border-[var(--line)]/80
-            shadow-[0_8px_30px_rgba(15,23,42,0.05)]
+            border border-[var(--line)]
+            shadow-[var(--shadow-card)]
             p-5
             sm:p-6
           "
@@ -1464,7 +1386,8 @@ export default function Dashboard() {
             <span
               className="
                 text-[11px]
-                bg-slate-100
+                bg-[var(--surface-elevated)]
+                border border-[var(--line)]
                 text-[var(--ink-secondary)]
                 font-bold
                 px-2.5
@@ -1590,8 +1513,7 @@ export default function Dashboard() {
           className="
             bg-[var(--surface)]
             rounded-2xl
-            border border-[var(--line)]/80
-            shadow-[0_8px_30px_rgba(15,23,42,0.05)]
+            border border-[var(--line)]\r\n            shadow-[var(--shadow-card)]
             p-5
             sm:p-6
           "
@@ -1734,8 +1656,7 @@ export default function Dashboard() {
           className="
             bg-[var(--surface)]
             rounded-2xl
-            border border-[var(--line)]/80
-            shadow-[0_8px_30px_rgba(15,23,42,0.05)]
+            border border-[var(--line)]\r\n            shadow-[var(--shadow-card)]
             p-5
             sm:p-6
           "
@@ -1844,8 +1765,7 @@ export default function Dashboard() {
           className="
             bg-[var(--surface)]
             rounded-2xl
-            border border-[var(--line)]/80
-            shadow-[0_8px_30px_rgba(15,23,42,0.05)]
+            border border-[var(--line)]\r\n            shadow-[var(--shadow-card)]
             p-5
             sm:p-6
           "
@@ -1984,8 +1904,7 @@ export default function Dashboard() {
           className="
             bg-[var(--surface)]
             rounded-2xl
-            border border-[var(--line)]/80
-            shadow-[0_8px_30px_rgba(15,23,42,0.05)]
+            border border-[var(--line)]\r\n            shadow-[var(--shadow-card)]
             p-5
             sm:p-6
           "
@@ -2142,8 +2061,7 @@ export default function Dashboard() {
           className="
             bg-[var(--surface)]
             rounded-2xl
-            border border-[var(--line)]/80
-            shadow-[0_8px_30px_rgba(15,23,42,0.05)]
+            border border-[var(--line)]\r\n            shadow-[var(--shadow-card)]
             p-5
             sm:p-6
           "
@@ -2301,8 +2219,7 @@ export default function Dashboard() {
           className="
             bg-[var(--surface)]
             rounded-2xl
-            border border-[var(--line)]/80
-            shadow-[0_8px_30px_rgba(15,23,42,0.05)]
+            border border-[var(--line)]\r\n            shadow-[var(--shadow-card)]
             p-5
             sm:p-6
           "
@@ -2514,8 +2431,7 @@ export default function Dashboard() {
           className="
             bg-[var(--surface)]
             rounded-2xl
-            border border-[var(--line)]/80
-            shadow-[0_8px_30px_rgba(15,23,42,0.05)]
+            border border-[var(--line)]\r\n            shadow-[var(--shadow-card)]
             p-5
             sm:p-6
           "
