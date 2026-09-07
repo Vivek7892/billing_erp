@@ -40,6 +40,7 @@ urlpatterns = [
     path('reports/expenses/', views.ExpenseReportView.as_view(), name='expense-report'),
     path('bills/', views.BillsListView.as_view(), name='bills-list'),
     path('invoices/<int:pk>/pdf/', views.InvoicePDFView.as_view(), name='invoice-pdf'),
+    path('invoices/<int:pk>/short-link/', views.InvoiceShortLinkView.as_view(), name='invoice-short-link-create'),
     path('invoices/<int:pk>/cancel/', views.CancelInvoiceView.as_view(), name='cancel-invoice'),
     path('invoices/<int:pk>/refund/', views.RefundInvoiceView.as_view(), name='refund-invoice'),
     path('inventory/adjust/', views.StockAdjustView.as_view(), name='stock-adjust'),

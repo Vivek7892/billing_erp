@@ -92,7 +92,7 @@ export default function Users() {
             <input type="password" className="input" value={form.password} onChange={e => f('password', e.target.value)} /></div>
           <div className="col-span-2 flex items-center gap-2">
             <input type="checkbox" id="active" checked={form.is_active} onChange={e => f('is_active', e.target.checked)} />
-            <label htmlFor="active" className="text-sm text-gray-700">Active</label>
+            <label htmlFor="active" className="text-sm text-[var(--ink-secondary)]">Active</label>
           </div>
         </div>
         <div className="flex gap-3 mt-6">

@@ -1,8 +1,10 @@
 """Small, server-side wrapper for persistent shop-logo storage."""
 from pathlib import Path
 from uuid import uuid4
+from urllib.parse import quote
 
 from django.conf import settings
+import httpx
 
 
 class SupabaseStorageError(Exception):
@@ -13,19 +15,35 @@ def upload_shop_logo(uploaded_file, business_id):
     if not settings.SUPABASE_URL or not settings.SUPABASE_SECRET_KEY:
         raise SupabaseStorageError('Logo storage is not configured. Contact your administrator.')
     try:
-        from supabase import create_client
-
         extension = Path(uploaded_file.name).suffix.lower() or '.png'
         object_name = f"businesses/{business_id}/{uuid4().hex}{extension}"
-        client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SECRET_KEY)
-        bucket = client.storage.from_(settings.SUPABASE_SHOP_LOGO_BUCKET)
-        bucket.upload(
-            object_name,
-            uploaded_file.read(),
-            file_options={'content-type': uploaded_file.content_type or 'image/png', 'upsert': 'false'},
+        base_url = settings.SUPABASE_URL.rstrip('/')
+        bucket = quote(settings.SUPABASE_SHOP_LOGO_BUCKET, safe='')
+        object_path = quote(object_name, safe='/')
+        headers = {
+            'Authorization': f'Bearer {settings.SUPABASE_SECRET_KEY}',
+            'apikey': settings.SUPABASE_SECRET_KEY,
+            'Content-Type': uploaded_file.content_type or 'image/png',
+            'x-upsert': 'false',
+        }
+        response = httpx.post(
+            f'{base_url}/storage/v1/object/{bucket}/{object_path}',
+            headers=headers,
+            content=uploaded_file.read(),
+            timeout=30,
         )
-        return bucket.get_public_url(object_name)
+        if response.status_code in (401, 403):
+            raise SupabaseStorageError(
+                'Logo storage credentials are invalid or not authorized for this bucket.'
+            )
+        response.raise_for_status()
+        return f'{base_url}/storage/v1/object/public/{bucket}/{object_path}'
     except SupabaseStorageError:
         raise
     except Exception as exc:
+        if 'invalid api key' in str(exc).lower():
+            raise SupabaseStorageError(
+                'Logo storage credentials are invalid. Configure a valid '
+                'Supabase service-role key on the backend.'
+            ) from exc
         raise SupabaseStorageError('Could not upload the logo. Please try again.') from exc

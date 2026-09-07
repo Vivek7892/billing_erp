@@ -13,5 +13,6 @@ Pillow
 qrcode[pil]
 python-barcode
 supabase
+httpx
 whitenoise[brotli]
 twilio>=8.0.0

@@ -5,14 +5,17 @@ from rest_framework.decorators import action
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from django.http import HttpResponse
-from django.db.models import Sum, Count, Q, F, Avg
+from django.http import HttpResponse, Http404
+from django.db import IntegrityError
+from django.urls import reverse
+from django.db.models import Sum, Count, Q, F
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
 from io import BytesIO
 import csv
 from openpyxl import Workbook, load_workbook
+from openpyxl.utils import get_column_letter
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
@@ -28,8 +31,9 @@ from .permissions import (
     IsManagerOrAdmin, IsManagerOrReadOnly,
 )
 from .supabase_storage import SupabaseStorageError, upload_shop_logo
-from .pagination import NoPagination
-from .utils import audit
+from .pagination import NoPagination, StandardPagination
+from .utils import audit_event
+from .services.report_service import ReportService
 from django_filters.rest_framework import DjangoFilterBackend
 
 
@@ -114,10 +118,15 @@ def _export_report_xlsx(title, headers, rows, filename, summary_rows=None):
     # KPI / summary block
     if summary_rows:
         summary_count = len(summary_rows)
-        summary_width = max(1, last_col // summary_count)
+        compact = summary_count <= last_col
+        summary_width = max(1, last_col // summary_count) if compact else last_col
         for i, (label, value) in enumerate(summary_rows):
-            col = 1 + i * summary_width
-            end_col = min(last_col, col + summary_width - 1)
+            if compact:
+                col = 1 + i * summary_width
+                end_col = min(last_col, col + summary_width - 1)
+            else:
+                col = 1
+                end_col = last_col
 
             sheet.merge_cells(
                 start_row=row_index,
@@ -154,9 +163,15 @@ def _export_report_xlsx(title, headers, rows, filename, summary_rows=None):
                         bottom=Side(style='thin', color=BORDER),
                     )
 
-        sheet.row_dimensions[row_index].height = 20
-        sheet.row_dimensions[row_index + 1].height = 25
-        row_index += 4
+            if not compact:
+                row_index += 2
+
+        if compact:
+            sheet.row_dimensions[row_index].height = 20
+            sheet.row_dimensions[row_index + 1].height = 25
+            row_index += 4
+        else:
+            row_index += 2
 
     # Report table header
     for col_index, header in enumerate(headers, 1):
@@ -227,7 +242,7 @@ def _export_report_xlsx(title, headers, rows, filename, summary_rows=None):
             width = min(max(width + 3, 18), 34)
         else:
             width = min(max(width + 3, 12), 24)
-        sheet.column_dimensions[sheet.cell(row=1, column=col_index).column_letter].width = width
+        sheet.column_dimensions[get_column_letter(col_index)].width = width
 
     buffer = BytesIO()
     workbook.save(buffer)
@@ -723,7 +738,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = serializer.save(business=self.request.user.business)
-        audit(self.request, 'create', 'users', 'User', user.id, new=user.username)
+        audit_event(self.request, 'USER_CREATED', 'User', user.id, after={'username': user.username, 'role': user.role})
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -742,6 +757,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class SupplierViewSet(viewsets.ModelViewSet):
     serializer_class = SupplierSerializer
     permission_classes = [IsManagerOrReadOnly]
+    pagination_class = StandardPagination
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'phone', 'email']
 
@@ -768,13 +784,13 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         product = serializer.save(business=self.request.user.business)
-        audit(self.request, 'create', 'products', 'Product', product.id, new=product.name)
+        audit_event(self.request, 'PRODUCT_CREATED', 'Product', product.id, after={'name': product.name})
 
     def perform_update(self, serializer):
         previous = f'{serializer.instance.purchase_price}|{serializer.instance.selling_price}|{serializer.instance.gst_percent}'
         product = serializer.save(business=self.request.user.business)
         current = f'{product.purchase_price}|{product.selling_price}|{product.gst_percent}'
-        audit(self.request, 'update', 'products', 'Product', product.id, prev=previous, new=current)
+        audit_event(self.request, 'PRODUCT_UPDATED', 'Product', product.id, before=previous, after=current)
 
     def destroy(self, request, *args, **kwargs):
         if request.user.role not in ('owner', 'admin', 'manager'):
@@ -783,13 +799,14 @@ class ProductViewSet(viewsets.ModelViewSet):
         previous = product.status
         product.status = 'inactive'
         product.save(update_fields=['status', 'updated_at'])
-        audit(self.request, 'archive', 'products', 'Product', product.id, prev=previous, new=product.status)
+        audit_event(self.request, 'PRODUCT_ARCHIVED', 'Product', product.id, before=previous, after=product.status)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CustomerViewSet(viewsets.ModelViewSet):
     serializer_class = CustomerSerializer
     permission_classes = [IsCashierOrAdmin]
+    pagination_class = StandardPagination
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'mobile', 'email']
 
@@ -844,6 +861,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
 class PurchaseViewSet(viewsets.ModelViewSet):
     serializer_class = PurchaseSerializer
     permission_classes = [IsManagerOrReadOnly]
+    pagination_class = StandardPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['supplier', 'payment_status']
     search_fields = ['invoice_number']
@@ -855,7 +873,7 @@ class PurchaseViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         purchase = serializer.save(created_by=self.request.user, business=self.request.user.business)
-        audit(self.request, 'create', 'purchases', 'Purchase', purchase.id, new=purchase.total_amount)
+        audit_event(self.request, 'PURCHASE_CREATED', 'Purchase', purchase.id, after={'total_amount': purchase.total_amount})
 
     def update(self, request, *args, **kwargs):
         return Response({'detail': 'Purchases are immutable after creation.'}, status=405)
@@ -882,8 +900,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         return [IsCashierOrAdmin()]
 
     def perform_create(self, serializer):
-        invoice = serializer.save(created_by=self.request.user, business=self.request.user.business)
-        audit(self.request, 'create', 'invoices', 'Invoice', invoice.id, new=invoice.invoice_number)
+        serializer.save(created_by=self.request.user, business=self.request.user.business)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -928,6 +945,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 class InventoryViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = InventoryTransactionSerializer
     permission_classes = [IsCashierOrAdmin]
+    pagination_class = StandardPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['product', 'transaction_type']
     search_fields = ['product__name', 'reference']
@@ -954,7 +972,7 @@ class SettingViewSet(viewsets.ModelViewSet):
         }
         for key, value in request.data.items():
             Setting.objects.update_or_create(business=request.user.business, key=key, defaults={'value': str(value)})
-        audit(request, 'update', 'settings', 'Setting', request.user.business_id, prev=previous, new=request.data)
+        audit_event(request, 'SETTINGS_CHANGED', 'Setting', request.user.business_id, before=previous, after=request.data)
         return Response({'status': 'updated'})
 
     @action(detail=False, methods=['post'], url_path='upload-logo')
@@ -974,7 +992,7 @@ class SettingViewSet(viewsets.ModelViewSet):
             return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         Setting.objects.update_or_create(business=request.user.business, key='shop_logo', defaults={'value': url})
-        audit(request, 'update', 'settings', 'Setting', request.user.business_id, new={'shop_logo': url})
+        audit_event(request, 'SETTINGS_CHANGED', 'Setting', request.user.business_id, after={'shop_logo': url})
         return Response({'url': url})
 
     @action(detail=False, methods=['post'], url_path='remove-logo')
@@ -984,7 +1002,7 @@ class SettingViewSet(viewsets.ModelViewSet):
             key='shop_logo',
             defaults={'value': ''},
         )
-        audit(request, 'update', 'settings', 'Setting', request.user.business_id, new={'shop_logo': ''})
+        audit_event(request, 'SETTINGS_CHANGED', 'Setting', request.user.business_id, after={'shop_logo': ''})
         return Response({'url': ''})
 
     @action(detail=False, methods=['get'], permission_classes=[IsCashierOrAdmin])
@@ -1362,283 +1380,63 @@ class GlobalSearchView(APIView):
         return Response({'results': results[:20]})
 
 
+def _serve_report(request, report_name):
+    report = ReportService.build(report_name, request.user.business, request.query_params)
+    report_format = request.query_params.get('export', '').lower()
+    if report_format == 'pdf':
+        return _export_report_pdf(
+            report.title, report.headers, report.rows,
+            f'{report.filename}.pdf', summary_rows=report.summary_rows,
+            request_user=request.user,
+        )
+    if report_format == 'xlsx':
+        return _export_report_xlsx(
+            report.title, report.headers, report.rows,
+            f'{report.filename}.xlsx', summary_rows=report.summary_rows,
+        )
+    return Response(report.payload)
+
+
 class SalesReportView(APIView):
     permission_classes = [IsFinanceStaff]
 
     def get(self, request):
-        biz = request.user.business
-        start = request.query_params.get('start_date', str(timezone.now().date().replace(day=1)))
-        end = request.query_params.get('end_date', str(timezone.now().date()))
-        invoices = Invoice.objects.filter(
-            business=biz,
-            created_at__date__gte=start,
-            created_at__date__lte=end,
-            status='completed'
-        )
-        summary = invoices.aggregate(
-            total_sales=Sum('grand_total'),
-            total_discount=Sum('discount_amount'),
-            total_tax=Sum('tax_amount'),
-            count=Count('id'),
-        )
-        returns_total = SalesReturn.objects.filter(
-            business=biz,
-            created_at__date__gte=start,
-            created_at__date__lte=end,
-        ).aggregate(total=Sum('refund_amount'))['total'] or Decimal('0')
-        collection = Payment.objects.filter(
-            invoice__business=biz,
-            invoice__status='completed',
-            created_at__date__gte=start,
-            created_at__date__lte=end,
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-        collection += CustomerPayment.objects.filter(
-            business=biz,
-            created_at__date__gte=start,
-            created_at__date__lte=end,
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-        outstanding = invoices.aggregate(total=Sum('balance_due'))['total'] or Decimal('0')
-        summary.update({
-            'returns': returns_total,
-            'net_sales': (summary['total_sales'] or Decimal('0')) - returns_total,
-            'collection': collection,
-            'outstanding': outstanding,
-        })
-        daily = invoices.values('created_at__date').annotate(
-            total=Sum('grand_total'), count=Count('id')
-        ).order_by('created_at__date')
-        report_format = request.query_params.get('export')
-        if report_format in ['pdf', 'xlsx']:
-            headers = ['Date', 'Invoices', 'Total Sales']
-            rows = [[row['created_at__date'], row['count'], row['total']] for row in daily]
-            summary_rows = [
-                ('Total Sales', summary['total_sales'] or 0),
-                ('Total Discount', summary['total_discount'] or 0),
-                ('Returns', summary['returns'] or 0),
-                ('Net Sales', summary['net_sales'] or 0),
-                ('Total Tax', summary['total_tax'] or 0),
-                ('Collection', summary['collection'] or 0),
-                ('Outstanding', summary['outstanding'] or 0),
-                ('Invoice Count', summary['count'] or 0),
-            ]
-            filename = f'sales-report.{report_format}'
-            if report_format == 'pdf':
-                return _export_report_pdf('Sales Report', headers, rows, filename, summary_rows=summary_rows, request_user=request.user)
-            return _export_report_xlsx('Sales Report', headers, rows, filename, summary_rows=summary_rows)
-        return Response({'summary': summary, 'daily': list(daily)})
+        return _serve_report(request, 'sales')
 
 
 class ProductReportView(APIView):
     permission_classes = [IsFinanceStaff]
 
     def get(self, request):
-        biz = request.user.business
-        start = request.query_params.get('start_date', str(timezone.now().date().replace(day=1)))
-        end = request.query_params.get('end_date', str(timezone.now().date()))
-        data = InvoiceItem.objects.filter(
-            invoice__business=biz,
-            invoice__created_at__date__gte=start,
-            invoice__created_at__date__lte=end,
-            invoice__status='completed'
-        ).values('product_name', 'sku').annotate(
-            total_qty=Sum('quantity'),
-            total_revenue=Sum('total'),
-        ).order_by('-total_qty')
-        report_format = request.query_params.get('export')
-        if report_format in ['pdf', 'xlsx']:
-            headers = ['Product', 'SKU', 'Qty Sold', 'Revenue']
-            rows = [[row['product_name'], row['sku'], row['total_qty'], row['total_revenue']] for row in data]
-            filename = f'product-report.{report_format}'
-            if report_format == 'pdf':
-                return _export_report_pdf('Product Sales Report', headers, rows, filename, request_user=request.user)
-            return _export_report_xlsx('Product Sales Report', headers, rows, filename)
-        return Response(list(data))
+        return _serve_report(request, 'products')
 
 
 class ProfitReportView(APIView):
     permission_classes = [IsFinanceStaff]
 
     def get(self, request):
-        biz = request.user.business
-        start = request.query_params.get('start_date', str(timezone.now().date().replace(day=1)))
-        end = request.query_params.get('end_date', str(timezone.now().date()))
-
-        # Expenses in period
-        expense_total = Expense.objects.filter(
-            business=biz, expense_date__gte=start, expense_date__lte=end
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-
-        # Sales returns in period
-        returns_total = SalesReturn.objects.filter(
-            business=biz, created_at__date__gte=start, created_at__date__lte=end
-        ).aggregate(total=Sum('refund_amount'))['total'] or Decimal('0')
-
-        agg = InvoiceItem.objects.filter(
-            invoice__business=biz,
-            invoice__created_at__date__gte=start,
-            invoice__created_at__date__lte=end,
-            invoice__status='completed',
-        ).annotate(
-            net_revenue=F('total') - F('gst_amount'),
-            cogs=F('quantity') * F('cost_price'),
-        ).aggregate(
-            total_net_revenue=Sum('net_revenue'),
-            total_cogs=Sum('cogs'),
-            total_gst=Sum('gst_amount'),
-            total_discount=Sum('discount_amount'),
-        )
-
-        gross_sales = float(
-            InvoiceItem.objects.filter(
-                invoice__business=biz,
-                invoice__created_at__date__gte=start,
-                invoice__created_at__date__lte=end,
-                invoice__status='completed',
-            ).aggregate(s=Sum(F('unit_price') * F('quantity')))['s'] or 0
-        )
-        total_discount = float(agg['total_discount'] or 0)
-        total_gst = float(agg['total_gst'] or 0)
-        net_revenue = float(agg['total_net_revenue'] or 0)
-        total_cogs = float(agg['total_cogs'] or 0)
-        gross_profit = net_revenue - total_cogs
-        net_profit = gross_profit - float(expense_total) - float(returns_total)
-        gross_margin = round(gross_profit / net_revenue * 100, 1) if net_revenue else 0
-        net_margin = round(net_profit / net_revenue * 100, 1) if net_revenue else 0
-
-        # Per-product breakdown
-        items = InvoiceItem.objects.filter(
-            invoice__business=biz,
-            invoice__created_at__date__gte=start,
-            invoice__created_at__date__lte=end,
-            invoice__status='completed',
-        ).values('product_name', 'sku').annotate(
-            total_qty=Sum('quantity'),
-            total_revenue=Sum(F('total') - F('gst_amount')),
-            total_cost=Sum(F('quantity') * F('cost_price')),
-        ).order_by('-total_revenue')
-
-        result = [
-            {
-                'product': row['product_name'],
-                'sku': row['sku'],
-                'qty': float(row['total_qty'] or 0),
-                'revenue': float(row['total_revenue'] or 0),
-                'cost': float(row['total_cost'] or 0),
-                'profit': float((row['total_revenue'] or 0) - (row['total_cost'] or 0)),
-            }
-            for row in items
-        ]
-
-        report_format = request.query_params.get('export')
-        if report_format in ['pdf', 'xlsx']:
-            headers = ['Product', 'SKU', 'Qty', 'Revenue', 'Cost', 'Profit']
-            rows = [[r['product'], r['sku'], r['qty'], r['revenue'], r['cost'], r['profit']] for r in result]
-            summary_rows = [
-                ('Gross Sales', gross_sales),
-                ('Net Revenue', net_revenue),
-                ('Total COGS', total_cogs),
-                ('Gross Profit', gross_profit),
-                ('Expenses', float(expense_total)),
-                ('Net Profit', net_profit),
-            ]
-            filename = f'profit-report.{report_format}'
-            if report_format == 'pdf':
-                return _export_report_pdf('Profit Report', headers, rows, filename, summary_rows=summary_rows, request_user=request.user)
-            return _export_report_xlsx('Profit Report', headers, rows, filename, summary_rows=summary_rows)
-        return Response({
-            'items': result,
-            'gross_sales': gross_sales,
-            'total_discount': total_discount,
-            'total_gst': total_gst,
-            'net_revenue': net_revenue,
-            'total_cogs': total_cogs,
-            'gross_profit': gross_profit,
-            'expenses': float(expense_total),
-            'sales_returns': float(returns_total),
-            'net_profit': net_profit,
-            'gross_margin': gross_margin,
-            'net_margin': net_margin,
-        })
+        return _serve_report(request, 'profit')
 
 
 class GSTReportView(APIView):
     permission_classes = [IsFinanceStaff]
 
     def get(self, request):
-        biz = request.user.business
-        start = request.query_params.get('start_date', str(timezone.now().date().replace(day=1)))
-        end = request.query_params.get('end_date', str(timezone.now().date()))
-        data = InvoiceItem.objects.filter(
-            invoice__business=biz,
-            invoice__created_at__date__gte=start,
-            invoice__created_at__date__lte=end,
-            invoice__status='completed'
-        ).values('gst_percent').annotate(
-            taxable_amount=Sum(F('total') - F('gst_amount')),
-            gst_collected=Sum('gst_amount'),
-        ).order_by('gst_percent')
-        total_gst = Invoice.objects.filter(
-            business=biz,
-            created_at__date__gte=start,
-            created_at__date__lte=end,
-            status='completed'
-        ).aggregate(total=Sum('tax_amount'))['total'] or 0
-        report_format = request.query_params.get('export')
-        if report_format in ['pdf', 'xlsx']:
-            headers = ['GST %', 'Taxable Amount', 'GST Collected']
-            rows = [[row['gst_percent'], row['taxable_amount'], row['gst_collected']] for row in data]
-            summary_rows = [('Total GST', total_gst)]
-            filename = f'gst-report.{report_format}'
-            if report_format == 'pdf':
-                return _export_report_pdf('GST Report', headers, rows, filename, summary_rows=summary_rows, request_user=request.user)
-            return _export_report_xlsx('GST Report', headers, rows, filename, summary_rows=summary_rows)
-        return Response({'by_rate': list(data), 'total_gst': float(total_gst)})
+        return _serve_report(request, 'gst')
 
 
 class CustomerCreditReportView(APIView):
     permission_classes = [IsFinanceStaff]
 
     def get(self, request):
-        biz = request.user.business
-        customers = Customer.objects.filter(business=biz, outstanding_amount__gt=0).values(
-            'id', 'name', 'mobile', 'outstanding_amount', 'credit_limit'
-        )
-        total = Customer.objects.filter(business=biz).aggregate(total=Sum('outstanding_amount'))['total'] or 0
-        report_format = request.query_params.get('export')
-        if report_format in ['pdf', 'xlsx']:
-            headers = ['Customer', 'Mobile', 'Outstanding', 'Credit Limit']
-            rows = [[row['name'], row['mobile'], row['outstanding_amount'], row['credit_limit']] for row in customers]
-            summary_rows = [('Total Outstanding', total)]
-            filename = f'customer-credit-report.{report_format}'
-            if report_format == 'pdf':
-                return _export_report_pdf('Customer Credit Report', headers, rows, filename, summary_rows=summary_rows, request_user=request.user)
-            return _export_report_xlsx('Customer Credit Report', headers, rows, filename, summary_rows=summary_rows)
-        return Response({'customers': list(customers), 'total_outstanding': float(total)})
+        return _serve_report(request, 'customers')
 
 
 class PaymentReportView(APIView):
     permission_classes = [IsFinanceStaff]
 
     def get(self, request):
-        biz = request.user.business
-        start = request.query_params.get('start_date', str(timezone.now().date().replace(day=1)))
-        end = request.query_params.get('end_date', str(timezone.now().date()))
-        data = Payment.objects.filter(
-            invoice__business=biz,
-            invoice__created_at__date__gte=start,
-            invoice__created_at__date__lte=end,
-            invoice__status='completed',
-            invoice__payment_status__in=['paid', 'partial']
-        ).values('method').annotate(total=Sum('amount'), count=Count('id'))
-        report_format = request.query_params.get('export')
-        if report_format in ['pdf', 'xlsx']:
-            headers = ['Method', 'Count', 'Total']
-            rows = [[row['method'], row['count'], row['total']] for row in data]
-            filename = f'payment-report.{report_format}'
-            if report_format == 'pdf':
-                return _export_report_pdf('Payment Report', headers, rows, filename, request_user=request.user)
-            return _export_report_xlsx('Payment Report', headers, rows, filename)
-        return Response(list(data))
+        return _serve_report(request, 'payments')
 
 
 class ExpenseCategoryViewSet(viewsets.ModelViewSet):
@@ -1670,7 +1468,7 @@ class ExpenseViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         expense = serializer.save(business=self.request.user.business, created_by=self.request.user)
-        audit(self.request, 'create', 'expenses', 'Expense', expense.id, new=expense.amount)
+        audit_event(self.request, 'EXPENSE_CREATED', 'Expense', expense.id, after={'amount': expense.amount})
 
     def perform_update(self, serializer):
         serializer.save(business=self.request.user.business)
@@ -1688,72 +1486,21 @@ class SupplierPaymentViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        from django.db import transaction
-        with transaction.atomic():
-            payment = serializer.save(business=self.request.user.business, created_by=self.request.user)
-            supplier = Supplier.objects.select_for_update().get(pk=payment.supplier_id)
-            supplier.outstanding_amount = max(
-                Decimal('0'), supplier.outstanding_amount - payment.amount
-            )
-            supplier.save(update_fields=['outstanding_amount'])
-            audit(self.request, 'create', 'payments', 'SupplierPayment', payment.id, new=payment.amount)
+        from .services.payment_service import PaymentService
+        payment = PaymentService.record_supplier_payment(
+            attributes=serializer.validated_data,
+            business=self.request.user.business,
+            created_by=self.request.user,
+        )
+        serializer.instance = payment
+        audit_event(self.request, 'PAYMENT_RECEIVED', 'SupplierPayment', payment.id, after={'amount': payment.amount})
 
 
 class ExpenseReportView(APIView):
     permission_classes = [IsFinanceStaff]
 
     def get(self, request):
-        biz = request.user.business
-        start = request.query_params.get('start_date', str(timezone.now().date().replace(day=1)))
-        end = request.query_params.get('end_date', str(timezone.now().date()))
-        expenses = Expense.objects.filter(
-            business=biz,
-            expense_date__gte=start,
-            expense_date__lte=end,
-        ).select_related('category').order_by('-expense_date')
-        summary = expenses.aggregate(
-            total_amount=Sum('amount'),
-            count=Count('id'),
-            avg_amount=Avg('amount'),
-        )
-        by_category = list(
-            expenses.values('category__name').annotate(
-                total=Sum('amount'), count=Count('id')
-            ).order_by('-total')
-        )
-        for row in by_category:
-            row['category'] = row.pop('category__name') or 'Uncategorised'
-        expense_list = list(expenses.values(
-            'expense_date', 'description', 'amount', 'payment_method',
-            'category__name', 'notes'
-        ))
-        for row in expense_list:
-            row['category'] = row.pop('category__name') or ''
-        report_format = request.query_params.get('export')
-        if report_format in ['pdf', 'xlsx']:
-            headers = ['Date', 'Description', 'Category', 'Method', 'Amount']
-            rows = [
-                [str(e['expense_date']), e['description'], e['category'], e['payment_method'], e['amount']]
-                for e in expense_list
-            ]
-            summary_rows = [
-                ('Total Expenses', summary['total_amount'] or 0),
-                ('Number of Entries', summary['count'] or 0),
-                ('Average per Entry', round(summary['avg_amount'] or 0, 2)),
-            ]
-            filename = f'expenses-report.{report_format}'
-            if report_format == 'pdf':
-                return _export_report_pdf('Expenses Report', headers, rows, filename, summary_rows=summary_rows, request_user=request.user)
-            return _export_report_xlsx('Expenses Report', headers, rows, filename, summary_rows=summary_rows)
-        return Response({
-            'expenses': expense_list,
-            'summary': {
-                'total_amount': float(summary['total_amount'] or 0),
-                'count': summary['count'] or 0,
-                'avg_amount': round(float(summary['avg_amount'] or 0), 2),
-            },
-            'by_category': by_category,
-        })
+        return _serve_report(request, 'expenses')
 
 
 class SalesReturnViewSet(viewsets.ModelViewSet):
@@ -1770,117 +1517,21 @@ class SalesReturnViewSet(viewsets.ModelViewSet):
         )
 
     def create(self, request, *args, **kwargs):
-        from django.db import transaction
-        invoice_id = request.data.get('invoice')
-        reason = request.data.get('reason', '')
-        refund_method = request.data.get('refund_method', 'cash')
-        items_data = request.data.get('items', [])  # [{invoice_item_id, quantity}]
-
+        from .services.sales_return_service import SalesReturnService
         try:
-            invoice = Invoice.objects.prefetch_related('items__product').get(
-                pk=invoice_id, business=request.user.business
-            )
-        except Invoice.DoesNotExist:
-            return Response({'detail': 'Invoice not found.'}, status=404)
-
-        if invoice.status not in ('completed',):
-            return Response({'detail': 'Only completed invoices can be returned.'}, status=400)
-
-        if not items_data:
-            return Response({'detail': 'Select at least one item to return.'}, status=400)
-
-        with transaction.atomic():
-            invoice = Invoice.objects.select_for_update().get(
-                pk=invoice.pk, business=request.user.business
-            )
-            # Generate return number
-            last = SalesReturn.objects.filter(business=request.user.business).order_by('-id').first()
-            seq = (last.id + 1) if last else 1
-            return_number = f"RET-{seq:04d}"
-
-            refund_total = Decimal('0')
-            requested_by_item = {}
-            return_obj = SalesReturn.objects.create(
+            return_obj = SalesReturnService.create_sales_return(
+                invoice_id=request.data.get('invoice'),
+                reason=request.data.get('reason', ''),
+                refund_method=request.data.get('refund_method', 'cash'),
+                items_data=request.data.get('items', []),
                 business=request.user.business,
-                invoice=invoice,
-                return_number=return_number,
-                reason=reason,
-                refund_method=refund_method,
                 created_by=request.user,
             )
-
-            for rd in items_data:
-                try:
-                    inv_item = InvoiceItem.objects.select_related('product').get(
-                        pk=rd['invoice_item_id'], invoice=invoice
-                    )
-                except (InvoiceItem.DoesNotExist, KeyError):
-                    return Response({'detail': f'Invalid item id {rd.get("invoice_item_id")}.'}, status=400)
-
-                ret_qty = Decimal(str(rd.get('quantity', inv_item.quantity)))
-                already_returned = SalesReturnItem.objects.filter(
-                    invoice_item=inv_item
-                ).aggregate(total=Sum('quantity'))['total'] or Decimal('0')
-                requested_by_item[inv_item.pk] = requested_by_item.get(inv_item.pk, Decimal('0')) + ret_qty
-                remaining_qty = inv_item.quantity - already_returned
-                if ret_qty <= 0 or requested_by_item[inv_item.pk] > remaining_qty:
-                    return Response({'detail': f'Invalid return qty for {inv_item.product_name}.'}, status=400)
-
-                line_total = (inv_item.total / inv_item.quantity * ret_qty).quantize(Decimal('0.01'))
-                refund_total += line_total
-
-                SalesReturnItem.objects.create(
-                    sales_return=return_obj,
-                    invoice_item=inv_item,
-                    product=inv_item.product,
-                    product_name=inv_item.product_name,
-                    quantity=ret_qty,
-                    unit_price=inv_item.unit_price,
-                    total=line_total,
-                )
-
-                # Restore stock
-                if inv_item.product:
-                    product = Product.objects.select_for_update().get(pk=inv_item.product_id)
-                    before = product.current_stock
-                    product.current_stock += ret_qty
-                    product.save(update_fields=['current_stock', 'updated_at'])
-                    InventoryTransaction.objects.create(
-                        business=request.user.business,
-                        product=product,
-                        transaction_type='returned',
-                        quantity=ret_qty,
-                        before_stock=before,
-                        after_stock=product.current_stock,
-                        reference=return_number,
-                        created_by=request.user,
-                    )
-
-            return_obj.refund_amount = refund_total
-            return_obj.save()
-            audit(request, 'create', 'returns', 'SalesReturn', return_obj.id, new=refund_total)
-
-            # Mark invoice as refunded if full return
-            total_returned = sum(
-                Decimal(str(i.quantity)) for i in return_obj.items.all()
-            )
-            total_original = sum(
-                Decimal(str(i.quantity)) for i in invoice.items.all()
-            )
-            if total_returned >= total_original:
-                invoice.status = 'refunded'
-                invoice.payment_status = 'refunded'
-                invoice.save()
-
-            # Reduce customer outstanding proportionally
-            if invoice.customer and invoice.balance_due > 0 and invoice.grand_total > 0:
-                proportion = refund_total / invoice.grand_total
-                credit_reduction = (invoice.balance_due * proportion).quantize(Decimal('0.01'))
-                invoice.customer.outstanding_amount = max(
-                    Decimal('0'), invoice.customer.outstanding_amount - credit_reduction
-                )
-                invoice.customer.save()
-
+        except LookupError as exc:
+            return Response({'detail': str(exc)}, status=404)
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=400)
+        audit_event(request, 'SALES_RETURN_CREATED', 'SalesReturn', return_obj.id, after={'refund_amount': return_obj.refund_amount})
         return Response(SalesReturnSerializer(return_obj).data, status=201)
 
 
@@ -1908,7 +1559,6 @@ class InvoicePDFView(APIView):
     permission_classes = []
 
     def get(self, request, pk):
-        from .pdf_utils import generate_invoice_pdf, generate_thermal_invoice_pdf
         from rest_framework_simplejwt.tokens import AccessToken
         from django.contrib.auth import get_user_model
 
@@ -1930,61 +1580,99 @@ class InvoicePDFView(APIView):
             )
         except Invoice.DoesNotExist:
             return HttpResponse('Not found', status=404)
-        printer = request.query_params.get('printer')
-        business_settings = {
-            setting.key: setting.value
-            for setting in Setting.objects.filter(business=invoice.business, key__in=['printer_type', 'invoice_template'])
-        }
-        printer_setting = business_settings.get('printer_type', 'a4').lower()
-        template_setting = business_settings.get('invoice_template', 'gst_a4').lower()
-        use_thermal = printer == 'thermal' or (
-            not printer and (printer_setting in ('thermal', 'thermal_80', 'thermal_58') or template_setting.startswith('thermal'))
+        return _invoice_pdf_response(invoice, request.query_params.get('printer'))
+
+
+def _invoice_pdf_response(invoice, printer=None):
+    """Generate an inline invoice PDF for both staff and public short links."""
+    from .pdf_utils import generate_invoice_pdf, generate_thermal_invoice_pdf
+
+    business_settings = {
+        setting.key: setting.value
+        for setting in Setting.objects.filter(
+            business=invoice.business, key__in=['printer_type', 'invoice_template']
         )
-        buffer = generate_thermal_invoice_pdf(invoice) if use_thermal else generate_invoice_pdf(invoice)
-        response = HttpResponse(buffer, content_type='application/pdf')
-        suffix = 'thermal' if use_thermal else 'a4'
-        response['Content-Disposition'] = f'inline; filename="invoice-{invoice.invoice_number}-{suffix}.pdf"'
-        return response
+    }
+    printer_setting = business_settings.get('printer_type', 'a4').lower()
+    template_setting = business_settings.get('invoice_template', 'gst_a4').lower()
+    use_thermal = printer == 'thermal' or (
+        not printer and (
+            printer_setting in ('thermal', 'thermal_80', 'thermal_58')
+            or template_setting.startswith('thermal')
+        )
+    )
+    buffer = generate_thermal_invoice_pdf(invoice) if use_thermal else generate_invoice_pdf(invoice)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    suffix = 'thermal' if use_thermal else 'a4'
+    response['Content-Disposition'] = f'inline; filename="invoice-{invoice.invoice_number}-{suffix}.pdf"'
+    return response
+
+
+class InvoiceShortLinkView(APIView):
+    """Create or return the current public, expiring PDF link for an invoice."""
+    permission_classes = [IsCashierOrAdmin]
+
+    def post(self, request, pk):
+        try:
+            invoice = Invoice.objects.get(pk=pk, business=request.user.business)
+        except Invoice.DoesNotExist:
+            raise Http404
+
+        link = invoice.short_links.filter(expires_at__gt=timezone.now()).first()
+        if link is None:
+            # A uniqueness constraint is the final collision guard; retries make
+            # the 6-character public code safe even at high volume.
+            for _ in range(5):
+                try:
+                    link = ShortLink.objects.create(invoice=invoice)
+                    break
+                except IntegrityError:
+                    link = None
+            if link is None:
+                return Response({'detail': 'Could not create a short link. Please retry.'}, status=503)
+
+        short_url = request.build_absolute_uri(reverse('invoice-short-link', kwargs={'code': link.code}))
+        return Response({
+            'code': link.code,
+            'url': short_url,
+            'expires_at': link.expires_at,
+        })
+
+
+class PublicInvoiceShortLinkView(APIView):
+    """Serve a PDF without authentication only when its public link is valid."""
+    authentication_classes = []
+    permission_classes = []
+    throttle_classes = [AnonRateThrottle]
+
+    def get(self, request, code):
+        try:
+            link = ShortLink.objects.select_related('invoice__customer', 'invoice__business').prefetch_related(
+                'invoice__items', 'invoice__payments'
+            ).get(code=code, expires_at__gt=timezone.now())
+        except ShortLink.DoesNotExist:
+            # Use one response for missing and expired codes to avoid revealing
+            # whether an invoice link once existed.
+            raise Http404('This invoice link is invalid or has expired.')
+        return _invoice_pdf_response(link.invoice, request.query_params.get('printer'))
 
 
 class CancelInvoiceView(APIView):
     permission_classes = [IsAdmin]
 
     def post(self, request, pk):
-        from django.db import transaction
+        from .services.invoice_service import InvoiceService
         try:
-            invoice = Invoice.objects.select_related('customer').prefetch_related('items__product').get(
-                pk=pk, business=request.user.business
+            invoice = InvoiceService.cancel_invoice(
+                invoice_id=pk,
+                business=request.user.business,
+                performed_by=request.user,
+                request=request,
             )
-        except Invoice.DoesNotExist:
-            return Response({'error': 'Not found'}, status=404)
-        if invoice.status != 'completed':
-            return Response({'error': 'Invoice already cancelled/refunded'}, status=400)
-        with transaction.atomic():
-            invoice.status = 'cancelled'
-            invoice.save()
-            # Restore stock
-            for item in invoice.items.all():
-                if item.product:
-                    before = item.product.current_stock
-                    item.product.current_stock += item.quantity
-                    item.product.save()
-                    InventoryTransaction.objects.create(
-                        business=invoice.business,
-                        product=item.product,
-                        transaction_type='returned',
-                        quantity=item.quantity,
-                        before_stock=before,
-                        after_stock=item.product.current_stock,
-                        reference=f"CANCEL-{invoice.invoice_number}",
-                        created_by=request.user,
-                    )
-            # Reverse customer credit — only if this invoice contributed to outstanding
-            if invoice.customer and invoice.payment_status in ('credit', 'partial') and invoice.balance_due > 0:
-                invoice.customer.outstanding_amount = max(
-                    Decimal('0'), invoice.customer.outstanding_amount - invoice.balance_due
-                )
-                invoice.customer.save()
+        except LookupError as exc:
+            return Response({'error': str(exc)}, status=404)
+        except ValueError as exc:
+            return Response({'error': str(exc)}, status=400)
         return Response({'status': 'cancelled'})
 
 
@@ -1992,40 +1680,18 @@ class RefundInvoiceView(APIView):
     permission_classes = [IsAdmin]
 
     def post(self, request, pk):
+        from .services.invoice_service import InvoiceService
         try:
-            invoice = Invoice.objects.select_related('customer').prefetch_related('items__product').get(
-                pk=pk, business=request.user.business
+            invoice = InvoiceService.refund_invoice(
+                invoice_id=pk,
+                business=request.user.business,
+                performed_by=request.user,
+                request=request,
             )
-        except Invoice.DoesNotExist:
-            return Response({'error': 'Not found'}, status=404)
-        if invoice.status != 'completed':
+        except LookupError as exc:
+            return Response({'error': str(exc)}, status=404)
+        except ValueError:
             return Response({'error': 'Cannot refund'}, status=400)
-        from django.db import transaction
-        with transaction.atomic():
-            invoice.status = 'refunded'
-            invoice.payment_status = 'refunded'
-            invoice.save()
-            for item in invoice.items.all():
-                if item.product:
-                    before = item.product.current_stock
-                    item.product.current_stock += item.quantity
-                    item.product.save()
-                    InventoryTransaction.objects.create(
-                        business=invoice.business,
-                        product=item.product,
-                        transaction_type='returned',
-                        quantity=item.quantity,
-                        before_stock=before,
-                        after_stock=item.product.current_stock,
-                        reference=f"REFUND-{invoice.invoice_number}",
-                        created_by=request.user,
-                    )
-            # Reverse customer outstanding on full refund
-            if invoice.customer and invoice.balance_due > 0:
-                invoice.customer.outstanding_amount = max(
-                    Decimal('0'), invoice.customer.outstanding_amount - invoice.balance_due
-                )
-                invoice.customer.save()
         return Response({'status': 'refunded'})
 
 
@@ -2033,7 +1699,7 @@ class StockAdjustView(APIView):
     permission_classes = [IsAdmin]
 
     def post(self, request):
-        from django.db import transaction
+        from .services.inventory_service import InventoryService
         product_id = request.data.get('product_id')
         try:
             quantity = Decimal(str(request.data.get('quantity', 0)))
@@ -2043,28 +1709,22 @@ class StockAdjustView(APIView):
             return Response({'error': 'Quantity cannot be zero.'}, status=400)
         transaction_type = request.data.get('transaction_type', 'adjustment')
         notes = request.data.get('notes', '')
-        with transaction.atomic():
-            try:
-                product = Product.objects.select_for_update().get(
-                    pk=product_id, business=request.user.business
-                )
-            except Product.DoesNotExist:
-                return Response({'error': 'Product not found'}, status=404)
-            before = product.current_stock
-            product.current_stock += quantity
-            if product.current_stock < 0:
-                return Response({'error': 'Insufficient stock.'}, status=400)
-            product.save(update_fields=['current_stock', 'updated_at'])
-            InventoryTransaction.objects.create(
-                business=product.business,
-                product=product,
-                transaction_type=transaction_type,
+        try:
+            product = InventoryService.adjust_stock(
+                product_id=product_id,
                 quantity=quantity,
-                before_stock=before,
-                after_stock=product.current_stock,
+                transaction_type=transaction_type,
                 notes=notes,
+                business=request.user.business,
                 created_by=request.user,
             )
+        except ValueError as exc:
+            status_code = 404 if str(exc) == 'Product not found' else 400
+            return Response({'error': str(exc)}, status=status_code)
+        audit_event(
+            request, 'STOCK_ADJUSTED', 'Product', product.id,
+            after={'quantity': quantity, 'transaction_type': transaction_type},
+        )
         return Response(ProductSerializer(product).data)
 
 
@@ -2073,42 +1733,26 @@ class BulkStockAdjustView(APIView):
     permission_classes = [IsAdmin]
 
     def post(self, request):
-        from django.db import transaction
-        items = request.data.get('items', [])
-        if not isinstance(items, list) or not items:
-            return Response({'detail': 'Add at least one product quantity.'}, status=400)
-        with transaction.atomic():
-            for item in items:
-                try:
-                    product = Product.objects.select_for_update().get(
-                        pk=item['product_id'], business=request.user.business
-                    )
-                    quantity = Decimal(str(item['quantity']))
-                except (Product.DoesNotExist, KeyError, ValueError, TypeError):
-                    return Response({'detail': 'One or more stock rows are invalid.'}, status=400)
-                if quantity == 0:
-                    continue
-                before = product.current_stock
-                product.current_stock += quantity
-                if product.current_stock < 0:
-                    return Response({'detail': f'Insufficient stock for {product.name}.'}, status=400)
-                product.save()
-                InventoryTransaction.objects.create(
-                    business=request.user.business,
-                    product=product,
-                    transaction_type='stock_in' if quantity > 0 else 'stock_out',
-                    quantity=quantity,
-                    before_stock=before,
-                    after_stock=product.current_stock,
-                    reference='BULK-STOCK',
-                    notes=request.data.get('notes', ''),
-                    created_by=request.user,
-                )
-        return Response({'status': 'updated'})
+        from .services.inventory_service import InventoryService
+        try:
+            imported = InventoryService.bulk_adjust_stock(
+                items=request.data.get('items', []),
+                notes=request.data.get('notes', ''),
+                business=request.user.business,
+                created_by=request.user,
+            )
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=400)
+        audit_event(request, 'STOCK_ADJUSTED', 'Business', request.user.business_id, after={'items': imported})
+        return Response({'status': 'updated', 'updated': imported})
 
 
 class StockImportView(APIView):
-    """Import stock changes from a CSV or modern Excel workbook."""
+    """Import stock changes from a CSV or modern Excel workbook.
+
+    TODO(background-jobs): Move to a background task when imports exceed
+    ~1 000 rows or p95 latency exceeds 5 s. See BACKGROUND_JOBS.md.
+    """
     permission_classes = [IsAdmin]
 
     MAX_IMPORT_ROWS = 1000
@@ -2175,48 +1819,37 @@ class StockImportView(APIView):
         if errors:
             return Response({'detail': 'Fix the import file and try again.', 'errors': errors[:20]}, status=400)
 
-        from django.db import transaction
-        with transaction.atomic():
-            resolved_rows = []
-            for row_number, sku, product_name, change, stock in prepared:
-                products = Product.objects.select_for_update()
-                product = products.filter(business=request.user.business, sku__iexact=sku).first() if sku else products.filter(business=request.user.business, name__iexact=product_name).first()
-                if not product:
-                    lookup = f'SKU "{sku}"' if sku else f'product "{product_name}"'
-                    return Response({'detail': f'Row {row_number}: no product found for {lookup}.'}, status=400)
-                resolved_rows.append((row_number, product, change, stock))
+        resolved_rows = []
+        for row_number, sku, product_name, change, stock in prepared:
+            products = Product.objects.filter(business=request.user.business)
+            product = products.filter(sku__iexact=sku).first() if sku else products.filter(name__iexact=product_name).first()
+            if not product:
+                lookup = f'SKU "{sku}"' if sku else f'product "{product_name}"'
+                return Response({'detail': f'Row {row_number}: no product found for {lookup}.'}, status=400)
+            resolved_rows.append((row_number, product, change, stock))
 
-            # Validate every resulting balance before changing stock, so an invalid
-            # later row never leaves earlier rows partially imported.
-            planned_rows = []
-            running_stock = {}
-            for row_number, product, change, stock in resolved_rows:
-                before = running_stock.get(product.pk, product.current_stock)
-                quantity = stock - before if stock is not None else change
-                after = before + quantity
-                if after < 0:
-                    return Response({'detail': f'Row {row_number}: {product.name} would have negative stock.'}, status=400)
-                running_stock[product.pk] = after
-                planned_rows.append((product, quantity, before, after))
+        planned_rows = []
+        running_stock = {}
+        for row_number, product, change, stock in resolved_rows:
+            before = running_stock.get(product.pk, product.current_stock)
+            quantity = stock - before if stock is not None else change
+            after = before + quantity
+            if after < 0:
+                return Response({'detail': f'Row {row_number}: {product.name} would have negative stock.'}, status=400)
+            running_stock[product.pk] = after
+            planned_rows.append((row_number, product, quantity, before, after))
 
-            imported = 0
-            for product, quantity, before, after in planned_rows:
-                if quantity == 0:
-                    continue
-                product.current_stock = after
-                product.save(update_fields=['current_stock', 'updated_at'])
-                InventoryTransaction.objects.create(
-                    business=request.user.business,
-                    product=product,
-                    transaction_type='stock_in' if quantity > 0 else 'stock_out',
-                    quantity=quantity,
-                    before_stock=before,
-                    after_stock=after,
-                    reference='STOCK-IMPORT',
-                    notes=f'Imported from {upload.name}',
-                    created_by=request.user,
-                )
-                imported += 1
+        from .services.inventory_service import InventoryService
+        try:
+            imported = InventoryService.import_stock(
+                planned_rows=planned_rows,
+                business=request.user.business,
+                created_by=request.user,
+                source_name=upload.name,
+            )
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=400)
+        audit_event(request, 'STOCK_ADJUSTED', 'Business', request.user.business_id, after={'imported': imported, 'rows': len(prepared)})
         return Response({'status': 'updated', 'imported': imported, 'rows': len(prepared)})
 
 
@@ -2233,19 +1866,14 @@ class CustomerPaymentViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        from django.db import transaction
-        with transaction.atomic():
-            payment = serializer.save(
-                business=self.request.user.business,
-                created_by=self.request.user,
-            )
-            # Reduce customer outstanding
-            customer = Customer.objects.select_for_update().get(pk=payment.customer_id)
-            customer.outstanding_amount = max(
-                Decimal('0'), customer.outstanding_amount - payment.amount
-            )
-            customer.save(update_fields=['outstanding_amount'])
-            audit(self.request, 'create', 'payments', 'CustomerPayment', payment.id, new=payment.amount)
+        from .services.payment_service import PaymentService
+        payment = PaymentService.record_customer_payment(
+            attributes=serializer.validated_data,
+            business=self.request.user.business,
+            created_by=self.request.user,
+        )
+        serializer.instance = payment
+        audit_event(self.request, 'PAYMENT_RECEIVED', 'CustomerPayment', payment.id, after={'amount': payment.amount})
 
 
 class PurchaseReturnViewSet(viewsets.ModelViewSet):
@@ -2262,99 +1890,20 @@ class PurchaseReturnViewSet(viewsets.ModelViewSet):
         )
 
     def create(self, request, *args, **kwargs):
-        from django.db import transaction
-        purchase_id = request.data.get('purchase')
-        reason = request.data.get('reason', '')
-        items_data = request.data.get('items', [])
-
+        from .services.purchase_return_service import PurchaseReturnService
         try:
-            purchase = Purchase.objects.prefetch_related('items__product').get(
-                pk=purchase_id, business=request.user.business
-            )
-        except Purchase.DoesNotExist:
-            return Response({'detail': 'Purchase not found.'}, status=404)
-
-        if not items_data:
-            return Response({'detail': 'Select at least one item to return.'}, status=400)
-
-        with transaction.atomic():
-            purchase = Purchase.objects.select_for_update().get(
-                pk=purchase.pk, business=request.user.business
-            )
-            last = PurchaseReturn.objects.filter(business=request.user.business).order_by('-id').first()
-            seq = (last.id + 1) if last else 1
-            return_number = f"PRET-{seq:04d}"
-
-            debit_total = Decimal('0')
-            requested_by_item = {}
-            return_obj = PurchaseReturn.objects.create(
+            return_obj = PurchaseReturnService.create_purchase_return(
+                purchase_id=request.data.get('purchase'),
+                reason=request.data.get('reason', ''),
+                items_data=request.data.get('items', []),
                 business=request.user.business,
-                purchase=purchase,
-                return_number=return_number,
-                reason=reason,
                 created_by=request.user,
             )
-
-            for rd in items_data:
-                try:
-                    p_item = PurchaseItem.objects.select_related('product').get(
-                        pk=rd['purchase_item_id'], purchase=purchase
-                    )
-                except (PurchaseItem.DoesNotExist, KeyError):
-                    return Response({'detail': f'Invalid item id {rd.get("purchase_item_id")}.'}, status=400)
-
-                ret_qty = Decimal(str(rd.get('quantity', p_item.quantity)))
-                already_returned = PurchaseReturnItem.objects.filter(
-                    purchase_item=p_item
-                ).aggregate(total=Sum('quantity'))['total'] or Decimal('0')
-                requested_by_item[p_item.pk] = requested_by_item.get(p_item.pk, Decimal('0')) + ret_qty
-                remaining_qty = p_item.quantity - already_returned
-                if ret_qty <= 0 or requested_by_item[p_item.pk] > remaining_qty:
-                    return Response({'detail': f'Invalid return qty for {p_item.product.name}.'}, status=400)
-
-                line_total = (p_item.total / p_item.quantity * ret_qty).quantize(Decimal('0.01'))
-                debit_total += line_total
-
-                PurchaseReturnItem.objects.create(
-                    purchase_return=return_obj,
-                    purchase_item=p_item,
-                    product=p_item.product,
-                    product_name=p_item.product.name,
-                    quantity=ret_qty,
-                    purchase_price=p_item.purchase_price,
-                    total=line_total,
-                )
-
-                # Reduce stock
-                if p_item.product:
-                    product = Product.objects.select_for_update().get(pk=p_item.product_id)
-                    before = product.current_stock
-                    if product.current_stock < ret_qty:
-                        return Response({'detail': f'Insufficient stock for {p_item.product.name}.'}, status=400)
-                    product.current_stock -= ret_qty
-                    product.save(update_fields=['current_stock', 'updated_at'])
-                    InventoryTransaction.objects.create(
-                        business=request.user.business,
-                        product=product,
-                        transaction_type='stock_out',
-                        quantity=-ret_qty,
-                        before_stock=before,
-                        after_stock=product.current_stock,
-                        reference=return_number,
-                        created_by=request.user,
-                    )
-
-            return_obj.debit_amount = debit_total
-            return_obj.save()
-            audit(request, 'create', 'returns', 'PurchaseReturn', return_obj.id, new=debit_total)
-
-            # Reduce supplier outstanding
-            if purchase.supplier and debit_total > 0:
-                purchase.supplier.outstanding_amount = max(
-                    Decimal('0'), purchase.supplier.outstanding_amount - debit_total
-                )
-                purchase.supplier.save(update_fields=['outstanding_amount'])
-
+        except LookupError as exc:
+            return Response({'detail': str(exc)}, status=404)
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=400)
+        audit_event(request, 'PURCHASE_RETURN_CREATED', 'PurchaseReturn', return_obj.id, after={'debit_amount': return_obj.debit_amount})
         return Response(PurchaseReturnSerializer(return_obj).data, status=201)
 
 
@@ -2370,3 +1919,5 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         return AuditLog.objects.select_related('user').filter(
             business=self.request.user.business
         )
+
+

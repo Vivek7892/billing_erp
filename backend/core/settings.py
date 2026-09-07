@@ -337,7 +337,7 @@ SUPABASE_URL = config(
 
 SUPABASE_SECRET_KEY = config(
     'SUPABASE_SECRET_KEY',
-    default=''
+    default=config('SUPABASE_SERVICE_ROLE_KEY', default='')
 )
 
 

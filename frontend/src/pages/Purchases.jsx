@@ -92,26 +92,26 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
   const [expanded, setExpanded] = useState(false)
   const supProducts = products.filter(p => p.supplier === supplier.id)
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-            <Building2 size={18} className="text-blue-600" />
+          <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center flex-shrink-0">
+            <Building2 size={18} className="text-blue-600 dark:text-blue-400" />
           </div>
           <div className="min-w-0">
-            <div className="font-semibold text-gray-900 truncate">{supplier.name}</div>
+            <div className="font-semibold text-[var(--ink)] truncate">{supplier.name}</div>
             <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-              {supplier.phone && <span className="text-xs text-gray-400 flex items-center gap-1"><Phone size={10} />{supplier.phone}</span>}
-              {supplier.email && <span className="text-xs text-gray-400 flex items-center gap-1"><Mail size={10} />{supplier.email}</span>}
-              {supplier.gstin && <span className="text-xs text-gray-400">GST: {supplier.gstin}</span>}
+              {supplier.phone && <span className="text-xs text-[var(--muted-light)] flex items-center gap-1"><Phone size={10} />{supplier.phone}</span>}
+              {supplier.email && <span className="text-xs text-[var(--muted-light)] flex items-center gap-1"><Mail size={10} />{supplier.email}</span>}
+              {supplier.gstin && <span className="text-xs text-[var(--muted-light)]">GST: {supplier.gstin}</span>}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {supplier.outstanding_amount > 0 && (
-            <span className="text-xs bg-red-50 text-red-600 font-semibold px-2 py-1 rounded-lg">Due: {fmt(supplier.outstanding_amount)}</span>
+            <span className="text-xs bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 font-semibold px-2 py-1 rounded-lg">Due: {fmt(supplier.outstanding_amount)}</span>
           )}
-          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-lg">{supProducts.length} products</span>
+          <span className="text-xs bg-gray-100 text-[var(--muted)] px-2 py-1 rounded-lg">{supProducts.length} products</span>
           <button onClick={() => onEdit(supplier)} className="icon-btn"><Edit2 size={14} /></button>
           <button onClick={() => onDelete(supplier)} className="icon-btn text-red-400"><Trash2 size={14} /></button>
           <button onClick={() => setExpanded(x => !x)} className="icon-btn">
@@ -120,10 +120,10 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
         </div>
       </div>
       {expanded && (
-        <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
-          {supplier.address && <p className="text-xs text-gray-500 flex items-start gap-1 mb-2"><MapPin size={11} className="mt-0.5 flex-shrink-0" />{supplier.address}</p>}
+        <div className="border-t border-[var(--line-subtle)] bg-[var(--surface-elevated)] px-4 py-3">
+          {supplier.address && <p className="text-xs text-[var(--muted)] flex items-start gap-1 mb-2"><MapPin size={11} className="mt-0.5 flex-shrink-0" />{supplier.address}</p>}
           {supProducts.length === 0 ? (
-            <p className="text-xs text-gray-400 py-2">No products linked to this supplier.</p>
+            <p className="text-xs text-[var(--muted-light)] py-2">No products linked to this supplier.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="table text-xs">
@@ -132,8 +132,8 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
                   {supProducts.map(p => (
                     <tr key={p.id}>
                       <td className="font-medium">{p.name}</td>
-                      <td className="font-mono text-gray-500">{p.sku}</td>
-                      <td className={p.current_stock <= 0 ? 'text-red-600 font-semibold' : p.current_stock <= p.minimum_stock ? 'text-orange-500 font-semibold' : 'text-green-600'}>{p.current_stock}</td>
+                      <td className="font-mono text-[var(--muted)]">{p.sku}</td>
+                      <td className={p.current_stock <= 0 ? 'text-red-600 dark:text-red-400 font-semibold' : p.current_stock <= p.minimum_stock ? 'text-orange-500 font-semibold' : 'text-green-600 dark:text-green-400'}>{p.current_stock}</td>
                       <td>{fmt(p.purchase_price)}</td>
                       <td>{fmt(p.selling_price)}</td>
                       <td><Badge status={p.stock_status} /></td>
@@ -262,10 +262,10 @@ export default function Purchases() {
       />
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200 pb-0">
+      <div className="flex gap-2 border-b border-[var(--line)] pb-0">
         {[['orders', 'Purchase Orders'], ['suppliers', `Suppliers (${suppliers.length})`]].map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === key ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-[var(--muted)] hover:text-[var(--ink-secondary)]'}`}>
             {label}
           </button>
         ))}
@@ -277,7 +277,7 @@ export default function Purchases() {
           {tab === 'orders' && (
             <div className="space-y-3">
               <div className="relative">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" />
                 <input className="input pl-9 text-sm" placeholder="Search by supplier or invoice number…"
                   value={poSearch} onChange={e => setPoSearch(e.target.value)} />
               </div>
@@ -291,10 +291,10 @@ export default function Purchases() {
                       <tbody>
                         {filteredPOs.map(p => (
                           <>
-                            <tr key={p.id} className="cursor-pointer hover:bg-blue-50" onClick={() => setExpandedPO(expandedPO === p.id ? null : p.id)}>
-                              <td className="font-mono text-blue-600 font-medium">PO-{p.id}</td>
+                            <tr key={p.id} className="cursor-pointer hover:bg-blue-50 dark:bg-blue-950/60" onClick={() => setExpandedPO(expandedPO === p.id ? null : p.id)}>
+                              <td className="font-mono text-blue-600 dark:text-blue-400 font-medium">PO-{p.id}</td>
                               <td className="font-medium">{p.supplier_name || '—'}</td>
-                              <td className="text-sm text-gray-500">{p.invoice_number || '—'}</td>
+                              <td className="text-sm text-[var(--muted)]">{p.invoice_number || '—'}</td>
                               <td className="text-sm">{p.purchase_date}</td>
                               <td className="font-semibold">{fmt(p.total_amount)}</td>
                               <td className="text-sm">{fmt(p.paid_amount)}</td>
@@ -306,9 +306,9 @@ export default function Purchases() {
                             </tr>
                             {expandedPO === p.id && (
                               <tr key={`${p.id}-detail`}>
-                                <td colSpan={8} className="bg-blue-50 px-4 py-3">
-                                  <div className="text-xs font-semibold text-gray-500 mb-2">Items in PO-{p.id}</div>
-                                  <table className="table text-xs bg-white rounded-lg overflow-hidden">
+                                <td colSpan={8} className="bg-blue-50 dark:bg-blue-950/60 px-4 py-3">
+                                  <div className="text-xs font-semibold text-[var(--muted)] mb-2">Items in PO-{p.id}</div>
+                                  <table className="table text-xs bg-[var(--surface)] rounded-lg overflow-hidden">
                                     <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Price</th><th>GST</th><th>Total</th></tr></thead>
                                     <tbody>
                                       {(p.items || []).map((it, idx) => (
@@ -323,7 +323,7 @@ export default function Purchases() {
                                       ))}
                                     </tbody>
                                   </table>
-                                  {p.notes && <p className="text-xs text-gray-500 mt-2">Notes: {p.notes}</p>}
+                                  {p.notes && <p className="text-xs text-[var(--muted)] mt-2">Notes: {p.notes}</p>}
                                 </td>
                               </tr>
                             )}
@@ -342,7 +342,7 @@ export default function Purchases() {
             <div className="space-y-3">
               <div className="flex gap-2">
                 <div className="relative flex-1">
-                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" />
                   <input className="input pl-9 text-sm" placeholder="Search suppliers…"
                     value={supSearch} onChange={e => setSupSearch(e.target.value)} />
                 </div>
@@ -410,13 +410,13 @@ export default function Purchases() {
           {/* Items */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="font-semibold text-sm text-gray-700">Items</span>
+              <span className="font-semibold text-sm text-[var(--ink-secondary)]">Items</span>
               <button onClick={() => setForm(p => ({ ...p, items: [...p.items, { product: '', quantity: 1, purchase_price: '', gst_percent: 0, total: 0 }] }))}
-                className="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
                 <Plus size={13} /> Add Item
               </button>
             </div>
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
+            <div className="overflow-x-auto rounded-lg border border-[var(--line)]">
               <table className="table">
                 <thead>
                   <tr><th>Product</th><th>Qty</th><th>Purchase Price</th><th>GST%</th><th>Total</th><th></th></tr>
@@ -442,7 +442,7 @@ export default function Purchases() {
                       <td className="font-semibold text-sm text-green-700">₹{item.total}</td>
                       <td>
                         <button onClick={() => setForm(p => ({ ...p, items: p.items.filter((_, j) => j !== i) }))}
-                          className="text-red-400 hover:text-red-600 p-1" disabled={form.items.length === 1}>
+                          className="text-red-400 hover:text-red-600 dark:text-red-400 p-1" disabled={form.items.length === 1}>
                           <Trash2 size={14} />
                         </button>
                       </td>
@@ -459,10 +459,10 @@ export default function Purchases() {
               <label className="label">Notes</label>
               <textarea className="input" rows={2} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Optional notes…" />
             </div>
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-right min-w-48">
-              <div className="text-xs text-gray-500 mb-1">Grand Total</div>
+            <div className="bg-blue-50 dark:bg-blue-950/60 border border-blue-100 rounded-xl p-4 text-right min-w-48">
+              <div className="text-xs text-[var(--muted)] mb-1">Grand Total</div>
               <div className="text-2xl font-bold text-blue-700">₹{grandTotal.toFixed(2)}</div>
-              <div className="text-xs text-gray-400 mt-1">{form.items.length} item{form.items.length !== 1 ? 's' : ''}</div>
+              <div className="text-xs text-[var(--muted-light)] mt-1">{form.items.length} item{form.items.length !== 1 ? 's' : ''}</div>
             </div>
           </div>
 

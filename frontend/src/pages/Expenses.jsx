@@ -18,10 +18,10 @@ const CAT_ICON = {
   Maintenance: MoreHorizontal, Other: IndianRupee,
 }
 const CAT_COLOR = {
-  Rent: 'bg-blue-50 text-blue-600', Utilities: 'bg-yellow-50 text-yellow-600',
-  Salaries: 'bg-violet-50 text-violet-600', Transport: 'bg-cyan-50 text-cyan-600',
-  Supplies: 'bg-emerald-50 text-emerald-600', Marketing: 'bg-pink-50 text-pink-600',
-  Maintenance: 'bg-orange-50 text-orange-600', Other: 'bg-slate-50 text-slate-600',
+  Rent: 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400', Utilities: 'bg-yellow-50 text-yellow-600 dark:bg-yellow-950/60 dark:text-yellow-400',
+  Salaries: 'bg-violet-50 text-violet-600 dark:bg-violet-950/60 dark:text-violet-400', Transport: 'bg-cyan-50 text-cyan-600 dark:bg-cyan-950/60 dark:text-cyan-400',
+  Supplies: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 dark:bg-emerald-950/60 dark:text-emerald-400', Marketing: 'bg-pink-50 text-pink-600 dark:bg-pink-950/60 dark:text-pink-400',
+  Maintenance: 'bg-orange-50 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400', Other: 'bg-[var(--surface-elevated)] text-[var(--muted)]',
 }
 
 const EMPTY = {
@@ -126,40 +126,40 @@ export default function Expenses() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-        <div className="bg-white rounded-xl border border-rose-100 p-3 sm:p-4 flex flex-col gap-2">
+        <div className="bg-[var(--surface)] rounded-xl border border-rose-100 dark:border-rose-800 p-3 sm:p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-[9px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wide truncate">Total Expenses</span>
-            <div className="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
-              <IndianRupee size={15} className="text-rose-600" />
+            <span className="text-[9px] sm:text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-wide truncate">Total Expenses</span>
+            <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/60 flex items-center justify-center">
+              <IndianRupee size={15} className="text-rose-600 dark:text-rose-400" />
             </div>
           </div>
-          <div className="text-base sm:text-xl font-bold text-slate-800">{fmt(totalAll)}</div>
-          <div className="text-xs text-slate-400">{expenses.length} records</div>
+          <div className="text-base sm:text-xl font-bold text-[var(--ink)]">{fmt(totalAll)}</div>
+          <div className="text-xs text-[var(--muted-light)]">{expenses.length} records</div>
         </div>
-        <div className="bg-white rounded-xl border border-orange-100 p-3 sm:p-4 flex flex-col gap-2">
+        <div className="bg-[var(--surface)] rounded-xl border border-orange-100 p-3 sm:p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <span className="text-[9px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wide truncate">This Month</span>
-            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
-              <TrendingDown size={15} className="text-orange-600" />
+            <span className="text-[9px] sm:text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-wide truncate">This Month</span>
+            <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-950/60 flex items-center justify-center">
+              <TrendingDown size={15} className="text-orange-600 dark:text-orange-400" />
             </div>
           </div>
-          <div className="text-base sm:text-xl font-bold text-slate-800">{fmt(thisMonth)}</div>
-          <div className="text-xs text-slate-400">Current month spend</div>
+          <div className="text-base sm:text-xl font-bold text-[var(--ink)]">{fmt(thisMonth)}</div>
+          <div className="text-xs text-[var(--muted-light)]">Current month spend</div>
         </div>
         {catTotals.map(({ cat, total }) => {
           const Icon = CAT_ICON[cat] || IndianRupee
-          const cls = CAT_COLOR[cat] || 'bg-slate-50 text-slate-600'
+          const cls = CAT_COLOR[cat] || 'bg-[var(--surface-elevated)] text-[var(--muted)]'
           const [bg, tx] = cls.split(' ')
           return (
-            <div key={cat} className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4 flex flex-col gap-2">
+            <div key={cat} className="bg-[var(--surface)] rounded-xl border border-[var(--line)] p-3 sm:p-4 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-[9px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wide truncate">{cat}</span>
+                <span className="text-[9px] sm:text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-wide truncate">{cat}</span>
                 <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center`}>
                   <Icon size={15} className={tx} />
                 </div>
               </div>
-              <div className="text-base sm:text-xl font-bold text-slate-800">{fmt(total)}</div>
-              <div className="text-xs text-slate-400">Top category</div>
+              <div className="text-base sm:text-xl font-bold text-[var(--ink)]">{fmt(total)}</div>
+              <div className="text-xs text-[var(--muted-light)]">Top category</div>
             </div>
           )
         })}
@@ -168,12 +168,12 @@ export default function Expenses() {
       {/* =================================================
           EXPENSES
       ================================================== */}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-card)]">
 
         {/* Header + controls */}
-        <div className="border-b border-slate-100 px-3 py-3 sm:px-5 sm:py-4">
+        <div className="border-b border-[var(--line-subtle)] px-3 py-3 sm:px-5 sm:py-4">
           <div className="flex items-center gap-2">
-            <h2 className="shrink-0 text-sm font-semibold text-slate-800">
+            <h2 className="shrink-0 text-sm font-semibold text-[var(--ink)]">
               All Expenses
             </h2>
 
@@ -182,13 +182,13 @@ export default function Expenses() {
               <div className="relative min-w-0 flex-1 sm:w-56 sm:flex-none">
                 <Search
                   size={13}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]"
                 />
                 <input
                   value={q}
                   onChange={e => setQ(e.target.value)}
                   placeholder="Search expenses..."
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-3 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-slate-300 focus:bg-white"
+                  className="h-9 w-full rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] pl-8 pr-3 text-xs text-[var(--ink-secondary)] outline-none placeholder:text-[var(--muted-light)] focus:border-slate-300 focus:bg-[var(--surface)]"
                 />
               </div>
 
@@ -197,7 +197,7 @@ export default function Expenses() {
                 type="button"
                 onClick={load}
                 disabled={loading}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:opacity-50"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] disabled:opacity-50"
                 title="Refresh expenses"
                 aria-label="Refresh expenses"
               >
@@ -225,7 +225,7 @@ export default function Expenses() {
             <select
               value={catFilter}
               onChange={e => setCatFilter(e.target.value)}
-              className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs text-slate-600 outline-none sm:w-auto"
+              className="h-9 w-full rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 text-xs text-[var(--muted)] outline-none sm:w-auto"
             >
               <option value="all">All Categories</option>
               {CATEGORIES.map(c => (
@@ -234,7 +234,7 @@ export default function Expenses() {
             </select>
 
             {(q || catFilter !== 'all') && (
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[11px] text-[var(--muted-light)]">
                 {filtered.length} result{filtered.length === 1 ? '' : 's'}
               </span>
             )}
@@ -246,7 +246,7 @@ export default function Expenses() {
             <Spinner />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 px-4 py-12 text-slate-400">
+          <div className="flex flex-col items-center gap-2 px-4 py-12 text-[var(--muted-light)]">
             <IndianRupee size={28} className="opacity-30" />
             <span className="text-sm">No expenses found</span>
             <button
@@ -259,22 +259,22 @@ export default function Expenses() {
         ) : (
           <>
             {/* Mobile list */}
-            <div className="divide-y divide-slate-100 sm:hidden">
+            <div className="divide-y divide-[var(--line-subtle)] sm:hidden">
               {filtered.map(e => {
                 const catName = e.category_name || 'Other'
                 const Icon = CAT_ICON[catName] || IndianRupee
-                const cls = CAT_COLOR[catName] || 'bg-slate-50 text-slate-600'
+                const cls = CAT_COLOR[catName] || 'bg-[var(--surface-elevated)] text-[var(--muted)]'
                 const [bg, tx] = cls.split(' ')
 
                 return (
                   <div key={e.id} className="p-3.5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-800">
+                        <p className="truncate text-sm font-semibold text-[var(--ink)]">
                           {e.description}
                         </p>
 
-                        <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[10px] text-slate-400">
+                        <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[10px] text-[var(--muted-light)]">
                           <span>
                             {e.expense_date
                               ? new Date(e.expense_date).toLocaleDateString('en-IN')
@@ -285,7 +285,7 @@ export default function Expenses() {
                         </div>
                       </div>
 
-                      <p className="shrink-0 text-sm font-bold text-slate-800">
+                      <p className="shrink-0 text-sm font-bold text-[var(--ink)]">
                         {fmt(e.amount)}
                       </p>
                     </div>
@@ -311,7 +311,7 @@ export default function Expenses() {
                           type="button"
                           onClick={() => del(e.id)}
                           disabled={deleting === e.id}
-                          className="icon-btn !h-8 !w-8 text-red-400 hover:bg-red-50 hover:text-red-600"
+                          className="icon-btn !h-8 !w-8 text-red-400 hover:bg-red-50 dark:bg-red-950/60 hover:text-red-600 dark:text-red-400"
                           title="Delete expense"
                           aria-label="Delete expense"
                         >
@@ -321,7 +321,7 @@ export default function Expenses() {
                     </div>
 
                     {e.notes && (
-                      <p className="mt-2 truncate text-[10px] text-slate-400">
+                      <p className="mt-2 truncate text-[10px] text-[var(--muted-light)]">
                         {e.notes}
                       </p>
                     )}
@@ -349,12 +349,12 @@ export default function Expenses() {
                   {filtered.map(e => {
                     const catName = e.category_name || 'Other'
                     const Icon = CAT_ICON[catName] || IndianRupee
-                    const cls = CAT_COLOR[catName] || 'bg-slate-50 text-slate-600'
+                    const cls = CAT_COLOR[catName] || 'bg-[var(--surface-elevated)] text-[var(--muted)]'
                     const [bg, tx] = cls.split(' ')
 
                     return (
                       <tr key={e.id}>
-                        <td className="font-medium text-sm text-slate-800">
+                        <td className="font-medium text-sm text-[var(--ink)]">
                           {e.description}
                         </td>
 
@@ -365,21 +365,21 @@ export default function Expenses() {
                           </span>
                         </td>
 
-                        <td className="text-sm text-slate-500">
+                        <td className="text-sm text-[var(--muted)]">
                           {e.expense_date
                             ? new Date(e.expense_date).toLocaleDateString('en-IN')
                             : '—'}
                         </td>
 
-                        <td className="text-xs capitalize text-slate-500">
+                        <td className="text-xs capitalize text-[var(--muted)]">
                           {e.payment_method}
                         </td>
 
-                        <td className="max-w-[160px] truncate text-xs text-slate-400">
+                        <td className="max-w-[160px] truncate text-xs text-[var(--muted-light)]">
                           {e.notes || '—'}
                         </td>
 
-                        <td className="text-sm font-bold text-slate-800">
+                        <td className="text-sm font-bold text-[var(--ink)]">
                           {fmt(e.amount)}
                         </td>
 
@@ -399,7 +399,7 @@ export default function Expenses() {
                               type="button"
                               onClick={() => del(e.id)}
                               disabled={deleting === e.id}
-                              className="icon-btn text-red-400 hover:bg-red-50 hover:text-red-600"
+                              className="icon-btn text-red-400 hover:bg-red-50 dark:bg-red-950/60 hover:text-red-600 dark:text-red-400"
                               title="Delete expense"
                               aria-label="Delete expense"
                             >

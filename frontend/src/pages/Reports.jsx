@@ -234,7 +234,7 @@ export default function Reports() {
               ${
                 tab === t.key
                   ? 'bg-blue-600 text-white'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                  : 'bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
               }
             `}
           >
@@ -273,7 +273,7 @@ export default function Reports() {
               text-blue-700
               border
               border-blue-100
-              bg-blue-50
+              bg-blue-50 dark:bg-blue-950/60
               hover:bg-blue-100
               active:bg-blue-100
               rounded-lg
@@ -322,7 +322,7 @@ export default function Reports() {
                   block
                   text-xs
                   sm:text-sm
-                  text-gray-600
+                  text-[var(--muted)]
                   mb-1.5
                 ">
                   From
@@ -349,7 +349,7 @@ export default function Reports() {
                   block
                   text-xs
                   sm:text-sm
-                  text-gray-600
+                  text-[var(--muted)]
                   mb-1.5
                 ">
                   To
@@ -405,11 +405,11 @@ export default function Reports() {
             size={28}
           />
 
-          <p className="font-medium text-gray-800">
+          <p className="font-medium text-[var(--ink)]">
             Reports could not be displayed
           </p>
 
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-[var(--muted)] mt-1">
             {error}
           </p>
 
@@ -474,13 +474,13 @@ function SalesReport({ data }) {
             text-lg
             sm:text-2xl
             font-bold
-            text-blue-600
+            text-blue-600 dark:text-blue-400
             break-words
           ">
             {fmt(data.summary?.total_sales)}
           </div>
 
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-[var(--muted)]">
             Total Sales
           </div>
         </Card>
@@ -490,12 +490,12 @@ function SalesReport({ data }) {
             text-lg
             sm:text-2xl
             font-bold
-            text-green-600
+            text-green-600 dark:text-green-400
           ">
             {data.summary?.count}
           </div>
 
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-[var(--muted)]">
             Invoices
           </div>
         </Card>
@@ -511,7 +511,7 @@ function SalesReport({ data }) {
             {fmt(data.summary?.total_discount)}
           </div>
 
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-[var(--muted)]">
             Discounts
           </div>
         </Card>
@@ -527,7 +527,7 @@ function SalesReport({ data }) {
             {fmt(data.summary?.total_tax)}
           </div>
 
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-[var(--muted)]">
             Tax Collected
           </div>
         </Card>
@@ -536,28 +536,28 @@ function SalesReport({ data }) {
           <div className="text-lg sm:text-2xl font-bold text-indigo-600 break-words">
             {fmt(data.summary?.net_sales)}
           </div>
-          <div className="text-sm text-gray-500">Net Sales</div>
+          <div className="text-sm text-[var(--muted)]">Net Sales</div>
         </Card>
 
         <Card className="p-3 sm:p-4 text-center">
           <div className="text-lg sm:text-2xl font-bold text-amber-600 break-words">
             {fmt(data.summary?.returns)}
           </div>
-          <div className="text-sm text-gray-500">Returns</div>
+          <div className="text-sm text-[var(--muted)]">Returns</div>
         </Card>
 
         <Card className="p-3 sm:p-4 text-center">
-          <div className="text-lg sm:text-2xl font-bold text-emerald-600 break-words">
+          <div className="text-lg sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 break-words">
             {fmt(data.summary?.collection)}
           </div>
-          <div className="text-sm text-gray-500">Collection</div>
+          <div className="text-sm text-[var(--muted)]">Collection</div>
         </Card>
 
         <Card className="p-3 sm:p-4 text-center">
-          <div className="text-lg sm:text-2xl font-bold text-rose-600 break-words">
+          <div className="text-lg sm:text-2xl font-bold text-rose-600 dark:text-rose-400 break-words">
             {fmt(data.summary?.outstanding)}
           </div>
-          <div className="text-sm text-gray-500">Outstanding</div>
+          <div className="text-sm text-[var(--muted)]">Outstanding</div>
         </Card>
 
       </div>
@@ -569,7 +569,7 @@ function SalesReport({ data }) {
         min-w-0
         overflow-hidden
       ">
-        <h3 className="font-semibold mb-3 sm:mb-4">
+        <h3 className="font-semibold mb-3 sm:mb-4 text-[var(--ink)]">
           Daily Sales
         </h3>
 
@@ -623,7 +623,7 @@ function ProductReport({ data }) {
   return (
     <Card className="p-3 sm:p-5 min-w-0">
 
-      <h3 className="font-semibold mb-4">
+      <h3 className="font-semibold mb-4 text-[var(--ink)]">
         Product Sales
       </h3>
 
@@ -663,7 +663,7 @@ function ProductReport({ data }) {
                   {p.total_qty}
                 </td>
 
-                <td className="font-semibold text-green-600">
+                <td className="font-semibold text-green-600 dark:text-green-400">
                   ₹{Number(p.total_revenue).toFixed(2)}
                 </td>
 
@@ -703,11 +703,11 @@ function ProfitReport({ data }) {
       ">
 
         <Card className="p-3 sm:p-4 text-center">
-          <div className="text-2xl font-bold text-blue-600">
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
             {fmt(data.total_revenue)}
           </div>
 
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-[var(--muted)]">
             Revenue
           </div>
         </Card>
@@ -717,17 +717,17 @@ function ProfitReport({ data }) {
             {fmt(data.total_cost)}
           </div>
 
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-[var(--muted)]">
             Cost
           </div>
         </Card>
 
         <Card className="p-3 sm:p-4 text-center">
-          <div className="text-2xl font-bold text-green-600">
+          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
             {fmt(data.total_profit)}
           </div>
 
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-[var(--muted)]">
             Profit
           </div>
         </Card>
@@ -788,8 +788,8 @@ function ProfitReport({ data }) {
                       font-semibold
                       ${
                         item.profit >= 0
-                          ? 'text-green-600'
-                          : 'text-red-600'
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-red-600 dark:text-red-400'
                       }
                     `}
                   >
@@ -833,7 +833,7 @@ function GSTReport({ data }) {
           ₹{Number(data.total_gst).toFixed(2)}
         </div>
 
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-[var(--muted)]">
           Total GST Collected
         </div>
 
@@ -915,11 +915,11 @@ function CustomerCreditReport({ data }) {
         sm:max-w-xs
       ">
 
-        <div className="text-2xl font-bold text-red-600">
+        <div className="text-2xl font-bold text-red-600 dark:text-red-400">
           ₹{Number(data.total_outstanding).toFixed(2)}
         </div>
 
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-[var(--muted)]">
           Total Outstanding
         </div>
 
@@ -965,7 +965,7 @@ function CustomerCreditReport({ data }) {
                     {c.mobile}
                   </td>
 
-                  <td className="font-semibold text-red-600">
+                  <td className="font-semibold text-red-600 dark:text-red-400">
                     ₹{Number(c.outstanding_amount).toFixed(2)}
                   </td>
 
@@ -999,10 +999,10 @@ function PaymentReport({ data }) {
     : (data?.results ?? [])
 
   const colors = {
-    cash: 'text-green-600',
-    upi: 'text-blue-600',
+    cash: 'text-green-600 dark:text-green-400',
+    upi: 'text-blue-600 dark:text-blue-400',
     card: 'text-purple-600',
-    credit: 'text-red-600'
+    credit: 'text-red-600 dark:text-red-400'
   }
 
   return (
@@ -1013,7 +1013,7 @@ function PaymentReport({ data }) {
       overflow-hidden
     ">
 
-      <h3 className="font-semibold mb-3 sm:mb-4">
+      <h3 className="font-semibold mb-3 sm:mb-4 text-[var(--ink)]">
         Payment Method Breakdown
       </h3>
 
@@ -1031,7 +1031,7 @@ function PaymentReport({ data }) {
         {!rows.length && (
           <p className="
             text-sm
-            text-gray-500
+            text-[var(--muted)]
             col-span-full
           ">
             No recorded payments in this date range.
@@ -1042,7 +1042,7 @@ function PaymentReport({ data }) {
           <div
             key={i}
             className="
-              bg-gray-50
+              bg-[var(--surface-elevated)]
               rounded-xl
               p-4
               text-center
@@ -1054,7 +1054,7 @@ function PaymentReport({ data }) {
                 text-2xl
                 font-bold
                 capitalize
-                ${colors[p.method] || 'text-gray-700'}
+                ${colors[p.method] || 'text-[var(--ink-secondary)]'}
               `}
             >
               ₹{Number(p.total).toFixed(0)}
@@ -1062,7 +1062,7 @@ function PaymentReport({ data }) {
 
             <div className="
               text-sm
-              text-gray-500
+              text-[var(--muted)]
               capitalize
               mt-1
             ">
@@ -1071,7 +1071,7 @@ function PaymentReport({ data }) {
 
             <div className="
               text-xs
-              text-gray-400
+              text-[var(--muted-light)]
             ">
               {p.count} transactions
             </div>
@@ -1127,7 +1127,7 @@ function EmptyRows({ columns, message }) {
         className="
           text-center
           text-sm
-          text-gray-500
+          text-[var(--muted)]
           py-10
         "
       >
@@ -1164,12 +1164,12 @@ function ExpensesReport({ data }) {
           <div className="
             text-2xl
             font-bold
-            text-red-600
+            text-red-600 dark:text-red-400
           ">
             {fmt(summary.total_amount)}
           </div>
 
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-[var(--muted)]">
             Total Expenses
           </div>
 
@@ -1180,12 +1180,12 @@ function ExpensesReport({ data }) {
           <div className="
             text-2xl
             font-bold
-            text-gray-700
+            text-[var(--ink-secondary)]
           ">
             {summary.count || 0}
           </div>
 
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-[var(--muted)]">
             Transactions
           </div>
 
@@ -1201,7 +1201,7 @@ function ExpensesReport({ data }) {
             {fmt(summary.avg_amount)}
           </div>
 
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-[var(--muted)]">
             Avg per Entry
           </div>
 
@@ -1217,7 +1217,7 @@ function ExpensesReport({ data }) {
             {byCategory.length}
           </div>
 
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-[var(--muted)]">
             Categories
           </div>
 
@@ -1233,6 +1233,7 @@ function ExpensesReport({ data }) {
             font-semibold
             mb-3
             text-sm
+            text-[var(--ink)]
           ">
             By Category
           </h3>
@@ -1249,7 +1250,7 @@ function ExpensesReport({ data }) {
               <div
                 key={i}
                 className="
-                  bg-gray-50
+                  bg-[var(--surface-elevated)]
                   rounded-xl
                   p-3
                   text-center
@@ -1259,14 +1260,14 @@ function ExpensesReport({ data }) {
                 <div className="
                   text-lg
                   font-bold
-                  text-gray-800
+                  text-[var(--ink)]
                 ">
                   {fmt(c.total)}
                 </div>
 
                 <div className="
                   text-xs
-                  text-gray-500
+                  text-[var(--muted)]
                   mt-0.5
                 ">
                   {c.category || 'Uncategorised'}
@@ -1274,7 +1275,7 @@ function ExpensesReport({ data }) {
 
                 <div className="
                   text-xs
-                  text-gray-400
+                  text-[var(--muted-light)]
                 ">
                   {c.count} entries
                 </div>
@@ -1298,6 +1299,7 @@ function ExpensesReport({ data }) {
           font-semibold
           mb-4
           text-sm
+          text-[var(--ink)]
         ">
           Expense Transactions
         </h3>
@@ -1333,7 +1335,7 @@ function ExpensesReport({ data }) {
                 <tr key={i}>
 
                   <td className="
-                    text-gray-500
+                    text-[var(--muted)]
                     text-xs
                   ">
                     {e.expense_date}
@@ -1347,7 +1349,7 @@ function ExpensesReport({ data }) {
                     <span className="
                       text-xs
                       bg-gray-100
-                      text-gray-600
+                      text-[var(--muted)]
                       px-2
                       py-0.5
                       rounded-full
@@ -1365,7 +1367,7 @@ function ExpensesReport({ data }) {
 
                   <td className="
                     font-semibold
-                    text-red-600
+                    text-red-600 dark:text-red-400
                   ">
                     {fmt(e.amount)}
                   </td>

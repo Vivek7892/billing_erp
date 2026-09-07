@@ -51,10 +51,10 @@ function Txt({ value, onChange, rows = 3, placeholder }) {
 
 function Pill({ color, children }) {
   const cls = {
-    green: 'bg-green-50 text-green-700 border-green-200',
-    blue: 'bg-blue-50 text-blue-700 border-blue-200',
-    gray: 'bg-gray-100 text-gray-600 border-gray-200',
-  }[color] || 'bg-gray-100 text-gray-600 border-gray-200'
+    green: 'bg-green-50 dark:bg-green-950/60 text-green-700 border-green-200',
+    blue: 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 border-blue-200',
+    gray: 'bg-gray-100 text-[var(--muted)] border-[var(--line)]',
+  }[color] || 'bg-gray-100 text-[var(--muted)] border-[var(--line)]'
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${cls}`}>
       {children}
@@ -75,7 +75,7 @@ const TABS = [
 function Section({ title, children }) {
   return (
     <Card className="p-5">
-      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">{title}</h3>
+      <h3 className="text-sm font-semibold text-[var(--ink-secondary)] uppercase tracking-wide mb-4">{title}</h3>
       <div className="grid sm:grid-cols-2 gap-3">{children}</div>
     </Card>
   )
@@ -119,19 +119,19 @@ function BusinessTab({ s, set, onLogoUpload, onLogoRemove, uploading, removing }
     <div className="space-y-4">
       {/* Logo tile */}
       <Card className="p-5">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Business Logo</h3>
+        <h3 className="text-sm font-semibold text-[var(--ink-secondary)] uppercase tracking-wide mb-4">Business Logo</h3>
         <div className="flex flex-col sm:flex-row gap-5">
 
           {/* Preview box */}
           <div className="flex flex-col items-center gap-2 flex-shrink-0">
             <div
               onClick={() => fileRef.current?.click()}
-              className="w-36 h-36 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center overflow-hidden cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors group relative"
+              className="w-36 h-36 rounded-2xl border-2 border-dashed border-gray-300 bg-[var(--surface-elevated)] flex flex-col items-center justify-center overflow-hidden cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 dark:bg-indigo-950/60 transition-colors group relative"
             >
               {previewUrl ? (
                 <img src={previewUrl} alt="Shop logo" className="w-full h-full object-contain p-2" />
               ) : (
-                <div className="flex flex-col items-center gap-1.5 text-gray-400 group-hover:text-indigo-500 transition-colors">
+                <div className="flex flex-col items-center gap-1.5 text-[var(--muted-light)] group-hover:text-indigo-500 dark:text-indigo-400 transition-colors">
                   <ImageIcon size={32} />
                   <span className="text-xs font-medium">No logo</span>
                 </div>
@@ -141,20 +141,20 @@ function BusinessTab({ s, set, onLogoUpload, onLogoRemove, uploading, removing }
                 <Upload size={22} className="text-white" />
               </div>
             </div>
-            <span className="text-[11px] text-gray-400">Click to change</span>
+            <span className="text-[11px] text-[var(--muted-light)]">Click to change</span>
           </div>
 
           {/* Controls */}
           <div className="flex-1 min-w-0 flex flex-col justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-0.5">Shop / Brand Logo</p>
-              <p className="text-xs text-gray-400">PNG · JPG · WEBP &nbsp;·&nbsp; Square recommended &nbsp;·&nbsp; Max 2 MB</p>
-              <p className="text-xs text-gray-400 mt-0.5">Appears on invoices, receipts and reports.</p>
+              <p className="text-sm font-medium text-[var(--ink-secondary)] mb-0.5">Shop / Brand Logo</p>
+              <p className="text-xs text-[var(--muted-light)]">PNG · JPG · WEBP &nbsp;·&nbsp; Square recommended &nbsp;·&nbsp; Max 2 MB</p>
+              <p className="text-xs text-[var(--muted-light)] mt-0.5">Appears on invoices, receipts and reports.</p>
             </div>
 
             {fileInfo && (
-              <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                <CheckCircle2 size={14} className="text-green-600 flex-shrink-0" />
+              <div className="flex items-center gap-2 bg-green-50 dark:bg-green-950/60 border border-green-200 rounded-lg px-3 py-2">
+                <CheckCircle2 size={14} className="text-green-600 dark:text-green-400 flex-shrink-0" />
                 <span className="text-xs text-green-700 truncate">{fileInfo.name}</span>
                 <span className="text-xs text-green-500 flex-shrink-0">{fileInfo.size}</span>
               </div>
@@ -173,7 +173,7 @@ function BusinessTab({ s, set, onLogoUpload, onLogoRemove, uploading, removing }
                 <Upload size={13} /> {previewUrl ? 'Change logo' : 'Upload logo'}
               </button>
               {previewUrl && (
-                <button type="button" onClick={handleRemove} disabled={removing} className="btn-secondary text-xs text-red-600 hover:bg-red-50 hover:border-red-200">
+                <button type="button" onClick={handleRemove} disabled={removing} className="btn-secondary text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:bg-red-950/60 hover:border-red-200">
                   <Trash2 size={13} /> Remove
                 </button>
               )}
@@ -239,7 +239,7 @@ function InvoiceTab({ s, set }) {
         </F>
         <F label="Next Invoice Number">
           <Inp value={s.invoice_start_number} onChange={v => set('invoice_start_number', v)} mono placeholder="0149" />
-          <p className="mt-1 text-xs text-gray-400">The next bill uses this number; it advances automatically after each saved invoice.</p>
+          <p className="mt-1 text-xs text-[var(--muted-light)]">The next bill uses this number; it advances automatically after each saved invoice.</p>
         </F>
         <F label="Invoice Template">
           <Sel value={s.invoice_template} onChange={v => set('invoice_template', v)} options={[
@@ -274,7 +274,7 @@ function InvoiceTab({ s, set }) {
           ['show_batch_col', 'Batch number'],
           ['show_expiry_col', 'Expiry date'],
         ].map(([key, label]) => (
-          <label key={key} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+          <label key={key} className="flex items-center gap-2 text-sm text-[var(--ink-secondary)] cursor-pointer">
             <input
               type="checkbox"
               checked={s[key] === 'true' || s[key] === true}
@@ -317,7 +317,7 @@ function GstTab({ s, set }) {
               ['exclusive', 'Exclusive of GST'],
               ['inclusive', 'Inclusive of GST'],
             ]} />
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-[var(--muted-light)]">
               {s.tax_on_price === 'inclusive'
                 ? 'Selling price already includes GST — tax is back-calculated.'
                 : 'GST is added on top of the selling price.'}
@@ -327,7 +327,7 @@ function GstTab({ s, set }) {
       </Section>
 
       <Card className="p-5">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Feature Flags</h3>
+        <h3 className="text-sm font-semibold text-[var(--ink-secondary)] uppercase tracking-wide mb-3">Feature Flags</h3>
         <div className="flex flex-wrap gap-2">
           <Pill color={s.einvoice_enabled === 'true' ? 'green' : 'gray'}>
             <CheckCircle2 size={12} />
@@ -349,7 +349,7 @@ function GstTab({ s, set }) {
             ['reverse_charge', 'Reverse charge applicable'],
             ['cess_enabled', 'CESS handling'],
           ].map(([key, label]) => (
-            <label key={key} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+            <label key={key} className="flex items-center gap-2 text-sm text-[var(--ink-secondary)] cursor-pointer">
               <input
                 type="checkbox"
                 checked={s[key] === 'true' || s[key] === true}
@@ -400,7 +400,7 @@ function PaymentTab({ s, set }) {
           ['show_upi_qr_on_thermal', 'Show UPI QR on thermal receipt'],
           ['advance_payment_enabled', 'Allow advance payment'],
         ].map(([key, label]) => (
-          <label key={key} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+          <label key={key} className="flex items-center gap-2 text-sm text-[var(--ink-secondary)] cursor-pointer">
             <input
               type="checkbox"
               checked={s[key] === 'true' || s[key] === true}
@@ -450,7 +450,7 @@ function PrinterTab({ s, set }) {
           ['open_cash_drawer', 'Open cash drawer on print'],
           ['print_duplicate', 'Print duplicate copy automatically'],
         ].map(([key, label]) => (
-          <label key={key} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+          <label key={key} className="flex items-center gap-2 text-sm text-[var(--ink-secondary)] cursor-pointer">
             <input
               type="checkbox"
               checked={s[key] === 'true' || s[key] === true}
@@ -572,8 +572,8 @@ export default function Settings() {
               onClick={() => setTab(id)}
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm text-left transition-colors ${
                 tab === id
-                  ? 'bg-indigo-50 text-indigo-700 font-medium'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-medium'
+                  : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
               }`}
             >
               <Icon size={16} className="flex-shrink-0" />

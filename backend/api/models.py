@@ -1,10 +1,26 @@
 import uuid
 import hashlib
+import secrets
+import string
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
 from django.utils import timezone
 from decimal import Decimal
+from datetime import timedelta
+
+
+SHORT_LINK_ALPHABET = string.ascii_letters + string.digits
+
+
+def generate_short_link_code():
+    """Return an opaque, URL-safe code suitable for public invoice links."""
+    return ''.join(secrets.choice(SHORT_LINK_ALPHABET) for _ in range(6))
+
+
+def default_short_link_expiry():
+    return timezone.now() + timedelta(days=30)
 
 
 class Business(models.Model):
@@ -111,6 +127,11 @@ class Supplier(models.Model):
     address = models.TextField(blank=True)
     gstin = models.CharField(max_length=15, blank=True)
     outstanding_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=Q(outstanding_amount__gte=0), name='supplier_outstanding_nonnegative'),
+        ]
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -141,6 +162,13 @@ class Product(models.Model):
 
     class Meta:
         unique_together = [('business', 'sku')]
+        constraints = [
+            models.CheckConstraint(check=Q(mrp__gte=0), name='product_mrp_nonnegative'),
+            models.CheckConstraint(check=Q(purchase_price__gte=0), name='product_purchase_price_nonnegative'),
+            models.CheckConstraint(check=Q(selling_price__gte=0), name='product_selling_price_nonnegative'),
+            models.CheckConstraint(check=Q(gst_percent__gte=0) & Q(gst_percent__lte=100), name='product_gst_valid'),
+            models.CheckConstraint(check=Q(minimum_stock__gte=0), name='product_minimum_stock_nonnegative'),
+        ]
 
     def __str__(self):
         return self.name
@@ -168,6 +196,12 @@ class Customer(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=Q(credit_limit__gte=0), name='customer_credit_limit_nonnegative'),
+            models.CheckConstraint(check=Q(outstanding_amount__gte=0), name='customer_outstanding_nonnegative'),
+        ]
+
 
 class Purchase(models.Model):
     STATUS_CHOICES = [('pending', 'Pending'), ('paid', 'Paid'), ('partial', 'Partial')]
@@ -185,6 +219,12 @@ class Purchase(models.Model):
     def __str__(self):
         return f"PO-{self.id}"
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=Q(total_amount__gte=0), name='purchase_total_nonnegative'),
+            models.CheckConstraint(check=Q(paid_amount__gte=0), name='purchase_paid_nonnegative'),
+        ]
+
 
 class PurchaseItem(models.Model):
     purchase = models.ForeignKey(Purchase, related_name='items', on_delete=models.CASCADE)
@@ -193,6 +233,14 @@ class PurchaseItem(models.Model):
     purchase_price = models.DecimalField(max_digits=10, decimal_places=2)
     gst_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     total = models.DecimalField(max_digits=12, decimal_places=2)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=Q(quantity__gt=0), name='purchase_item_quantity_positive'),
+            models.CheckConstraint(check=Q(purchase_price__gte=0), name='purchase_item_price_nonnegative'),
+            models.CheckConstraint(check=Q(gst_percent__gte=0) & Q(gst_percent__lte=100), name='purchase_item_gst_valid'),
+            models.CheckConstraint(check=Q(total__gte=0), name='purchase_item_total_nonnegative'),
+        ]
 
 
 class Invoice(models.Model):
@@ -215,17 +263,44 @@ class Invoice(models.Model):
     paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     balance_due = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     payment_method = models.CharField(max_length=20, default='cash')
-    payment_status = models.CharField(max_length=10, choices=PAYMENT_STATUS_CHOICES, default='paid')
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='completed')
+    payment_status = models.CharField(max_length=12, choices=PAYMENT_STATUS_CHOICES, default='paid')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='completed')
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = [('business', 'invoice_number')]
+        constraints = [
+            models.CheckConstraint(check=Q(subtotal__gte=0), name='invoice_subtotal_nonnegative'),
+            models.CheckConstraint(check=Q(discount_amount__gte=0), name='invoice_discount_nonnegative'),
+            models.CheckConstraint(check=Q(tax_amount__gte=0), name='invoice_tax_nonnegative'),
+            models.CheckConstraint(check=Q(grand_total__gte=0), name='invoice_total_nonnegative'),
+            models.CheckConstraint(check=Q(paid_amount__gte=0), name='invoice_paid_nonnegative'),
+            models.CheckConstraint(check=Q(balance_due__gte=0), name='invoice_balance_nonnegative'),
+        ]
 
     def __str__(self):
         return self.invoice_number
+
+
+class ShortLink(models.Model):
+    """A time-limited public link to an invoice PDF."""
+    code = models.CharField(max_length=6, unique=True, default=generate_short_link_code, editable=False)
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='short_links')
+    expires_at = models.DateTimeField(default=default_short_link_expiry)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [models.Index(fields=['expires_at'], name='shortlink_expiry_idx')]
+
+    @property
+    def is_expired(self):
+        return self.expires_at <= timezone.now()
+
+    def __str__(self):
+        return f'{self.code} → {self.invoice.invoice_number}'
 
 
 class InvoiceItem(models.Model):
@@ -244,6 +319,17 @@ class InvoiceItem(models.Model):
     gst_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     total = models.DecimalField(max_digits=12, decimal_places=2)
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=Q(quantity__gt=0), name='invoice_item_quantity_positive'),
+            models.CheckConstraint(check=Q(unit_price__gte=0), name='invoice_item_price_nonnegative'),
+            models.CheckConstraint(check=Q(cost_price__gte=0), name='invoice_item_cost_nonnegative'),
+            models.CheckConstraint(check=Q(mrp__gte=0), name='invoice_item_mrp_nonnegative'),
+            models.CheckConstraint(check=Q(discount_percent__gte=0) & Q(discount_percent__lte=100), name='invoice_item_discount_valid'),
+            models.CheckConstraint(check=Q(gst_percent__gte=0) & Q(gst_percent__lte=100), name='invoice_item_gst_valid'),
+            models.CheckConstraint(check=Q(total__gte=0), name='invoice_item_total_nonnegative'),
+        ]
+
 
 class Payment(models.Model):
     METHOD_CHOICES = [('cash', 'Cash'), ('upi', 'UPI'), ('card', 'Card'), ('online', 'Online'), ('credit', 'Credit')]
@@ -252,6 +338,11 @@ class Payment(models.Model):
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     reference = models.CharField(max_length=100, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=Q(amount__gt=0), name='payment_amount_positive'),
+        ]
 
 
 class InventoryTransaction(models.Model):
@@ -265,10 +356,20 @@ class InventoryTransaction(models.Model):
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
     before_stock = models.DecimalField(max_digits=10, decimal_places=2)
     after_stock = models.DecimalField(max_digits=10, decimal_places=2)
+    unit_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     reference = models.CharField(max_length=100, blank=True)
+    reference_type = models.CharField(max_length=50, blank=True)
+    reference_id = models.CharField(max_length=100, blank=True)
+    movement_key = models.CharField(max_length=200, null=True, blank=True, unique=True)
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=~Q(quantity=0), name='inventory_quantity_nonzero'),
+            models.CheckConstraint(check=Q(unit_cost__gte=0) | Q(unit_cost__isnull=True), name='inventory_unit_cost_nonnegative'),
+        ]
 
 
 class Setting(models.Model):
@@ -306,6 +407,11 @@ class Expense(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=Q(amount__gt=0), name='expense_amount_positive'),
+        ]
+
 
 class CustomerPayment(models.Model):
     METHOD_CHOICES = [('cash', 'Cash'), ('upi', 'UPI'), ('card', 'Card'), ('online', 'Online')]
@@ -317,6 +423,11 @@ class CustomerPayment(models.Model):
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=Q(amount__gt=0), name='customer_payment_amount_positive'),
+        ]
 
 
 class SupplierPayment(models.Model):
@@ -330,6 +441,63 @@ class SupplierPayment(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=Q(amount__gt=0), name='supplier_payment_amount_positive'),
+        ]
+
+
+class CustomerLedger(models.Model):
+    ENTRY_TYPES = [
+        ('invoice', 'Invoice Debit'), ('payment', 'Payment Credit'),
+        ('sales_return', 'Sales Return'), ('credit_adjustment', 'Credit Adjustment'),
+        ('debit_adjustment', 'Debit Adjustment'),
+    ]
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, null=True, blank=True)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='ledger_entries')
+    entry_type = models.CharField(max_length=30, choices=ENTRY_TYPES)
+    debit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    credit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    reference_type = models.CharField(max_length=50, blank=True)
+    reference_id = models.CharField(max_length=100, blank=True)
+    event_key = models.CharField(max_length=200, null=True, blank=True, unique=True)
+    description = models.CharField(max_length=300, blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=Q(debit__gte=0), name='customer_ledger_debit_nonnegative'),
+            models.CheckConstraint(check=Q(credit__gte=0), name='customer_ledger_credit_nonnegative'),
+            models.CheckConstraint(check=Q(debit=0) | Q(credit=0), name='customer_ledger_one_sided'),
+        ]
+
+
+class SupplierLedger(models.Model):
+    ENTRY_TYPES = [
+        ('purchase', 'Purchase Debit'), ('payment', 'Payment Credit'),
+        ('purchase_return', 'Purchase Return'), ('credit_adjustment', 'Credit Adjustment'),
+        ('debit_adjustment', 'Debit Adjustment'),
+    ]
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, null=True, blank=True)
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='ledger_entries')
+    entry_type = models.CharField(max_length=30, choices=ENTRY_TYPES)
+    debit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    credit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    reference_type = models.CharField(max_length=50, blank=True)
+    reference_id = models.CharField(max_length=100, blank=True)
+    event_key = models.CharField(max_length=200, null=True, blank=True, unique=True)
+    description = models.CharField(max_length=300, blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=Q(debit__gte=0), name='supplier_ledger_debit_nonnegative'),
+            models.CheckConstraint(check=Q(credit__gte=0), name='supplier_ledger_credit_nonnegative'),
+            models.CheckConstraint(check=Q(debit=0) | Q(credit=0), name='supplier_ledger_one_sided'),
+        ]
+
 
 class SalesReturn(models.Model):
     business = models.ForeignKey(Business, on_delete=models.CASCADE, null=True, blank=True)
@@ -341,6 +509,11 @@ class SalesReturn(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=Q(refund_amount__gte=0), name='sales_return_refund_nonnegative'),
+        ]
+
 
 class SalesReturnItem(models.Model):
     sales_return = models.ForeignKey(SalesReturn, on_delete=models.CASCADE, related_name='items')
@@ -350,6 +523,13 @@ class SalesReturnItem(models.Model):
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     total = models.DecimalField(max_digits=12, decimal_places=2)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=Q(quantity__gt=0), name='sales_return_item_quantity_positive'),
+            models.CheckConstraint(check=Q(unit_price__gte=0), name='sales_return_item_price_nonnegative'),
+            models.CheckConstraint(check=Q(total__gte=0), name='sales_return_item_total_nonnegative'),
+        ]
 
 
 class PurchaseReturn(models.Model):
@@ -361,6 +541,11 @@ class PurchaseReturn(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=Q(debit_amount__gte=0), name='purchase_return_debit_nonnegative'),
+        ]
+
 
 class PurchaseReturnItem(models.Model):
     purchase_return = models.ForeignKey(PurchaseReturn, on_delete=models.CASCADE, related_name='items')
@@ -370,3 +555,10 @@ class PurchaseReturnItem(models.Model):
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
     purchase_price = models.DecimalField(max_digits=10, decimal_places=2)
     total = models.DecimalField(max_digits=12, decimal_places=2)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(check=Q(quantity__gt=0), name='purchase_return_item_quantity_positive'),
+            models.CheckConstraint(check=Q(purchase_price__gte=0), name='purchase_return_item_price_nonnegative'),
+            models.CheckConstraint(check=Q(total__gte=0), name='purchase_return_item_total_nonnegative'),
+        ]

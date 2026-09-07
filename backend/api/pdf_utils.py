@@ -281,11 +281,8 @@ def make_upi_qr(upi_id, shop_name, amount, size_mm=22, invoice_number=None):
 
 
 def _basic_price(item):
-    qty = dec(item.quantity)
-    rate = dec(item.unit_price)
-    disc_pct = dec(getattr(item, "discount_percent", 0))
-    disc_amt = (rate * qty * disc_pct / 100).quantize(Decimal("0.01"))
-    return (rate * qty - disc_amt).quantize(Decimal("0.01"))
+    """Use persisted line totals; PDF rendering must not recalculate pricing."""
+    return dec(getattr(item, "total", 0)) - dec(getattr(item, "gst_amount", 0))
 
 
 # ═════════════════════════════════════════════════════════════════════════

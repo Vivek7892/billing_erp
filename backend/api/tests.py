@@ -2,11 +2,13 @@ from decimal import Decimal
 from unittest.mock import patch
 
 from django.test import SimpleTestCase, TestCase
+from django.db.models import Sum
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 
 from .calculations import calculate_invoice
-from .models import AuditLog, Business, Customer, Product, User
+from .models import AuditLog, Business, Customer, CustomerLedger, Invoice, Product, Supplier, SupplierLedger, User
+from .services.ledger_service import LedgerService
 
 
 class InvoiceCalculationTests(SimpleTestCase):
@@ -95,7 +97,6 @@ class TransactionWorkflowTests(TestCase):
 		self.assertEqual(purchase_response.status_code, 201, purchase_response.data)
 		self.product.refresh_from_db()
 		self.assertEqual(self.product.current_stock, Decimal('15.00'))
-
 		invoice_response = self.client.post('/api/invoices/', {
 			'customer': self.customer.pk,
 			'payment_status': 'credit',
@@ -131,6 +132,126 @@ class TransactionWorkflowTests(TestCase):
 			'items': [{'invoice_item_id': invoice_item_id, 'quantity': '3'}],
 		}, format='json')
 		self.assertEqual(repeat_response.status_code, 400)
+
+		refund_response = self.client.post(
+			f'/api/invoices/{invoice_response.data["id"]}/refund/'
+		)
+		self.assertEqual(refund_response.status_code, 200, refund_response.data)
+		self.product.refresh_from_db()
+		self.assertEqual(self.product.current_stock, Decimal('15.00'))
+		self.assertEqual(LedgerService.reconcile_customer(
+			customer_id=self.customer.pk, business=self.business,
+		), Decimal('0'))
+		ledger_totals = CustomerLedger.objects.filter(customer=self.customer).aggregate(
+			debit=Sum('debit'), credit=Sum('credit'),
+		)
+		self.assertEqual(ledger_totals['debit'], Decimal('60.00'))
+		self.assertEqual(ledger_totals['credit'], Decimal('60.00'))
+
+	def test_bulk_stock_adjust_rolls_back_when_a_later_row_is_invalid(self):
+		second_product = Product.objects.create(
+			business=self.business,
+			name='Second Product',
+			sku='TEST-2',
+			purchase_price=Decimal('5.00'),
+			selling_price=Decimal('8.00'),
+			current_stock=Decimal('4.00'),
+		)
+
+		response = self.client.post('/api/inventory/bulk-adjust/', {
+			'items': [
+				{'product_id': self.product.pk, 'quantity': '2'},
+				{'product_id': second_product.pk, 'quantity': '-99'},
+			],
+		}, format='json')
+
+		self.assertEqual(response.status_code, 400)
+		self.product.refresh_from_db()
+		second_product.refresh_from_db()
+		self.assertEqual(self.product.current_stock, Decimal('10.00'))
+		self.assertEqual(second_product.current_stock, Decimal('4.00'))
+
+	def test_sales_return_rolls_back_when_a_later_item_is_invalid(self):
+		invoice_response = self.client.post('/api/invoices/', {
+			'payment_status': 'paid',
+			'payment_method': 'cash',
+			'items': [{
+				'product_id': self.product.pk,
+				'quantity': '2',
+				'unit_price': '20.00',
+				'discount_percent': '0',
+				'gst_percent': '0',
+			}],
+			'payments': [{'method': 'cash', 'amount': '40.00'}],
+		}, format='json')
+		self.assertEqual(invoice_response.status_code, 201, invoice_response.data)
+		invoice_item_id = invoice_response.data['items'][0]['id']
+
+		response = self.client.post('/api/sales-returns/', {
+			'invoice': invoice_response.data['id'],
+			'items': [
+				{'invoice_item_id': invoice_item_id, 'quantity': '1'},
+				{'invoice_item_id': 999999, 'quantity': '1'},
+			],
+		}, format='json')
+
+		self.assertEqual(response.status_code, 400)
+		self.product.refresh_from_db()
+		self.assertEqual(self.product.current_stock, Decimal('8.00'))
+		self.assertFalse(self.product.inventorytransaction_set.filter(reference__startswith='RET-').exists())
+		self.assertFalse(self.business.salesreturn_set.exists())
+
+	def test_invoice_creation_failure_leaves_no_partial_records_or_stock_change(self):
+		response = self.client.post('/api/invoices/', {
+			'payment_status': 'paid',
+			'payment_method': 'cash',
+			'items': [{
+				'product_id': self.product.pk,
+				'quantity': '2',
+				'unit_price': '20.00',
+				'discount_percent': '0',
+				'gst_percent': '0',
+			}],
+			'payments': [{'method': 'invalid', 'amount': '40.00'}],
+		}, format='json')
+
+		self.assertEqual(response.status_code, 400)
+		self.product.refresh_from_db()
+		self.assertEqual(self.product.current_stock, Decimal('10.00'))
+		self.assertFalse(Invoice.objects.filter(business=self.business).exists())
+		self.assertFalse(AuditLog.objects.filter(business=self.business, module='invoices').exists())
+
+	def test_supplier_balance_reconciles_from_purchase_payment_and_return_ledger(self):
+		supplier = Supplier.objects.create(business=self.business, name='Test Supplier')
+		purchase_response = self.client.post('/api/purchases/', {
+			'supplier': supplier.pk,
+			'purchase_date': '2026-09-05',
+			'items': [{'product': self.product.pk, 'quantity': '5', 'purchase_price': '10.00'}],
+		}, format='json')
+		self.assertEqual(purchase_response.status_code, 201, purchase_response.data)
+
+		payment_response = self.client.post('/api/supplier-payments/', {
+			'supplier': supplier.pk, 'amount': '20.00', 'method': 'cash',
+		}, format='json')
+		self.assertEqual(payment_response.status_code, 201, payment_response.data)
+		supplier.refresh_from_db()
+		self.assertEqual(supplier.outstanding_amount, Decimal('30.00'))
+		self.assertEqual(LedgerService.reconcile_supplier(
+			supplier_id=supplier.pk, business=self.business,
+		), Decimal('30.00'))
+		self.assertEqual(SupplierLedger.objects.filter(supplier=supplier).count(), 2)
+
+	def test_report_service_supports_json_and_export_formats(self):
+		for path in ('sales', 'products', 'profit', 'gst', 'customers', 'payments', 'expenses'):
+			response = self.client.get(f'/api/reports/{path}/')
+			self.assertEqual(response.status_code, 200, path)
+
+		xlsx_response = self.client.get('/api/reports/sales/?export=xlsx')
+		self.assertEqual(xlsx_response.status_code, 200)
+		self.assertIn('spreadsheetml', xlsx_response['Content-Type'])
+		pdf_response = self.client.get('/api/reports/sales/?export=pdf')
+		self.assertEqual(pdf_response.status_code, 200)
+		self.assertEqual(pdf_response['Content-Type'], 'application/pdf')
 
 	def test_dashboard_collection_and_action_counts_use_database_data(self):
 		response = self.client.get('/api/dashboard/')

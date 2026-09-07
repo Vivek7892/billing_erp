@@ -115,57 +115,18 @@ class PurchaseSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        from django.db import transaction
         items_data = validated_data.pop('items')
-        with transaction.atomic():
-            purchase = Purchase.objects.create(**validated_data)
-            total = Decimal('0')
-            for item_data in items_data:
-                product_value = item_data.get('product') or item_data.get('product_id')
-                if isinstance(product_value, Product):
-                    product = Product.objects.select_for_update().get(
-                        pk=product_value.pk, business=purchase.business, status='active'
-                    )
-                else:
-                    product = Product.objects.select_for_update().get(
-                        pk=product_value, business=purchase.business, status='active'
-                    )
-                quantity = Decimal(str(item_data['quantity']))
-                purchase_price = Decimal(str(item_data['purchase_price']))
-                gst_percent = Decimal(str(item_data.get('gst_percent', 0)))
-                if quantity <= 0 or purchase_price < 0 or not 0 <= gst_percent <= 100:
-                    raise serializers.ValidationError('Invalid purchase item values.')
-                line_total = (quantity * purchase_price * (1 + gst_percent / 100)).quantize(Decimal('0.01'))
-                item = PurchaseItem.objects.create(
-                    purchase=purchase,
-                    product=product,
-                    quantity=quantity,
-                    purchase_price=purchase_price,
-                    gst_percent=gst_percent,
-                    total=line_total,
-                )
-                total += item.total
-                before = product.current_stock
-                product.current_stock += item.quantity
-                product.save()
-                InventoryTransaction.objects.create(
-                    business=purchase.business,
-                    product=product,
-                    transaction_type='purchase',
-                    quantity=item.quantity,
-                    before_stock=before,
-                    after_stock=product.current_stock,
-                    reference=f"PO-{purchase.id}",
-                    created_by=purchase.created_by,
-                )
-            purchase.total_amount = total
-            # Update supplier outstanding if not fully paid
-            balance = total - purchase.paid_amount
-            if balance > 0 and purchase.supplier:
-                purchase.supplier.outstanding_amount += balance
-                purchase.supplier.save()
-            purchase.save()
-        return purchase
+        from .services.purchase_service import PurchaseService
+
+        try:
+            return PurchaseService.create_purchase(
+                attributes=validated_data,
+                items_data=items_data,
+                business=validated_data['business'],
+                created_by=validated_data['created_by'],
+            )
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc)) from exc
 
 
 class InvoiceItemSerializer(serializers.ModelSerializer):
@@ -216,135 +177,23 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        from django.db import transaction
-        from .calculations import calculate_invoice
-        from .utils import get_next_invoice_number
         items_data = validated_data.pop('items')
         payments_data = validated_data.pop('payments')
         bill_discount = validated_data.pop('bill_discount', 0)
-        business = validated_data.get('business')
+        from .services.invoice_service import InvoiceService
 
-        with transaction.atomic():
-            invoice = Invoice.objects.create(
-                invoice_number=get_next_invoice_number(business),
-                **validated_data
+        try:
+            return InvoiceService.create_invoice(
+                attributes=validated_data,
+                items_data=items_data,
+                payments_data=payments_data,
+                bill_discount=bill_discount,
+                business=validated_data['business'],
+                created_by=validated_data['created_by'],
+                request=self.context.get('request'),
             )
-
-            allow_negative = Setting.objects.filter(business=business, key='allow_negative_stock').first()
-            allow_neg = allow_negative and allow_negative.value == 'true'
-
-            tax_on_price = (Setting.objects.filter(business=business, key='tax_on_price').first() or type('', (), {'value': 'exclusive'})()).value
-            tax_inclusive = tax_on_price == 'inclusive'
-
-            try:
-                calculation = calculate_invoice(
-                    items_data,
-                    tax_inclusive=tax_inclusive,
-                    bill_discount=bill_discount,
-                )
-            except ValueError as exc:
-                raise serializers.ValidationError(str(exc)) from exc
-
-            for item_data, line in zip(items_data, calculation.lines):
-                product = Product.objects.select_for_update().get(
-                    id=item_data['product_id'], business=business, status='active'
-                )
-                qty = line.quantity
-                unit_price = line.unit_price
-                disc_pct = line.discount_percent
-                gst_pct = Decimal(str(item_data.get('gst_percent', product.gst_percent)))
-
-                if not allow_neg and product.current_stock < qty:
-                    raise serializers.ValidationError(f"Insufficient stock for {product.name}")
-
-                InvoiceItem.objects.create(
-                    invoice=invoice,
-                    product=product,
-                    product_name=product.name,
-                    sku=product.sku,
-                    hsn_code=item_data.get('hsn_code', product.hsn_code),
-                    mrp=Decimal(str(item_data.get('mrp', product.mrp or product.selling_price))),
-                    quantity=qty,
-                    unit_price=unit_price,
-                    cost_price=product.purchase_price,
-                    discount_percent=disc_pct,
-                    discount_amount=line.discount_amount,
-                    gst_percent=gst_pct,
-                    gst_amount=line.gst_amount,
-                    total=line.total,
-                )
-
-                before = product.current_stock
-                product.current_stock -= qty
-                product.save()
-                InventoryTransaction.objects.create(
-                    business=business,
-                    product=product,
-                    transaction_type='sale',
-                    quantity=-qty,
-                    before_stock=before,
-                    after_stock=product.current_stock,
-                    reference=invoice.invoice_number,
-                )
-
-            grand_total = calculation.grand_total
-
-            requested_status = invoice.payment_status
-            valid_methods = {choice[0] for choice in Payment.METHOD_CHOICES}
-            for payment_data in payments_data:
-                amount = Decimal(str(payment_data.get('amount', 0)))
-                if amount <= 0 or payment_data.get('method') not in valid_methods:
-                    raise serializers.ValidationError('Payments must have a valid method and positive amount.')
-            paid_amount = (
-                sum(Decimal(str(p['amount'])) for p in payments_data)
-                if requested_status not in ('pending', 'failed') else Decimal('0')
-            )
-            if requested_status in ('pending', 'failed') and payments_data:
-                raise serializers.ValidationError('Pending or failed invoices cannot contain payments.')
-            if paid_amount > grand_total:
-                raise serializers.ValidationError('Paid amount cannot exceed the invoice total.')
-            balance_due = grand_total - paid_amount
-
-            invoice.subtotal = calculation.subtotal
-            invoice.discount_amount = calculation.discount_amount
-            invoice.tax_amount = calculation.tax_amount
-            invoice.round_off = calculation.round_off
-            invoice.grand_total = grand_total
-            invoice.paid_amount = paid_amount
-            invoice.balance_due = balance_due
-
-            if requested_status in ('pending', 'failed', 'credit'):
-                invoice.payment_status = requested_status
-            elif balance_due <= 0:
-                invoice.payment_status = 'paid'
-            elif paid_amount > 0:
-                invoice.payment_status = 'partial'
-            else:
-                invoice.payment_status = 'credit'
-
-            invoice.save()
-
-            for p in payments_data:
-                Payment.objects.create(
-                    invoice=invoice,
-                    method=p['method'],
-                    amount=Decimal(str(p['amount'])),
-                    reference=p.get('reference', ''),
-                )
-
-            if invoice.customer and balance_due > 0:
-                customer = invoice.customer
-                # Credit limit check
-                if customer.credit_limit > 0:
-                    available = customer.credit_limit - customer.outstanding_amount
-                    if balance_due > available:
-                        raise serializers.ValidationError(
-                            f"Credit limit exceeded. Available credit: {available:.2f}, required: {balance_due:.2f}"
-                        )
-                customer.outstanding_amount += balance_due
-                customer.save()
-
-        return invoice
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc)) from exc
 
 
 class InventoryTransactionSerializer(serializers.ModelSerializer):

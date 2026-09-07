@@ -84,17 +84,32 @@ export default function Products() {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Products" subtitle={`${count} product${count !== 1 ? 's' : ''}`}
-        action={<button onClick={openAdd} className="btn-primary flex items-center gap-2"><Plus size={16} />Add Product</button>} />
+      <PageHeader
+        title="Products"
+        subtitle={`${count} product${count !== 1 ? 's' : ''}`}
+        action={
+          <button onClick={openAdd} className="btn-primary btn-base flex items-center gap-2">
+            <Plus size={16} />Add Product
+          </button>
+        }
+      />
 
       <Card className="p-4">
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-48">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input className="input pl-8 text-sm" placeholder="Search name, SKU, barcode..."
-              value={search} onChange={e => { setSearch(e.target.value) }} />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+            <input
+              className="input pl-9 text-sm"
+              placeholder="Search name, SKU, barcode..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
-          <select className="input w-44 text-sm" value={catFilter} onChange={e => { setCatFilter(e.target.value) }}>
+          <select
+            className="input w-44 text-sm"
+            value={catFilter}
+            onChange={e => setCatFilter(e.target.value)}
+          >
             <option value="">All Categories</option>
             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
@@ -106,30 +121,44 @@ export default function Products() {
           <div className="overflow-x-auto">
             <table className="table">
               <thead>
-                <tr><th>Product</th><th>SKU</th><th>Category</th><th>Purchase</th><th>Selling</th><th>GST</th><th>Stock</th><th>Status</th><th>Actions</th></tr>
+                <tr>
+                  <th>Product</th><th>SKU</th><th>Category</th>
+                  <th>Purchase</th><th>Selling</th><th>GST</th>
+                  <th>Stock</th><th>Status</th><th>Actions</th>
+                </tr>
               </thead>
               <tbody>
                 {products.map(p => (
                   <tr key={p.id}>
                     <td>
-                      <div className="font-medium">{p.name}</div>
-                      {p.brand && <div className="text-xs text-gray-400">{p.brand}</div>}
+                      <div className="font-semibold text-[var(--ink)]">{p.name}</div>
+                      {p.brand && <div className="text-xs text-[var(--muted)] mt-0.5">{p.brand}</div>}
                     </td>
-                    <td className="font-mono text-sm">{p.sku}</td>
+                    <td className="font-mono text-xs text-[var(--muted)]">{p.sku}</td>
                     <td className="text-sm">{p.category_name || '—'}</td>
                     <td className="text-sm">₹{p.purchase_price}</td>
-                    <td className="font-semibold text-sm">₹{p.selling_price}</td>
-                    <td className="text-sm">{p.gst_percent}%</td>
+                    <td className="font-semibold text-sm text-[var(--ink)]">₹{p.selling_price}</td>
                     <td>
-                      <span className={`font-semibold text-sm ${p.current_stock <= 0 ? 'text-red-600' : p.current_stock <= p.minimum_stock ? 'text-yellow-600' : 'text-green-600'}`}>
-                        {p.current_stock} {p.unit}
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-[var(--surface-elevated)] text-xs font-semibold text-[var(--muted)] border border-[var(--line)]">
+                        {p.gst_percent}%
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`font-bold text-sm ${
+                        p.current_stock <= 0
+                          ? 'text-[var(--danger)]'
+                          : p.current_stock <= p.minimum_stock
+                          ? 'text-[var(--warning)]'
+                          : 'text-[var(--success)]'
+                      }`}>
+                        {p.current_stock} <span className="font-normal text-xs text-[var(--muted)]">{p.unit}</span>
                       </span>
                     </td>
                     <td><Badge status={p.stock_status} /></td>
                     <td>
                       <div className="flex gap-1">
-                        <button onClick={() => openEdit(p)} className="icon-btn"><Edit2 size={14} /></button>
-                        <button onClick={() => setDeleteId(p.id)} className="icon-btn text-red-400"><Trash2 size={14} /></button>
+                        <button onClick={() => openEdit(p)} className="icon-btn" title="Edit product"><Edit2 size={14} /></button>
+                        <button onClick={() => setDeleteId(p.id)} className="icon-btn danger" title="Delete product"><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
@@ -139,7 +168,7 @@ export default function Products() {
           </div>
         )}
         {count > 0 && (
-          <div className="px-4 py-2 text-xs text-gray-400 border-t border-gray-100">
+          <div className="px-4 py-2.5 text-xs text-[var(--muted)] border-t border-[var(--line)]">
             {count} product{count !== 1 ? 's' : ''} total
           </div>
         )}
@@ -147,9 +176,11 @@ export default function Products() {
 
       <Modal open={modal === 'add' || modal === 'edit'} onClose={() => setModal(null)}
         title={editId ? 'Edit Product' : 'Add Product'} size="lg">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-2"><label className="label">Product Name *</label>
-            <input className="input" value={form.name} onChange={e => f('name', e.target.value)} /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="col-span-1 sm:col-span-2">
+            <label className="label">Product Name *</label>
+            <input className="input" value={form.name} onChange={e => f('name', e.target.value)} />
+          </div>
           <div><label className="label">SKU *</label>
             <input className="input" value={form.sku} onChange={e => f('sku', e.target.value)} /></div>
           <div><label className="label">Barcode</label>
@@ -193,8 +224,8 @@ export default function Products() {
             </select></div>
         </div>
         <div className="flex gap-3 mt-6">
-          <button onClick={save} className="btn-primary flex-1">Save Product</button>
-          <button onClick={() => setModal(null)} className="btn-secondary flex-1">Cancel</button>
+          <button onClick={save} className="btn-primary btn-base flex-1">Save Product</button>
+          <button onClick={() => setModal(null)} className="btn-secondary btn-base flex-1">Cancel</button>
         </div>
       </Modal>
 

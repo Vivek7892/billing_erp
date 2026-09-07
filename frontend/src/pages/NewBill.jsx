@@ -1,13 +1,17 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import api, { API_BASE_URL } from '../api'
+import invoiceService from '../features/billing/api/invoiceService'
+import productService from '../features/inventory/api/productService'
+import customerService from '../features/customers/api/customerService'
+import settingsService from '../features/settings/api/settingsService'
 import toast from 'react-hot-toast'
 import {
   Search, Plus, Minus, Trash2, User, Printer, Download, RefreshCw, QrCode,
   Keyboard, CheckCircle2, Share2, Clock, Package, Layers, X, Banknote,
-  CreditCard, Wallet, Receipt, AlertTriangle
+  CreditCard, Wallet, Receipt, AlertTriangle, FileText
 } from 'lucide-react'
-import { Modal } from '../components/UI'
+import { ErrorState, Modal, Skeleton } from '../components/UI'
 import { useNavigate } from 'react-router-dom'
 
 // ---------------------------------------------------------------------------
@@ -42,42 +46,42 @@ function CartRow({ item, index, onQty, onRemove, showGst, justAdded }) {
   return (
     <>
       {/* Desktop cart row */}
-      <tr className={`hidden sm:table-row border-b border-slate-100 last:border-0 transition-colors ${justAdded ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
-        <td className="py-2 pl-3 pr-1 text-xs text-slate-400 text-center align-middle">{index}</td>
+      <tr className={`hidden sm:table-row border-b border-[var(--line-subtle)] last:border-0 transition-colors ${justAdded ? 'bg-indigo-50 dark:bg-indigo-950/60' : 'hover:bg-[var(--surface-elevated)]'}`}>
+        <td className="py-2 pl-3 pr-1 text-xs text-[var(--muted-light)] text-center align-middle">{index}</td>
         <td className="py-2 pr-2 align-middle min-w-[9rem]">
-          <div className="font-medium text-sm text-slate-800 leading-tight">{item.product_name}</div>
-          <div className="text-[11px] text-slate-400">{item.sku}{item.hsn_code ? ` · HSN ${item.hsn_code}` : ''}</div>
+          <div className="font-medium text-sm text-[var(--ink)] leading-tight">{item.product_name}</div>
+          <div className="text-[11px] text-[var(--muted-light)]">{item.sku}{item.hsn_code ? ` · HSN ${item.hsn_code}` : ''}</div>
         </td>
-        <td className="py-2 pr-2 text-right align-middle text-xs text-slate-400 whitespace-nowrap">{fmt(item.mrp || item.unit_price)}</td>
-        <td className="py-2 pr-2 text-right align-middle text-sm font-medium text-slate-700 whitespace-nowrap">{fmt(item.unit_price)}</td>
+        <td className="py-2 pr-2 text-right align-middle text-xs text-[var(--muted-light)] whitespace-nowrap">{fmt(item.mrp || item.unit_price)}</td>
+        <td className="py-2 pr-2 text-right align-middle text-sm font-medium text-[var(--ink-secondary)] whitespace-nowrap">{fmt(item.unit_price)}</td>
         <td className="py-2 px-1 align-middle">
           <div className="flex items-center justify-center gap-1">
             <button
               aria-label={`Decrease ${item.product_name} quantity`}
               onClick={() => onQty(item.id, item.qty - 1)}
-              className="h-8 w-8 rounded-md border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 active:scale-95 transition"
+              className="h-8 w-8 rounded-md border border-[var(--line)] flex items-center justify-center text-[var(--muted)] hover:bg-slate-100 active:scale-95 transition"
             ><Minus size={13} /></button>
             <input
               aria-label={`${item.product_name} quantity`}
               type="number" min="0.01" step="0.01" value={item.qty}
               onChange={e => onQty(item.id, parseFloat(e.target.value) || 0)}
-              className="w-12 h-8 text-center border border-slate-200 rounded-md text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="w-12 h-8 text-center border border-[var(--line)] rounded-md text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
             <button
               aria-label={`Increase ${item.product_name} quantity`}
               onClick={() => onQty(item.id, item.qty + 1)}
-              className="h-8 w-8 rounded-md border border-slate-200 flex items-center justify-center text-slate-500 hover:bg-slate-100 active:scale-95 transition"
+              className="h-8 w-8 rounded-md border border-[var(--line)] flex items-center justify-center text-[var(--muted)] hover:bg-slate-100 active:scale-95 transition"
             ><Plus size={13} /></button>
           </div>
         </td>
-        <td className="py-2 px-2 text-right align-middle text-sm text-slate-600 whitespace-nowrap">{fmt(basic)}</td>
+        <td className="py-2 px-2 text-right align-middle text-sm text-[var(--muted)] whitespace-nowrap">{fmt(basic)}</td>
         {showGst && (
           <td className="py-2 px-2 text-right align-middle whitespace-nowrap">
-            <div className="text-sm text-slate-600">{fmt(gst)}</div>
-            <div className="text-[10px] text-slate-400">{item.gst_percent}%</div>
+            <div className="text-sm text-[var(--muted)]">{fmt(gst)}</div>
+            <div className="text-[10px] text-[var(--muted-light)]">{item.gst_percent}%</div>
           </td>
         )}
-        <td className="py-2 pl-2 pr-2 text-right align-middle text-sm font-semibold text-slate-900 whitespace-nowrap">{fmt(item.total)}</td>
+        <td className="py-2 pl-2 pr-2 text-right align-middle text-sm font-semibold text-[var(--ink)] whitespace-nowrap">{fmt(item.total)}</td>
         <td className="py-2 pr-3 text-center align-middle">
           <button
             aria-label={`Remove ${item.product_name}`}
@@ -88,37 +92,37 @@ function CartRow({ item, index, onQty, onRemove, showGst, justAdded }) {
       </tr>
 
       {/* Mobile cart card */}
-      <tr className={`sm:hidden border-b border-slate-100 ${justAdded ? 'bg-indigo-50' : ''}`}>
+      <tr className={`sm:hidden border-b border-[var(--line-subtle)] ${justAdded ? 'bg-indigo-50 dark:bg-indigo-950/60' : ''}`}>
         <td colSpan={showGst ? 9 : 8} className="p-0">
           <div className="p-3.5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="font-semibold text-sm text-slate-800 leading-tight break-words">{item.product_name}</div>
-                <div className="text-[11px] text-slate-400 mt-0.5">
+                <div className="font-semibold text-sm text-[var(--ink)] leading-tight break-words">{item.product_name}</div>
+                <div className="text-[11px] text-[var(--muted-light)] mt-0.5">
                   {item.sku}{item.hsn_code ? ` · HSN ${item.hsn_code}` : ''}
                 </div>
               </div>
               <button
                 aria-label={`Remove ${item.product_name}`}
                 onClick={() => onRemove(item.id)}
-                className="shrink-0 h-9 w-9 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-500 hover:bg-rose-50 flex items-center justify-center"
+                className="shrink-0 h-9 w-9 rounded-lg border border-[var(--line)] text-[var(--muted-light)] hover:text-rose-500 hover:bg-rose-50 dark:bg-rose-950/60 flex items-center justify-center"
               >
                 <Trash2 size={15} />
               </button>
             </div>
 
             <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
-              <div className="rounded-lg bg-slate-50 px-2.5 py-2">
-                <div className="text-[10px] text-slate-400">Rate</div>
-                <div className="font-semibold text-slate-700 mt-0.5">{fmt(item.unit_price)}</div>
+              <div className="rounded-lg bg-[var(--surface-elevated)] px-2.5 py-2">
+                <div className="text-[10px] text-[var(--muted-light)]">Rate</div>
+                <div className="font-semibold text-[var(--ink-secondary)] mt-0.5">{fmt(item.unit_price)}</div>
               </div>
-              <div className="rounded-lg bg-slate-50 px-2.5 py-2">
-                <div className="text-[10px] text-slate-400">MRP</div>
-                <div className="font-semibold text-slate-700 mt-0.5">{fmt(item.mrp || item.unit_price)}</div>
+              <div className="rounded-lg bg-[var(--surface-elevated)] px-2.5 py-2">
+                <div className="text-[10px] text-[var(--muted-light)]">MRP</div>
+                <div className="font-semibold text-[var(--ink-secondary)] mt-0.5">{fmt(item.mrp || item.unit_price)}</div>
               </div>
-              <div className="rounded-lg bg-indigo-50 px-2.5 py-2">
-                <div className="text-[10px] text-indigo-500">Total</div>
-                <div className="font-bold text-indigo-700 mt-0.5">{fmt(item.total)}</div>
+              <div className="rounded-lg bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-2">
+                <div className="text-[10px] text-indigo-500 dark:text-indigo-400">Total</div>
+                <div className="font-bold text-indigo-700 dark:text-indigo-300 mt-0.5">{fmt(item.total)}</div>
               </div>
             </div>
 
@@ -127,22 +131,22 @@ function CartRow({ item, index, onQty, onRemove, showGst, justAdded }) {
                 <button
                   aria-label={`Decrease ${item.product_name} quantity`}
                   onClick={() => onQty(item.id, item.qty - 1)}
-                  className="h-10 w-10 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 active:scale-95"
+                  className="h-10 w-10 rounded-lg border border-[var(--line)] flex items-center justify-center text-[var(--muted)] active:scale-95"
                 ><Minus size={15} /></button>
                 <input
                   aria-label={`${item.product_name} quantity`}
                   type="number" min="0.01" step="0.01" value={item.qty}
                   onChange={e => onQty(item.id, parseFloat(e.target.value) || 0)}
-                  className="w-16 h-10 text-center border border-slate-200 rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="w-16 h-10 text-center border border-[var(--line)] rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 />
                 <button
                   aria-label={`Increase ${item.product_name} quantity`}
                   onClick={() => onQty(item.id, item.qty + 1)}
-                  className="h-10 w-10 rounded-lg border border-slate-200 flex items-center justify-center text-slate-500 active:scale-95"
+                  className="h-10 w-10 rounded-lg border border-[var(--line)] flex items-center justify-center text-[var(--muted)] active:scale-95"
                 ><Plus size={15} /></button>
               </div>
 
-              <div className="text-right text-xs text-slate-500">
+              <div className="text-right text-xs text-[var(--muted)]">
                 <div>Basic {fmt(basic)}</div>
                 {showGst && <div>GST {fmt(gst)} ({item.gst_percent}%)</div>}
               </div>
@@ -289,24 +293,24 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
   return (
     <Modal open={open} onClose={onClose} title="Quick Customer Payment" size="sm"><div className="mobile-modal-content">
       <div className="text-center space-y-4">
-        <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3">
+        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 p-3">
           <div className="flex items-center justify-center gap-2 text-emerald-700 font-bold">
             <QrCode size={18} />
             Scan & Pay
           </div>
-          <div className="text-xs text-emerald-600 mt-1">
+          <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
             Customer scans this QR with Google Pay, PhonePe, Paytm, BHIM or another UPI app.
           </div>
         </div>
 
         {/* Manual amount entry */}
         <div className="text-left">
-          <span className="text-xs text-slate-500 font-medium">Amount to collect</span>
+          <span className="text-xs text-[var(--muted)] font-medium">Amount to collect</span>
           <div className="relative mt-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-base font-semibold">₹</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)] text-base font-semibold">₹</span>
             <input
               type="number" min="0" step="0.01" inputMode="decimal"
-              className="w-full h-12 pl-7 pr-3 rounded-lg border border-slate-200 text-lg font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="w-full h-12 pl-7 pr-3 rounded-lg border border-[var(--line)] text-lg font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-emerald-400"
               value={amount}
               onChange={e => setAmount(e.target.value)}
               placeholder="0.00"
@@ -318,7 +322,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
             {hasCart && billTotal > 0 && (
               <button
                 onClick={applyBillTotal}
-                className="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100"
+                className="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 hover:bg-indigo-100"
               >
                 🧾 Bill Total · {fmt(billTotal)}
               </button>
@@ -327,7 +331,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
               <button
                 key={v}
                 onClick={() => applyPreset(v)}
-                className="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100"
+                className="px-2.5 py-1 rounded-full text-xs font-medium bg-[var(--surface-elevated)] text-[var(--muted)] border border-[var(--line)] hover:bg-slate-100"
               >
                 ₹{v.toLocaleString('en-IN')}
               </button>
@@ -342,7 +346,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
           </div>
         )}
 
-        <div ref={qrRef} className="inline-flex max-w-full p-3 sm:p-4 border-2 border-slate-200 rounded-2xl bg-white shadow-sm">
+        <div ref={qrRef} className="inline-flex max-w-full p-3 sm:p-4 border-2 border-[var(--line)] rounded-2xl bg-[var(--surface)] shadow-[var(--shadow-card)]">
           {numericAmount > 0 ? (
             <QRCodeSVG
               value={uri}
@@ -354,17 +358,17 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
               fgColor="#111827"
             />
           ) : (
-            <div className="w-[240px] h-[240px] flex items-center justify-center text-center text-sm text-slate-400 px-6">
+            <div className="w-[240px] h-[240px] flex items-center justify-center text-center text-sm text-[var(--muted-light)] px-6">
               Enter an amount to generate the QR
             </div>
           )}
         </div>
 
         <div>
-          <div className="text-4xl font-extrabold text-slate-900 tabular-nums">{fmt(numericAmount)}</div>
-          <div className="text-sm font-semibold text-slate-700 mt-1">{shopName}</div>
-          <div className="text-xs text-slate-400 mt-1">{upiId || 'UPI ID not configured'}</div>
-          <div className="text-xs text-slate-400">Invoice: {invoice || 'NEW-BILL'}</div>
+          <div className="text-4xl font-extrabold text-[var(--ink)] tabular-nums">{fmt(numericAmount)}</div>
+          <div className="text-sm font-semibold text-[var(--ink-secondary)] mt-1">{shopName}</div>
+          <div className="text-xs text-[var(--muted-light)] mt-1">{upiId || 'UPI ID not configured'}</div>
+          <div className="text-xs text-[var(--muted-light)]">Invoice: {invoice || 'NEW-BILL'}</div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -403,6 +407,8 @@ export default function NewBill() {
   const [customers, setCustomers] = useState([])
   const [dashboard, setDashboard] = useState(null)
   const [settings, setSettings] = useState({})
+  const [initializing, setInitializing] = useState(true)
+  const [loadError, setLoadError] = useState(false)
 
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('')
@@ -431,13 +437,27 @@ export default function NewBill() {
   const fmtDate = d => d.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
   const fmtTime = d => d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
 
-  useEffect(() => {
-    api.get('/products/?status=active&page_size=200').then(r => setProducts(r.data.results || r.data))
-    api.get('/categories/').then(r => setCategories(r.data.results || r.data))
-    api.get('/customers/?page_size=200').then(r => setCustomers(r.data.results || r.data))
-    api.get('/dashboard/').then(r => setDashboard(r.data)).catch(() => {})
-    api.get('/settings/all/').then(r => setSettings(r.data)).catch(() => {})
+  const loadInitialData = useCallback(async () => {
+    setInitializing(true)
+    setLoadError(false)
+    const results = await Promise.allSettled([
+      productService.getProducts({ status: 'active', page_size: 200 }),
+      productService.getCategories(),
+      customerService.getCustomers({ page_size: 200 }),
+      api.get('/dashboard/'),
+      settingsService.getAll(),
+    ])
+    const [productsResult, categoriesResult, customersResult, dashboardResult, settingsResult] = results
+    if (productsResult.status === 'fulfilled') setProducts(productsResult.value)
+    if (categoriesResult.status === 'fulfilled') setCategories(categoriesResult.value)
+    if (customersResult.status === 'fulfilled') setCustomers(customersResult.value)
+    if (dashboardResult.status === 'fulfilled') setDashboard(dashboardResult.value.data)
+    if (settingsResult.status === 'fulfilled') setSettings(settingsResult.value)
+    setLoadError(results.some(result => result.status === 'rejected'))
+    setInitializing(false)
   }, [])
+
+  useEffect(() => { loadInitialData() }, [loadInitialData])
 
   const recalc = item => {
     const basic = item.unit_price * item.qty * (1 - item.discount_percent / 100)
@@ -739,7 +759,7 @@ export default function NewBill() {
             }]
       }
 
-      const { data } = await api.post('/invoices/', payload)
+      const data = await invoiceService.createInvoice(payload)
 
       // Preserve customer contact/payment information for Share after
       // resetBill() clears the current billing form.
@@ -778,13 +798,18 @@ export default function NewBill() {
 
   const addCustomer = async () => {
     try {
-      const { data } = await api.post('/customers/', newCustomer)
+      const data = await customerService.createCustomer(newCustomer)
       setCustomers(x => [...x, data]); setCustomer(data); setCustomerSearch(data.name)
       setShowCustomerModal(false); setNewCustomer({ name: '', mobile: '', email: '' })
     } catch { toast.error('Failed to add customer') }
   }
 
-  const shareInvoice = async () => {
+  const getShortPdfUrl = async (invoiceId) => {
+    const link = await invoiceService.createShortLink(invoiceId)
+    return link.url
+  }
+
+  const shareInvoice = async ({ sharePdf = false } = {}) => {
     if (!lastInvoice) {
       toast.error('Save the bill first')
       return
@@ -797,44 +822,72 @@ export default function NewBill() {
       lastInvoice.customer?.mobile ||
       ''
     ).replace(/\D/g, '')
+    let pdfUrl
+    try {
+      pdfUrl = await getShortPdfUrl(lastInvoice.id)
+    } catch {
+      toast.error('Could not create a share link')
+      return
+    }
 
     const message =
       `*${shopName}*\n` +
       `Invoice: ${invoiceNumber}\n` +
       `Total: ${fmt(total)}\n` +
       `Payment: ${(lastInvoice.payment_method || payment.method || 'cash').toUpperCase()}\n` +
-      `Thank you for shopping with us!`
+      `Thank you for shopping with us!\n\nDownload PDF: ${pdfUrl}`
 
-    // WhatsApp is the most useful sharing option for a billing/POS app.
+    // Share PDF file directly via Web Share API
+    if (sharePdf) {
+      try {
+        const res = await fetch(pdfUrl)
+        if (!res.ok) throw new Error('fetch failed')
+        const blob = await res.blob()
+        const file = new File([blob], `invoice-${invoiceNumber}.pdf`, { type: 'application/pdf' })
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file], title: `Invoice ${invoiceNumber}` })
+          return
+        }
+        // Fallback: download the PDF
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `invoice-${invoiceNumber}.pdf`
+        a.click()
+        setTimeout(() => URL.revokeObjectURL(url), 1000)
+        toast.success('PDF downloaded')
+        return
+      } catch (err) {
+        if (err?.name === 'AbortError') return
+        toast.error('Could not share PDF')
+        return
+      }
+    }
+
+    // WhatsApp with PDF link
     if (phone) {
       const whatsappPhone = phone.length === 10 ? `91${phone}` : phone
       const waUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`
       const win = window.open(waUrl, '_blank', 'noopener,noreferrer')
-      if (!win) {
-        toast.error('Allow pop-ups to share through WhatsApp')
-      }
+      if (!win) toast.error('Allow pop-ups to share through WhatsApp')
       return
     }
 
-    // Use the native share sheet where supported.
+    // Native share sheet
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: `Invoice ${invoiceNumber}`,
-          text: message,
-        })
+        await navigator.share({ title: `Invoice ${invoiceNumber}`, text: message })
         return
       } catch (err) {
         if (err?.name === 'AbortError') return
       }
     }
 
-    // Clipboard fallback for desktop browsers.
+    // Clipboard fallback
     try {
       await navigator.clipboard.writeText(message)
       toast.success('Invoice details copied — ready to share')
     } catch {
-      // Last-resort fallback that works even when clipboard permissions are denied.
       window.prompt('Copy invoice details:', message)
     }
   }
@@ -865,13 +918,14 @@ export default function NewBill() {
   }, [grandTotal, payment, cart, lastInvoice, upiId, billDiscount, navigate])
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-slate-50 text-slate-900">
+    <div className="min-h-screen w-full overflow-x-hidden bg-[var(--surface-elevated)] text-[var(--ink)]">
       <style>{`
-        .btn-solid{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;height:2.5rem;padding:0 .9rem;border-radius:.65rem;background:#4f46e5;color:#fff;font-weight:600;font-size:.8rem;transition:background .15s}
-        .btn-solid:hover{background:#4338ca}
-        .btn-solid:disabled{background:#c7d2fe;cursor:not-allowed}
-        .btn-outline{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;height:2.5rem;padding:0 .9rem;border-radius:.65rem;border:1px solid #e2e8f0;background:#fff;color:#334155;font-weight:500;font-size:.78rem;transition:background .15s}
-        .btn-outline:hover{background:#f8fafc}
+        .btn-solid{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;min-height:2.75rem;padding:0 .9rem;border-radius:.625rem;background:var(--primary);color:#fff;font-weight:600;font-size:.8rem;transition:background .15s,transform .15s}
+        .btn-solid:hover{background:var(--primary-hover)}
+        .btn-solid:active{transform:translateY(1px)}
+        .btn-solid:disabled{opacity:.5;cursor:not-allowed}
+        .btn-outline{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;min-height:2.75rem;padding:0 .9rem;border-radius:.625rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:600;font-size:.78rem;transition:background .15s,border-color .15s}
+        .btn-outline:hover{background:color-mix(in srgb,var(--primary) 6%,var(--surface));border-color:var(--primary);color:var(--primary)}
         .btn-outline:disabled{opacity:.45;cursor:not-allowed}
         @media (max-width: 639px){
           .mobile-action-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -885,19 +939,19 @@ export default function NewBill() {
         <section className="flex-1 min-w-0 flex flex-col gap-3">
 
           {/* Top bar: clock + quick customer QR payment + today snapshot */}
-          <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm">
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl px-3 py-2 shadow-[var(--shadow-card)]">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <Clock size={13} className="text-indigo-500" />
-                <span className="font-medium text-slate-700">{fmtDate(now)}</span>
+              <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+                <Clock size={13} className="text-indigo-500 dark:text-indigo-400" />
+                <span className="font-medium text-[var(--ink-secondary)]">{fmtDate(now)}</span>
                 <span className="font-mono text-indigo-600 font-semibold tracking-wide">{fmtTime(now)}</span>
               </div>
 
               <div className="flex items-center gap-2">
                 {dashboard && (dashboard.today_sales != null || dashboard.today_bills != null) && (
-                  <div className="hidden sm:flex items-center gap-3 text-xs text-slate-500">
-                    {dashboard.today_bills != null && <span><b className="text-slate-700">{dashboard.today_bills}</b> bills today</span>}
-                    {dashboard.today_sales != null && <span><b className="text-slate-700">{fmt(dashboard.today_sales)}</b> sold today</span>}
+                  <div className="hidden sm:flex items-center gap-3 text-xs text-[var(--muted)]">
+                    {dashboard.today_bills != null && <span><b className="text-[var(--ink-secondary)]">{dashboard.today_bills}</b> bills today</span>}
+                    {dashboard.today_sales != null && <span><b className="text-[var(--ink-secondary)]">{fmt(dashboard.today_sales)}</b> sold today</span>}
                   </div>
                 )}
 
@@ -905,7 +959,7 @@ export default function NewBill() {
                   onClick={openQuickPayment}
                   disabled={!upiId}
                   title={!upiId ? 'Configure UPI ID in Settings' : 'Show customer payment QR'}
-                  className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold text-xs shadow-sm transition active:scale-[0.98]"
+                  className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-[var(--muted-light)] text-white font-bold text-xs shadow-[var(--shadow-card)] transition active:scale-[0.98]"
                 >
                   <QrCode size={17} />
                   <span>Quick Pay</span>
@@ -916,33 +970,33 @@ export default function NewBill() {
           </div>
 
           {/* Search + category chips */}
-          <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm space-y-2.5">
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3 shadow-[var(--shadow-card)] space-y-2.5">
             <div className="relative">
-              <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" />
               <input
                 ref={searchRef}
-                className="w-full h-11 pl-10 pr-16 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="w-full h-11 pl-10 pr-16 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 placeholder="Scan barcode, or search product / SKU"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && filtered[0] && addToCart(filtered[0])}
                 autoFocus
               />
-              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 border border-slate-200 rounded px-1.5 py-0.5">Ctrl K</kbd>
+              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--muted-light)] border border-[var(--line)] rounded px-1.5 py-0.5">Ctrl K</kbd>
               {search && (
-                <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-72 overflow-y-auto">
+                <div className="absolute z-20 mt-1 w-full bg-[var(--surface)] border border-[var(--line)] rounded-lg shadow-lg max-h-72 overflow-y-auto">
                   {filtered.length ? filtered.slice(0, 10).map(p => (
-                    <button key={p.id} onClick={() => addToCart(p)} className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-indigo-50 border-b border-slate-50 last:border-0">
+                    <button key={p.id} onClick={() => addToCart(p)} className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-indigo-50 dark:bg-indigo-950/60 border-b border-slate-50 last:border-0">
                       <span>
-                        <span className="block text-sm font-medium text-slate-800">{p.name}</span>
-                        <span className="block text-[11px] text-slate-400">SKU {p.sku} · Stock {p.current_stock}</span>
+                        <span className="block text-sm font-medium text-[var(--ink)]">{p.name}</span>
+                        <span className="block text-[11px] text-[var(--muted-light)]">SKU {p.sku} · Stock {p.current_stock}</span>
                       </span>
                       <span className="text-right">
-                        <span className="block text-sm font-semibold text-slate-800">{fmt(p.selling_price)}</span>
-                        <span className="block text-[11px] text-slate-400">MRP {fmt(p.mrp || p.selling_price)}</span>
+                        <span className="block text-sm font-semibold text-[var(--ink)]">{fmt(p.selling_price)}</span>
+                        <span className="block text-[11px] text-[var(--muted-light)]">MRP {fmt(p.mrp || p.selling_price)}</span>
                       </span>
                     </button>
-                  )) : <div className="p-3 text-sm text-slate-400">No products found</div>}
+                  )) : <div className="p-3 text-sm text-[var(--muted-light)]">No products found</div>}
                 </div>
               )}
             </div>
@@ -950,57 +1004,59 @@ export default function NewBill() {
             <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'thin' }}>
               <button
                 onClick={() => setCatFilter('')}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition ${catFilter === '' ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition ${catFilter === '' ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-[var(--surface)] border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'}`}
               >All</button>
               {categories.map(c => (
                 <button
                   key={c.id}
                   onClick={() => setCatFilter(String(c.id))}
-                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition ${catFilter === String(c.id) ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition ${catFilter === String(c.id) ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-[var(--surface)] border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'}`}
                 >{c.name}</button>
               ))}
             </div>
           </div>
 
           {/* Quick-add product grid */}
-          <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 mb-2">
-              <Package size={13} /> Quick add <span className="font-normal text-slate-400">({availableProducts.length} in stock)</span>
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3 shadow-[var(--shadow-card)]">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] mb-2">
+              <Package size={13} /> Quick add <span className="font-normal text-[var(--muted-light)]">({availableProducts.length} in stock)</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 max-h-[15rem] overflow-y-auto pr-0.5">
-              {availableProducts.slice(0, 30).map(p => {
+              {initializing && Array.from({ length: 10 }, (_, index) => <Skeleton key={index} className="h-20" />)}
+              {!initializing && availableProducts.slice(0, 30).map(p => {
                 const inCart = cart.find(i => i.id === p.id)
                 return (
                   <button
                     key={p.id}
                     onClick={() => addToCart(p)}
-                    className={`relative text-left border rounded-lg p-2.5 transition-colors ${inCart ? 'border-indigo-300 bg-indigo-50' : 'border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50'}`}
+                    className={`relative text-left border rounded-lg p-2.5 transition-colors ${inCart ? 'border-indigo-300 bg-indigo-50 dark:bg-indigo-950/60' : 'border-[var(--line)] hover:border-indigo-300 hover:bg-indigo-50 dark:bg-indigo-950/60/50'}`}
                   >
                     {inCart && <span className="absolute top-1.5 right-1.5 bg-indigo-600 text-white text-[10px] font-bold rounded-full h-4 min-w-4 px-1 flex items-center justify-center">{inCart.qty}</span>}
-                    <div className="text-xs font-medium text-slate-800 truncate pr-4">{p.name}</div>
-                    <div className="text-[10px] text-slate-400 truncate">{p.sku}</div>
+                    <div className="text-xs font-medium text-[var(--ink)] truncate pr-4">{p.name}</div>
+                    <div className="text-[10px] text-[var(--muted-light)] truncate">{p.sku}</div>
                     <div className="flex items-center justify-between mt-1.5">
                       <span className="text-xs font-semibold text-indigo-600">{fmt(p.selling_price)}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${p.current_stock <= 5 ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'}`}>{p.current_stock}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${p.current_stock <= 5 ? 'bg-rose-100 text-rose-600 dark:text-rose-400' : 'bg-emerald-100 text-emerald-600 dark:text-emerald-400'}`}>{p.current_stock}</span>
                     </div>
                   </button>
                 )
               })}
-              {availableProducts.length === 0 && <div className="col-span-full text-center text-sm text-slate-400 py-4">No products match this filter</div>}
+              {!initializing && availableProducts.length === 0 && <div className="col-span-full text-center text-sm text-[var(--muted-light)] py-4">No products match this filter</div>}
             </div>
+            {loadError && <ErrorState title="Some billing data could not be loaded" message="Products already loaded remain available. Retry to refresh products, customers, and settings." onRetry={loadInitialData} />}
           </div>
 
           {/* Cart */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm flex-1 flex flex-col min-h-[16rem]">
-            <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-slate-100">
-              <b className="text-sm text-slate-800">Cart <span className="font-normal text-slate-400">({cart.length} item{cart.length === 1 ? '' : 's'})</span></b>
-              {cart.length > 0 && <button onClick={() => setCart([])} className="text-xs text-rose-500 hover:text-rose-600 font-medium">Clear cart</button>}
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-[var(--shadow-card)] flex-1 flex flex-col min-h-[16rem]">
+            <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-[var(--line-subtle)]">
+              <b className="text-sm text-[var(--ink)]">Cart <span className="font-normal text-[var(--muted-light)]">({cart.length} item{cart.length === 1 ? '' : 's'})</span></b>
+              {cart.length > 0 && <button onClick={() => setCart([])} className="text-xs text-rose-500 hover:text-rose-600 dark:text-rose-400 font-medium">Clear cart</button>}
             </div>
             {cart.length ? (
               <div className="overflow-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-[11px] uppercase tracking-wide text-slate-400 border-b border-slate-100">
+                    <tr className="text-[11px] uppercase tracking-wide text-[var(--muted-light)] border-b border-[var(--line-subtle)]">
                       <th className="py-2 pl-3 pr-1 font-medium text-center">#</th>
                       <th className="py-2 pr-2 font-medium text-left">Item</th>
                       <th className="py-2 pr-2 font-medium text-right">MRP</th>
@@ -1022,9 +1078,9 @@ export default function NewBill() {
                 </table>
               </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-slate-400">
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-[var(--muted-light)]">
                 <Receipt size={32} className="mb-2 text-slate-300" />
-                <div className="text-base font-medium text-slate-600">Cart is empty</div>
+                <div className="text-base font-medium text-[var(--muted)]">Cart is empty</div>
                 <p className="text-sm mt-1">Search, scan, or tap a product above to start billing.</p>
                 <button className="btn-solid mt-4" onClick={() => searchRef.current?.focus()}><Search size={15} /> Search product</button>
               </div>
@@ -1033,42 +1089,42 @@ export default function NewBill() {
         </section>
 
         {/* ============================ SIDEBAR ============================ */}
-        <aside className={`w-full md:w-auto lg:w-[380px] shrink-0 flex-col gap-3 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto ${cartOpen ? 'flex' : 'hidden'} md:flex max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:max-h-[90dvh] max-md:overflow-y-auto max-md:rounded-t-2xl max-md:bg-slate-50 max-md:p-3 max-md:shadow-2xl`}>
-          <div className="md:hidden flex items-center justify-between rounded-xl bg-white border border-slate-200 px-3 py-2">
-            <b className="text-sm text-slate-800">Cart and checkout</b>
+        <aside className={`w-full md:w-auto lg:w-[380px] shrink-0 flex-col gap-3 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto ${cartOpen ? 'flex' : 'hidden'} md:flex max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:max-h-[90dvh] max-md:overflow-y-auto max-md:rounded-t-2xl max-md:bg-[var(--surface-elevated)] max-md:p-3 max-md:shadow-2xl`}>
+          <div className="md:hidden flex items-center justify-between rounded-xl bg-[var(--surface)] border border-[var(--line)] px-3 py-2">
+            <b className="text-sm text-[var(--ink)]">Cart and checkout</b>
             <button type="button" onClick={() => setCartOpen(false)} aria-label="Close cart" className="icon-btn min-w-10 min-h-10 justify-center"><X size={18} /></button>
           </div>
 
           {/* Customer */}
-          <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm">
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3.5 shadow-[var(--shadow-card)]">
             <div className="flex justify-between items-center mb-2">
-              <b className="text-sm text-slate-800">Customer</b>
+              <b className="text-sm text-[var(--ink)]">Customer</b>
               <button className="text-xs text-indigo-600 font-medium flex items-center gap-0.5" onClick={() => setShowCustomerModal(true)}>
                 <Plus size={13} /> New
               </button>
             </div>
             <div className="relative">
-              <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" />
               <input
                 ref={customerRef}
-                className="w-full h-9 pl-8 pr-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="w-full h-9 pl-8 pr-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                 placeholder="Walk-in customer, or search"
                 value={customerSearch}
                 onChange={e => { setCustomerSearch(e.target.value); if (!e.target.value) setCustomer(null) }}
               />
               {customer && (
-                <button onClick={() => { setCustomer(null); setCustomerSearch('') }} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
+                <button onClick={() => { setCustomer(null); setCustomerSearch('') }} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-[var(--muted)]">
                   <X size={14} />
                 </button>
               )}
             </div>
             {customerSearch && !customer && (
-              <div className="mt-1.5 border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-50 max-h-40 overflow-y-auto">
-                <button onClick={() => { setCustomer(null); setCustomerSearch('Walk-in Customer') }} className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50">Walk-in Customer</button>
+              <div className="mt-1.5 border border-[var(--line)] rounded-lg overflow-hidden divide-y divide-slate-50 max-h-40 overflow-y-auto">
+                <button onClick={() => { setCustomer(null); setCustomerSearch('Walk-in Customer') }} className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 dark:bg-indigo-950/60">Walk-in Customer</button>
                 {filteredCustomers.slice(0, 6).map(c => (
-                  <button key={c.id} onClick={() => { setCustomer(c); setCustomerSearch(c.name) }} className="w-full text-left px-3 py-2 hover:bg-indigo-50">
-                    <div className="text-sm font-medium text-slate-800">{c.name}</div>
-                    <div className="text-[11px] text-slate-400">{c.mobile}</div>
+                  <button key={c.id} onClick={() => { setCustomer(c); setCustomerSearch(c.name) }} className="w-full text-left px-3 py-2 hover:bg-indigo-50 dark:bg-indigo-950/60">
+                    <div className="text-sm font-medium text-[var(--ink)]">{c.name}</div>
+                    <div className="text-[11px] text-[var(--muted-light)]">{c.mobile}</div>
                   </button>
                 ))}
               </div>
@@ -1076,9 +1132,9 @@ export default function NewBill() {
           </div>
 
           {/* Summary + grand total — the most important number on the page */}
-          <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm">
-            <b className="text-sm text-slate-800">Bill summary</b>
-            <div className="mt-2 space-y-1 text-sm text-slate-600">
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3.5 shadow-[var(--shadow-card)]">
+            <b className="text-sm text-[var(--ink)]">Bill summary</b>
+            <div className="mt-2 space-y-1 text-sm text-[var(--muted)]">
               <div className="flex justify-between"><span>Subtotal</span><span className="tabular-nums">{fmt(subtotal)}</span></div>
               <div className="flex justify-between"><span>Item discount</span><span className="tabular-nums text-rose-500">-{fmt(discount)}</span></div>
               <label className="flex items-center justify-between gap-3">
@@ -1091,28 +1147,28 @@ export default function NewBill() {
                   step="0.01"
                   value={billDiscountInput}
                   onChange={e => setBillDiscountInput(e.target.value)}
-                  className="w-24 h-7 px-2 text-right text-xs rounded border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                  className="w-24 h-7 px-2 text-right text-xs rounded border border-[var(--line)] focus:outline-none focus:ring-2 focus:ring-indigo-400"
                   placeholder="0.00"
                 />
               </label>
               {showGst && <div className="flex justify-between"><span>GST</span><span className="tabular-nums">{fmt(tax)}</span></div>}
               <div className="flex justify-between"><span>Round off</span><span className="tabular-nums">{fmt(roundOff)}</span></div>
             </div>
-            <div className="mt-3 pt-3 border-t border-dashed border-slate-200 flex items-end justify-between">
-              <span className="text-sm font-medium text-slate-500">Grand total</span>
-              <strong className="text-3xl font-bold text-slate-900 tabular-nums">{fmt(grandTotal)}</strong>
+            <div className="mt-3 pt-3 border-t border-dashed border-[var(--line)] flex items-end justify-between">
+              <span className="text-sm font-medium text-[var(--muted)]">Grand total</span>
+              <strong className="text-3xl font-bold text-[var(--ink)] tabular-nums">{fmt(grandTotal)}</strong>
             </div>
           </div>
 
           {/* Payment */}
-          <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm">
-            <b className="text-sm text-slate-800">Payment</b>
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3.5 shadow-[var(--shadow-card)]">
+            <b className="text-sm text-[var(--ink)]">Payment</b>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2.5">
               {PAYMENT_METHODS.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
                   onClick={() => selectPayment(id)}
-                  className={`flex flex-col items-center justify-center gap-1 rounded-lg border py-2 text-[11px] font-medium transition ${payment.method === id ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                  className={`flex flex-col items-center justify-center gap-1 rounded-lg border py-2 text-[11px] font-medium transition ${payment.method === id ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'}`}
                 >
                   <Icon size={15} />{label}
                 </button>
@@ -1122,23 +1178,23 @@ export default function NewBill() {
             {payment.method === 'cash' && (
               <div className="mt-3 space-y-2.5">
                 <label className="block">
-                  <span className="text-xs text-slate-500">Amount received</span>
+                  <span className="text-xs text-[var(--muted)]">Amount received</span>
                   <input
                     ref={paymentRef}
-                    type="number" className="w-full h-10 mt-1 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    type="number" className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
                     value={payment.amount} placeholder={grandTotal.toFixed(2)}
                     onChange={e => setPayment(x => ({ ...x, amount: e.target.value, status: 'paid' }))}
                   />
                 </label>
                 <div className="flex flex-wrap gap-1.5">
-                  <button onClick={setExactCash} className="px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100">Exact</button>
+                  <button onClick={setExactCash} className="px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 border border-emerald-200 hover:bg-emerald-100">Exact</button>
                   {CASH_CHIPS.map(v => (
-                    <button key={v} onClick={() => addCashChip(v)} className="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100">+{v}</button>
+                    <button key={v} onClick={() => addCashChip(v)} className="px-2.5 py-1 rounded-full text-xs font-medium bg-[var(--surface-elevated)] text-[var(--muted)] border border-[var(--line)] hover:bg-slate-100">+{v}</button>
                   ))}
                 </div>
-                <div className="flex justify-between text-xs bg-slate-50 rounded-lg px-3 py-2">
-                  <span className="text-slate-500">Balance due <b className="text-slate-800">{fmt(balance)}</b></span>
-                  <span className="text-slate-500">Change <b className="text-slate-800">{fmt(change)}</b></span>
+                <div className="flex justify-between text-xs bg-[var(--surface-elevated)] rounded-lg px-3 py-2">
+                  <span className="text-[var(--muted)]">Balance due <b className="text-[var(--ink)]">{fmt(balance)}</b></span>
+                  <span className="text-[var(--muted)]">Change <b className="text-[var(--ink)]">{fmt(change)}</b></span>
                 </div>
               </div>
             )}
@@ -1146,16 +1202,16 @@ export default function NewBill() {
             {payment.method === 'upi' && (
               <div className="mt-3 space-y-2.5">
                 <label className="block">
-                  <span className="text-xs text-slate-500">Merchant UPI ID</span>
+                  <span className="text-xs text-[var(--muted)]">Merchant UPI ID</span>
                   <input
-                    className="w-full h-10 mt-1 px-3 rounded-lg border border-slate-200 bg-slate-50 text-sm text-slate-500"
+                    className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-sm text-[var(--muted)]"
                     value={upiId}
                     readOnly
                     placeholder="Configure in Settings"
                   />
                 </label>
 
-                <div className="w-full h-12 mt-1 px-3 rounded-lg border border-emerald-200 bg-emerald-50 flex items-center justify-between">
+                <div className="w-full h-12 mt-1 px-3 rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-between">
                   <span className="text-xs text-emerald-700">Customer pays</span>
                   <strong className="text-xl text-emerald-700 tabular-nums">{fmt(grandTotal)}</strong>
                 </div>
@@ -1173,23 +1229,23 @@ export default function NewBill() {
             {['card', 'online'].includes(payment.method) && (
               <div className="mt-3 space-y-2.5">
                 <label className="block">
-                  <span className="text-xs text-slate-500">Amount</span>
-                  <input type="number" className="w-full h-10 mt-1 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={payment.amount} onChange={e => setPayment(x => ({ ...x, amount: e.target.value }))} />
+                  <span className="text-xs text-[var(--muted)]">Amount</span>
+                  <input type="number" className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={payment.amount} onChange={e => setPayment(x => ({ ...x, amount: e.target.value }))} />
                 </label>
                 <label className="block">
-                  <span className="text-xs text-slate-500">Reference (optional)</span>
-                  <input className="w-full h-10 mt-1 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={payment.reference} onChange={e => setPayment(x => ({ ...x, reference: e.target.value }))} />
+                  <span className="text-xs text-[var(--muted)]">Reference (optional)</span>
+                  <input className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={payment.reference} onChange={e => setPayment(x => ({ ...x, reference: e.target.value }))} />
                 </label>
               </div>
             )}
 
             {payment.method === 'credit' && (
-              <p className="text-xs text-slate-500 mt-3 bg-slate-50 rounded-lg px-3 py-2">This amount will be recorded as customer credit and settled later.</p>
+              <p className="text-xs text-[var(--muted)] mt-3 bg-[var(--surface-elevated)] rounded-lg px-3 py-2">This amount will be recorded as customer credit and settled later.</p>
             )}
 
             {!['cash', 'credit'].includes(payment.method) && (
               <div className="mt-3">
-                <span className="text-xs text-slate-500">Payment status</span>
+                <span className="text-xs text-[var(--muted)]">Payment status</span>
                 <div className="flex gap-1.5 mt-1">
                   {['pending', 'paid', 'failed'].map(s => (
                     <button key={s} onClick={() => setPayment(x => ({ ...x, status: s }))}
@@ -1197,7 +1253,7 @@ export default function NewBill() {
                         ? s === 'paid' ? 'bg-emerald-600 border-emerald-600 text-white'
                         : s === 'failed' ? 'bg-rose-600 border-rose-600 text-white'
                         : 'bg-amber-500 border-amber-500 text-white'
-                        : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                        : 'border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'}`}
                     >{s}</button>
                   ))}
                 </div>
@@ -1206,7 +1262,7 @@ export default function NewBill() {
           </div>
 
           {/* Actions */}
-          <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm space-y-2">
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3.5 shadow-[var(--shadow-card)] space-y-2">
             <button
               className="btn-solid w-full h-12 text-sm"
               onClick={() => saveBill(false)}
@@ -1251,10 +1307,13 @@ export default function NewBill() {
               >
                 <QrCode size={14} /> QR Pay
               </button>
-              <button className="btn-outline" onClick={shareInvoice}>
+              <button className="btn-outline" onClick={() => shareInvoice()}>
                 <Share2 size={14} /> Share
               </button>
-              <button className="btn-outline" onClick={saveDraft}>
+              <button className="btn-outline" onClick={() => shareInvoice({ sharePdf: true })} disabled={!lastInvoice}>
+                <FileText size={14} /> Share PDF
+              </button>
+              <button className="btn-outline border-amber-300 text-amber-700 hover:border-amber-500 hover:bg-amber-50 hover:text-amber-800" onClick={saveDraft}>
                 <Layers size={14} /> Draft
               </button>
             </div>
@@ -1281,7 +1340,7 @@ export default function NewBill() {
             </button>
 
             <button
-              className="text-xs text-slate-400 hover:text-slate-600 underline inline-flex gap-1 items-center pt-1"
+              className="text-xs text-[var(--muted-light)] hover:text-[var(--muted)] underline inline-flex gap-1 items-center pt-1"
               onClick={() => setShowShortcuts(true)}
             >
               <Keyboard size={13} /> Keyboard shortcuts
@@ -1305,7 +1364,7 @@ export default function NewBill() {
         <button
           onClick={openQuickPayment}
           title="Quick customer UPI payment"
-          className="fixed right-3 bottom-3 sm:right-5 sm:bottom-5 z-40 inline-flex items-center gap-2 h-12 px-4 sm:px-5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-2xl border-2 border-white transition active:scale-[0.98]"
+          className="fixed right-3 bottom-20 md:right-5 md:bottom-5 z-20 inline-flex items-center gap-2 h-12 px-4 sm:px-5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-2xl border-2 border-white transition active:scale-[0.98]"
         >
           <QrCode size={18} />
           Quick Pay{cart.length > 0 ? ` · ${fmt(grandTotal)}` : ''}
@@ -1315,14 +1374,14 @@ export default function NewBill() {
       {/* ============================ MODALS ============================ */}
       <Modal open={showCustomerModal} onClose={() => setShowCustomerModal(false)} title="Add new customer" size="sm">
         <div className="space-y-3">
-          <label className="block text-sm text-slate-600">Name *
-            <input className="w-full h-10 mt-1 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={newCustomer.name} onChange={e => setNewCustomer(x => ({ ...x, name: e.target.value }))} />
+          <label className="block text-sm text-[var(--muted)]">Name *
+            <input className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={newCustomer.name} onChange={e => setNewCustomer(x => ({ ...x, name: e.target.value }))} />
           </label>
-          <label className="block text-sm text-slate-600">Mobile
-            <input className="w-full h-10 mt-1 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={newCustomer.mobile} onChange={e => setNewCustomer(x => ({ ...x, mobile: e.target.value }))} />
+          <label className="block text-sm text-[var(--muted)]">Mobile
+            <input className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={newCustomer.mobile} onChange={e => setNewCustomer(x => ({ ...x, mobile: e.target.value }))} />
           </label>
-          <label className="block text-sm text-slate-600">Email
-            <input className="w-full h-10 mt-1 px-3 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={newCustomer.email} onChange={e => setNewCustomer(x => ({ ...x, email: e.target.value }))} />
+          <label className="block text-sm text-[var(--muted)]">Email
+            <input className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" value={newCustomer.email} onChange={e => setNewCustomer(x => ({ ...x, email: e.target.value }))} />
           </label>
           <button className="btn-solid w-full" onClick={addCustomer}>Add customer</button>
         </div>
@@ -1330,24 +1389,25 @@ export default function NewBill() {
 
       <Modal open={showSuccess && Boolean(lastInvoice)} onClose={() => setShowSuccess(false)} title="Payment Successful" size="sm">
         <div className="space-y-4">
-          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-center">
-            <CheckCircle2 size={34} className="mx-auto text-emerald-600" />
+          <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 p-4 text-center">
+            <CheckCircle2 size={34} className="mx-auto text-emerald-600 dark:text-emerald-400" />
             <div className="mt-2 text-2xl font-bold text-emerald-800">{fmt(lastInvoice?.grand_total)}</div>
             <div className="text-xs text-emerald-700 mt-1">Invoice {lastInvoice?.invoice_number}</div>
           </div>
           <dl className="grid grid-cols-2 gap-2 text-sm">
-            <dt className="text-slate-500">Payment method</dt>
-            <dd className="text-right font-semibold text-slate-800 capitalize">{lastInvoice?.payment_method || 'cash'}</dd>
-            <dt className="text-slate-500">Amount received</dt>
-            <dd className="text-right font-semibold text-slate-800">{fmt(lastInvoice?.amount_received ?? lastInvoice?.paid_amount)}</dd>
-            <dt className="text-slate-500">Change</dt>
-            <dd className="text-right font-semibold text-slate-800">{fmt(Math.max(0, Number(lastInvoice?.amount_received || 0) - Number(lastInvoice?.grand_total || 0)))}</dd>
+            <dt className="text-[var(--muted)]">Payment method</dt>
+            <dd className="text-right font-semibold text-[var(--ink)] capitalize">{lastInvoice?.payment_method || 'cash'}</dd>
+            <dt className="text-[var(--muted)]">Amount received</dt>
+            <dd className="text-right font-semibold text-[var(--ink)]">{fmt(lastInvoice?.amount_received ?? lastInvoice?.paid_amount)}</dd>
+            <dt className="text-[var(--muted)]">Change</dt>
+            <dd className="text-right font-semibold text-[var(--ink)]">{fmt(Math.max(0, Number(lastInvoice?.amount_received || 0) - Number(lastInvoice?.grand_total || 0)))}</dd>
           </dl>
           <div className="grid grid-cols-2 gap-2">
             <button className="btn-outline" onClick={() => printInvoiceDocument(lastInvoice?.id)}><Printer size={14} /> Print</button>
             <button className="btn-outline" onClick={() => downloadInvoiceDocument(lastInvoice?.id)}><Download size={14} /> PDF</button>
-            <button className="btn-outline" onClick={shareInvoice}><Share2 size={14} /> Share</button>
-            <button className="btn-solid" onClick={() => { setShowSuccess(false); resetBill() }}><RefreshCw size={14} /> New Bill</button>
+            <button className="btn-outline" onClick={() => shareInvoice()}><Share2 size={14} /> Share</button>
+            <button className="btn-outline" onClick={() => shareInvoice({ sharePdf: true })}><FileText size={14} /> Share PDF</button>
+            <button className="btn-solid col-span-2" onClick={() => { setShowSuccess(false); resetBill() }}><RefreshCw size={14} /> New Bill</button>
           </div>
         </div>
       </Modal>
@@ -1371,8 +1431,8 @@ export default function NewBill() {
         <div className="grid grid-cols-2 gap-3 text-sm">
           {[['F1', 'New bill'], ['F2', 'Product search'], ['F3', 'Customer'], ['F4', 'Payment'], ['F5', 'Hold bill'], ['F6', 'Bill discount'], ['F7', 'Print'], ['F8', 'Save'], ['Ctrl/Cmd + K', 'Global search'], ['Esc', 'Close modal']].map(([key, text]) => (
             <div key={key} className="contents">
-              <kbd className="border border-slate-200 rounded px-2 py-1 text-center bg-slate-50">{key}</kbd>
-              <span className="text-slate-600">{text}</span>
+              <kbd className="border border-[var(--line)] rounded px-2 py-1 text-center bg-[var(--surface-elevated)]">{key}</kbd>
+              <span className="text-[var(--muted)]">{text}</span>
             </div>
           ))}
         </div>

@@ -97,33 +97,33 @@ function SupplierCard({ supplier, products, onEdit, onDelete, onRefresh }) {
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
       <div className="flex items-center justify-between p-4 gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-            <Building2 size={20} className="text-blue-600" />
+          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center flex-shrink-0">
+            <Building2 size={20} className="text-blue-600 dark:text-blue-400" />
           </div>
           <div className="min-w-0">
-            <div className="font-semibold text-gray-900 truncate text-sm">{supplier.name}</div>
+            <div className="font-semibold text-[var(--ink)] truncate text-sm">{supplier.name}</div>
             <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-              {supplier.phone && <span className="text-xs text-gray-400 flex items-center gap-1"><Phone size={10} />{supplier.phone}</span>}
-              {supplier.email && <span className="text-xs text-gray-400 flex items-center gap-1"><Mail size={10} />{supplier.email}</span>}
-              {supplier.gstin && <span className="text-xs text-gray-400">GST: {supplier.gstin}</span>}
+              {supplier.phone && <span className="text-xs text-[var(--muted-light)] flex items-center gap-1"><Phone size={10} />{supplier.phone}</span>}
+              {supplier.email && <span className="text-xs text-[var(--muted-light)] flex items-center gap-1"><Mail size={10} />{supplier.email}</span>}
+              {supplier.gstin && <span className="text-xs text-[var(--muted-light)]">GST: {supplier.gstin}</span>}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
           {Number(supplier.outstanding_amount) > 0 && (
             <button onClick={() => setPayModal(true)}
-              className="text-xs bg-red-50 text-red-600 font-semibold px-2.5 py-1 rounded-lg border border-red-100 hover:bg-red-100 transition-colors">
+              className="text-xs bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 font-semibold px-2.5 py-1 rounded-lg border border-red-100 hover:bg-red-100 transition-colors">
               Due: {fmt(supplier.outstanding_amount)}
             </button>
           )}
-          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-lg flex items-center gap-1">
+          <span className="text-xs bg-gray-100 text-[var(--muted)] px-2 py-1 rounded-lg flex items-center gap-1">
             <Package size={11} />{supProducts.length}
           </span>
           <button onClick={() => onEdit(supplier)} className="icon-btn" title="Edit"><Pencil size={14} /></button>
-          <button onClick={() => onDelete(supplier)} className="icon-btn text-red-400 hover:bg-red-50 hover:text-red-600" title="Delete"><Trash2 size={14} /></button>
+          <button onClick={() => onDelete(supplier)} className="icon-btn text-red-400 hover:bg-red-50 dark:bg-red-950/60 hover:text-red-600 dark:text-red-400" title="Delete"><Trash2 size={14} /></button>
           <button onClick={() => setExpanded(x => !x)} className="icon-btn">
             {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           </button>
@@ -131,26 +131,26 @@ function SupplierCard({ supplier, products, onEdit, onDelete, onRefresh }) {
       </div>
 
       {expanded && (
-        <div className="border-t border-gray-100 bg-gray-50 px-4 py-3 space-y-3">
+        <div className="border-t border-[var(--line-subtle)] bg-[var(--surface-elevated)] px-4 py-3 space-y-3">
           {supplier.address && (
-            <p className="text-xs text-gray-500 flex items-start gap-1.5">
-              <MapPin size={11} className="mt-0.5 flex-shrink-0 text-gray-400" />{supplier.address}
+            <p className="text-xs text-[var(--muted)] flex items-start gap-1.5">
+              <MapPin size={11} className="mt-0.5 flex-shrink-0 text-[var(--muted-light)]" />{supplier.address}
             </p>
           )}
           <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Linked Products ({supProducts.length})</p>
+            <p className="text-xs font-semibold text-[var(--muted-light)] uppercase tracking-wide mb-2">Linked Products ({supProducts.length})</p>
             {supProducts.length === 0 ? (
-              <p className="text-xs text-gray-400">No products linked to this supplier.</p>
+              <p className="text-xs text-[var(--muted-light)]">No products linked to this supplier.</p>
             ) : (
-              <div className="overflow-x-auto rounded-lg border border-gray-200">
+              <div className="overflow-x-auto rounded-lg border border-[var(--line)]">
                 <table className="table text-xs">
                   <thead><tr><th>Product</th><th>SKU</th><th>Stock</th><th>Purchase Price</th><th>Selling Price</th><th>Status</th></tr></thead>
                   <tbody>
                     {supProducts.map(p => (
                       <tr key={p.id}>
                         <td className="font-medium">{p.name}</td>
-                        <td className="font-mono text-gray-500">{p.sku}</td>
-                        <td className={Number(p.current_stock) <= 0 ? 'text-red-600 font-semibold' : Number(p.current_stock) <= Number(p.minimum_stock) ? 'text-orange-500 font-semibold' : 'text-green-600 font-semibold'}>{p.current_stock}</td>
+                        <td className="font-mono text-[var(--muted)]">{p.sku}</td>
+                        <td className={Number(p.current_stock) <= 0 ? 'text-red-600 dark:text-red-400 font-semibold' : Number(p.current_stock) <= Number(p.minimum_stock) ? 'text-orange-500 font-semibold' : 'text-green-600 dark:text-green-400 font-semibold'}>{p.current_stock}</td>
                         <td>{fmt(p.purchase_price)}</td>
                         <td>{fmt(p.selling_price)}</td>
                         <td><Badge status={p.stock_status} /></td>
@@ -167,9 +167,9 @@ function SupplierCard({ supplier, products, onEdit, onDelete, onRefresh }) {
       {/* Pay outstanding modal */}
       <Modal open={payModal} onClose={() => setPayModal(false)} title={`Record Payment — ${supplier.name}`} size="sm">
         <div className="space-y-4">
-          <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-center">
+          <div className="bg-red-50 dark:bg-red-950/60 border border-red-100 rounded-xl p-3 text-center">
             <div className="text-xs text-red-500 font-semibold uppercase tracking-wide">Outstanding Balance</div>
-            <div className="text-2xl font-bold text-red-600 mt-1">{fmt(supplier.outstanding_amount)}</div>
+            <div className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{fmt(supplier.outstanding_amount)}</div>
           </div>
           <div>
             <label className="label">Amount Paid (₹) *</label>
@@ -252,29 +252,29 @@ export default function Suppliers() {
 
       {/* Summary row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="bg-white rounded-xl border border-blue-100 p-4 flex flex-col gap-1">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Total Suppliers</span>
-          <div className="text-2xl font-bold text-blue-600">{suppliers.length}</div>
+        <div className="bg-[var(--surface)] rounded-xl border border-blue-100 p-4 flex flex-col gap-1">
+          <span className="text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-wide">Total Suppliers</span>
+          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{suppliers.length}</div>
         </div>
-        <div className="bg-white rounded-xl border border-red-100 p-4 flex flex-col gap-1">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Total Outstanding</span>
-          <div className="text-2xl font-bold text-red-600">{fmt(totalOutstanding)}</div>
+        <div className="bg-[var(--surface)] rounded-xl border border-red-100 p-4 flex flex-col gap-1">
+          <span className="text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-wide">Total Outstanding</span>
+          <div className="text-2xl font-bold text-red-600 dark:text-red-400">{fmt(totalOutstanding)}</div>
         </div>
-        <div className="bg-white rounded-xl border border-green-100 p-4 flex flex-col gap-1">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Products Supplied</span>
-          <div className="text-2xl font-bold text-green-600">{products.filter(p => p.supplier).length}</div>
+        <div className="bg-[var(--surface)] rounded-xl border border-green-100 p-4 flex flex-col gap-1">
+          <span className="text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-wide">Products Supplied</span>
+          <div className="text-2xl font-bold text-green-600 dark:text-green-400">{products.filter(p => p.supplier).length}</div>
         </div>
       </div>
 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 flex-1 max-w-sm">
-          <Search size={14} className="text-slate-400 flex-shrink-0" />
+        <div className="flex items-center gap-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg px-3 py-2 flex-1 max-w-sm">
+          <Search size={14} className="text-[var(--muted-light)] flex-shrink-0" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search suppliers…"
-            className="bg-transparent text-sm outline-none w-full text-slate-700 placeholder-slate-400" />
+            className="bg-transparent text-sm outline-none w-full text-[var(--ink-secondary)] placeholder-slate-400" />
         </div>
         <div className="flex gap-2">
-          <button onClick={load} className="w-9 h-9 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 hover:bg-slate-50 transition-colors">
+          <button onClick={load} className="w-9 h-9 flex items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--muted-light)] hover:bg-[var(--surface-elevated)] transition-colors">
             <RefreshCw size={14} />
           </button>
           <button onClick={openAdd} className="btn-primary flex items-center gap-2 text-sm">
@@ -285,7 +285,7 @@ export default function Suppliers() {
 
       {/* List */}
       {loading ? <Spinner /> : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-[var(--muted-light)]">
           <Building2 size={40} className="opacity-30" />
           <p className="text-sm">{q ? 'No suppliers match your search' : 'No suppliers yet'}</p>
           {!q && <button onClick={openAdd} className="btn-primary text-sm">Add First Supplier</button>}
@@ -310,7 +310,7 @@ export default function Suppliers() {
       {/* Delete confirm */}
       <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete Supplier" size="sm">
         <div className="space-y-4">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-[var(--muted)]">
             Delete <span className="font-semibold">"{deleteTarget?.name}"</span>? This cannot be undone. Existing purchases will not be affected.
           </p>
           <div className="flex gap-2">

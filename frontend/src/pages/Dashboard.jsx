@@ -207,7 +207,7 @@ function isCacheFresh() {
 function Trend({ value }) {
   if (value === 0) {
     return (
-      <span className="text-xs text-gray-400 flex items-center gap-0.5">
+      <span className="text-xs text-[var(--muted-light)] flex items-center gap-0.5">
         <Minus size={11} />
         No change
       </span>
@@ -220,7 +220,7 @@ function Trend({ value }) {
     <span
       className={`text-xs flex items-center gap-0.5 font-medium ${
         up
-          ? 'text-green-600'
+          ? 'text-green-600 dark:text-green-400'
           : 'text-red-500'
       }`}
     >
@@ -251,22 +251,22 @@ function Stat({
 }) {
   const colors = {
     blue: {
-      bg: 'bg-blue-50',
-      icon: 'text-blue-600'
+      bg: 'bg-blue-50 dark:bg-blue-950/60',
+      icon: 'text-blue-600 dark:text-blue-400'
     },
 
     green: {
-      bg: 'bg-green-50',
-      icon: 'text-green-600'
+      bg: 'bg-green-50 dark:bg-green-950/60',
+      icon: 'text-green-600 dark:text-green-400'
     },
 
     orange: {
-      bg: 'bg-orange-50',
+      bg: 'bg-orange-50 dark:bg-orange-950/60',
       icon: 'text-orange-500'
     },
 
     red: {
-      bg: 'bg-red-50',
+      bg: 'bg-red-50 dark:bg-red-950/60',
       icon: 'text-red-500'
     },
 
@@ -281,7 +281,7 @@ function Stat({
     },
 
     indigo: {
-      bg: 'bg-indigo-50',
+      bg: 'bg-indigo-50 dark:bg-indigo-950/60',
       icon: 'text-indigo-600'
     }
   }
@@ -292,9 +292,9 @@ function Stat({
     <div
       className={`
         group
-        bg-white
+        bg-[var(--surface)]
         rounded-2xl
-        border border-slate-200/80
+        border border-[var(--line)]/80
         ${highlight ? 'ring-2 ring-blue-200 border-blue-300' : ''}
         p-4 sm:p-5
         flex flex-col gap-3
@@ -309,7 +309,7 @@ function Stat({
           className="
             text-[10px]
             font-bold
-            text-slate-400
+            text-[var(--muted-light)]
             uppercase
             tracking-[0.14em]
             leading-tight
@@ -344,7 +344,7 @@ function Stat({
           sm:text-2xl
           font-extrabold
           tracking-tight
-          text-slate-950
+          text-[var(--ink)]
           truncate
         "
       >
@@ -352,7 +352,7 @@ function Stat({
       </div>
 
       {sub && (
-        <div className="text-xs text-slate-500 truncate">
+        <div className="text-xs text-[var(--muted)] truncate">
           {sub}
         </div>
       )}
@@ -377,13 +377,13 @@ function Insight({
 }) {
   const colors = {
     green:
-      'bg-green-50 border-green-100 text-green-700',
+      'bg-green-50 dark:bg-green-950/60 border-green-100 text-green-700',
 
     blue:
-      'bg-blue-50 border-blue-100 text-blue-700',
+      'bg-blue-50 dark:bg-blue-950/60 border-blue-100 text-blue-700',
 
     orange:
-      'bg-orange-50 border-orange-100 text-orange-700',
+      'bg-orange-50 dark:bg-orange-950/60 border-orange-100 text-orange-700',
 
     purple:
       'bg-purple-50 border-purple-100 text-purple-700'
@@ -448,7 +448,7 @@ const ChartTooltip = ({
   return (
     <div
       className="
-        bg-slate-950
+        bg-[var(--app-bg)]
         border border-slate-800
         rounded-xl
         shadow-2xl
@@ -473,7 +473,7 @@ const ChartTooltip = ({
             }}
           />
 
-          <span className="text-slate-400">
+          <span className="text-[var(--muted-light)]">
             {item.name}:
           </span>
 
@@ -519,7 +519,7 @@ function BackgroundLoading() {
           w-2
           h-2
           rounded-full
-          bg-white
+          bg-[var(--surface)]
           animate-pulse
         "
       />
@@ -791,7 +791,7 @@ export default function Dashboard() {
           className="
             w-12 h-12
             rounded-full
-            bg-red-50
+            bg-red-50 dark:bg-red-950/60
             flex
             items-center
             justify-center
@@ -804,11 +804,11 @@ export default function Dashboard() {
         </div>
 
         <div className="text-center">
-          <p className="text-sm font-semibold text-slate-800">
+          <p className="text-sm font-semibold text-[var(--ink)]">
             Could not load dashboard
           </p>
 
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-[var(--muted)] mt-1">
             Please check your connection and try again.
           </p>
         </div>
@@ -849,7 +849,7 @@ export default function Dashboard() {
       className="
         min-h-full
         space-y-6
-        bg-slate-50/80
+        bg-[var(--surface-elevated)]/80
         -m-2
         sm:-m-4
         p-2
@@ -865,19 +865,19 @@ export default function Dashboard() {
       <div
         className="
           w-full
-          bg-[#F8F9FA]
-          border border-[#DEE2E6]
+          bg-[var(--app-bg)]
+          border border-[var(--line)]
           rounded-2xl
           px-4 sm:px-5
-          py-4
-          shadow-sm
+          py-3
+          shadow-[var(--shadow-card)]
         "
       >
         <div
           className="
             flex
             flex-col
-            gap-4
+            gap-3
             sm:flex-row
             sm:items-center
             sm:justify-between
@@ -889,12 +889,12 @@ export default function Dashboard() {
           <div className="min-w-0 flex-1">
             <h2
               className="
-                text-lg
-                sm:text-xl
-                lg:text-2xl
+                text-base
+                sm:text-lg
+                lg:text-xl
                 font-bold
                 tracking-tight
-                text-[#212529]
+                text-[var(--ink)]
                 truncate
               "
             >
@@ -903,14 +903,14 @@ export default function Dashboard() {
 
             <div
               className="
-                mt-1
+                mt-0.5
                 flex
                 flex-wrap
                 items-center
                 gap-x-2
                 gap-y-0.5
-                text-xs
-                text-[#6C757D]
+                text-[11px]
+                text-[var(--muted-light)]
               "
             >
               <span>
@@ -925,7 +925,7 @@ export default function Dashboard() {
                 )}
               </span>
 
-              <span className="text-[#ADB5BD]">
+              <span className="text-[var(--muted-light)]">
                 ·
               </span>
 
@@ -960,13 +960,14 @@ export default function Dashboard() {
               className="
                 flex-1
                 sm:flex-none
-                h-9
-                sm:h-10
-                px-4
-                rounded-xl
-                bg-[#1471D8]
-                hover:bg-[#0F5FB8]
-                active:bg-[#0B4F9A]
+                h-8
+                sm:h-9
+                px-3
+                sm:px-4
+                rounded-lg
+                bg-[var(--primary)]
+                hover:bg-[var(--primary-hover)]
+                active:bg-[var(--primary-active)]
                 text-white
                 text-xs
                 sm:text-sm
@@ -976,11 +977,11 @@ export default function Dashboard() {
                 justify-center
                 gap-1.5
                 transition-colors
-                shadow-sm
+                shadow-[var(--shadow-primary)]
                 whitespace-nowrap
               "
             >
-              <ShoppingCart size={14} />
+              <ShoppingCart size={13} />
               <span>New Bill</span>
             </button>
 
@@ -995,26 +996,24 @@ export default function Dashboard() {
               title="Refresh dashboard"
               className="
                 shrink-0
-                w-9
-                h-9
-                sm:w-10
-                sm:h-10
-                rounded-xl
+                w-8
+                h-8
+                rounded-lg
                 border
-                border-[#CED4DA]
-                bg-white
-                text-[#495057]
+                border-[var(--line)]
+                bg-[var(--surface)]
+                text-[var(--muted)]
                 flex
                 items-center
                 justify-center
-                hover:bg-[#E9ECEF]
-                active:bg-[#DEE2E6]
+                hover:bg-[var(--surface-hover)]
+                active:bg-[var(--line-subtle)]
                 disabled:opacity-50
                 transition-colors
               "
             >
               <RefreshCw
-                size={14}
+                size={13}
                 className={
                   refreshing
                     ? 'animate-spin'
@@ -1051,11 +1050,11 @@ export default function Dashboard() {
             border
             px-4
             py-3
-            shadow-sm
+            shadow-[var(--shadow-card)]
             ${
               dashboard.out_of_stock > 0
-                ? 'bg-red-50 border-red-200'
-                : 'bg-orange-50 border-orange-200'
+                ? 'bg-red-50 dark:bg-red-950/60 border-red-200'
+                : 'bg-orange-50 dark:bg-orange-950/60 border-orange-200'
             }
           `}
         >
@@ -1129,7 +1128,7 @@ export default function Dashboard() {
               text-xs
               font-semibold
               underline
-              text-blue-600
+              text-blue-600 dark:text-blue-400
             "
           >
             View Inventory →
@@ -1146,7 +1145,7 @@ export default function Dashboard() {
           className="
             text-[10px]
             font-bold
-            text-slate-400
+            text-[var(--muted-light)]
             uppercase
             tracking-[0.18em]
             mb-3
@@ -1156,7 +1155,7 @@ export default function Dashboard() {
         </p>
 
         <div
-            className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3"
+            className="grid grid-cols-2 xl:grid-cols-4 gap-3"
         >
           <Stat
             label="Today's Sales"
@@ -1217,7 +1216,7 @@ export default function Dashboard() {
           className="
             text-[10px]
             font-bold
-            text-slate-400
+            text-[var(--muted-light)]
             uppercase
             tracking-[0.18em]
             mb-3
@@ -1292,17 +1291,17 @@ export default function Dashboard() {
         <section className="rounded-2xl border border-amber-200 bg-amber-50/70 p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle size={16} className="text-amber-600" />
-            <h2 className="text-sm font-bold text-amber-900">Action Required</h2>
+            <h2 className="text-sm font-bold text-amber-900 dark:text-amber-400">Action Required</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
             {actionRequired.map(item => (
               <button
                 key={item.key}
                 onClick={() => navigate(item.route)}
-                className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-white px-3 py-3 text-left hover:border-amber-400 hover:shadow-sm transition"
+                className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-[var(--surface)] px-3 py-3 text-left hover:border-amber-400 hover:shadow-[var(--shadow-card)] transition"
               >
-                <span className="text-xs font-medium text-slate-700">
-                  <strong className="text-base text-slate-950 mr-1">{item.count}</strong>
+                <span className="text-xs font-medium text-[var(--ink-secondary)]">
+                   <strong className="text-base text-[var(--ink)] mr-1">{item.count}</strong>
                   {item.label}
                 </span>
                 <ArrowUpRight size={15} className="text-amber-600 shrink-0" />
@@ -1321,7 +1320,7 @@ export default function Dashboard() {
           className="
             text-[10px]
             font-bold
-            text-slate-400
+            text-[var(--muted-light)]
             uppercase
             tracking-[0.18em]
             mb-3
@@ -1411,7 +1410,7 @@ export default function Dashboard() {
             font-bold
             uppercase
             tracking-[0.18em]
-            text-slate-400
+            text-[var(--muted-light)]
           "
         >
           Analytics
@@ -1436,9 +1435,9 @@ export default function Dashboard() {
 
         <div
           className="
-            bg-white
+            bg-[var(--surface)]
             rounded-2xl
-            border border-slate-200/80
+            border border-[var(--line)]/80
             shadow-[0_8px_30px_rgba(15,23,42,0.05)]
             p-5
             sm:p-6
@@ -1453,11 +1452,11 @@ export default function Dashboard() {
             "
           >
             <div>
-              <h3 className="font-bold text-slate-900 text-sm tracking-tight">
+              <h3 className="font-bold text-[var(--ink)] text-sm tracking-tight">
                 Sales & Profit — Last 7 Days
               </h3>
 
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[var(--muted)]">
                 Daily revenue vs profit
               </p>
             </div>
@@ -1466,7 +1465,7 @@ export default function Dashboard() {
               className="
                 text-[11px]
                 bg-slate-100
-                text-slate-700
+                text-[var(--ink-secondary)]
                 font-bold
                 px-2.5
                 py-1.5
@@ -1589,9 +1588,9 @@ export default function Dashboard() {
 
         <div
           className="
-            bg-white
+            bg-[var(--surface)]
             rounded-2xl
-            border border-slate-200/80
+            border border-[var(--line)]/80
             shadow-[0_8px_30px_rgba(15,23,42,0.05)]
             p-5
             sm:p-6
@@ -1606,11 +1605,11 @@ export default function Dashboard() {
             "
           >
             <div>
-              <h3 className="font-bold text-slate-900 text-sm tracking-tight">
+              <h3 className="font-bold text-[var(--ink)] text-sm tracking-tight">
                 Today's Hourly Sales
               </h3>
 
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[var(--muted)]">
                 Revenue by hour of day
               </p>
             </div>
@@ -1733,9 +1732,9 @@ export default function Dashboard() {
 
         <div
           className="
-            bg-white
+            bg-[var(--surface)]
             rounded-2xl
-            border border-slate-200/80
+            border border-[var(--line)]/80
             shadow-[0_8px_30px_rgba(15,23,42,0.05)]
             p-5
             sm:p-6
@@ -1750,11 +1749,11 @@ export default function Dashboard() {
             "
           >
             <div>
-              <h3 className="font-bold text-slate-900 text-sm tracking-tight">
+              <h3 className="font-bold text-[var(--ink)] text-sm tracking-tight">
                 Monthly Sales
               </h3>
 
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[var(--muted)]">
                 Last 6 months revenue
               </p>
             </div>
@@ -1762,7 +1761,7 @@ export default function Dashboard() {
             <span
               className="
                 text-[11px]
-                bg-emerald-50
+                bg-emerald-50 dark:bg-emerald-950/60
                 text-emerald-700
                 font-bold
                 px-2.5
@@ -1843,26 +1842,26 @@ export default function Dashboard() {
 
         <div
           className="
-            bg-white
+            bg-[var(--surface)]
             rounded-2xl
-            border border-slate-200/80
+            border border-[var(--line)]/80
             shadow-[0_8px_30px_rgba(15,23,42,0.05)]
             p-5
             sm:p-6
           "
         >
           <div className="mb-3">
-            <h3 className="font-bold text-slate-900 text-sm tracking-tight">
+            <h3 className="font-bold text-[var(--ink)] text-sm tracking-tight">
               Category Sales — This Month
             </h3>
 
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--muted)]">
               Revenue by product category
             </p>
           </div>
 
           {catSales.length === 0 ? (
-            <div className="flex items-center justify-center h-40 text-sm text-gray-400">
+            <div className="flex items-center justify-center h-40 text-sm text-[var(--muted-light)]">
               No category data yet
             </div>
           ) : (
@@ -1936,7 +1935,7 @@ export default function Dashboard() {
                         <span
                           className="
                             text-xs
-                            text-gray-600
+                            text-[var(--muted)]
                             truncate
                             max-w-[90px]
                           "
@@ -1951,7 +1950,7 @@ export default function Dashboard() {
                         className="
                           text-xs
                           font-semibold
-                          text-gray-800
+                          text-[var(--ink)]
                         "
                       >
                         {fmt(
@@ -1983,26 +1982,26 @@ export default function Dashboard() {
 
         <div
           className="
-            bg-white
+            bg-[var(--surface)]
             rounded-2xl
-            border border-slate-200/80
+            border border-[var(--line)]/80
             shadow-[0_8px_30px_rgba(15,23,42,0.05)]
             p-5
             sm:p-6
           "
         >
           <div className="mb-3">
-            <h3 className="font-bold text-slate-900 text-sm tracking-tight">
+            <h3 className="font-bold text-[var(--ink)] text-sm tracking-tight">
               Top Products by Revenue
             </h3>
 
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--muted)]">
               All-time best sellers
             </p>
           </div>
 
           {topProducts.length === 0 ? (
-            <p className="text-sm text-gray-400 py-8 text-center">
+            <p className="text-sm text-[var(--muted-light)] py-8 text-center">
               No sales data yet
             </p>
           ) : (
@@ -2046,7 +2045,7 @@ export default function Dashboard() {
                             className="
                               text-[10px]
                               font-bold
-                              text-gray-400
+                              text-[var(--muted-light)]
                               w-4
                             "
                           >
@@ -2057,7 +2056,7 @@ export default function Dashboard() {
                             className="
                               text-xs
                               font-medium
-                              text-gray-700
+                              text-[var(--ink-secondary)]
                               truncate
                               max-w-[55%]
                             "
@@ -2079,7 +2078,7 @@ export default function Dashboard() {
                           <span
                             className="
                               text-[10px]
-                              text-gray-400
+                              text-[var(--muted-light)]
                             "
                           >
                             {Number(
@@ -2093,7 +2092,7 @@ export default function Dashboard() {
                             className="
                               text-xs
                               font-bold
-                              text-gray-800
+                              text-[var(--ink)]
                             "
                           >
                             {fmt(
@@ -2141,26 +2140,26 @@ export default function Dashboard() {
 
         <div
           className="
-            bg-white
+            bg-[var(--surface)]
             rounded-2xl
-            border border-slate-200/80
+            border border-[var(--line)]/80
             shadow-[0_8px_30px_rgba(15,23,42,0.05)]
             p-5
             sm:p-6
           "
         >
           <div className="mb-3">
-            <h3 className="font-bold text-slate-900 text-sm tracking-tight">
+            <h3 className="font-bold text-[var(--ink)] text-sm tracking-tight">
               Payment Methods
             </h3>
 
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--muted)]">
               Today's collection by payment type
             </p>
           </div>
 
           {payDist.length === 0 ? (
-            <p className="text-sm text-gray-400 py-8 text-center">
+            <p className="text-sm text-[var(--muted-light)] py-8 text-center">
               No payment data yet
             </p>
           ) : (
@@ -2240,7 +2239,7 @@ export default function Dashboard() {
                         <span
                           className="
                             text-xs
-                            text-gray-600
+                            text-[var(--muted)]
                             capitalize
                           "
                         >
@@ -2255,7 +2254,7 @@ export default function Dashboard() {
                           className="
                             text-xs
                             font-bold
-                            text-gray-800
+                            text-[var(--ink)]
                           "
                         >
                           {fmt(
@@ -2266,7 +2265,7 @@ export default function Dashboard() {
                         <div
                           className="
                             text-[10px]
-                            text-gray-400
+                            text-[var(--muted-light)]
                           "
                         >
                           {
@@ -2300,9 +2299,9 @@ export default function Dashboard() {
 
         <div
           className="
-            bg-white
+            bg-[var(--surface)]
             rounded-2xl
-            border border-slate-200/80
+            border border-[var(--line)]/80
             shadow-[0_8px_30px_rgba(15,23,42,0.05)]
             p-5
             sm:p-6
@@ -2317,11 +2316,11 @@ export default function Dashboard() {
             "
           >
             <div>
-              <h3 className="font-bold text-slate-900 text-sm tracking-tight">
+              <h3 className="font-bold text-[var(--ink)] text-sm tracking-tight">
                 Stock Alerts
               </h3>
 
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[var(--muted)]">
                 {
                   dashboard.out_of_stock ||
                   0
@@ -2341,8 +2340,8 @@ export default function Dashboard() {
                 <span
                   className="
                     text-xs
-                    bg-red-50
-                    text-red-600
+                    bg-red-50 dark:bg-red-950/60
+                    text-red-600 dark:text-red-400
                     font-semibold
                     px-2
                     py-1
@@ -2361,8 +2360,8 @@ export default function Dashboard() {
                 <span
                   className="
                     text-xs
-                    bg-orange-50
-                    text-orange-600
+                    bg-orange-50 dark:bg-orange-950/60
+                    text-orange-600 dark:text-orange-400
                     font-semibold
                     px-2
                     py-1
@@ -2394,7 +2393,7 @@ export default function Dashboard() {
                   w-10
                   h-10
                   rounded-full
-                  bg-green-50
+                  bg-green-50 dark:bg-green-950/60
                   flex
                   items-center
                   justify-center
@@ -2406,7 +2405,7 @@ export default function Dashboard() {
                 />
               </div>
 
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-[var(--muted-light)]">
                 All products well stocked
               </p>
             </div>
@@ -2437,7 +2436,7 @@ export default function Dashboard() {
                         className="
                           text-sm
                           font-medium
-                          text-gray-800
+                          text-[var(--ink)]
                           truncate
                         "
                       >
@@ -2447,7 +2446,7 @@ export default function Dashboard() {
                       <div
                         className="
                           text-xs
-                          text-slate-500
+                          text-[var(--muted)]
                         "
                       >
                         {product.sku}
@@ -2470,7 +2469,7 @@ export default function Dashboard() {
                             ${
                               product.current_stock <=
                               0
-                                ? 'text-red-600'
+                                ? 'text-red-600 dark:text-red-400'
                                 : 'text-orange-500'
                             }
                           `}
@@ -2483,7 +2482,7 @@ export default function Dashboard() {
                         <div
                           className="
                             text-[10px]
-                            text-gray-400
+                            text-[var(--muted-light)]
                           "
                         >
                           min{' '}
@@ -2513,9 +2512,9 @@ export default function Dashboard() {
 
         <div
           className="
-            bg-white
+            bg-[var(--surface)]
             rounded-2xl
-            border border-slate-200/80
+            border border-[var(--line)]/80
             shadow-[0_8px_30px_rgba(15,23,42,0.05)]
             p-5
             sm:p-6
@@ -2523,11 +2522,11 @@ export default function Dashboard() {
         >
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="font-bold text-slate-900 text-sm tracking-tight">
+              <h3 className="font-bold text-[var(--ink)] text-sm tracking-tight">
                 Recent Bills
               </h3>
 
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[var(--muted)]">
                 Latest {recentBills.length}{' '}
                 invoices
               </p>
@@ -2545,7 +2544,7 @@ export default function Dashboard() {
               <p
                 className="
                   text-sm
-                  text-gray-400
+                  text-[var(--muted-light)]
                   text-center
                   py-8
                 "
@@ -2573,7 +2572,7 @@ export default function Dashboard() {
                           text-sm
                           font-mono
                           font-semibold
-                          text-blue-600
+                          text-blue-600 dark:text-blue-400
                         "
                       >
                         {
@@ -2584,7 +2583,7 @@ export default function Dashboard() {
                       <div
                         className="
                           text-xs
-                          text-gray-400
+                          text-[var(--muted-light)]
                           truncate
                         "
                       >
@@ -2607,7 +2606,7 @@ export default function Dashboard() {
                           className="
                             text-sm
                             font-bold
-                            text-gray-800
+                            text-[var(--ink)]
                           "
                         >
                           {fmtDec(
@@ -2618,7 +2617,7 @@ export default function Dashboard() {
                         <div
                           className="
                             text-[10px]
-                            text-gray-400
+                            text-[var(--muted-light)]
                             capitalize
                           "
                         >
@@ -2642,24 +2641,24 @@ export default function Dashboard() {
         </div>
 
         {/* TOP CUSTOMERS */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_8px_30px_rgba(15,23,42,0.05)] p-5 sm:p-6">
+        <div className="bg-[var(--surface)] rounded-2xl border border-[var(--line)]/80 shadow-[0_8px_30px_rgba(15,23,42,0.05)] p-5 sm:p-6">
           <div className="mb-3">
-            <h3 className="font-bold text-slate-900 text-sm tracking-tight">Top Customers</h3>
-            <p className="text-xs text-slate-500">Highest completed sales</p>
+            <h3 className="font-bold text-[var(--ink)] text-sm tracking-tight">Top Customers</h3>
+            <p className="text-xs text-[var(--muted)]">Highest completed sales</p>
           </div>
           {topCustomers.length === 0 ? (
-            <p className="text-sm text-gray-400 py-8 text-center">No customer sales yet</p>
+            <p className="text-sm text-[var(--muted-light)] py-8 text-center">No customer sales yet</p>
           ) : (
             <div className="space-y-3">
               {topCustomers.map((customer, index) => (
                 <div key={customer.customer_id} className="flex items-center justify-between gap-3">
                   <div className="min-w-0 flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-slate-400 w-4">#{index + 1}</span>
-                    <span className="text-sm font-medium text-slate-700 truncate">{customer.customer__name}</span>
+                    <span className="text-[10px] font-bold text-[var(--muted-light)] w-4">#{index + 1}</span>
+                    <span className="text-sm font-medium text-[var(--ink-secondary)] truncate">{customer.customer__name}</span>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-sm font-bold text-slate-800">{fmt(customer.total)}</div>
-                    <div className="text-[10px] text-slate-400">{customer.bills} bills</div>
+                    <div className="text-sm font-bold text-[var(--ink)]">{fmt(customer.total)}</div>
+                    <div className="text-[10px] text-[var(--muted-light)]">{customer.bills} bills</div>
                   </div>
                 </div>
               ))}
@@ -2679,15 +2678,15 @@ export default function Dashboard() {
             bottom-4
             right-4
             z-40
-            bg-white
+            bg-[var(--surface)]
             border
-            border-slate-200
+            border-[var(--line)]
             shadow-lg
             rounded-full
             px-3
             py-2
             text-xs
-            text-slate-500
+            text-[var(--muted)]
             flex
             items-center
             gap-2
@@ -2697,7 +2696,7 @@ export default function Dashboard() {
             className="
               w-2
               h-2
-              bg-blue-500
+              bg-blue-50 dark:bg-blue-950/600
               rounded-full
               animate-pulse
             "

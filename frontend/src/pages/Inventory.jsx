@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import api from '../api'
+import inventoryService from '../features/inventory/api/inventoryService'
 import { Badge, Card, PageHeader, Modal, Spinner, EmptyState } from '../components/UI'
 import toast from 'react-hot-toast'
 import { Search, ArrowUpCircle, ArrowDownCircle, Settings, Layers, Upload, Download, RefreshCw } from 'lucide-react'
@@ -10,40 +10,40 @@ function MobileStockCard({ product }) {
   const minimum = Number(product.minimum_stock || 0)
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-3.5 shadow-sm">
+    <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow-card)]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-gray-900">{product.name}</p>
-          <p className="mt-1 font-mono text-[11px] text-gray-500">{product.sku || 'No SKU'}</p>
+          <p className="truncate text-sm font-semibold text-[var(--ink)]">{product.name}</p>
+          <p className="mt-1 font-mono text-[11px] text-[var(--muted)]">{product.sku || 'No SKU'}</p>
         </div>
         <Badge status={product.stock_status} />
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <div className="rounded-xl bg-gray-50 p-2.5">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Current</p>
+        <div className="rounded-xl bg-[var(--surface-elevated)] p-2.5">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--muted-light)]">Current</p>
           <p className={`mt-1 text-sm font-bold ${
-            current <= 0 ? 'text-red-600' :
+            current <= 0 ? 'text-red-600 dark:text-red-400' :
             current <= minimum ? 'text-yellow-600' :
-            'text-green-600'
+            'text-green-600 dark:text-green-400'
           }`}>
             {product.current_stock} {product.unit}
           </p>
         </div>
 
-        <div className="rounded-xl bg-gray-50 p-2.5">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Minimum</p>
-          <p className="mt-1 text-sm font-semibold text-gray-700">{product.minimum_stock}</p>
+        <div className="rounded-xl bg-[var(--surface-elevated)] p-2.5">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--muted-light)]">Minimum</p>
+          <p className="mt-1 text-sm font-semibold text-[var(--ink-secondary)]">{product.minimum_stock}</p>
         </div>
 
-        <div className="rounded-xl bg-gray-50 p-2.5">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Purchase</p>
-          <p className="mt-1 text-sm font-semibold text-gray-700">₹{product.purchase_price}</p>
+        <div className="rounded-xl bg-[var(--surface-elevated)] p-2.5">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--muted-light)]">Purchase</p>
+          <p className="mt-1 text-sm font-semibold text-[var(--ink-secondary)]">₹{product.purchase_price}</p>
         </div>
 
-        <div className="rounded-xl bg-gray-50 p-2.5">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-400">Selling</p>
-          <p className="mt-1 text-sm font-semibold text-gray-700">₹{product.selling_price}</p>
+        <div className="rounded-xl bg-[var(--surface-elevated)] p-2.5">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--muted-light)]">Selling</p>
+          <p className="mt-1 text-sm font-semibold text-[var(--ink-secondary)]">₹{product.selling_price}</p>
         </div>
       </div>
     </div>
@@ -55,13 +55,13 @@ function MobileTransactionCard({ transaction }) {
   const isSale = transaction.transaction_type === 'sale'
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-3.5 shadow-sm">
+    <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow-card)]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-gray-900">
+          <p className="truncate text-sm font-semibold text-[var(--ink)]">
             {transaction.product_name}
           </p>
-          <p className="mt-1 text-[11px] text-gray-500">
+          <p className="mt-1 text-[11px] text-[var(--muted)]">
             {new Date(transaction.created_at).toLocaleDateString('en-IN')}
           </p>
         </div>
@@ -78,25 +78,25 @@ function MobileTransactionCard({ transaction }) {
         </span>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-gray-50 p-2.5">
+      <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-[var(--surface-elevated)] p-2.5">
         <div>
-          <p className="text-[9px] uppercase tracking-wide text-gray-400">Qty</p>
-          <p className={`mt-1 text-xs font-bold ${qty < 0 ? 'text-red-600' : 'text-green-600'}`}>
+          <p className="text-[9px] uppercase tracking-wide text-[var(--muted-light)]">Qty</p>
+          <p className={`mt-1 text-xs font-bold ${qty < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
             {qty > 0 ? '+' : ''}{transaction.quantity}
           </p>
         </div>
         <div>
-          <p className="text-[9px] uppercase tracking-wide text-gray-400">Before</p>
-          <p className="mt-1 text-xs font-semibold text-gray-700">{transaction.before_stock}</p>
+          <p className="text-[9px] uppercase tracking-wide text-[var(--muted-light)]">Before</p>
+          <p className="mt-1 text-xs font-semibold text-[var(--ink-secondary)]">{transaction.before_stock}</p>
         </div>
         <div>
-          <p className="text-[9px] uppercase tracking-wide text-gray-400">After</p>
-          <p className="mt-1 text-xs font-semibold text-gray-700">{transaction.after_stock}</p>
+          <p className="text-[9px] uppercase tracking-wide text-[var(--muted-light)]">After</p>
+          <p className="mt-1 text-xs font-semibold text-[var(--ink-secondary)]">{transaction.after_stock}</p>
         </div>
       </div>
 
       {transaction.reference && (
-        <p className="mt-2 truncate text-[10px] text-gray-400">
+        <p className="mt-2 truncate text-[10px] text-[var(--muted-light)]">
           Ref: {transaction.reference}
         </p>
       )}
@@ -122,19 +122,19 @@ export default function Inventory() {
     setLoading(true)
     const params = new URLSearchParams({ page_size: 100 })
     if (search) params.set('search', search)
-    api.get(`/products/?${params}`).then(r => setProducts(r.data.results || r.data)).finally(() => setLoading(false))
+    inventoryService.getProducts(Object.fromEntries(params)).then(setProducts).finally(() => setLoading(false))
   }
 
   const loadTransactions = () => {
     setLoading(true)
-    api.get('/inventory/?page_size=50').then(r => setTransactions(r.data.results || r.data)).finally(() => setLoading(false))
+    inventoryService.getTransactions({ page_size: 50 }).then(setTransactions).finally(() => setLoading(false))
   }
 
   useEffect(() => { tab === 'stock' ? loadProducts() : loadTransactions() }, [tab, search])
 
   const adjust = async () => {
     try {
-      await api.post('/inventory/adjust/', adjustForm)
+      await inventoryService.adjustStock(adjustForm)
       toast.success('Stock adjusted')
       setAdjustModal(false)
       setAdjustForm({ product_id: '', quantity: '', transaction_type: 'stock_in', notes: '' })
@@ -146,7 +146,7 @@ export default function Inventory() {
     const items = Object.entries(bulkQuantities).filter(([, quantity]) => Number(quantity)).map(([product_id, quantity]) => ({ product_id, quantity: Number(quantity) }))
     if (!items.length) return toast.error('Enter stock quantity for at least one product')
     try {
-      await api.post('/inventory/bulk-adjust/', { items })
+      await inventoryService.bulkAdjustStock(items)
       toast.success(`${items.length} stock item${items.length === 1 ? '' : 's'} updated`)
       setBulkQuantities({}); setBulkModal(false); loadProducts()
     } catch (e) { toast.error(e.response?.data?.detail || 'Could not update stock') }
@@ -168,7 +168,7 @@ export default function Inventory() {
     try {
       const form = new FormData()
       form.append('file', importFile)
-      const { data } = await api.post('/inventory/import/', form)
+      const data = await inventoryService.importStock(form)
       toast.success(`${data.imported} product${data.imported === 1 ? '' : 's'} updated from file`)
       setImportFile(null); setImportModal(false); loadProducts()
     } catch (e) {
@@ -216,8 +216,8 @@ export default function Inventory() {
             onClick={() => setTab(t)}
             className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-medium capitalize transition sm:flex-none sm:px-4 ${
               tab === t
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-gray-600 hover:bg-white'
+                ? 'bg-blue-600 text-white shadow-[var(--shadow-card)]'
+                : 'text-[var(--muted)] hover:bg-[var(--surface)]'
             }`}
           >
             {t === 'stock' ? 'Current Stock' : 'Transactions'}
@@ -230,7 +230,7 @@ export default function Inventory() {
           <Card className="p-2.5 sm:p-3">
             <div className="flex items-center gap-2">
               <div className="relative min-w-0 flex-1">
-                <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" />
                 <input
                   className="input w-full pl-8 pr-3 text-sm"
                   placeholder="Search products..."
@@ -242,7 +242,7 @@ export default function Inventory() {
               <button
                 type="button"
                 onClick={() => loadProducts()}
-                className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--muted)] hover:bg-[var(--surface-elevated)]"
                 title="Refresh stock"
                 aria-label="Refresh stock"
               >
@@ -266,7 +266,7 @@ export default function Inventory() {
                         <tr key={p.id}>
                           <td className="font-medium">{p.name}</td>
                           <td className="font-mono text-sm">{p.sku}</td>
-                          <td className={`font-bold ${p.current_stock <= 0 ? 'text-red-600' : p.current_stock <= p.minimum_stock ? 'text-yellow-600' : 'text-green-600'}`}>
+                          <td className={`font-bold ${p.current_stock <= 0 ? 'text-red-600 dark:text-red-400' : p.current_stock <= p.minimum_stock ? 'text-yellow-600' : 'text-green-600 dark:text-green-400'}`}>
                             {p.current_stock} {p.unit}
                           </td>
                           <td>{p.minimum_stock}</td>
@@ -298,7 +298,7 @@ export default function Inventory() {
                   <tbody>
                     {transactions.map(t => (
                       <tr key={t.id}>
-                        <td className="text-sm text-gray-500">{new Date(t.created_at).toLocaleDateString('en-IN')}</td>
+                        <td className="text-sm text-[var(--muted)]">{new Date(t.created_at).toLocaleDateString('en-IN')}</td>
                         <td className="font-medium text-sm">{t.product_name}</td>
                         <td>
                           <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
@@ -309,10 +309,10 @@ export default function Inventory() {
                             {t.transaction_type.replace('_', ' ')}
                           </span>
                         </td>
-                        <td className={`font-semibold ${t.quantity < 0 ? 'text-red-600' : 'text-green-600'}`}>{t.quantity > 0 ? '+' : ''}{t.quantity}</td>
+                        <td className={`font-semibold ${t.quantity < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{t.quantity > 0 ? '+' : ''}{t.quantity}</td>
                         <td className="text-sm">{t.before_stock}</td>
                         <td className="text-sm font-medium">{t.after_stock}</td>
-                        <td className="text-xs text-gray-500">{t.reference}</td>
+                        <td className="text-xs text-[var(--muted)]">{t.reference}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -347,17 +347,17 @@ export default function Inventory() {
       </Modal>
 
       <Modal open={bulkModal} onClose={() => setBulkModal(false)} title="Bulk Stock Update" size="lg">
-        <p className="text-sm text-gray-500 mb-3">Enter quantities to add or remove. The current stock stays visible for every product.</p>
-        <div className="max-h-[55vh] overflow-y-auto rounded-xl border border-gray-200">
+        <p className="text-sm text-[var(--muted)] mb-3">Enter quantities to add or remove. The current stock stays visible for every product.</p>
+        <div className="max-h-[55vh] overflow-y-auto rounded-xl border border-[var(--line)]">
           <div className="space-y-2 p-2 sm:hidden">
             {products.map(product => (
-              <div key={product.id} className="rounded-xl bg-gray-50 p-3">
+              <div key={product.id} className="rounded-xl bg-[var(--surface-elevated)] p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-xs font-semibold text-gray-800">{product.name}</p>
-                    <p className="mt-1 truncate text-[10px] text-gray-500">{product.sku}</p>
+                    <p className="truncate text-xs font-semibold text-[var(--ink)]">{product.name}</p>
+                    <p className="mt-1 truncate text-[10px] text-[var(--muted)]">{product.sku}</p>
                   </div>
-                  <p className="shrink-0 text-xs font-semibold text-gray-700">
+                  <p className="shrink-0 text-xs font-semibold text-[var(--ink-secondary)]">
                     {product.current_stock} {product.unit}
                   </p>
                 </div>
@@ -381,7 +381,7 @@ export default function Inventory() {
                 {products.map(product => (
                   <tr key={product.id}>
                     <td className="font-medium">{product.name}</td>
-                    <td className="text-xs text-gray-500">{product.sku}</td>
+                    <td className="text-xs text-[var(--muted)]">{product.sku}</td>
                     <td className="text-right">{product.current_stock} {product.unit}</td>
                     <td>
                       <input
@@ -405,14 +405,14 @@ export default function Inventory() {
 
       <Modal open={importModal} onClose={() => !importing && setImportModal(false)} title="Import Stock from File" size="md">
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">Upload a CSV or Excel file (.xlsx/.xlsm) to update existing products. Match each product by <b>SKU</b> (recommended) or Product Name.</p>
-          <div className="rounded-lg bg-blue-50 border border-blue-100 p-3 text-xs text-blue-900 space-y-1">
+          <p className="text-sm text-[var(--muted)]">Upload a CSV or Excel file (.xlsx/.xlsm) to update existing products. Match each product by <b>SKU</b> (recommended) or Product Name.</p>
+          <div className="rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-100 p-3 text-xs text-blue-900 space-y-1">
             <p><b>To add or remove stock:</b> use columns <code>SKU, Quantity</code>; negative quantities remove stock.</p>
             <p><b>To set an exact balance:</b> use <code>SKU, Current Stock</code>.</p>
           </div>
           <button type="button" onClick={downloadImportTemplate} className="text-sm text-blue-700 inline-flex items-center gap-1 hover:underline"><Download size={15} /> Download CSV template</button>
           <input type="file" accept=".csv,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={e => setImportFile(e.target.files?.[0] || null)} className="block w-full text-sm" disabled={importing} />
-          {importFile && <p className="text-xs text-gray-500">Selected: {importFile.name}</p>}
+          {importFile && <p className="text-xs text-[var(--muted)]">Selected: {importFile.name}</p>}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2"><button onClick={importStock} disabled={importing} className="btn-primary w-full">{importing ? 'Importing...' : 'Import Stock'}</button><button onClick={() => setImportModal(false)} disabled={importing} className="btn-secondary w-full">Cancel</button></div>
         </div>
       </Modal>

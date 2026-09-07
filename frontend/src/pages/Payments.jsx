@@ -21,16 +21,16 @@ const METHOD_META = {
   cash: {
     label: 'Cash',
     icon: Banknote,
-    bg: 'bg-green-50',
-    text: 'text-green-600',
+    bg: 'bg-green-50 dark:bg-green-950/60',
+    text: 'text-green-600 dark:text-green-400',
     border: 'border-green-100',
     ring: 'ring-green-100',
   },
   upi: {
     label: 'UPI',
     icon: Smartphone,
-    bg: 'bg-blue-50',
-    text: 'text-blue-600',
+    bg: 'bg-blue-50 dark:bg-blue-950/60',
+    text: 'text-blue-600 dark:text-blue-400',
     border: 'border-blue-100',
     ring: 'ring-blue-100',
   },
@@ -45,9 +45,9 @@ const METHOD_META = {
   credit: {
     label: 'Credit',
     icon: Wallet,
-    bg: 'bg-rose-50',
-    text: 'text-rose-600',
-    border: 'border-rose-100',
+    bg: 'bg-rose-50 dark:bg-rose-950/60',
+    text: 'text-rose-600 dark:text-rose-400',
+    border: 'border-rose-100 dark:border-rose-800',
     ring: 'ring-rose-100',
   },
 }
@@ -142,7 +142,7 @@ export default function Payments() {
               onClick={() =>
                 setFilter(filter === m.key ? 'all' : m.key)
               }
-              className={`group rounded-2xl border bg-white p-3 text-left shadow-sm transition active:scale-[0.99] sm:p-4 ${
+              className={`group rounded-2xl border bg-[var(--surface)] p-3 text-left shadow-[var(--shadow-card)] transition active:scale-[0.99] sm:p-4 ${
                 filter === m.key
                   ? `${m.border} ring-2 ${m.ring}`
                   : m.border
@@ -150,11 +150,11 @@ export default function Payments() {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="truncate text-[9px] font-bold uppercase tracking-wider text-slate-400 sm:text-[11px]">
+                  <p className="truncate text-[9px] font-bold uppercase tracking-wider text-[var(--muted-light)] sm:text-[11px]">
                     {m.label}
                   </p>
 
-                  <p className="mt-1.5 truncate text-base font-bold text-slate-800 sm:text-xl">
+                  <p className="mt-1.5 truncate text-base font-bold text-[var(--ink)] sm:text-xl">
                     {fmt(m.total)}
                   </p>
                 </div>
@@ -167,7 +167,7 @@ export default function Payments() {
               </div>
 
               <div className="mt-2 flex items-center justify-between gap-2">
-                <span className="text-[10px] text-slate-400 sm:text-xs">
+                <span className="text-[10px] text-[var(--muted-light)] sm:text-xs">
                   {m.count} transactions
                 </span>
 
@@ -184,37 +184,37 @@ export default function Payments() {
 
       {/* Quick payment totals */}
       <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-        <div className="rounded-2xl border border-emerald-100 bg-white p-3 shadow-sm sm:p-4">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 sm:text-[10px]">
+        <div className="rounded-2xl border border-emerald-100 dark:border-emerald-800 bg-[var(--surface)] p-3 shadow-[var(--shadow-card)] sm:p-4">
+          <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted-light)] sm:text-[10px]">
             Collected
           </p>
-          <p className="mt-1 text-base font-bold text-emerald-600 sm:text-xl">
+          <p className="mt-1 text-base font-bold text-emerald-600 dark:text-emerald-400 sm:text-xl">
             {fmt(totalCollected)}
           </p>
-          <p className="mt-1 text-[10px] text-slate-400">
+          <p className="mt-1 text-[10px] text-[var(--muted-light)]">
             Non-credit payments
           </p>
         </div>
 
-        <div className="rounded-2xl border border-rose-100 bg-white p-3 shadow-sm sm:p-4">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 sm:text-[10px]">
+        <div className="rounded-2xl border border-rose-100 dark:border-rose-800 bg-[var(--surface)] p-3 shadow-[var(--shadow-card)] sm:p-4">
+          <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted-light)] sm:text-[10px]">
             Credit Due
           </p>
-          <p className="mt-1 text-base font-bold text-rose-600 sm:text-xl">
+          <p className="mt-1 text-base font-bold text-rose-600 dark:text-rose-400 sm:text-xl">
             {fmt(totalCredit)}
           </p>
-          <p className="mt-1 text-[10px] text-slate-400">
+          <p className="mt-1 text-[10px] text-[var(--muted-light)]">
             Credit transactions
           </p>
         </div>
       </div>
 
       {/* Transactions */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-card)]">
         {/* Header */}
-        <div className="border-b border-slate-100 px-3 py-3 sm:px-5 sm:py-4">
+        <div className="border-b border-[var(--line-subtle)] px-3 py-3 sm:px-5 sm:py-4">
           <div className="flex items-center gap-2">
-            <h2 className="shrink-0 text-sm font-semibold text-slate-800">
+            <h2 className="shrink-0 text-sm font-semibold text-[var(--ink)]">
               Payment Transactions
             </h2>
 
@@ -223,21 +223,21 @@ export default function Payments() {
               <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
                 <Search
                   size={14}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]"
                 />
 
                 <input
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   placeholder="Search invoice, customer..."
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-8 text-xs text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-50"
+                  className="h-9 w-full rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] pl-8 pr-8 text-xs text-[var(--ink-secondary)] outline-none transition placeholder:text-[var(--muted-light)] focus:border-blue-300 focus:bg-[var(--surface)] focus:ring-2 focus:ring-blue-50"
                 />
 
                 {search && (
                   <button
                     type="button"
                     onClick={() => setSearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted-light)] hover:text-[var(--ink-secondary)]"
                     title="Clear search"
                     aria-label="Clear search"
                   >
@@ -251,7 +251,7 @@ export default function Payments() {
                 type="button"
                 onClick={load}
                 disabled={loading}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:opacity-50"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] disabled:opacity-50"
                 title="Refresh payments"
                 aria-label="Refresh payments"
               >
@@ -273,8 +273,8 @@ export default function Payments() {
                   onClick={() => setFilter(f.key)}
                   className={`rounded-lg px-3 py-2 text-[11px] font-semibold transition-all ${
                     filter === f.key
-                      ? 'bg-white text-slate-800 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700'
+                      ? 'bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-card)]'
+                      : 'text-[var(--muted)] hover:text-[var(--ink-secondary)]'
                   }`}
                 >
                   {f.label}
@@ -289,7 +289,7 @@ export default function Payments() {
             <Spinner />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center px-4 py-14 text-center text-slate-400">
+          <div className="flex flex-col items-center justify-center px-4 py-14 text-center text-[var(--muted-light)]">
             <Wallet size={28} className="mb-2 opacity-30" />
             <p className="text-sm font-medium">No transactions found</p>
             <p className="mt-1 text-xs">
@@ -299,7 +299,7 @@ export default function Payments() {
         ) : (
           <>
             {/* Mobile cards */}
-            <div className="divide-y divide-slate-100 sm:hidden">
+            <div className="divide-y divide-[var(--line-subtle)] sm:hidden">
               {filtered.map(b => {
                 const meta =
                   METHOD_META[b.payment_method] || METHOD_META.cash
@@ -309,29 +309,29 @@ export default function Payments() {
                   <div key={b.id} className="p-3.5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate font-mono text-xs font-bold text-blue-600">
+                        <p className="truncate font-mono text-xs font-bold text-blue-600 dark:text-blue-400">
                           {b.invoice_number}
                         </p>
 
-                        <p className="mt-1 truncate text-sm font-semibold text-slate-800">
+                        <p className="mt-1 truncate text-sm font-semibold text-[var(--ink)]">
                           {b.customer_name || 'Walk-in'}
                         </p>
 
                         {b.customer_phone && (
-                          <p className="mt-1 text-[10px] text-slate-400">
+                          <p className="mt-1 text-[10px] text-[var(--muted-light)]">
                             {b.customer_phone}
                           </p>
                         )}
                       </div>
 
-                      <p className="shrink-0 text-sm font-bold text-slate-800">
+                      <p className="shrink-0 text-sm font-bold text-[var(--ink)]">
                         {fmt(b.grand_total)}
                       </p>
                     </div>
 
                     <div className="mt-3 grid grid-cols-2 gap-2">
-                      <div className="rounded-xl bg-slate-50 p-2.5">
-                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                      <div className="rounded-xl bg-[var(--surface-elevated)] p-2.5">
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
                           Payment
                         </p>
 
@@ -343,11 +343,11 @@ export default function Payments() {
                         </span>
                       </div>
 
-                      <div className="rounded-xl bg-slate-50 p-2.5">
-                        <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                      <div className="rounded-xl bg-[var(--surface-elevated)] p-2.5">
+                        <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
                           Date
                         </p>
-                        <p className="mt-1.5 text-[10px] font-semibold text-slate-600">
+                        <p className="mt-1.5 text-[10px] font-semibold text-[var(--muted)]">
                           {new Date(
                             b.created_at
                           ).toLocaleDateString('en-IN')}
@@ -359,7 +359,7 @@ export default function Payments() {
                       <Badge status={b.payment_status} />
 
                       {b.payment_method === 'credit' && (
-                        <span className="text-[10px] font-semibold text-rose-600">
+                        <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400">
                           Credit due
                         </span>
                       )}
@@ -397,15 +397,15 @@ export default function Payments() {
 
                     return (
                       <tr key={b.id}>
-                        <td className="font-mono text-sm font-semibold text-blue-600">
+                        <td className="font-mono text-sm font-semibold text-blue-600 dark:text-blue-400">
                           {b.invoice_number}
                         </td>
 
-                        <td className="text-sm text-slate-700">
+                        <td className="text-sm text-[var(--ink-secondary)]">
                           {b.customer_name || 'Walk-in'}
                         </td>
 
-                        <td className="text-sm text-slate-500">
+                        <td className="text-sm text-[var(--muted)]">
                           {new Date(
                             b.created_at
                           ).toLocaleDateString('en-IN')}
@@ -420,7 +420,7 @@ export default function Payments() {
                           </span>
                         </td>
 
-                        <td className="text-sm font-bold text-slate-800">
+                        <td className="text-sm font-bold text-[var(--ink)]">
                           {fmt(b.grand_total)}
                         </td>
 
