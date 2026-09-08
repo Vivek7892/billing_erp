@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import inventoryService from '../features/inventory/api/inventoryService'
 import { Badge, Card, PageHeader, Modal, Spinner, EmptyState } from '../components/UI'
 import toast from 'react-hot-toast'
@@ -118,10 +118,10 @@ export default function Inventory() {
   const [bulkQuantities, setBulkQuantities] = useState({})
   const [adjustForm, setAdjustForm] = useState({ product_id: '', quantity: '', transaction_type: 'stock_in', notes: '' })
 
-  const loadProducts = () => {
+  const loadProducts = (q = search) => {
     setLoading(true)
     const params = new URLSearchParams({ page_size: 100 })
-    if (search) params.set('search', search)
+    if (q) params.set('search', q)
     inventoryService.getProducts(Object.fromEntries(params)).then(setProducts).finally(() => setLoading(false))
   }
 
@@ -130,7 +130,13 @@ export default function Inventory() {
     inventoryService.getTransactions({ page_size: 50 }).then(setTransactions).finally(() => setLoading(false))
   }
 
-  useEffect(() => { tab === 'stock' ? loadProducts() : loadTransactions() }, [tab, search])
+  const searchDebounce = useRef(null)
+  useEffect(() => {
+    if (tab !== 'stock') { loadTransactions(); return }
+    clearTimeout(searchDebounce.current)
+    searchDebounce.current = setTimeout(() => loadProducts(search), search ? 400 : 0)
+    return () => clearTimeout(searchDebounce.current)
+  }, [tab, search])
 
   const adjust = async () => {
     try {

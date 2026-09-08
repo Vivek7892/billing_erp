@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { API_BASE_URL } from '../api'
 import invoiceService from '../features/billing/api/invoiceService'
@@ -240,7 +240,7 @@ function ShareMenu({ bill, shopName, onClose }) {
 
   return (
     <div
-      className="absolute right-0 top-11 z-[70] w-52 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl shadow-gray-200/60"
+      className="absolute right-0 top-11 z-[70] w-52 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow-lg)]"
       onClick={e => e.stopPropagation()}
     >
       <div className="px-3 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--muted-light)]">
@@ -297,7 +297,7 @@ function StatCard({
   const style = tones[tone] || tones.blue
 
   return (
-    <div className="group rounded-2xl border border-[var(--line)]/80 bg-[var(--surface)] p-3 shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-md sm:p-4">
+    <div className="group rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-[var(--shadow-card)] transition hover:shadow-md sm:p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted-light)]">
@@ -305,7 +305,7 @@ function StatCard({
           </p>
 
           <p
-            className={`mt-1.5 truncate text-base font-bold tracking-tight sm:text-xl ${style.value}`}
+            className="mt-1.5 truncate text-base font-bold tracking-tight text-[var(--ink)] sm:text-xl"
           >
             {value}
           </p>
@@ -1026,7 +1026,7 @@ export default function Bills() {
   ------------------------------------------------------- */
 
   const load = useCallback(
-    (pg = 1) => {
+    (pg = 1, q = search) => {
       setLoading(true)
 
       const params = new URLSearchParams({
@@ -1037,8 +1037,8 @@ export default function Bills() {
         params.set('date_filter', dateFilter)
       }
 
-      if (search.trim()) {
-        params.set('search', search.trim())
+      if (q.trim()) {
+        params.set('search', q.trim())
       }
 
       invoiceService
@@ -1054,12 +1054,15 @@ export default function Bills() {
           setLoading(false)
         })
     },
-    [dateFilter, search]
+    [dateFilter]
   )
 
+  const searchDebounce = useRef(null)
   useEffect(() => {
-    load(page)
-  }, [load, page])
+    clearTimeout(searchDebounce.current)
+    searchDebounce.current = setTimeout(() => load(page, search), search ? 400 : 0)
+    return () => clearTimeout(searchDebounce.current)
+  }, [search, page, load])
 
   /* -------------------------------------------------------
      FILTERED BILLS
@@ -1156,13 +1159,13 @@ export default function Bills() {
   ======================================================= */
 
   return (
-    <div className="min-h-full bg-[var(--app-bg)] px-2.5 py-3 sm:px-5 sm:py-4 lg:px-7">
+    <div className="min-h-full">
       <div className="mx-auto max-w-[1600px] space-y-4 overflow-x-hidden">
         {/* =================================================
             HEADER
         ================================================= */}
 
-        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--line)]/80 bg-[var(--surface)] px-4 py-4 shadow-[var(--shadow-card)] sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-4 shadow-[var(--shadow-card)] sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div>
             <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold text-[var(--muted-light)]">
               <Receipt size={13} />
@@ -1195,7 +1198,7 @@ export default function Bills() {
             KPI CARDS
         ================================================= */}
 
-        <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <StatCard
             icon={IndianRupee}
             label="Total sales"
@@ -1233,7 +1236,7 @@ export default function Bills() {
             FILTER BAR
         ================================================= */}
 
-        <div className="rounded-2xl border border-[var(--line)]/80 bg-[var(--surface)] p-2.5 shadow-[var(--shadow-card)] sm:p-3">
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-[var(--shadow-card)] sm:p-3">
           <div className="flex w-full items-center gap-2">
             {/* Search */}
             <div className="relative min-w-0 flex-1">
@@ -1331,7 +1334,7 @@ export default function Bills() {
             INVOICE TABLE
         ================================================= */}
 
-        <div className="overflow-hidden rounded-2xl border border-[var(--line)]/80 bg-[var(--surface)] shadow-[var(--shadow-card)]">
+        <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-card)]">
           {/* Table header */}
           <div className="flex items-center justify-between border-b border-[var(--line-subtle)] px-3.5 py-3 sm:px-5">
             <div>

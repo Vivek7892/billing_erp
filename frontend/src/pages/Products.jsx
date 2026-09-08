@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import api from '../api'
 import { Badge, Card, PageHeader, Modal, ConfirmDialog, Spinner, EmptyState } from '../components/UI'
 import toast from 'react-hot-toast'
@@ -25,19 +25,24 @@ export default function Products() {
   const [deleteId, setDeleteId] = useState(null)
   const [count, setCount] = useState(0)
 
-  const load = useCallback(() => {
+  const load = useCallback((q, cat) => {
     setLoading(true)
     const params = new URLSearchParams()
-    if (search) params.set('search', search)
-    if (catFilter) params.set('category', catFilter)
+    if (q) params.set('search', q)
+    if (cat) params.set('category', cat)
     api.get(`/products/?${params}`).then(r => {
       const data = r.data.results || r.data
       setProducts(Array.isArray(data) ? data : [])
       setCount(r.data.count || (Array.isArray(data) ? data.length : 0))
     }).catch(() => toast.error('Failed to load products')).finally(() => setLoading(false))
-  }, [search, catFilter])
+  }, [])
 
-  useEffect(() => { load() }, [load])
+  const debounceRef = useRef(null)
+  useEffect(() => {
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => load(search, catFilter), search ? 400 : 0)
+    return () => clearTimeout(debounceRef.current)
+  }, [search, catFilter, load])
   useEffect(() => {
     api.get('/categories/?page_size=100').then(r => setCategories(r.data.results || r.data))
     api.get('/suppliers/?page_size=100').then(r => setSuppliers(r.data.results || r.data))

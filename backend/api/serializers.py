@@ -171,6 +171,8 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         business = self.context['request'].user.business
+        if not business:
+            raise serializers.ValidationError({'detail': 'Your account is not linked to a business. Please contact admin.'})
         customer = attrs.get('customer')
         if customer and customer.business_id != business.id:
             raise serializers.ValidationError({'customer': 'Customer does not belong to this business.'})
@@ -180,6 +182,9 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
         items_data = validated_data.pop('items')
         payments_data = validated_data.pop('payments')
         bill_discount = validated_data.pop('bill_discount', 0)
+        request = self.context.get('request')
+        business = validated_data.pop('business', None) or request.user.business
+        created_by = validated_data.pop('created_by', None) or request.user
         from .services.invoice_service import InvoiceService
 
         try:
@@ -188,9 +193,9 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
                 items_data=items_data,
                 payments_data=payments_data,
                 bill_discount=bill_discount,
-                business=validated_data['business'],
-                created_by=validated_data['created_by'],
-                request=self.context.get('request'),
+                business=business,
+                created_by=created_by,
+                request=request,
             )
         except ValueError as exc:
             raise serializers.ValidationError(str(exc)) from exc

@@ -115,16 +115,11 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }) {
 
   useEffect(() => {
     if (!open) return undefined
-    const prev = document.activeElement
     const onKey = e => { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
-    requestAnimationFrame(() =>
-      dialogRef.current?.querySelector('button, input, select, textarea, [tabindex]:not([tabindex="-1"])')?.focus()
-    )
     document.body.style.overflow = 'hidden'
     return () => {
       window.removeEventListener('keydown', onKey)
-      prev?.focus?.()
       document.body.style.overflow = ''
     }
   }, [open, onClose])

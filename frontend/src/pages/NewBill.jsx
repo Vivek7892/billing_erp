@@ -477,6 +477,7 @@ export default function NewBill() {
           })]
     })
     setLastAddedId(product.id)
+    setTimeout(() => setLastAddedId(null), 800)
     setSearch('')
     searchRef.current?.focus()
   }, [])

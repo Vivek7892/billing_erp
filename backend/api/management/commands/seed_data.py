@@ -15,6 +15,24 @@ class Command(BaseCommand):
         self.stdout.write('Seeding data...')
 
         # ============================================================
+        # Business
+        # ============================================================
+        business, _ = Business.objects.get_or_create(
+            name='dreamwithtech',
+            defaults={
+                'business_type': 'retail',
+                'owner_name': 'Admin User',
+                'mobile': '+91 98765 43210',
+                'email': 'info@dreamwithtech.com',
+                'address': '123 Market Street, Mumbai, Maharashtra 400001',
+                'gstin': '27AABCU9603R1ZX',
+                'invoice_prefix': 'INV',
+                'invoice_start_number': 1001,
+                'currency': '₹',
+            }
+        )
+
+        # ============================================================
         # Settings
         # ============================================================
         defaults = {
@@ -35,6 +53,7 @@ class Command(BaseCommand):
 
         for k, v in defaults.items():
             Setting.objects.get_or_create(
+                business=business,
                 key=k,
                 defaults={'value': v}
             )
@@ -62,6 +81,7 @@ class Command(BaseCommand):
         admin_user.is_staff = True
         admin_user.is_superuser = True
         admin_user.is_active = True
+        admin_user.business = business
         admin_user.set_password('admin123')
         admin_user.save()
 
@@ -82,8 +102,12 @@ class Command(BaseCommand):
         cashier.first_name = 'John'
         cashier.last_name = 'Cashier'
         cashier.is_active = True
+        cashier.business = business
         cashier.set_password('cashier123')
         cashier.save()
+
+        # Link any other existing users to this business
+        User.objects.filter(business__isnull=True).update(business=business)
 
         # ============================================================
         # Categories
@@ -104,7 +128,7 @@ class Command(BaseCommand):
         cat_objs = {}
 
         for c in cats:
-            obj, _ = Category.objects.get_or_create(name=c)
+            obj, _ = Category.objects.get_or_create(business=business, name=c)
             cat_objs[c] = obj
 
         # ============================================================
@@ -137,6 +161,7 @@ class Command(BaseCommand):
 
         for name, phone, email in suppliers_data:
             obj, _ = Supplier.objects.get_or_create(
+                business=business,
                 name=name,
                 defaults={
                     'phone': phone,
@@ -199,6 +224,7 @@ class Command(BaseCommand):
         for name, sku, cat, pp, sp, gst, stock, min_stock in products_data:
 
             obj, _ = Product.objects.get_or_create(
+                business=business,
                 sku=sku,
                 defaults={
                     'name': name,
@@ -237,6 +263,7 @@ class Command(BaseCommand):
         for name, mobile, email, credit in customers_data:
 
             obj, _ = Customer.objects.get_or_create(
+                business=business,
                 name=name,
                 defaults={
                     'mobile': mobile,
@@ -255,7 +282,7 @@ class Command(BaseCommand):
         # ============================================================
         # Sample invoices
         # ============================================================
-        if Invoice.objects.count() < 5:
+        if Invoice.objects.filter(business=business).count() < 5:
 
             for i in range(15):
 
@@ -266,6 +293,7 @@ class Command(BaseCommand):
 
                 invoice = Invoice.objects.create(
                     invoice_number=f"INV-{1000 + i + 1}",
+                    business=business,
                     customer=customer,
                     customer_name=customer.name,
                     customer_phone=customer.mobile,
