@@ -17,16 +17,38 @@ const CAT_ICON = {
   Transport: Car, Supplies: ShoppingBag, Marketing: TrendingDown,
   Maintenance: MoreHorizontal, Other: IndianRupee,
 }
+const CAT_ICON_CLS = {
+  Rent: 'border-blue-200 text-blue-600', Utilities: 'border-yellow-200 text-yellow-600',
+  Salaries: 'border-violet-200 text-violet-600', Transport: 'border-cyan-200 text-cyan-600',
+  Supplies: 'border-emerald-200 text-emerald-600', Marketing: 'border-pink-200 text-pink-600',
+  Maintenance: 'border-orange-200 text-orange-600', Other: 'border-gray-200 text-gray-500',
+}
+
+const CAT_BADGE = {
+  Rent: 'bg-blue-50 text-blue-700', Utilities: 'bg-yellow-50 text-yellow-700',
+  Salaries: 'bg-violet-50 text-violet-700', Transport: 'bg-cyan-50 text-cyan-700',
+  Supplies: 'bg-emerald-50 text-emerald-700', Marketing: 'bg-pink-50 text-pink-700',
+  Maintenance: 'bg-orange-50 text-orange-700', Other: 'bg-gray-100 text-gray-600',
+}
+
 const CAT_COLOR = {
-  Rent: 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400', Utilities: 'bg-yellow-50 text-yellow-600 dark:bg-yellow-950/60 dark:text-yellow-400',
-  Salaries: 'bg-violet-50 text-violet-600 dark:bg-violet-950/60 dark:text-violet-400', Transport: 'bg-cyan-50 text-cyan-600 dark:bg-cyan-950/60 dark:text-cyan-400',
-  Supplies: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 dark:bg-emerald-950/60 dark:text-emerald-400', Marketing: 'bg-pink-50 text-pink-600 dark:bg-pink-950/60 dark:text-pink-400',
-  Maintenance: 'bg-orange-50 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400', Other: 'bg-[var(--surface-elevated)] text-[var(--muted)]',
+  Rent: 'bg-blue-50 text-blue-700',
+  Utilities: 'bg-yellow-50 text-yellow-700',
+  Salaries: 'bg-violet-50 text-violet-700',
+  Transport: 'bg-cyan-50 text-cyan-700',
+  Supplies: 'bg-emerald-50 text-emerald-700',
+  Marketing: 'bg-pink-50 text-pink-700',
+  Maintenance: 'bg-orange-50 text-orange-700',
+  Other: 'bg-gray-100 text-gray-600',
 }
 
 const EMPTY = {
-  description: '', amount: '', payment_method: 'cash',
-  expense_date: new Date().toISOString().slice(0, 10), notes: '', category_name: 'Other'
+  description: '',
+  amount: '',
+  payment_method: 'cash',
+  expense_date: new Date().toISOString().slice(0, 10),
+  notes: '',
+  category_name: 'Other',
 }
 
 export default function Expenses() {
@@ -126,11 +148,11 @@ export default function Expenses() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-        <div className="bg-[var(--surface)] rounded-xl border border-rose-100 dark:border-rose-800 p-3 sm:p-4 flex flex-col gap-2">
+        <div className="bg-[var(--surface)] rounded-xl border border-rose-100 p-3 sm:p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-[9px] sm:text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-wide truncate">Total Expenses</span>
-            <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/60 flex items-center justify-center">
-              <IndianRupee size={15} className="text-rose-600 dark:text-rose-400" />
+            <div className="w-9 h-9 rounded-xl bg-white border border-rose-200 shadow-sm flex items-center justify-center">
+              <IndianRupee size={15} className="text-rose-600" />
             </div>
           </div>
           <div className="text-base sm:text-xl font-bold text-[var(--ink)]">{fmt(totalAll)}</div>
@@ -139,8 +161,8 @@ export default function Expenses() {
         <div className="bg-[var(--surface)] rounded-xl border border-orange-100 p-3 sm:p-4 flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <span className="text-[9px] sm:text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-wide truncate">This Month</span>
-            <div className="w-8 h-8 rounded-lg bg-orange-50 dark:bg-orange-950/60 flex items-center justify-center">
-              <TrendingDown size={15} className="text-orange-600 dark:text-orange-400" />
+            <div className="w-9 h-9 rounded-xl bg-white border border-orange-200 shadow-sm flex items-center justify-center">
+              <TrendingDown size={15} className="text-orange-600" />
             </div>
           </div>
           <div className="text-base sm:text-xl font-bold text-[var(--ink)]">{fmt(thisMonth)}</div>
@@ -154,8 +176,8 @@ export default function Expenses() {
             <div key={cat} className="bg-[var(--surface)] rounded-xl border border-[var(--line)] p-3 sm:p-4 flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <span className="text-[9px] sm:text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-wide truncate">{cat}</span>
-                <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center`}>
-                  <Icon size={15} className={tx} />
+                <div className={`w-9 h-9 rounded-xl bg-white border shadow-sm flex items-center justify-center ${cls.split(' ').find(c => c.startsWith('border-')) || 'border-gray-200'}`}>
+                  <Icon size={15} className={cls.split(' ').find(c => c.startsWith('text-')) || 'text-gray-500'} />
                 </div>
               </div>
               <div className="text-base sm:text-xl font-bold text-[var(--ink)]">{fmt(total)}</div>

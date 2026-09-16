@@ -945,10 +945,10 @@ def _page_chrome(canvas, doc):
     canvas.restoreState()
 
 
-def generate_invoice_pdf(invoice):
+def generate_invoice_pdf(invoice, force_a4=False):
     """Generate the redesigned A4 monochrome GST invoice."""
     raw_settings = invoice_settings(invoice)
-    if raw_settings.get("invoice_template", "gst_a4") == "thermal_80":
+    if raw_settings.get("invoice_template", "gst_a4") == "thermal_80" and not force_a4:
         raise ValueError("invoice_template is 'thermal_80' — use generate_thermal_invoice_pdf() instead.")
 
     buffer = BytesIO()
@@ -1009,7 +1009,7 @@ T_FOOTER = 6.3
 def _tpara(text, size=T_ITEM, align=TA_LEFT, bold=False, color=INK, leading=None):
     return Paragraph(str(text), ParagraphStyle(
         "thermal_invoice", fontName=(FONT_MONO_B if bold else FONT_MONO_R),
-        fontSize=size, leading=leading or size+2.0,
+        fontSize=size, leading=leading or size + 2.0,
         alignment=align, textColor=INK,
         spaceAfter=0, spaceBefore=0,
     ))
@@ -1017,18 +1017,38 @@ def _tpara(text, size=T_ITEM, align=TA_LEFT, bold=False, color=INK, leading=None
 
 def _tdashed(story, content_w, gap_above=1.0*mm, gap_below=1.0*mm):
     story.append(Spacer(1, gap_above))
-    story.append(HRFlowable(width=content_w, thickness=0.55, color=INK, dash=(2, 1.4), spaceBefore=0, spaceAfter=0, hAlign="CENTER"))
+    story.append(HRFlowable(
+        width=content_w, thickness=0.55, color=INK,
+        dash=(2, 1.4), spaceBefore=0, spaceAfter=0, hAlign="CENTER"
+    ))
     story.append(Spacer(1, gap_below))
 
 
+def _thermal_bool(settings, key, default=True):
+    return settings.flag(key, default)
+
+
+def _thermal_discount_total(invoice):
+    return dec(getattr(invoice, "discount_amount", 0))
+
+
 def generate_thermal_invoice_pdf(invoice):
-    """Generate a compact 80mm monochrome POS receipt."""
+    """Generate an 80mm monochrome receipt using the same section order as A4.
+
+    The layout is intentionally different in width, but not in document
+    hierarchy: identity -> invoice control -> customer -> items -> totals ->
+    settlement -> UPI -> terms -> footer.
+    """
     buffer = BytesIO()
     s = load_settings(invoice)
-    shop_name = s.get("shop_name", "Business Name Not Configured")
+
+    shop_name = _fmt_value(s.get("shop_name"), "Business Name Not Configured")
     shop_address = s.get("shop_address")
-    shop_phone, shop_email = s.get("shop_phone"), s.get("shop_email")
-    shop_gstin, upi_id = s.get("shop_gstin"), s.get("shop_upi_id")
+    shop_phone = s.get("shop_phone")
+    shop_email = s.get("shop_email")
+    shop_gstin = s.get("shop_gstin")
+    upi_id = s.get("shop_upi_id")
+
     document_title, show_tax = resolve_document_mode(s, invoice)
     interstate = resolve_interstate(s, invoice)
     show_signature = s.flag("show_signature_thermal", False)
@@ -1036,105 +1056,175 @@ def generate_thermal_invoice_pdf(invoice):
     show_qr = s.flag("show_upi_qr_on_thermal", True) and has_val(upi_id)
 
     items = list(invoice.items.all())
-    address_lines = len([l for l in (shop_address or "").split("\n") if l.strip()])
-    page_height = (70 + address_lines*4 + (4 if shop_phone or shop_email else 0) + (4 if shop_gstin else 0) + len(items)*8 + (43 if show_qr else 0) + (10 if show_terms else 0) + (10 if show_signature else 0)) * mm
-    page_height = max(90*mm, page_height)
-
-    doc = SimpleDocTemplate(
-        buffer, pagesize=portrait((80*mm, page_height)),
-        topMargin=4*mm, bottomMargin=4*mm, leftMargin=4*mm, rightMargin=4*mm,
-        title=f"Invoice {invoice.invoice_number}",
-    )
-    content_w = 72*mm
-    story = []
     inv_date = _date_text(getattr(invoice, "created_at", None) or getattr(invoice, "date", None))
     cust = getattr(invoice, "customer", None)
     cust_name = getattr(cust, "name", None) if cust else getattr(invoice, "customer_name", None)
-    cust_name = cust_name or "Walk-in Customer"
+    cust_name = _fmt_value(cust_name, "Walk-in Customer")
     cust_phone = getattr(cust, "mobile", None) if cust else getattr(invoice, "customer_phone", None)
+    cust_address = getattr(cust, "address", None) if cust else ""
+    cust_gstin = getattr(cust, "gstin", None) if cust else ""
+    place = getattr(invoice, "place_of_supply", None) or getattr(cust, "state", None) or s.get("place_of_supply")
+
     grand = dec(invoice.grand_total)
-    paid_amount = dec(invoice.paid_amount)
-    balance_due = max(Decimal("0.00"), grand-paid_amount)
-    change_returned = max(Decimal("0.00"), paid_amount-grand)
-    discount_amt = dec(invoice.discount_amount)
+    paid_amount = dec(getattr(invoice, "paid_amount", 0))
+    balance_due = max(Decimal("0.00"), grand - paid_amount)
+    change_returned = max(Decimal("0.00"), paid_amount - grand)
+    discount_amt = _thermal_discount_total(invoice)
     round_off_amt = dec(getattr(invoice, "round_off", 0)) if s.flag("round_off", True) else Decimal("0.00")
     payment_mode = (getattr(invoice, "payment_method", None) or s.get("default_payment_method", "cash")).upper()
+    status = _fmt_value(getattr(invoice, "payment_status", None), "PAID").upper()
+
+    page_height = (
+        78
+        + len([l for l in (shop_address or "").split("\n") if l.strip()]) * 4
+        + (4 if shop_phone or shop_email else 0)
+        + (4 if shop_gstin else 0)
+        + len(items) * 10
+        + (45 if show_qr else 0)
+        + (16 if show_terms else 0)
+        + (12 if show_signature else 0)
+        + (10 if cust_address or cust_gstin or place else 0)
+    ) * mm
+    page_height = max(100 * mm, page_height)
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=portrait((80 * mm, page_height)),
+        topMargin=4 * mm,
+        bottomMargin=4 * mm,
+        leftMargin=4 * mm,
+        rightMargin=4 * mm,
+        title=f"Invoice {invoice.invoice_number}",
+        author="Billing Application",
+    )
+
+    content_w = 72 * mm
+    story = []
 
     # 1. Store identity
-    story.append(_tpara(shop_name.upper(), size=T_NAME, align=TA_CENTER, bold=True))
+    story.append(_tpara(shop_name.upper(), size=T_NAME + 1, align=TA_CENTER, bold=True))
     for line in (shop_address or "").split("\n"):
         if line.strip():
             story.append(_tpara(line.strip(), size=T_META, align=TA_CENTER))
     contact_bits = []
-    if has_val(shop_phone): contact_bits.append(f"Ph: {shop_phone}")
-    if has_val(shop_email): contact_bits.append(shop_email)
-    if contact_bits: story.append(_tpara(" | ".join(contact_bits), size=T_META, align=TA_CENTER))
-    if has_val(shop_gstin): story.append(_tpara(f"GSTIN: {shop_gstin}", size=T_META, align=TA_CENTER, bold=True))
-    _tdashed(story, content_w, 1.2*mm, 1.2*mm)
+    if has_val(shop_phone):
+        contact_bits.append(f"Mobile: {shop_phone}")
+    if has_val(shop_email):
+        contact_bits.append(str(shop_email))
+    if contact_bits:
+        story.append(_tpara(" | ".join(contact_bits), size=T_META, align=TA_CENTER))
+    if has_val(shop_gstin):
+        story.append(_tpara(f"GSTIN: {shop_gstin}", size=T_META, align=TA_CENTER, bold=True))
+
+    _tdashed(story, content_w, 1.2 * mm, 1.2 * mm)
 
     # 2. Invoice control
-    story.append(_tpara(document_title, size=T_TITLE, align=TA_CENTER, bold=True))
-    story.append(_tpara(_fmt_value(invoice.invoice_number), size=T_META+0.5, align=TA_CENTER, bold=True))
-    if inv_date: story.append(_tpara(f"Date: {inv_date}", size=T_META, align=TA_CENTER))
-    story.append(_tpara(f"Mode: {payment_mode}", size=T_META, align=TA_CENTER))
+    story.append(_tpara(document_title, size=T_TITLE + 1, align=TA_CENTER, bold=True))
+    story.append(_tpara(f"Invoice No: {_fmt_value(invoice.invoice_number)}", size=T_META + 0.5, align=TA_CENTER, bold=True))
+    if inv_date:
+        story.append(_tpara(f"Invoice Date: {inv_date}", size=T_META, align=TA_CENTER))
+    story.append(_tpara(f"Payment Mode: {payment_mode}", size=T_META, align=TA_CENTER))
+    place_header = place
+    if has_val(place_header):
+        story.append(_tpara(f"Place of Supply: {place_header}", size=T_META, align=TA_CENTER))
+
     _tdashed(story, content_w)
 
-    # 3. Customer
-    story.append(_tpara(f"CUSTOMER: {_fmt_value(cust_name)}", size=T_META, bold=True))
-    if has_val(cust_phone): story.append(_tpara(f"PHONE: {cust_phone}", size=T_META))
+    # 3. Customer block
+    story.append(_tpara("BILL TO", size=T_META, bold=True))
+    story.append(_tpara(cust_name, size=T_ITEM + 0.5, bold=True))
+    if has_val(cust_address):
+        story.append(_tpara(str(cust_address).replace("\n", ", "), size=T_META))
+    if has_val(cust_phone):
+        story.append(_tpara(f"Mobile: {cust_phone}", size=T_META))
+    if has_val(cust_gstin):
+        story.append(_tpara(f"GSTIN: {cust_gstin}", size=T_META))
+
     _tdashed(story, content_w)
 
-    # 4. Items — intentionally limited to four columns for thermal readability
+    # 4. Items — same logical columns as A4, compressed for 80mm
+    show_hsn = s.flag("show_hsn_col", True) and any_item_has(invoice, "hsn_code")
+    show_discount = s.flag("show_discount_col", True) and discount_amt != 0
+
     item_rows = [[
         _tpara("ITEM", size=T_META, bold=True),
         _tpara("QTY", size=T_META, align=TA_RIGHT, bold=True),
         _tpara("RATE", size=T_META, align=TA_RIGHT, bold=True),
-        _tpara("AMT", size=T_META, align=TA_RIGHT, bold=True),
+        _tpara("AMOUNT", size=T_META, align=TA_RIGHT, bold=True),
     ]]
+
     for item in items:
+        product = _fmt_value(item.product_name)
+        details = []
+        if show_hsn and has_val(getattr(item, "hsn_code", None)):
+            details.append(f"HSN: {item.hsn_code}")
+        if show_discount and dec(getattr(item, "discount_percent", 0)) != 0:
+            details.append(f"Disc: {dec(getattr(item, 'discount_percent', 0))}%")
+        if show_tax and dec(getattr(item, "gst_amount", 0)) != 0 and has_val(getattr(item, "gst_percent", None)):
+            details.append(f"GST: {dec(getattr(item, 'gst_percent', 0))}%")
+        item_text = product + ("<br/><font size='5.2'>" + " | ".join(details) + "</font>" if details else "")
+
         item_rows.append([
-            _tpara(_fmt_value(item.product_name), size=T_ITEM),
+            _tpara(item_text, size=T_ITEM),
             _tpara(_fmt_value(item.quantity), size=T_ITEM, align=TA_RIGHT),
             _tpara(currency(item.unit_price), size=T_ITEM, align=TA_RIGHT),
             _tpara(currency(item.total), size=T_ITEM, align=TA_RIGHT, bold=True),
         ])
-    item_tbl = Table(item_rows, colWidths=[30*mm, 9*mm, 16*mm, 17*mm], repeatRows=1, hAlign="CENTER")
+
+    item_tbl = Table(
+        item_rows,
+        colWidths=[31 * mm, 9 * mm, 15 * mm, 17 * mm],
+        repeatRows=1,
+        hAlign="CENTER",
+    )
     item_tbl.setStyle(TableStyle([
         ("LINEABOVE", (0, 0), (-1, 0), 0.65, BORDER),
         ("LINEBELOW", (0, 0), (-1, 0), 0.65, BORDER),
         ("LINEBELOW", (0, 1), (-1, -1), 0.2, BORDER),
-        ("TOPPADDING", (0, 0), (-1, 0), 2.0),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 2.0),
-        ("TOPPADDING", (0, 1), (-1, -1), 1.5),
-        ("BOTTOMPADDING", (0, 1), (-1, -1), 1.5),
+        ("TOPPADDING", (0, 0), (-1, 0), 2.2),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 2.2),
+        ("TOPPADDING", (0, 1), (-1, -1), 1.7),
+        ("BOTTOMPADDING", (0, 1), (-1, -1), 1.7),
         ("LEFTPADDING", (0, 0), (-1, -1), 1.0),
         ("RIGHTPADDING", (0, 0), (-1, -1), 1.0),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ]))
     story.append(item_tbl)
 
     # 5. Totals
     _tdashed(story, content_w)
-    totals_rows = [[_tpara("SUBTOTAL", size=T_META), _tpara(currency(invoice.subtotal), size=T_META, align=TA_RIGHT)]]
+    subtotal = dec(invoice.subtotal)
+    sgst, cgst, igst = invoice_tax_breakup(invoice, interstate) if show_tax else (Decimal("0"), Decimal("0"), Decimal("0"))
+    cess_amt = dec(getattr(invoice, "cess_amount", 0)) if show_tax and s.flag("cess_enabled", False) else Decimal("0.00")
+
+    totals_rows = [[_tpara("SUB TOTAL", size=T_META), _tpara(currency(subtotal), size=T_META, align=TA_RIGHT)]]
     if discount_amt != 0:
         totals_rows.append([_tpara("DISCOUNT", size=T_META), _tpara(currency(discount_amt), size=T_META, align=TA_RIGHT)])
-    if show_tax and dec(getattr(invoice, "tax_amount", 0)) != 0:
-        tax_label = "IGST" if interstate else "GST"
-        totals_rows.append([_tpara(tax_label, size=T_META), _tpara(currency(invoice.tax_amount), size=T_META, align=TA_RIGHT)])
-    cess_amt = dec(getattr(invoice, "cess_amount", 0)) if show_tax and s.flag("cess_enabled", False) else Decimal("0")
-    if cess_amt != 0:
-        totals_rows.append([_tpara("CESS", size=T_META), _tpara(currency(cess_amt), size=T_META, align=TA_RIGHT)])
+    if show_tax:
+        if interstate and igst != 0:
+            totals_rows.append([_tpara("IGST", size=T_META), _tpara(currency(igst), size=T_META, align=TA_RIGHT)])
+        else:
+            if sgst != 0:
+                totals_rows.append([_tpara("SGST", size=T_META), _tpara(currency(sgst), size=T_META, align=TA_RIGHT)])
+            if cgst != 0:
+                totals_rows.append([_tpara("CGST", size=T_META), _tpara(currency(cgst), size=T_META, align=TA_RIGHT)])
+        if cess_amt != 0:
+            totals_rows.append([_tpara("CESS", size=T_META), _tpara(currency(cess_amt), size=T_META, align=TA_RIGHT)])
     if round_off_amt != 0:
         totals_rows.append([_tpara("ROUND OFF", size=T_META), _tpara(currency(round_off_amt), size=T_META, align=TA_RIGHT)])
+
     grand_idx = len(totals_rows)
-    totals_rows.append([_tpara("GRAND TOTAL", size=T_TOTAL, bold=True), _tpara(currency(grand), size=T_TOTAL, align=TA_RIGHT, bold=True)])
-    totals_tbl = Table(totals_rows, colWidths=[36*mm, 36*mm], hAlign="CENTER")
+    totals_rows.append([
+        _tpara("GRAND TOTAL", size=T_TOTAL, bold=True),
+        _tpara(currency(grand), size=T_TOTAL, align=TA_RIGHT, bold=True),
+    ])
+
+    totals_tbl = Table(totals_rows, colWidths=[36 * mm, 36 * mm], hAlign="CENTER")
     totals_tbl.setStyle(TableStyle([
         ("LINEABOVE", (0, 0), (-1, 0), 0.6, BORDER),
-        ("LINEBELOW", (0, grand_idx-1), (-1, grand_idx-1), 0.25, BORDER),
         ("LINEABOVE", (0, grand_idx), (-1, grand_idx), 0.9, BORDER),
-        ("TOPPADDING", (0, 0), (-1, -1), 1.4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 1.4),
+        ("TOPPADDING", (0, 0), (-1, -1), 1.5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 1.5),
         ("TOPPADDING", (0, grand_idx), (-1, grand_idx), 2.8),
         ("BOTTOMPADDING", (0, grand_idx), (-1, grand_idx), 2.8),
         ("LEFTPADDING", (0, 0), (-1, -1), 2),
@@ -1142,39 +1232,70 @@ def generate_thermal_invoice_pdf(invoice):
     ]))
     story.append(totals_tbl)
 
-    # 6. Amount and settlement
+    # 6. Amount in words + settlement
     _tdashed(story, content_w)
     story.append(_tpara(amount_in_words(grand), size=T_META))
-    story.append(Spacer(1, 0.8*mm))
-    status = (getattr(invoice, "payment_status", None) or "PAID").upper()
+    story.append(Spacer(1, 0.8 * mm))
+
     payment_line = f"{status}  |  PAID: {currency(paid_amount)}"
-    if balance_due != 0: payment_line += f"  |  BAL: {currency(balance_due)}"
-    if change_returned != 0: payment_line += f"  |  CHANGE: {currency(change_returned)}"
+    if balance_due != 0:
+        payment_line += f"  |  BAL: {currency(balance_due)}"
+    if change_returned != 0:
+        payment_line += f"  |  CHANGE: {currency(change_returned)}"
     story.append(_tpara(payment_line, size=T_META, align=TA_CENTER, bold=True))
     story.append(_tpara(f"PAYMENT MODE: {payment_mode}", size=T_META, align=TA_CENTER))
 
-    # 7. QR
-    qr_img = make_upi_qr(upi_id, shop_name, grand, size_mm=_qr_size_thermal(s), invoice_number=invoice.invoice_number) if show_qr else None
+    # 7. UPI
+    qr_img = make_upi_qr(
+        upi_id,
+        shop_name,
+        grand,
+        size_mm=_qr_size_thermal(s),
+        invoice_number=invoice.invoice_number,
+    ) if show_qr else None
     if qr_img:
         _tdashed(story, content_w)
-        story.append(_tpara("SCAN TO PAY", size=T_META+0.4, align=TA_CENTER, bold=True))
-        story.append(Spacer(1, 0.8*mm))
+        story.append(_tpara("UPI PAYMENT", size=T_META, align=TA_CENTER, bold=True))
+        story.append(_tpara("SCAN TO PAY", size=T_META, align=TA_CENTER, bold=True))
+        story.append(Spacer(1, 0.8 * mm))
         qr_wrap = Table([[qr_img]], colWidths=[content_w], hAlign="CENTER")
         qr_wrap.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
         story.append(qr_wrap)
         story.append(_tpara(_fmt_value(upi_id), size=T_META, align=TA_CENTER))
 
-    # 8. Terms/signature/footer
-    _tdashed(story, content_w, 1.2*mm, 1.0*mm)
+    # 8. Terms, signature and footer
+    if show_terms or show_signature:
+        _tdashed(story, content_w)
+
     if show_terms:
-        story.append(_tpara(s.get("invoice_terms"), size=T_META))
-        story.append(Spacer(1, 1.0*mm))
+        story.append(_tpara("TERMS & CONDITIONS", size=T_META, bold=True))
+        story.append(_tpara(s.get("invoice_terms"), size=5.8, leading=7.4))
+        story.append(Spacer(1, 1.0 * mm))
+
     if show_signature:
-        sig_tbl = Table([[_tpara("", size=T_META), _tpara("Authorized Sign.", size=T_META, align=TA_RIGHT)]], colWidths=[content_w/2, content_w/2])
-        sig_tbl.setStyle(TableStyle([("LINEABOVE", (0, 0), (-1, 0), 0.4, BORDER), ("TOPPADDING", (0, 0), (-1, -1), 1.2)]))
+        sig_tbl = Table([
+            [_tpara("", size=T_META), _tpara("Authorized Sign.", size=T_META, align=TA_RIGHT)]
+        ], colWidths=[content_w / 2, content_w / 2])
+        sig_tbl.setStyle(TableStyle([
+            ("LINEABOVE", (0, 0), (-1, 0), 0.4, BORDER),
+            ("TOPPADDING", (0, 0), (-1, -1), 1.2),
+        ]))
         story.append(sig_tbl)
-        story.append(Spacer(1, 1.0*mm))
-    story.append(_tpara((_clean_footer(s.get("invoice_footer"))).upper(), size=T_FOOTER, align=TA_CENTER, bold=True))
+        story.append(Spacer(1, 1.0 * mm))
+
+    if str(s.get("invoice_footer_layout", "text_center")).lower() != "none":
+        align = TA_LEFT if str(s.get("invoice_footer_layout", "text_center")).lower() == "text_left" else TA_CENTER
+        story.append(_tpara(_clean_footer(s.get("invoice_footer")).upper(), size=T_FOOTER, align=align, bold=True))
+
+    date_text, time_text = _invoice_datetime(invoice)
+    meta = []
+    if date_text:
+        meta.append(f"Date: {date_text}")
+    if time_text:
+        meta.append(f"Time: {time_text}")
+    meta.append(f"Bill Ref: {_bill_reference_token(invoice)}")
+    story.append(_tpara(" | ".join(meta), size=5.8, align=TA_CENTER))
+
     doc.build(story)
     buffer.seek(0)
     return buffer

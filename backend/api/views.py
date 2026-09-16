@@ -1602,13 +1602,15 @@ def _invoice_pdf_response(invoice, printer=None):
     }
     printer_setting = business_settings.get('printer_type', 'a4').lower()
     template_setting = business_settings.get('invoice_template', 'gst_a4').lower()
-    use_thermal = printer == 'thermal' or (
-        not printer and (
+    requested_printer = (printer or '').lower()
+    use_thermal = requested_printer == 'thermal' or (
+        not requested_printer and (
             printer_setting in ('thermal', 'thermal_80', 'thermal_58')
             or template_setting.startswith('thermal')
         )
     )
-    buffer = generate_thermal_invoice_pdf(invoice) if use_thermal else generate_invoice_pdf(invoice)
+    # An explicit A4 request must work even when the business default is thermal.
+    buffer = generate_thermal_invoice_pdf(invoice) if use_thermal else generate_invoice_pdf(invoice, force_a4=True)
     response = HttpResponse(buffer, content_type='application/pdf')
     suffix = 'thermal' if use_thermal else 'a4'
     response['Content-Disposition'] = f'inline; filename="invoice-{invoice.invoice_number}-{suffix}.pdf"'

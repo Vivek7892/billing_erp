@@ -331,7 +331,7 @@ export default function Customers() {
               </p>
             </div>
 
-            <div className="p-2 rounded-lg sm:rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 shrink-0">
+            <div className="p-2 rounded-lg sm:rounded-xl bg-white border border-blue-200 text-blue-600 shadow-sm shrink-0">
               <Users size={17} />
             </div>
           </div>
@@ -355,7 +355,7 @@ export default function Customers() {
               </p>
             </div>
 
-            <div className="p-2 rounded-lg sm:rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 shrink-0">
+            <div className="p-2 rounded-lg sm:rounded-xl bg-white border border-red-200 text-red-600 shadow-sm shrink-0">
               <IndianRupee size={17} />
             </div>
           </div>
@@ -379,7 +379,7 @@ export default function Customers() {
               </p>
             </div>
 
-            <div className="p-2 rounded-lg sm:rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 shrink-0">
+            <div className="p-2 rounded-lg sm:rounded-xl bg-white border border-blue-200 text-blue-600 shadow-sm shrink-0">
               <WalletCards size={17} />
             </div>
           </div>
@@ -403,7 +403,7 @@ export default function Customers() {
               </p>
             </div>
 
-            <div className="p-2 rounded-lg sm:rounded-xl bg-green-50 dark:bg-green-950/60 text-green-600 dark:text-green-400 shrink-0">
+            <div className="p-2 rounded-lg sm:rounded-xl bg-white border border-emerald-200 text-emerald-600 shadow-sm shrink-0">
               <FileText size={17} />
             </div>
           </div>

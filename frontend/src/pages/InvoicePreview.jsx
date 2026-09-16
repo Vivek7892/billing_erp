@@ -1,23 +1,40 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { Printer, Download, ArrowLeft, FileText } from 'lucide-react'
+import { Printer, Download, ArrowLeft, FileText, Share2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import invoiceService from '../features/billing/api/invoiceService'
+import { API_BASE_URL } from '../api'
+
+function getPdfUrl(id, thermal) {
+  const token = localStorage.getItem('access_token') || ''
+  const printer = thermal ? 'thermal' : 'a4'
+  return `${API_BASE_URL}/invoices/${id}/pdf/?token=${token}&printer=${printer}`
+}
 
 export default function InvoicePreview() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [invoiceNumber, setInvoiceNumber] = useState('')
+  const [thermal, setThermal] = useState(false)
   const [pdfUrl, setPdfUrl] = useState('')
   const [loading, setLoading] = useState(true)
 
+  // Fetch invoice number
+  useEffect(() => {
+    if (!id) return
+    invoiceService.getInvoice(id)
+      .then(inv => setInvoiceNumber(inv?.invoice_number || `#${id}`))
+      .catch(() => setInvoiceNumber(`#${id}`))
+  }, [id])
+
+  // Reload PDF blob whenever id or thermal mode changes
   useEffect(() => {
     if (!id) { setLoading(false); return }
     let objectUrl = ''
     setLoading(true)
     const token = localStorage.getItem('access_token') || ''
-    const params = new URLSearchParams()
-    if (token) params.set('token', token)
-    invoiceService.getPdf(id, Object.fromEntries(params), { responseType: 'blob' })
+    const params = { token, printer: thermal ? 'thermal' : 'a4' }
+    invoiceService.getPdf(id, params, { responseType: 'blob' })
       .then(res => {
         const blob = new Blob([res.data], { type: 'application/pdf' })
         objectUrl = URL.createObjectURL(blob)
@@ -26,38 +43,59 @@ export default function InvoicePreview() {
       .catch(() => toast.error('Could not load invoice PDF'))
       .finally(() => setLoading(false))
     return () => { if (objectUrl) URL.revokeObjectURL(objectUrl) }
-  }, [id])
+  }, [id, thermal])
 
-  const print = async () => {
-    if (!id) return
-    const win = window.open('', '_blank', 'width=900,height=900')
-    if (!win) { toast.error('Allow pop-ups to print'); return }
-    try {
-      const token = localStorage.getItem('access_token') || ''
-      const params = new URLSearchParams()
-      if (token) params.set('token', token)
-      const res = await invoiceService.getPdf(id, Object.fromEntries(params), { responseType: 'blob' })
-      const blob = new Blob([res.data], { type: 'application/pdf' })
-      const url = URL.createObjectURL(blob)
-      win.location.href = url
-      setTimeout(() => { try { win.focus(); win.print() } catch {} }, 1200)
-    } catch { win.close(); toast.error('Could not print invoice') }
+  const openInNew = () => {
+    const url = getPdfUrl(id, thermal)
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+    if (isMobile) { window.open(url, '_blank', 'noopener,noreferrer'); return }
+    const w = window.open('', '_blank')
+    if (!w) { toast.error('Allow pop-ups to open'); return }
+    w.location.href = url
   }
 
   const download = async () => {
     if (!id) return
     try {
       const token = localStorage.getItem('access_token') || ''
-      const params = new URLSearchParams()
-      if (token) params.set('token', token)
-      const res = await invoiceService.getPdf(id, Object.fromEntries(params), { responseType: 'blob' })
+      const params = { token, printer: thermal ? 'thermal' : 'a4' }
+      const res = await invoiceService.getPdf(id, params, { responseType: 'blob' })
       const blob = new Blob([res.data], { type: 'application/pdf' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url; a.download = `invoice-${id}.pdf`
+      const suffix = thermal ? 'thermal' : 'a4'
+      a.href = url; a.download = `invoice-${invoiceNumber || id}-${suffix}.pdf`
       document.body.appendChild(a); a.click(); a.remove()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
     } catch { toast.error('Could not download invoice') }
+  }
+
+  const share = async () => {
+    if (!id) return
+    try {
+      const format = thermal ? 'thermal' : 'a4'
+      const [pdfResponse, link] = await Promise.all([
+        invoiceService.getPdf(id, { token: localStorage.getItem('access_token') || '', printer: format }, { responseType: 'blob' }),
+        invoiceService.createShortLink(id),
+      ])
+      const file = new File(
+        [new Blob([pdfResponse.data], { type: 'application/pdf' })],
+        `invoice-${invoiceNumber || id}-${format}.pdf`,
+        { type: 'application/pdf' },
+      )
+      const title = `Invoice ${invoiceNumber || id}`
+      const sharedPdfUrl = link?.url ? `${link.url}?printer=${format}` : getPdfUrl(id, thermal)
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title, files: [file] })
+      } else if (navigator.share) {
+        await navigator.share({ title, url: sharedPdfUrl })
+      } else {
+        await navigator.clipboard.writeText(sharedPdfUrl)
+        toast.success('Invoice link copied')
+      }
+    } catch (error) {
+      if (error?.name !== 'AbortError') toast.error('Could not share invoice')
+    }
   }
 
   if (!id) return (
@@ -73,12 +111,34 @@ export default function InvoicePreview() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
-      <div className="flex items-center gap-3 px-4 py-2.5 border-b border-[var(--line)] bg-[var(--surface)] shrink-0">
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-[var(--line)] bg-[var(--surface)] shrink-0 flex-wrap">
         <button onClick={() => navigate(-1)} className="icon-btn"><ArrowLeft size={18} /></button>
-        <span className="text-sm font-semibold text-[var(--ink)] flex-1">Invoice #{id}</span>
-        <button onClick={print} className="btn-secondary text-xs gap-1.5"><Printer size={14} /> Print</button>
-        <button onClick={download} className="btn-secondary text-xs gap-1.5"><Download size={14} /> Download</button>
+
+        <span className="text-sm font-semibold text-[var(--ink)] flex-1 min-w-0 truncate">
+          {invoiceNumber ? `Invoice ${invoiceNumber}` : `Invoice #${id}`}
+        </span>
+
+        {/* Thermal / PDF toggle */}
+        <div className="flex items-center rounded-xl border border-[var(--line)] overflow-hidden shrink-0 text-xs font-semibold">
+          <button
+            onClick={() => setThermal(false)}
+            className={`px-3 py-1.5 transition ${!thermal ? 'bg-blue-600 text-white' : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)]'}`}
+          >
+            PDF
+          </button>
+          <button
+            onClick={() => setThermal(true)}
+            className={`px-3 py-1.5 transition ${thermal ? 'bg-blue-600 text-white' : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)]'}`}
+          >
+            Thermal
+          </button>
+        </div>
+
+        <button onClick={openInNew} className="btn-secondary text-xs gap-1.5 shrink-0"><Printer size={14} /> Open</button>
+        <button onClick={download} className="btn-secondary text-xs gap-1.5 shrink-0"><Download size={14} /> Download</button>
+        <button onClick={share} className="btn-secondary text-xs gap-1.5 shrink-0"><Share2 size={14} /> Share</button>
       </div>
+
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
@@ -87,7 +147,7 @@ export default function InvoicePreview() {
         <iframe
           src={pdfUrl}
           className="flex-1 w-full border-0"
-          title={`Invoice ${id}`}
+          title={`Invoice ${invoiceNumber || id}`}
         />
       )}
     </div>

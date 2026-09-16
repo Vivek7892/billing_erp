@@ -30,10 +30,10 @@ export default function Stock() {
   const outStock  = products.filter(p => getStatus(p) === 'out_of_stock').length
 
   const stats = [
-    { label: 'Total Products', value: products.length, icon: Boxes, bg: 'bg-blue-50 dark:bg-blue-950/60', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-100', key: 'all' },
-    { label: 'In Stock', value: inStock, icon: CheckCircle, bg: 'bg-green-50 dark:bg-green-950/60', text: 'text-green-600 dark:text-green-400', border: 'border-green-100', key: 'in_stock' },
-    { label: 'Low Stock', value: lowStock, icon: AlertTriangle, bg: 'bg-orange-50 dark:bg-orange-950/60', text: 'text-orange-500 dark:text-orange-400', border: 'border-orange-100', key: 'low_stock' },
-    { label: 'Out of Stock', value: outStock, icon: XCircle, bg: 'bg-red-50 dark:bg-red-950/60', text: 'text-red-600 dark:text-red-400', border: 'border-red-100', key: 'out_of_stock' },
+    { label: 'Total Products', value: products.length, icon: Boxes,         iconCls: 'bg-white border border-blue-200 text-blue-600',   border: 'border-blue-100',   key: 'all' },
+    { label: 'In Stock',       value: inStock,          icon: CheckCircle,   iconCls: 'bg-white border border-emerald-200 text-emerald-600', border: 'border-emerald-100', key: 'in_stock' },
+    { label: 'Low Stock',      value: lowStock,         icon: AlertTriangle, iconCls: 'bg-white border border-amber-200 text-amber-500',  border: 'border-amber-100',  key: 'low_stock' },
+    { label: 'Out of Stock',   value: outStock,         icon: XCircle,       iconCls: 'bg-white border border-red-200 text-red-600',     border: 'border-red-100',    key: 'out_of_stock' },
   ]
 
   const FILTERS = [
@@ -55,8 +55,8 @@ export default function Stock() {
             }`}>
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-wide">{s.label}</span>
-              <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center`}>
-                <s.icon size={15} className={s.text} />
+              <div className={`w-9 h-9 rounded-xl shadow-sm flex items-center justify-center ${s.iconCls}`}>
+                <s.icon size={15} />
               </div>
             </div>
             <div className="text-xl font-bold text-[var(--ink)]">{s.value}</div>

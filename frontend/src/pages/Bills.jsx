@@ -113,9 +113,21 @@ function formatTime(date) {
    SHARE MENU
 ========================================================= */
 
-function getPdfUrl(billId) {
+function getPdfUrl(billId, printer = false) {
   const token = localStorage.getItem('access_token') || ''
-  return `${API_BASE_URL}/invoices/${billId}/pdf/?token=${token}`
+  return `${API_BASE_URL}/invoices/${billId}/pdf/?token=${token}${printer ? '&printer=thermal' : ''}`
+}
+
+function openPdf(billId, printer = false) {
+  const url = getPdfUrl(billId, printer)
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+  if (isMobile) {
+    window.open(url, '_blank', 'noopener,noreferrer')
+    return
+  }
+  const w = window.open('', '_blank')
+  if (!w) { toast.error('Popup blocked. Please allow popups.'); return }
+  w.location.href = url
 }
 
 async function fetchPdfBlob(billId) {
@@ -276,22 +288,11 @@ function StatCard({
   tone = 'blue',
 }) {
   const tones = {
-    blue: {
-      icon: 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400',
-      value: 'text-gray-950',
-    },
-    green: {
-      icon: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 dark:bg-emerald-950/60 dark:text-emerald-400',
-      value: 'text-gray-950',
-    },
-    violet: {
-      icon: 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400',
-      value: 'text-gray-950',
-    },
-    amber: {
-      icon: 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400',
-      value: 'text-gray-950',
-    },
+    blue:   { icon: 'bg-white border border-blue-100 text-blue-600',    accent: 'text-blue-600' },
+    green:  { icon: 'bg-white border border-emerald-100 text-emerald-600', accent: 'text-emerald-600' },
+    violet: { icon: 'bg-white border border-violet-100 text-violet-600', accent: 'text-violet-600' },
+    amber:  { icon: 'bg-white border border-amber-100 text-amber-600',   accent: 'text-amber-600' },
+    rose:   { icon: 'bg-white border border-rose-100 text-rose-600',     accent: 'text-rose-600' },
   }
 
   const style = tones[tone] || tones.blue
@@ -303,23 +304,16 @@ function StatCard({
           <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted-light)]">
             {label}
           </p>
-
-          <p
-            className="mt-1.5 truncate text-base font-bold tracking-tight text-[var(--ink)] sm:text-xl"
-          >
+          <p className="mt-1.5 truncate text-base font-bold tracking-tight text-[var(--ink)] sm:text-xl">
             {value}
           </p>
-
           {helper && (
             <p className="mt-1 text-[11px] text-[var(--muted-light)]">
               {helper}
             </p>
           )}
         </div>
-
-        <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${style.icon}`}
-        >
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm ${style.icon}`}>
           <Icon size={18} />
         </div>
       </div>
@@ -338,51 +332,39 @@ function StatusPill({ bill }) {
     paid: {
       label: 'Paid',
       icon: CheckCircle2,
-      className:
-        'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 ring-1 ring-inset ring-emerald-100',
+      className: 'bg-emerald-500 text-white',
     },
-
     completed: {
       label: 'Paid',
       icon: CheckCircle2,
-      className:
-        'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 ring-1 ring-inset ring-emerald-100',
+      className: 'bg-emerald-500 text-white',
     },
-
     partial: {
       label: 'Partial',
       icon: AlertCircle,
-      className:
-        'bg-orange-50 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 ring-1 ring-inset ring-orange-100 dark:ring-orange-900/40',
+      className: 'bg-amber-400 text-white',
     },
-
     pending: {
       label: 'Pending',
       icon: Clock3,
-      className:
-        'bg-orange-50 dark:bg-orange-950/60 text-orange-700 ring-1 ring-inset ring-orange-100',
+      className: 'bg-orange-500 text-white',
     },
-
     cancelled: {
       label: 'Cancelled',
       icon: Ban,
-      className:
-        'bg-red-50 dark:bg-red-950/60 text-red-700 ring-1 ring-inset ring-red-100',
+      className: 'bg-red-500 text-white',
     },
-
     refunded: {
       label: 'Refunded',
       icon: RefundIcon,
-      className:
-        'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 ring-1 ring-inset ring-amber-100 dark:ring-amber-900/40',
+      className: 'bg-slate-500 text-white',
     },
   }
 
   const item = config[status] || {
     label: status || 'Unknown',
     icon: AlertCircle,
-    className:
-      'bg-gray-100 text-[var(--muted)] ring-1 ring-inset ring-gray-200',
+    className: 'bg-gray-400 text-white',
   }
 
   const Icon = item.icon
@@ -405,17 +387,19 @@ function PaymentBadge({ method }) {
   const value = method?.toLowerCase()
 
   const styles = {
-    cash: 'bg-[var(--surface-elevated)] text-[var(--ink-secondary)] border-[var(--line)]',
-    upi: 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 border-blue-100',
-    card: 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-100',
-    credit: 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-900/40',
-    bank: 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-100',
+    cash:     'bg-emerald-500 text-white',
+    upi:      'bg-blue-500 text-white',
+    card:     'bg-violet-500 text-white',
+    credit:   'bg-rose-500 text-white',
+    bank:     'bg-cyan-600 text-white',
+    razorpay: 'bg-indigo-500 text-white',
+    online:   'bg-sky-500 text-white',
   }
 
   return (
     <span
-      className={`inline-flex items-center rounded-lg border px-2 py-1 text-[11px] font-semibold ${
-        styles[value] || 'border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--muted)]'
+      className={`inline-flex items-center rounded-lg px-2 py-1 text-[11px] font-semibold ${
+        styles[value] || 'bg-slate-400 text-white'
       }`}
     >
       {paymentLabel(method)}
@@ -436,20 +420,6 @@ function InvoiceActions({
   const navigate = useNavigate()
   const [shareOpen, setShareOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-
-  const openPdf = printer => {
-    const w = window.open('', '_blank')
-
-    if (!w) {
-      toast.error('Popup blocked. Please allow popups.')
-      return
-    }
-
-    w.location.href =
-      `${API_BASE_URL}/invoices/${bill.id}/pdf/?token=${localStorage.getItem(
-        'access_token'
-      )}${printer ? '&printer=thermal' : ''}`
-  }
 
   useEffect(() => {
     if (!shareOpen && !menuOpen) return
@@ -476,7 +446,7 @@ function InvoiceActions({
       </button>
 
       <button
-        onClick={() => openPdf(false)}
+        onClick={() => openPdf(bill.id, false)}
         className="icon-btn"
         title="Download PDF"
       >
@@ -484,7 +454,7 @@ function InvoiceActions({
       </button>
 
       <button
-        onClick={() => openPdf(true)}
+        onClick={() => openPdf(bill.id, true)}
         className="icon-btn"
         title="Thermal print"
       >
@@ -575,20 +545,6 @@ function InvoiceModal({
 
   if (!selected) return null
 
-  const openPdf = printer => {
-    const w = window.open('', '_blank')
-
-    if (!w) {
-      toast.error('Popup blocked. Please allow popups.')
-      return
-    }
-
-    w.location.href =
-      `${API_BASE_URL}/invoices/${selected.id}/pdf/?token=${localStorage.getItem(
-        'access_token'
-      )}${printer ? '&printer=thermal' : ''}`
-  }
-
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-3 backdrop-blur-sm sm:p-5"
@@ -631,7 +587,7 @@ function InvoiceModal({
 
           <div className="mt-3 flex flex-wrap gap-2 sm:mt-4">
             <button
-              onClick={() => openPdf(false)}
+              onClick={() => openPdf(selected.id, false)}
               className="inline-flex items-center gap-2 rounded-xl border border-[var(--line)] px-3.5 py-2 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
             >
               <Download size={14} />
@@ -639,7 +595,7 @@ function InvoiceModal({
             </button>
 
             <button
-              onClick={() => openPdf(true)}
+              onClick={() => openPdf(selected.id, true)}
               className="inline-flex items-center gap-2 rounded-xl border border-[var(--line)] px-3.5 py-2 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
             >
               <Printer size={14} />

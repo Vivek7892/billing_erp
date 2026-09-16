@@ -333,7 +333,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
               <button
                 key={v}
                 onClick={() => applyPreset(v)}
-                className="px-2.5 py-1 rounded-full text-xs font-medium bg-[var(--surface-elevated)] text-[var(--muted)] border border-[var(--line)] hover:bg-slate-100"
+                className="pos-chip"
               >
                 ₹{v.toLocaleString('en-IN')}
               </button>
@@ -949,19 +949,98 @@ export default function NewBill() {
   }, [grandTotal, payment, cart, lastInvoice, upiId, billDiscount, navigate])
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-[var(--app-bg)] text-[var(--ink)]">
+    <div className="pos-page min-h-screen w-full overflow-x-hidden bg-[var(--app-bg)] text-[var(--ink)]">
       <style>{`
-        .btn-solid{display:inline-flex;align-items:center;justify-content:center;gap:.375rem;min-height:2.375rem;padding:0 1rem;border-radius:var(--radius);background:var(--primary);color:#fff;font-weight:600;font-size:.8125rem;letter-spacing:.01em;transition:all .15s ease;border:1.5px solid var(--primary);box-shadow:var(--shadow-primary)}
-        .btn-solid:hover:not(:disabled){background:var(--primary-hover);border-color:var(--primary-hover)}
-        .btn-solid:active:not(:disabled){transform:translateY(1px) scale(.99)}
-        .btn-solid:disabled{opacity:.5;cursor:not-allowed}
-        .btn-outline{display:inline-flex;align-items:center;justify-content:center;gap:.375rem;min-height:2.375rem;padding:0 .875rem;border-radius:var(--radius);border:1.5px solid var(--line);background:var(--surface);color:var(--ink-secondary);font-weight:600;font-size:.8125rem;letter-spacing:.01em;transition:all .15s ease;box-shadow:var(--shadow-xs)}
-        .btn-outline:hover:not(:disabled){background:var(--surface-hover);border-color:var(--muted-light);color:var(--ink)}
+        /* ------------------------------------------------------------------
+           POS visual system
+           Clean, high-contrast, compact and consistent across desktop/mobile.
+        ------------------------------------------------------------------ */
+        .pos-page{--pos-radius:10px;--pos-radius-sm:8px}
+        .pos-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--pos-radius);box-shadow:var(--shadow-card)}
+        .pos-card-header{border-bottom:1px solid var(--line-subtle);background:var(--surface);border-radius:var(--pos-radius) var(--pos-radius) 0 0}
+        .pos-input{
+          width:100%;min-height:2.5rem;padding:.5rem .75rem;border:1px solid var(--line);
+          border-radius:var(--pos-radius-sm);background:var(--surface);color:var(--ink);
+          font-size:.8125rem;outline:none;transition:border-color .15s ease,box-shadow .15s ease,background .15s ease;
+        }
+        .pos-input::placeholder{color:var(--muted-light)}
+        .pos-input:hover{border-color:var(--muted-light)}
+        .pos-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 12%,transparent);background:var(--surface)}
+        .pos-select{appearance:auto;cursor:pointer}
+        .pos-money{font-variant-numeric:tabular-nums}
+        .pos-icon-button{
+          display:inline-flex;align-items:center;justify-content:center;width:2.25rem;height:2.25rem;
+          border:1px solid var(--line);border-radius:var(--pos-radius-sm);background:var(--surface);
+          color:var(--muted);transition:all .15s ease;
+        }
+        .pos-icon-button:hover{background:var(--surface-elevated);color:var(--ink);border-color:var(--muted-light)}
+        .pos-icon-button:active{transform:translateY(1px)}
+        .btn-solid{
+          display:inline-flex;align-items:center;justify-content:center;gap:.375rem;min-height:2.5rem;
+          padding:0 1rem;border-radius:var(--pos-radius-sm);background:var(--primary);color:#fff;
+          font-weight:700;font-size:.8125rem;letter-spacing:.005em;transition:all .15s ease;
+          border:1px solid var(--primary);box-shadow:var(--shadow-primary)
+        }
+        .btn-solid:hover:not(:disabled){background:var(--primary-hover);border-color:var(--primary-hover);filter:saturate(1.03)}
+        .btn-solid:active:not(:disabled){transform:translateY(1px)}
+        .btn-solid:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+        .btn-outline{
+          display:inline-flex;align-items:center;justify-content:center;gap:.375rem;min-height:2.5rem;
+          padding:0 .875rem;border-radius:var(--pos-radius-sm);border:1px solid var(--line);
+          background:var(--surface);color:var(--ink-secondary);font-weight:600;font-size:.8125rem;
+          letter-spacing:.005em;transition:all .15s ease;box-shadow:var(--shadow-xs)
+        }
+        .btn-outline:hover:not(:disabled){background:var(--surface-elevated);border-color:var(--muted-light);color:var(--ink)}
         .btn-outline:active:not(:disabled){transform:translateY(1px)}
         .btn-outline:disabled{opacity:.45;cursor:not-allowed}
+        .pos-payment-method{
+          min-height:3.5rem;border:1px solid var(--line);background:var(--surface);
+          color:var(--muted);border-radius:var(--pos-radius-sm);transition:all .15s ease
+        }
+        .pos-payment-method:hover{border-color:var(--primary);background:var(--surface-elevated);color:var(--ink)}
+        .pos-payment-active{background:var(--primary)!important;border-color:var(--primary)!important;color:#fff!important;box-shadow:var(--shadow-primary)}
+        .pos-amount-box{border-radius:var(--pos-radius-sm);padding:.75rem;border:1px solid var(--line);background:var(--surface-elevated)}
+        .pos-exact{
+          display:inline-flex;align-items:center;justify-content:center;min-height:2rem;padding:0 .8rem;
+          border-radius:var(--pos-radius-sm);border:1px solid #059669;background:#059669;color:#fff;
+          font-size:.75rem;font-weight:700;transition:all .15s ease
+        }
+        .pos-exact:hover{background:#047857;border-color:#047857}
+        .pos-exact:active{transform:translateY(1px)}
+        .pos-chip{
+          display:inline-flex;align-items:center;justify-content:center;min-height:2rem;padding:0 .7rem;
+          border-radius:var(--pos-radius-sm);border:1px solid var(--line);background:var(--surface);
+          color:var(--muted);font-size:.75rem;font-weight:600;transition:all .15s ease
+        }
+        .pos-chip:hover{background:var(--surface-elevated);border-color:var(--muted-light);color:var(--ink)}
+        .pos-total-panel{
+          border:1px solid var(--line);border-radius:var(--pos-radius);background:var(--surface-elevated);
+          padding:.875rem
+        }
+        .pos-grand-total{
+          font-size:clamp(1.65rem,3vw,2rem);font-weight:800;letter-spacing:-.02em;
+          font-variant-numeric:tabular-nums;color:var(--ink)
+        }
+        .pos-product{
+          position:relative;text-align:left;border:1px solid var(--line);border-radius:var(--pos-radius-sm);
+          background:var(--surface);padding:.75rem;transition:all .15s ease
+        }
+        .pos-product:hover{border-color:var(--primary);background:var(--surface-elevated);transform:translateY(-1px);box-shadow:var(--shadow-xs)}
+        .pos-product:active{transform:translateY(0)}
+        .pos-product-in-cart{border-color:var(--primary)!important;background:color-mix(in srgb,var(--primary) 7%,var(--surface))!important}
+        .pos-search-result{border-bottom:1px solid var(--line-subtle);transition:background .15s ease}
+        .pos-search-result:hover{background:var(--surface-elevated)}
+        .pos-section-label{font-size:.75rem;font-weight:700;color:var(--ink);letter-spacing:.01em}
+        .pos-muted-label{font-size:.6875rem;color:var(--muted-light)}
+        .pos-table thead th{background:var(--surface-elevated);color:var(--muted);font-size:.6875rem;font-weight:700;letter-spacing:.05em}
+        .pos-table tbody tr{transition:background .15s ease}
+        .pos-table tbody tr:hover{background:var(--surface-elevated)}
+        .pos-danger{color:#dc2626}
+        .pos-danger:hover{background:#fef2f2;color:#b91c1c}
         @media (max-width: 639px){
           .mobile-safe-button{min-height:2.75rem}
           .mobile-modal-content{max-height:calc(100dvh - 1.5rem);overflow-y:auto}
+          .pos-grand-total{font-size:1.75rem}
         }
       `}</style>
 
@@ -970,7 +1049,7 @@ export default function NewBill() {
         <section className="flex-1 min-w-0 flex flex-col gap-3">
 
           {/* Top bar: clock + quick customer QR payment + today snapshot */}
-          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl px-3 py-2 shadow-[var(--shadow-card)]">
+          <div className="pos-card px-3 py-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
                 <Clock size={13} className="text-blue-500 dark:text-blue-400" />
@@ -1001,12 +1080,12 @@ export default function NewBill() {
           </div>
 
           {/* Search + category chips */}
-          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3 shadow-[var(--shadow-card)] space-y-2.5">
+          <div className="pos-card p-3 space-y-2.5">
             <div className="relative">
               <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" />
               <input
                 ref={searchRef}
-                className="w-full h-11 pl-10 pr-16 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]"
+                className="pos-input h-11 pl-10 pr-16 text-sm"
                 placeholder="Scan barcode, or search product / SKU"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -1017,7 +1096,7 @@ export default function NewBill() {
               {search && (
                 <div className="absolute z-20 mt-1 w-full bg-[var(--surface)] border border-[var(--line)] rounded-lg shadow-lg max-h-72 overflow-y-auto">
                   {filtered.length ? filtered.slice(0, 10).map(p => (
-                    <button key={p.id} onClick={() => addToCart(p)} className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-blue-50 dark:hover:bg-blue-950/30 border-b border-[var(--line-subtle)] last:border-0 transition-colors">
+                    <button key={p.id} onClick={() => addToCart(p)} className="pos-search-result w-full flex items-center justify-between px-3 py-2.5 text-left last:border-0">
                       <span>
                         <span className="block text-sm font-medium text-[var(--ink)]">{p.name}</span>
                         <span className="block text-[11px] text-[var(--muted-light)]">SKU {p.sku} · Stock {p.current_stock}</span>
@@ -1060,7 +1139,7 @@ export default function NewBill() {
                   <button
                     key={p.id}
                     onClick={() => addToCart(p)}
-                    className={`relative text-left border rounded-lg p-2.5 transition-colors ${inCart ? 'border-blue-300 bg-blue-50 dark:bg-blue-950/40' : 'border-[var(--line)] hover:border-blue-200 hover:bg-blue-50/50 dark:hover:bg-blue-950/20'}`}
+                    className={`pos-product ${inCart ? 'pos-product-in-cart' : ''}`}
                   >
                     {inCart && <span className="absolute top-1.5 right-1.5 bg-[var(--primary)] text-white text-[10px] font-bold rounded-full h-4 min-w-4 px-1 flex items-center justify-center">{inCart.qty}</span>}
                     <div className="text-xs font-medium text-[var(--ink)] truncate pr-4">{p.name}</div>
@@ -1078,14 +1157,14 @@ export default function NewBill() {
           </div>
 
           {/* Cart */}
-          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-[var(--shadow-card)] flex-1 flex flex-col min-h-[16rem]">
+          <div className="pos-card flex-1 flex flex-col min-h-[16rem] overflow-hidden">
             <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-[var(--line-subtle)]">
               <b className="text-sm text-[var(--ink)]">Cart <span className="font-normal text-[var(--muted-light)]">({cart.length} item{cart.length === 1 ? '' : 's'})</span></b>
               {cart.length > 0 && <button onClick={() => setCart([])} className="text-xs text-rose-500 hover:text-rose-600 dark:text-rose-400 font-medium">Clear cart</button>}
             </div>
             {cart.length ? (
               <div className="overflow-auto">
-                <table className="w-full text-sm">
+                <table className="pos-table w-full text-sm">
                   <thead>
                     <tr className="text-[11px] uppercase tracking-wide text-[var(--muted-light)] border-b border-[var(--line-subtle)]">
                       <th className="py-2 pl-3 pr-1 font-medium text-center">#</th>
@@ -1127,7 +1206,7 @@ export default function NewBill() {
           </div>
 
           {/* Customer */}
-          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3.5 shadow-[var(--shadow-card)]">
+          <div className="pos-card p-3.5">
             <div className="flex justify-between items-center mb-2">
               <b className="text-sm text-[var(--ink)]">Customer</b>
               <button className="text-xs text-[var(--primary-text)] font-semibold flex items-center gap-0.5 hover:underline" onClick={() => setShowCustomerModal(true)}>
@@ -1138,7 +1217,7 @@ export default function NewBill() {
               <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" />
               <input
                 ref={customerRef}
-                className="w-full h-9 pl-8 pr-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]"
+                className="pos-input h-9 pl-8 pr-3 text-sm"
                 placeholder="Walk-in customer, or search"
                 value={customerSearch}
                 onChange={e => { setCustomerSearch(e.target.value); if (!e.target.value) setCustomer(null) }}
@@ -1163,7 +1242,7 @@ export default function NewBill() {
           </div>
 
           {/* Summary + grand total — the most important number on the page */}
-          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3.5 shadow-[var(--shadow-card)]">
+          <div className="pos-card p-3.5">
             <b className="text-sm text-[var(--ink)]">Bill summary</b>
             <div className="mt-2 space-y-1 text-sm text-[var(--muted)]">
               <div className="flex justify-between"><span>Subtotal</span><span className="tabular-nums">{fmt(subtotal)}</span></div>
@@ -1187,19 +1266,19 @@ export default function NewBill() {
             </div>
             <div className="mt-3 pt-3 border-t border-dashed border-[var(--line)] flex items-end justify-between">
               <span className="text-sm font-medium text-[var(--muted)]">Grand total</span>
-              <strong className="text-3xl font-bold text-[var(--ink)] tabular-nums">{fmt(grandTotal)}</strong>
+              <strong className="pos-grand-total">{fmt(grandTotal)}</strong>
             </div>
           </div>
 
           {/* Payment */}
-          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3.5 shadow-[var(--shadow-card)]">
+          <div className="pos-card p-3.5">
             <b className="text-sm text-[var(--ink)]">Payment</b>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2.5">
               {PAYMENT_METHODS.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
                   onClick={() => selectPayment(id)}
-                  className={`flex flex-col items-center justify-center gap-1 rounded-lg border py-2 text-[11px] font-medium transition ${payment.method === id ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-[var(--shadow-primary)]' : 'border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:border-[var(--primary-border)]'}`}
+                  className={`pos-payment-method flex flex-col items-center justify-center gap-1 border py-2 text-[11px] font-semibold ${payment.method === id ? 'pos-payment-active' : ''}`}
                 >
                   <Icon size={15} />{label}
                 </button>
@@ -1212,15 +1291,21 @@ export default function NewBill() {
                   <span className="text-xs text-[var(--muted)]">Amount received</span>
                   <input
                     ref={paymentRef}
-                    type="number" className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]"
+                    type="number" className="pos-input h-10 mt-1 text-sm"
                     value={payment.amount} placeholder={grandTotal.toFixed(2)}
                     onChange={e => setPayment(x => ({ ...x, amount: e.target.value, status: 'paid' }))}
                   />
                 </label>
                 <div className="flex flex-wrap gap-1.5">
-                  <button onClick={setExactCash} className="px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 border border-emerald-200 hover:bg-emerald-100">Exact</button>
+<button
+  type="button"
+  onClick={setExactCash}
+  className="pos-exact focus:outline-none focus:ring-2 focus:ring-emerald-500/25"
+>
+  Exact
+</button>
                   {CASH_CHIPS.map(v => (
-                    <button key={v} onClick={() => addCashChip(v)} className="px-2.5 py-1 rounded-full text-xs font-medium bg-[var(--surface-elevated)] text-[var(--muted)] border border-[var(--line)] hover:bg-slate-100">+{v}</button>
+                    <button key={v} onClick={() => addCashChip(v)} className="pos-chip">+{v}</button>
                   ))}
                 </div>
                 <div className="flex justify-between text-xs bg-[var(--surface-elevated)] rounded-lg px-3 py-2">
@@ -1261,11 +1346,11 @@ export default function NewBill() {
               <div className="mt-3 space-y-2.5">
                 <label className="block">
                   <span className="text-xs text-[var(--muted)]">Amount</span>
-                  <input type="number" className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]" value={payment.amount} onChange={e => setPayment(x => ({ ...x, amount: e.target.value }))} />
+                  <input type="number" className="pos-input h-10 mt-1 text-sm" value={payment.amount} onChange={e => setPayment(x => ({ ...x, amount: e.target.value }))} />
                 </label>
                 <label className="block">
                   <span className="text-xs text-[var(--muted)]">Reference (optional)</span>
-                  <input className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]" value={payment.reference} onChange={e => setPayment(x => ({ ...x, reference: e.target.value }))} />
+                  <input className="pos-input h-10 mt-1 text-sm" value={payment.reference} onChange={e => setPayment(x => ({ ...x, reference: e.target.value }))} />
                 </label>
               </div>
             )}
@@ -1404,7 +1489,7 @@ export default function NewBill() {
       <button
         type="button"
         onClick={() => setCartOpen(true)}
-        className="md:hidden fixed bottom-3 inset-x-3 z-20 min-h-12 rounded-xl bg-[var(--primary)] text-white px-4 shadow-xl flex items-center justify-between font-semibold text-sm"
+        className="md:hidden fixed bottom-3 inset-x-3 z-20 min-h-12 rounded-xl bg-[var(--primary)] text-white px-4 shadow-2xl flex items-center justify-between font-bold text-sm border border-white/10"
       >
         <span className="flex items-center gap-2"><Receipt size={17} /> Cart ({cart.reduce((count, item) => count + Number(item.qty || 0), 0)})</span>
         <span>{fmt(grandTotal)}</span>
@@ -1415,7 +1500,7 @@ export default function NewBill() {
         <button
           onClick={openQuickPayment}
           title="Quick customer UPI payment"
-          className="fixed right-3 bottom-20 md:right-5 md:bottom-5 z-20 inline-flex items-center gap-2 h-12 px-4 sm:px-5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-2xl border-2 border-white transition active:scale-[0.98]"
+          className="fixed right-3 bottom-20 md:right-5 md:bottom-5 z-20 inline-flex items-center gap-2 h-12 px-4 sm:px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-2xl border border-emerald-700 transition active:scale-[0.98]"
         >
           <QrCode size={18} />
           Quick Pay{cart.length > 0 ? ` · ${fmt(grandTotal)}` : ''}
@@ -1426,13 +1511,13 @@ export default function NewBill() {
       <Modal open={showCustomerModal} onClose={() => setShowCustomerModal(false)} title="Add new customer" size="sm">
         <div className="space-y-3">
           <label className="block text-sm text-[var(--muted)]">Name *
-            <input className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]" value={newCustomer.name} onChange={e => setNewCustomer(x => ({ ...x, name: e.target.value }))} />
+            <input className="pos-input h-10 mt-1 text-sm" value={newCustomer.name} onChange={e => setNewCustomer(x => ({ ...x, name: e.target.value }))} />
           </label>
           <label className="block text-sm text-[var(--muted)]">Mobile
-            <input className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]" value={newCustomer.mobile} onChange={e => setNewCustomer(x => ({ ...x, mobile: e.target.value }))} />
+            <input className="pos-input h-10 mt-1 text-sm" value={newCustomer.mobile} onChange={e => setNewCustomer(x => ({ ...x, mobile: e.target.value }))} />
           </label>
           <label className="block text-sm text-[var(--muted)]">Email
-            <input className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]" value={newCustomer.email} onChange={e => setNewCustomer(x => ({ ...x, email: e.target.value }))} />
+            <input className="pos-input h-10 mt-1 text-sm" value={newCustomer.email} onChange={e => setNewCustomer(x => ({ ...x, email: e.target.value }))} />
           </label>
           <button className="btn-solid w-full" onClick={addCustomer}>Add customer</button>
         </div>

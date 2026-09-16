@@ -26,6 +26,11 @@ export const invoiceService = {
     return unwrapResponse(response)
   },
 
+  async getInvoice(invoiceId) {
+    const response = await api.get(`/invoices/${invoiceId}/`)
+    return unwrapResponse(response)
+  },
+
   async getPdf(invoiceId, params = {}, config = {}) {
     return api.get(`/invoices/${invoiceId}/pdf/`, {
       ...config,
