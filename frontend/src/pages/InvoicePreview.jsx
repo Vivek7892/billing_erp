@@ -14,6 +14,10 @@ function getPdfUrl(id, thermal) {
 export default function InvoicePreview() {
   const { id } = useParams()
   const navigate = useNavigate()
+  // Mobile browsers, especially iOS Safari, do not reliably render an
+  // authenticated blob URL inside an iframe. Let their native PDF viewer do
+  // the job instead.
+  const isMobile = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
   const [invoiceNumber, setInvoiceNumber] = useState('')
   const [thermal, setThermal] = useState(false)
   const [pdfUrl, setPdfUrl] = useState('')
@@ -30,6 +34,11 @@ export default function InvoicePreview() {
   // Reload PDF blob whenever id or thermal mode changes
   useEffect(() => {
     if (!id) { setLoading(false); return }
+    if (isMobile) {
+      setPdfUrl('')
+      setLoading(false)
+      return undefined
+    }
     let objectUrl = ''
     setLoading(true)
     const token = localStorage.getItem('access_token') || ''
@@ -43,12 +52,16 @@ export default function InvoicePreview() {
       .catch(() => toast.error('Could not load invoice PDF'))
       .finally(() => setLoading(false))
     return () => { if (objectUrl) URL.revokeObjectURL(objectUrl) }
-  }, [id, thermal])
+  }, [id, thermal, isMobile])
 
   const openInNew = () => {
     const url = getPdfUrl(id, thermal)
-    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-    if (isMobile) { window.open(url, '_blank', 'noopener,noreferrer'); return }
+    if (isMobile) {
+      // A same-tab navigation is not popup-blocked and opens in the phone's
+      // native PDF viewer, where zoom, save and share work as expected.
+      window.location.assign(url)
+      return
+    }
     const w = window.open('', '_blank')
     if (!w) { toast.error('Allow pop-ups to open'); return }
     w.location.href = url
@@ -134,7 +147,7 @@ export default function InvoicePreview() {
           </button>
         </div>
 
-        <button onClick={openInNew} className="btn-secondary text-xs gap-1.5 shrink-0"><Printer size={14} /> Open</button>
+        <button onClick={openInNew} className="btn-secondary text-xs gap-1.5 shrink-0"><Printer size={14} /> {isMobile ? 'Open bill' : 'Open'}</button>
         <button onClick={download} className="btn-secondary text-xs gap-1.5 shrink-0"><Download size={14} /> Download</button>
         <button onClick={share} className="btn-secondary text-xs gap-1.5 shrink-0"><Share2 size={14} /> Share</button>
       </div>
@@ -142,6 +155,24 @@ export default function InvoicePreview() {
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
           <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+        </div>
+      ) : isMobile ? (
+        <div className="flex-1 flex items-center justify-center bg-[var(--surface-elevated)] p-5">
+          <section className="w-full max-w-sm rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 text-center shadow-[var(--shadow-card)]">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <FileText size={22} />
+            </div>
+            <h2 className="mt-4 text-base font-bold text-[var(--ink)]">View your invoice</h2>
+            <p className="mt-1.5 text-sm leading-6 text-[var(--muted)]">
+              Open this bill in your phone's PDF viewer to view, zoom, print, or share it.
+            </p>
+            <button onClick={openInNew} className="btn-primary btn-lg mt-5 w-full">
+              <FileText size={16} /> Open bill
+            </button>
+            <button onClick={download} className="btn-secondary btn-lg mt-2.5 w-full">
+              <Download size={16} /> Download PDF
+            </button>
+          </section>
         </div>
       ) : (
         <iframe

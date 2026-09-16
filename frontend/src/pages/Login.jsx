@@ -103,92 +103,121 @@ export default function Login() {
     }
   }
 
-  // ============================================================
-  // UI
-  // ============================================================
-
   return (
-    <main className="min-h-screen bg-[var(--app-bg)] text-[var(--ink)]">
+    <main className="min-h-screen bg-white text-slate-900">
 
-      <div className="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid min-h-screen lg:grid-cols-[1.1fr_0.9fr]">
 
         {/* ======================================================
-            LEFT BRANDING PANEL
+            LEFT INFORMATION PANEL
         ====================================================== */}
 
-        <section className="relative hidden overflow-hidden bg-slate-950 lg:flex">
+        <section className="hidden bg-slate-50 lg:flex">
 
-          {/* Background decoration */}
-          <div className="absolute inset-0 overflow-hidden">
+          <div className="flex min-h-screen w-full flex-col px-12 py-10 xl:px-20">
 
-            <div className="absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full bg-blue-600/20 blur-[100px]" />
+            {/* ==================================================
+                BRAND
+            ================================================== */}
 
-            <div className="absolute -bottom-40 -right-40 h-[520px] w-[520px] rounded-full bg-cyan-500/10 blur-[110px]" />
+            <Brand />
 
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(37,99,235,0.18),transparent_32%)]" />
 
-            <div className="absolute inset-y-0 right-0 w-px bg-white/10" />
+            {/* ==================================================
+                SYSTEM INFORMATION
+            ================================================== */}
 
-          </div>
-
-          <div className="relative z-10 flex min-h-screen w-full flex-col px-12 py-10 xl:px-20">
-
-            {/* Brand */}
-            <Brand dark />
-
-            {/* Hero */}
             <div className="flex flex-1 items-center">
 
-              <div className="max-w-2xl pb-12">
+              <div className="max-w-[650px]">
 
-                {/* Badge */}
-                <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-semibold text-slate-300 backdrop-blur">
+                {/* Small Label */}
 
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]" />
+                <div className="mb-5 flex items-center gap-3">
 
-                  Built for modern business
+                  <span className="h-px w-8 bg-blue-600" />
+
+                  <span className="
+                    text-xs
+                    font-semibold
+                    uppercase
+                    tracking-[0.16em]
+                    text-slate-500
+                  ">
+                    ERP Billing & Business Management
+                  </span>
 
                 </div>
 
-                {/* Heading */}
-                <h1 className="max-w-xl text-5xl font-bold leading-[1.05] tracking-[-0.045em] text-white xl:text-6xl">
 
-                  Run your business
+                {/* Main Heading */}
 
-                  <span className="mt-2 block text-blue-400">
-                    with confidence.
+                <h1 className="
+                  max-w-xl
+                  text-4xl
+                  font-bold
+                  leading-[1.12]
+                  tracking-[-0.035em]
+                  text-slate-950
+                  xl:text-5xl
+                ">
+                  Manage your business
+                  <span className="block text-slate-700">
+                    from one place.
                   </span>
-
                 </h1>
 
+
                 {/* Description */}
-                <p className="mt-7 max-w-xl text-base leading-7 text-slate-400 xl:text-lg">
 
-                  A smarter ERP workspace for billing, inventory,
-                  customers, reports and everyday operations — all in
-                  one place.
-
+                <p className="
+                  mt-6
+                  max-w-xl
+                  text-[15px]
+                  leading-7
+                  text-slate-600
+                ">
+                  A centralized ERP billing system designed to simplify
+                  daily business operations. Manage invoices, inventory,
+                  customers, purchases, expenses, GST and reports from
+                  a single workspace.
                 </p>
 
-                {/* Features */}
-                <div className="mt-12 grid max-w-xl gap-3 sm:grid-cols-3">
 
-                  <Feature
-                    icon={<CheckIcon />}
-                    title="Simple"
-                    description="Less effort, more control."
+                {/* ==================================================
+                    FEATURES
+                ================================================== */}
+
+                <div className="mt-10 grid max-w-xl grid-cols-2 gap-x-10 gap-y-7">
+
+                  <SystemFeature
+                    title="Billing & Invoices"
+                    description="Create, manage and print invoices."
                   />
 
-                  <Feature
-                    icon={<ChartIcon />}
-                    title="Insightful"
-                    description="Decisions backed by data."
+                  <SystemFeature
+                    title="Inventory Management"
+                    description="Track products and stock levels."
                   />
 
-                  <Feature
-                    icon={<ShieldIcon />}
-                    title="Secure"
-                    description="Access you can trust."
+                  <SystemFeature
+                    title="Customer Management"
+                    description="Maintain customer and transaction records."
+                  />
+
+                  <SystemFeature
+                    title="Purchases & Expenses"
+                    description="Manage suppliers, purchases and expenses."
+                  />
+
+                  <SystemFeature
+                    title="GST & Tax"
+                    description="Maintain tax and GST information."
+                  />
+
+                  <SystemFeature
+                    title="Business Reports"
+                    description="Monitor sales and business activity."
                   />
 
                 </div>
@@ -197,15 +226,26 @@ export default function Login() {
 
             </div>
 
-            {/* Footer */}
-            <div className="flex items-center justify-between border-t border-white/10 pt-5 text-[11px] font-medium text-slate-500">
 
-              <span>
+            {/* ==================================================
+                LEFT FOOTER
+            ================================================== */}
+
+            <div className="
+              flex
+              items-center
+              justify-between
+              border-t
+              border-slate-200
+              pt-5
+            ">
+
+              <span className="text-xs text-slate-500">
                 © {new Date().getFullYear()} DreamWithTech
               </span>
 
-              <span>
-                ERP · Retail · Business Management
+              <span className="text-xs text-slate-400">
+                ERP · Billing · Business Management
               </span>
 
             </div>
@@ -219,294 +259,433 @@ export default function Login() {
             RIGHT LOGIN PANEL
         ====================================================== */}
 
-        <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--app-bg)] px-5 py-8 sm:px-8">
+        <section className="
+          flex
+          min-h-screen
+          items-center
+          justify-center
+          bg-white
+          px-5
+          py-10
+          sm:px-8
+        ">
 
-          {/* Background glow */}
-          <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-blue-100/60 blur-[90px]" />
+          <div className="w-full max-w-[400px]">
 
-          <div className="pointer-events-none absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-slate-200/70 blur-[90px]" />
+            {/* ==================================================
+                MOBILE BRAND
+            ================================================== */}
 
-
-          <div className="relative w-full max-w-[440px]">
-
-            {/* Mobile logo */}
-            <div className="mb-8 lg:hidden">
+            <div className="mb-12 lg:hidden">
               <Brand />
             </div>
 
 
             {/* ==================================================
-                LOGIN CARD
+                LOGIN HEADER
             ================================================== */}
 
-            <div className="rounded-[30px] border border-[var(--line)] bg-[var(--surface)] p-7 shadow-[0_30px_80px_-30px_rgba(15,23,42,0.25)] sm:p-10">
+            <div className="mb-8">
 
-              {/* Header */}
-              <div className="mb-8">
+              {/* Login Icon */}
 
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100">
-
-                  <LockIcon large />
-
-                </div>
-
-                <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-blue-600">
-
-                  Login to your account
-
-                </p>
-
-                <h2 className="text-3xl font-bold tracking-[-0.04em] text-[var(--ink)]">
-
-                  Welcome back
-
-                </h2>
-
-                <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-
-                  Sign in to access your ERP workspace.
-
-                </p>
-
+              <div className="
+                mb-5
+                flex
+                h-11
+                w-11
+                items-center
+                justify-center
+                rounded-md
+                border
+                border-slate-200
+                bg-slate-50
+                text-slate-700
+              ">
+                <LockIcon />
               </div>
 
 
-              {/* =================================================
-                  SERVER ERROR
-              ================================================= */}
-
-              {errors.form && (
-
-                <div
-                  role="alert"
-                  className="mb-5 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3.5 text-sm font-medium text-red-700"
-                >
-
-                  <AlertIcon />
-
-                  <span>
-                    {errors.form}
-                  </span>
-
-                </div>
-
-              )}
+              <h2 className="
+                text-3xl
+                font-bold
+                tracking-[-0.03em]
+                text-slate-950
+              ">
+                Welcome back
+              </h2>
 
 
-              {/* =================================================
-                  LOGIN FORM
-              ================================================= */}
+              <p className="
+                mt-2
+                text-sm
+                leading-6
+                text-slate-500
+              ">
+                Sign in to access your ERP workspace.
+              </p>
 
-              <form
-                onSubmit={submit}
-                noValidate
-                className="space-y-5"
+            </div>
+
+
+            {/* ==================================================
+                ERROR MESSAGE
+            ================================================== */}
+
+            {errors.form && (
+
+              <div
+                role="alert"
+                className="
+                  mb-5
+                  rounded-md
+                  border
+                  border-red-200
+                  bg-red-50
+                  px-4
+                  py-3
+                  text-sm
+                  font-medium
+                  text-red-700
+                "
               >
+                {errors.form}
+              </div>
 
-                {/* Username */}
-                <Field
-                  id="username"
-                  label="Username"
-                  type="text"
-                  value={form.username}
-                  error={errors.username}
-                  placeholder="Enter your username"
-                  autoComplete="username"
-                  autoFocus
-                  onChange={(e) =>
-                    updateField(
-                      'username',
-                      e.target.value
-                    )
-                  }
-                  disabled={loading}
-                />
+            )}
 
 
-                {/* Password */}
-                <div>
+            {/* ==================================================
+                LOGIN FORM
+            ================================================== */}
 
-                  <label
-                    htmlFor="password"
-                    className="mb-2 block text-sm font-semibold text-[var(--ink-secondary)]"
-                  >
-                    Password
-                  </label>
+            <form
+              onSubmit={submit}
+              noValidate
+              className="space-y-5"
+            >
+
+              {/* ==================================================
+                  USERNAME
+              ================================================== */}
+
+              <Field
+                id="username"
+                label="Username"
+                type="text"
+                value={form.username}
+                error={errors.username}
+                placeholder="Enter your username"
+                autoComplete="username"
+                autoFocus
+                disabled={loading}
+                onChange={(e) =>
+                  updateField(
+                    'username',
+                    e.target.value
+                  )
+                }
+              />
 
 
-                  <div className="relative">
+              {/* ==================================================
+                  PASSWORD
+              ================================================== */}
 
-                    <input
-                      id="password"
-                      type={
-                        showPassword
-                          ? 'text'
-                          : 'password'
-                      }
-                      autoComplete="current-password"
-                      placeholder="Enter your password"
-                      value={form.password}
-                      onChange={(e) =>
-                        updateField(
-                          'password',
-                          e.target.value
-                        )
-                      }
-                      disabled={loading}
-                      aria-invalid={
-                        Boolean(errors.password)
-                      }
-                      aria-describedby={
+              <div>
+
+                <label
+                  htmlFor="password"
+                  className="
+                    mb-2
+                    block
+                    text-sm
+                    font-medium
+                    text-slate-700
+                  "
+                >
+                  Password
+                </label>
+
+
+                <div className="relative">
+
+                  <input
+                    id="password"
+                    type={
+                      showPassword
+                        ? 'text'
+                        : 'password'
+                    }
+                    value={form.password}
+                    placeholder="Enter your password"
+                    autoComplete="current-password"
+                    disabled={loading}
+                    aria-invalid={Boolean(errors.password)}
+                    aria-describedby={
+                      errors.password
+                        ? 'password-error'
+                        : undefined
+                    }
+                    onChange={(e) =>
+                      updateField(
+                        'password',
+                        e.target.value
+                      )
+                    }
+                    className={`
+                      h-12
+                      w-full
+                      rounded-md
+                      border
+                      bg-white
+                      px-4
+                      pr-12
+                      text-sm
+                      text-slate-900
+                      outline-none
+                      transition
+                      placeholder:text-slate-400
+                      disabled:cursor-not-allowed
+                      disabled:bg-slate-50
+                      focus:ring-2
+
+                      ${
                         errors.password
-                          ? 'password-error'
-                          : undefined
+                          ? `
+                            border-red-400
+                            focus:border-red-500
+                            focus:ring-red-100
+                          `
+                          : `
+                            border-slate-300
+                            focus:border-slate-700
+                            focus:ring-slate-100
+                          `
                       }
-                      className={`h-12 w-full rounded-2xl border bg-[var(--surface-elevated)] px-4 pr-12 text-sm text-[var(--ink)] outline-none transition-all duration-200 placeholder:text-[var(--muted-light)] hover:bg-[var(--surface)] focus:bg-[var(--surface)] focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 ${
-                        errors.password
-                          ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10'
-                          : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/10'
-                      }`}
-                    />
+                    `}
+                  />
 
 
-                    {/* Show / Hide Password */}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowPassword(
-                          (value) => !value
-                        )
-                      }
-                      disabled={loading}
-                      aria-label={
-                        showPassword
-                          ? 'Hide password'
-                          : 'Show password'
-                      }
-                      title={
-                        showPassword
-                          ? 'Hide password'
-                          : 'Show password'
-                      }
-                      className="absolute right-0 top-0 flex h-12 w-12 items-center justify-center rounded-r-2xl text-[var(--muted-light)] transition hover:text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:cursor-not-allowed"
-                    >
-
-                      {showPassword ? (
-                        <EyeOffIcon />
-                      ) : (
-                        <EyeIcon />
-                      )}
-
-                    </button>
-
-                  </div>
-
-
-                  {/* Password error */}
-                  {errors.password && (
-
-                    <p
-                      id="password-error"
-                      className="mt-1.5 text-xs font-medium text-red-600"
-                    >
-                      {errors.password}
-                    </p>
-
-                  )}
-
-                </div>
-
-
-                {/* Remember / Forgot */}
-                <div className="flex items-center justify-between pt-1">
-
-                  <label className="flex cursor-pointer items-center gap-2.5 text-xs font-medium text-[var(--muted)]">
-
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                    />
-
-                    Remember me
-
-                  </label>
-
+                  {/* Show / Hide */}
 
                   <button
                     type="button"
-                    className="text-xs font-semibold text-blue-600 transition hover:text-blue-700"
                     onClick={() =>
-                      toast(
-                        'Please contact your administrator to reset your password.'
+                      setShowPassword(
+                        (value) => !value
                       )
                     }
+                    disabled={loading}
+                    aria-label={
+                      showPassword
+                        ? 'Hide password'
+                        : 'Show password'
+                    }
+                    className="
+                      absolute
+                      right-0
+                      top-0
+                      flex
+                      h-12
+                      w-12
+                      items-center
+                      justify-center
+                      text-slate-400
+                      transition
+                      hover:text-slate-700
+                      focus:outline-none
+                    "
                   >
-                    Forgot password?
+
+                    {showPassword ? (
+                      <EyeOffIcon />
+                    ) : (
+                      <EyeIcon />
+                    )}
+
                   </button>
 
                 </div>
 
 
-                {/* =================================================
-                    SIGN IN BUTTON
-                ================================================= */}
+                {/* Password Error */}
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="group relative flex h-12 w-full items-center justify-center overflow-hidden rounded-2xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-700 hover:shadow-xl hover:shadow-blue-600/25 focus:outline-none focus:ring-4 focus:ring-blue-500/20 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
-                >
+                {errors.password && (
 
-                  {loading ? (
+                  <p
+                    id="password-error"
+                    className="
+                      mt-1.5
+                      text-xs
+                      font-medium
+                      text-red-600
+                    "
+                  >
+                    {errors.password}
+                  </p>
 
-                    <span className="inline-flex items-center gap-2">
-
-                      <Spinner />
-
-                      Signing in...
-
-                    </span>
-
-                  ) : (
-
-                    <span className="inline-flex items-center gap-2">
-
-                      Sign in
-
-                      <ArrowIcon />
-
-                    </span>
-
-                  )}
-
-                </button>
-
-              </form>
-
-
-              {/* =================================================
-                  SECURITY MESSAGE
-              ================================================= */}
-
-              <div className="mt-7 flex items-center justify-center gap-2 text-xs font-medium text-[var(--muted-light)]">
-
-                <LockIcon />
-
-                <span>
-                  Your connection is secure
-                </span>
+                )}
 
               </div>
+
+
+              {/* ==================================================
+                  OPTIONS
+              ================================================== */}
+
+              <div className="
+                flex
+                items-center
+                justify-between
+                pt-1
+              ">
+
+                <label className="
+                  flex
+                  cursor-pointer
+                  items-center
+                  gap-2
+                  text-sm
+                  text-slate-600
+                ">
+
+                  <input
+                    type="checkbox"
+                    className="
+                      h-4
+                      w-4
+                      rounded
+                      border-slate-300
+                      text-slate-900
+                      focus:ring-slate-300
+                    "
+                  />
+
+                  Remember me
+
+                </label>
+
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    toast(
+                      'Please contact your administrator to reset your password.'
+                    )
+                  }
+                  className="
+                    text-sm
+                    font-medium
+                    text-slate-600
+                    transition
+                    hover:text-slate-950
+                  "
+                >
+                  Forgot password?
+                </button>
+
+              </div>
+
+
+              {/* ==================================================
+                  SIGN IN BUTTON
+              ================================================== */}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="
+                  flex
+                  h-12
+                  w-full
+                  items-center
+                  justify-center
+                  rounded-md
+                  bg-slate-900
+                  text-sm
+                  font-semibold
+                  text-white
+                  transition
+                  hover:bg-slate-800
+                  focus:outline-none
+                  focus:ring-2
+                  focus:ring-slate-300
+                  active:bg-slate-950
+                  disabled:cursor-not-allowed
+                  disabled:opacity-60
+                "
+              >
+
+                {loading ? (
+
+                  <span className="
+                    flex
+                    items-center
+                    gap-2
+                  ">
+                    <Spinner />
+                    Signing in...
+                  </span>
+
+                ) : (
+
+                  'Sign in'
+
+                )}
+
+              </button>
+
+            </form>
+
+
+            {/* ==================================================
+                SECURITY
+            ================================================== */}
+
+            <div className="
+              mt-8
+              flex
+              items-center
+              justify-center
+              gap-2
+              text-xs
+              text-slate-400
+            ">
+
+              <LockIcon small />
+
+              <span>
+                Secure ERP access
+              </span>
 
             </div>
 
 
-            {/* Bottom footer */}
-            <p className="mt-6 text-center text-[11px] font-medium text-[var(--muted-light)]">
+            {/* ==================================================
+                MOBILE SYSTEM DESCRIPTION
+            ================================================== */}
 
-              © {new Date().getFullYear()} DreamWithTech · Secure ERP access
+            <div className="
+              mt-10
+              border-t
+              border-slate-200
+              pt-6
+              text-center
+              lg:hidden
+            ">
 
-            </p>
+              <p className="
+                text-xs
+                leading-5
+                text-slate-500
+              ">
+                ERP Billing & Business Management
+                <br />
+                Billing · Inventory · Customers · Reports
+              </p>
+
+            </div>
 
           </div>
 
@@ -519,50 +698,63 @@ export default function Login() {
 }
 
 
-// ================================================================
-// BRAND
-// ================================================================
+/* ================================================================
+   BRAND
+================================================================ */
 
-function Brand({ dark = false }) {
+function Brand() {
   return (
     <div className="flex items-center gap-3">
 
-      <div
-        className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
-          dark
-            ? 'bg-white shadow-lg shadow-black/20'
-            : 'border border-slate-200 bg-white shadow-sm'
-        }`}
-      >
+      {/* Square Logo */}
+
+      <div className="
+        flex
+        h-11
+        w-11
+        shrink-0
+        items-center
+        justify-center
+        rounded-md
+        border
+        border-slate-200
+        bg-white
+        shadow-sm
+      ">
 
         <img
           src="/logo.png"
           alt="DreamWithTech"
-          className="h-7 w-7 object-contain"
+          className="
+            h-7
+            w-7
+            object-contain
+          "
         />
 
       </div>
 
 
+      {/* Brand Text */}
+
       <div>
 
-        <p
-          className={`text-[15px] font-bold tracking-tight ${
-            dark
-              ? 'text-white'
-              : 'text-slate-900'
-          }`}
-        >
+        <p className="
+          text-[15px]
+          font-bold
+          tracking-tight
+          text-slate-950
+        ">
           DreamWithTech
         </p>
 
-        <p
-          className={`mt-0.5 text-[9px] font-bold tracking-[0.18em] ${
-            dark
-              ? 'text-slate-500'
-              : 'text-slate-400'
-          }`}
-        >
+        <p className="
+          mt-0.5
+          text-[9px]
+          font-semibold
+          tracking-[0.18em]
+          text-slate-400
+        ">
           SMART BUSINESS
         </p>
 
@@ -573,40 +765,66 @@ function Brand({ dark = false }) {
 }
 
 
-// ================================================================
-// FEATURE CARD
-// ================================================================
+/* ================================================================
+   SYSTEM FEATURE
+================================================================ */
 
-function Feature({
-  icon,
+function SystemFeature({
   title,
   description,
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm transition hover:bg-white/[0.07]">
+    <div className="flex gap-3">
 
-      <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-300">
+      {/* Square Check */}
 
-        {icon}
-
+      <div className="
+        mt-0.5
+        flex
+        h-5
+        w-5
+        shrink-0
+        items-center
+        justify-center
+        rounded-md
+        border
+        border-slate-300
+        bg-white
+        text-blue-600
+      ">
+        <CheckIcon />
       </div>
 
-      <p className="text-sm font-semibold text-white">
-        {title}
-      </p>
 
-      <p className="mt-1 text-[11px] leading-5 text-slate-500">
-        {description}
-      </p>
+      <div>
+
+        <p className="
+          text-sm
+          font-semibold
+          text-slate-900
+        ">
+          {title}
+        </p>
+
+        <p className="
+          mt-1
+          text-xs
+          leading-5
+          text-slate-500
+        ">
+          {description}
+        </p>
+
+      </div>
 
     </div>
   )
 }
 
 
-// ================================================================
-// INPUT FIELD
-// ================================================================
+/* ================================================================
+   INPUT FIELD
+================================================================ */
 
 function Field({
   id,
@@ -627,7 +845,13 @@ function Field({
 
       <label
         htmlFor={id}
-        className="mb-2 block text-sm font-semibold text-[var(--ink-secondary)]"
+        className="
+          mb-2
+          block
+          text-sm
+          font-medium
+          text-slate-700
+        "
       >
         {label}
       </label>
@@ -648,11 +872,36 @@ function Field({
             ? errorId
             : undefined
         }
-        className={`h-12 w-full rounded-2xl border bg-[var(--surface-elevated)] px-4 text-sm text-[var(--ink)] outline-none transition-all duration-200 placeholder:text-[var(--muted-light)] hover:bg-[var(--surface)] focus:bg-[var(--surface)] focus:ring-4 disabled:cursor-not-allowed disabled:opacity-60 ${
-          error
-            ? 'border-red-400 focus:border-red-500 focus:ring-red-500/10'
-            : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/10'
-        }`}
+        className={`
+          h-12
+          w-full
+          rounded-md
+          border
+          bg-white
+          px-4
+          text-sm
+          text-slate-900
+          outline-none
+          transition
+          placeholder:text-slate-400
+          disabled:cursor-not-allowed
+          disabled:bg-slate-50
+          focus:ring-2
+
+          ${
+            error
+              ? `
+                border-red-400
+                focus:border-red-500
+                focus:ring-red-100
+              `
+              : `
+                border-slate-300
+                focus:border-slate-700
+                focus:ring-slate-100
+              `
+          }
+        `}
       />
 
 
@@ -660,7 +909,12 @@ function Field({
 
         <p
           id={errorId}
-          className="mt-1.5 text-xs font-medium text-red-600"
+          className="
+            mt-1.5
+            text-xs
+            font-medium
+            text-red-600
+          "
         >
           {error}
         </p>
@@ -672,19 +926,19 @@ function Field({
 }
 
 
-// ================================================================
-// ICONS
-// ================================================================
+/* ================================================================
+   CHECK ICON
+================================================================ */
 
 function CheckIcon() {
   return (
     <svg
-      width="17"
-      height="17"
+      width="12"
+      height="12"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="3"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
@@ -694,43 +948,9 @@ function CheckIcon() {
 }
 
 
-function ChartIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 3v18h18" />
-      <path d="m7 16 4-5 3 3 5-7" />
-    </svg>
-  )
-}
-
-
-function ShieldIcon() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  )
-}
-
+/* ================================================================
+   EYE ICON
+================================================================ */
 
 function EyeIcon() {
   return (
@@ -745,6 +965,7 @@ function EyeIcon() {
       strokeLinejoin="round"
     >
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
+
       <circle
         cx="12"
         cy="12"
@@ -754,6 +975,10 @@ function EyeIcon() {
   )
 }
 
+
+/* ================================================================
+   EYE OFF ICON
+================================================================ */
 
 function EyeOffIcon() {
   return (
@@ -768,9 +993,13 @@ function EyeOffIcon() {
       strokeLinejoin="round"
     >
       <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.3 20.3 0 0 1 5.06-5.94" />
+
       <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a20.14 20.14 0 0 1-2.16 3.19" />
+
       <path d="m14.12 14.12-4.24-4.24" />
+
       <path d="M9.88 9.88a3 3 0 0 0 4.24 4.24" />
+
       <line
         x1="1"
         y1="1"
@@ -782,30 +1011,15 @@ function EyeOffIcon() {
 }
 
 
-function ArrowIcon() {
+/* ================================================================
+   LOCK ICON
+================================================================ */
+
+function LockIcon({ small = false }) {
   return (
     <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M5 12h14" />
-      <path d="m13 6 6 6-6 6" />
-    </svg>
-  )
-}
-
-
-function LockIcon({ large = false }) {
-  return (
-    <svg
-      width={large ? 19 : 13}
-      height={large ? 19 : 13}
+      width={small ? 13 : 18}
+      height={small ? 13 : 18}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -827,30 +1041,9 @@ function LockIcon({ large = false }) {
 }
 
 
-function AlertIcon() {
-  return (
-    <svg
-      className="mt-0.5 h-4 w-4 shrink-0"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-      />
-
-      <path d="M12 8v4" />
-
-      <path d="M12 16h.01" />
-    </svg>
-  )
-}
-
+/* ================================================================
+   SPINNER
+================================================================ */
 
 function Spinner() {
   return (
@@ -876,4 +1069,3 @@ function Spinner() {
     </svg>
   )
 }
-

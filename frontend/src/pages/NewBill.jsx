@@ -295,12 +295,12 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
   return (
     <Modal open={open} onClose={onClose} title="Quick Customer Payment" size="sm"><div className="mobile-modal-content">
       <div className="text-center space-y-4">
-        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 p-3">
-          <div className="flex items-center justify-center gap-2 text-emerald-700 font-bold">
+        <div className="rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 p-3 shadow-sm">
+          <div className="flex items-center justify-center gap-2 text-blue-700 dark:text-blue-300 font-bold">
             <QrCode size={18} />
             Scan & Pay
           </div>
-          <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+          <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
             Customer scans this QR with Google Pay, Paytm, BHIM or another UPI app.
           </div>
         </div>
@@ -348,7 +348,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
           </div>
         )}
 
-        <div ref={qrRef} className="inline-flex max-w-full p-3 sm:p-4 border-2 border-[var(--line)] rounded-2xl bg-[var(--surface)] shadow-[var(--shadow-card)]">
+        <div ref={qrRef} className="inline-flex max-w-full p-3 sm:p-4 border-2 border-blue-200 dark:border-blue-900/60 rounded-2xl bg-[var(--surface)] shadow-[var(--shadow-card)]">
           {numericAmount > 0 ? (
             <QRCodeSVG
               value={uri}
@@ -367,7 +367,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
         </div>
 
         <div>
-          <div className="text-4xl font-extrabold text-[var(--ink)] tabular-nums">{fmt(numericAmount)}</div>
+          <div className="text-4xl font-extrabold text-blue-700 dark:text-blue-300 tabular-nums">{fmt(numericAmount)}</div>
           <div className="text-sm font-semibold text-[var(--ink-secondary)] mt-1">{shopName}</div>
           <div className="text-xs text-[var(--muted-light)] mt-1">{upiId || 'UPI ID not configured'}</div>
           <div className="text-xs text-[var(--muted-light)]">Invoice: {invoice || 'NEW-BILL'}</div>
@@ -383,7 +383,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
           <button
             onClick={() => onPaid(numericAmount)}
             disabled={!canAct}
-            className="btn-solid bg-emerald-600 hover:bg-emerald-700 col-span-1 sm:col-span-2 h-11 mobile-safe-button"
+            className="btn-solid bg-blue-600 hover:bg-blue-700 border-blue-600 hover:border-blue-700 col-span-1 sm:col-span-2 h-11 mobile-safe-button"
           >
             <CheckCircle2 size={16} /> Payment Received — Mark Paid ({fmt(numericAmount)})
           </button>
@@ -957,6 +957,23 @@ export default function NewBill() {
         ------------------------------------------------------------------ */
         .pos-page{--pos-radius:10px;--pos-radius-sm:8px}
         .pos-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--pos-radius);box-shadow:var(--shadow-card)}
+        .pos-sale-toolbar{
+          display:flex;align-items:center;justify-content:space-between;gap:1rem;
+          padding:.75rem 1rem;border:1px solid var(--primary-border);border-radius:var(--pos-radius);
+          background:linear-gradient(90deg,var(--primary-light),var(--surface) 58%);box-shadow:var(--shadow-xs)
+        }
+        .pos-sale-kicker{font-size:.625rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-text)}
+        .pos-sale-title{font-size:1rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.2}
+        .pos-flow{display:flex;align-items:center;gap:.35rem;font-size:.6875rem;font-weight:700;color:var(--muted)}
+        .pos-flow span{display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .5rem;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+        .pos-flow span:first-child{color:var(--primary-text);border-color:var(--primary-border);background:var(--primary-light)}
+        .pos-scan-panel{border-color:var(--primary-border);box-shadow:0 1px 2px rgba(37,99,235,.05)}
+        .pos-scan-panel:focus-within{box-shadow:0 0 0 3px rgba(37,99,235,.08)}
+        .pos-products-panel{border-top:3px solid var(--primary)}
+        .pos-cart-panel{border-top:3px solid #0f766e}
+        .pos-checkout{padding:.25rem;border:1px solid var(--line);border-radius:calc(var(--pos-radius) + 2px);background:var(--surface-elevated)}
+        .pos-checkout .pos-card{box-shadow:none;background:var(--surface)}
+        .pos-checkout-actions{border-color:var(--primary-border)!important;background:var(--surface)!important}
         .pos-card-header{border-bottom:1px solid var(--line-subtle);background:var(--surface);border-radius:var(--pos-radius) var(--pos-radius) 0 0}
         .pos-input{
           width:100%;min-height:2.5rem;padding:.5rem .75rem;border:1px solid var(--line);
@@ -1037,7 +1054,31 @@ export default function NewBill() {
         .pos-table tbody tr:hover{background:var(--surface-elevated)}
         .pos-danger{color:#dc2626}
         .pos-danger:hover{background:#fef2f2;color:#b91c1c}
+        .pos-checkout-actions{position:relative;min-width:0}
+        .pos-checkout-actions .btn-outline{min-width:0}
+        .pos-products-panel{scroll-margin-top:1rem}
+        .pos-cart-panel{min-width:0}
+        .pos-table{min-width:720px;table-layout:auto}
+        @media (max-width: 767px){
+          .pos-checkout{border:0;background:transparent;padding:0}
+          .pos-checkout .pos-card{border-radius:12px}
+          .mobile-modal-content{width:100%;min-width:0}
+          .mobile-modal-content input{max-width:100%}
+          .pos-checkout-actions{padding:1rem}
+          .pos-checkout-actions > *{min-width:0}
+
+          .pos-sale-toolbar{border-radius:10px}
+          .pos-sale-toolbar > div{min-width:0}
+          .pos-input{font-size:16px}
+          .pos-product{min-height:4.75rem;padding:.7rem}
+          .pos-checkout-actions{padding:1rem}
+          .pos-checkout-actions .btn-outline,
+          .pos-checkout-actions .btn-solid{width:100%;min-height:2.75rem}
+          .pos-total-panel{padding:1rem}
+        }
         @media (max-width: 639px){
+          .pos-sale-toolbar{padding:.7rem .75rem}
+          .pos-sale-title{font-size:.9375rem}
           .mobile-safe-button{min-height:2.75rem}
           .mobile-modal-content{max-height:calc(100dvh - 1.5rem);overflow-y:auto}
           .pos-grand-total{font-size:1.75rem}
@@ -1048,39 +1089,37 @@ export default function NewBill() {
         {/* ============================= MAIN ============================= */}
         <section className="flex-1 min-w-0 flex flex-col gap-3">
 
-          {/* Top bar: clock + quick customer QR payment + today snapshot */}
-          <div className="pos-card px-3 py-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-                <Clock size={13} className="text-blue-500 dark:text-blue-400" />
-                <span className="font-medium text-[var(--ink-secondary)]">{fmtDate(now)}</span>
-                <span className="font-mono text-blue-600 dark:text-blue-400 font-semibold tracking-wide">{fmtTime(now)}</span>
+          {/* POS sale command bar */}
+          <div className="pos-sale-toolbar">
+            <div className="w-full flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-[var(--primary)] text-white flex items-center justify-center shadow-[var(--shadow-primary)]">
+                  <Receipt size={17} />
+                </div>
+                <div>
+                  <div className="pos-sale-kicker">Counter sale</div>
+                  <div className="pos-sale-title">New bill</div>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 {dashboard && (dashboard.today_sales != null || dashboard.today_bills != null) && (
-                  <div className="hidden sm:flex items-center gap-3 text-xs text-[var(--muted)]">
+                  <div className="hidden lg:flex items-center gap-3 text-xs text-[var(--muted)]">
                     {dashboard.today_bills != null && <span><b className="text-[var(--ink-secondary)]">{dashboard.today_bills}</b> bills today</span>}
                     {dashboard.today_sales != null && <span><b className="text-[var(--ink-secondary)]">{fmt(dashboard.today_sales)}</b> sold today</span>}
                   </div>
                 )}
-
-                <button
-                  onClick={openQuickPayment}
-                  disabled={!upiId}
-                  title={!upiId ? 'Configure UPI ID in Settings' : 'Show customer payment QR'}
-                  className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-[var(--muted-light)] text-white font-bold text-xs shadow-[var(--shadow-card)] transition active:scale-[0.98]"
-                >
-                  <QrCode size={17} />
-                  <span>Quick Pay</span>
-                  {cart.length > 0 && <span className="hidden sm:inline">· {fmt(grandTotal)}</span>}
-                </button>
+                <div className="hidden sm:flex items-center gap-1.5 text-xs text-[var(--muted)] border-l border-[var(--primary-border)] pl-3">
+                  <Clock size={13} className="text-[var(--primary)]" />
+                  <span className="font-medium">{fmtDate(now)}</span>
+                  <span className="font-mono text-[var(--primary-text)] font-semibold">{fmtTime(now)}</span>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Search + category chips */}
-          <div className="pos-card p-3 space-y-2.5">
+          <div className="pos-card pos-scan-panel p-3 space-y-2.5">
             <div className="relative">
               <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" />
               <input
@@ -1114,7 +1153,7 @@ export default function NewBill() {
             <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'thin' }}>
               <button
                 onClick={() => setCatFilter('')}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition ${catFilter === '' ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-[var(--surface)] border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'}`}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition ${catFilter === '' ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-[var(--shadow-primary)]' : 'bg-[var(--surface)] border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'}`}
               >All</button>
               {categories.map(c => (
                 <button
@@ -1127,9 +1166,10 @@ export default function NewBill() {
           </div>
 
           {/* Quick-add product grid */}
-          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3 shadow-[var(--shadow-card)]">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted)] mb-2">
-              <Package size={13} /> Quick add <span className="font-normal text-[var(--muted-light)]">({availableProducts.length} in stock)</span>
+          <div className="pos-products-panel bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3 shadow-[var(--shadow-card)]">
+            <div className="flex items-center justify-between gap-2 text-xs font-semibold text-[var(--muted)] mb-2">
+              <span className="flex items-center gap-1.5"><Package size={13} /> Quick add <span className="font-normal text-[var(--muted-light)]">({availableProducts.length} in stock)</span></span>
+              <span className="hidden sm:inline text-[10px] font-medium text-[var(--primary-text)]">Tap to add</span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 max-h-[15rem] overflow-y-auto pr-0.5">
               {initializing && Array.from({ length: 10 }, (_, index) => <Skeleton key={index} className="h-20" />)}
@@ -1157,9 +1197,9 @@ export default function NewBill() {
           </div>
 
           {/* Cart */}
-          <div className="pos-card flex-1 flex flex-col min-h-[16rem] overflow-hidden">
+          <div className="pos-card pos-cart-panel flex-1 flex flex-col min-h-[16rem] overflow-hidden">
             <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-[var(--line-subtle)]">
-              <b className="text-sm text-[var(--ink)]">Cart <span className="font-normal text-[var(--muted-light)]">({cart.length} item{cart.length === 1 ? '' : 's'})</span></b>
+              <div><b className="text-sm text-[var(--ink)]">Items in bill</b> <span className="font-normal text-[var(--muted-light)]">({cart.length} item{cart.length === 1 ? '' : 's'})</span></div>
               {cart.length > 0 && <button onClick={() => setCart([])} className="text-xs text-rose-500 hover:text-rose-600 dark:text-rose-400 font-medium">Clear cart</button>}
             </div>
             {cart.length ? (
@@ -1199,7 +1239,7 @@ export default function NewBill() {
         </section>
 
         {/* ============================ SIDEBAR ============================ */}
-        <aside className={`w-full md:w-auto lg:w-[380px] shrink-0 flex-col gap-3 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto ${cartOpen ? 'flex' : 'hidden'} md:flex max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:max-h-[90dvh] max-md:overflow-y-auto max-md:rounded-t-2xl max-md:bg-[var(--surface-elevated)] max-md:p-3 max-md:shadow-2xl`}>
+        <aside className={`pos-checkout w-full md:w-auto lg:w-[380px] shrink-0 flex-col gap-3 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto ${cartOpen ? 'flex' : 'hidden'} md:flex max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:max-h-[90dvh] max-md:overflow-y-auto max-md:rounded-t-2xl max-md:bg-[var(--surface-elevated)] max-md:p-3 max-md:shadow-2xl`}>
           <div className="md:hidden flex items-center justify-between rounded-xl bg-[var(--surface)] border border-[var(--line)] px-3 py-2">
             <b className="text-sm text-[var(--ink)]">Cart and checkout</b>
             <button type="button" onClick={() => setCartOpen(false)} aria-label="Close cart" className="icon-btn min-w-10 min-h-10 justify-center"><X size={18} /></button>
@@ -1400,83 +1440,57 @@ export default function NewBill() {
             )}
           </div>
 
-          {/* Actions */}
-          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3.5 shadow-[var(--shadow-card)] space-y-2">
-            <button
-              className="btn-solid w-full h-12 text-sm font-bold tracking-wide"
-              onClick={() => saveBill(false)}
-              disabled={saving || !cart.length}
-            >
-              {saving ? 'Saving…' : `Save bill · ${fmt(grandTotal)}`}
-            </button>
+          {/* Invoice actions */}
+          <div className="pos-checkout-actions bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3.5 shadow-[var(--shadow-card)] space-y-2.5">
+            <div className="flex items-center justify-between gap-2 pb-1">
+              <div>
+                <div className="text-sm font-bold text-[var(--ink)]">Invoice actions</div>
+                <div className="text-[11px] text-[var(--muted-light)]">Print, share, hold or start a fresh bill</div>
+              </div>
+              <Receipt size={17} className="text-[var(--primary)]" />
+            </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <button
-                className="btn-outline"
-                onClick={() => saveBill(true)}
-                disabled={saving || !cart.length}
-                title="Save this bill and open the print dialog"
-              >
-                <Printer size={14} /> Print Bill
+              <button className="btn-outline mobile-safe-button" onClick={() => saveBill(true)} disabled={saving || !cart.length}>
+                <Printer size={14} /> Save & Print
               </button>
-
-              <button
-                className="btn-outline"
-                onClick={() => openInvoiceDocument(lastInvoice?.id, false)}
-                disabled={!lastInvoice}
-              >
-                <Download size={14} /> View PDF
+              <button className="btn-outline mobile-safe-button" onClick={() => openInvoiceDocument(lastInvoice?.id, false)} disabled={!lastInvoice}>
+                <FileText size={14} /> Invoice
               </button>
-
-              <button
-                className="btn-outline"
-                onClick={() => printInvoiceDocument(lastInvoice?.id, true)}
-                disabled={!lastInvoice}
-                title="Print the saved bill in thermal format"
-              >
-                <Printer size={14} /> Thermal Bill
+              <button className="btn-outline mobile-safe-button" onClick={() => printInvoiceDocument(lastInvoice?.id, true)} disabled={!lastInvoice}>
+                <Printer size={14} /> Thermal
               </button>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <button
-                className="btn-outline"
-                onClick={openQuickPayment}
-                disabled={!upiId}
-              >
-                <QrCode size={14} /> QR Pay
+              <button className="btn-outline mobile-safe-button" onClick={openQuickPayment} disabled={!upiId}>
+                <QrCode size={14} /> Scan & Pay
               </button>
-              <button className="btn-outline w-full" onClick={shareInvoice} disabled={!lastInvoice}>
-                <Share2 size={14} /> Share Bill + PDF
+              <button className="btn-outline mobile-safe-button" onClick={shareInvoice} disabled={!lastInvoice}>
+                <Share2 size={14} /> Share
               </button>
-              <button className="btn-outline border-amber-300 text-amber-700 hover:border-amber-500 hover:bg-amber-50 hover:text-amber-800" onClick={saveDraft}>
-                <Layers size={14} /> Draft
+              <button className="btn-outline border-amber-300 text-amber-700 hover:border-amber-500 hover:bg-amber-50 hover:text-amber-800 mobile-safe-button" onClick={saveDraft} disabled={!cart.length}>
+                <Layers size={14} /> Hold
               </button>
             </div>
 
             {lastInvoice && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
-                  className="btn-outline"
-                  onClick={() => downloadInvoiceDocument(lastInvoice.id, false)}
-                >
-                  <Download size={14} /> Download PDF
+              <div className="grid grid-cols-2 gap-2">
+                <button className="btn-outline mobile-safe-button" onClick={() => downloadInvoiceDocument(lastInvoice.id, false)}>
+                  <Download size={14} /> PDF
                 </button>
-                <button
-                  className="btn-outline"
-                  onClick={() => downloadInvoiceDocument(lastInvoice.id, true)}
-                >
-                  <Download size={14} /> Download Thermal
+                <button className="btn-outline mobile-safe-button" onClick={() => downloadInvoiceDocument(lastInvoice.id, true)}>
+                  <Download size={14} /> Thermal PDF
                 </button>
               </div>
             )}
 
-            <button className="btn-outline w-full" onClick={resetBill}>
-              <RefreshCw size={14} /> New bill
+            <button className="btn-outline w-full mobile-safe-button" onClick={resetBill} disabled={!cart.length && !lastInvoice}>
+              <RefreshCw size={14} /> New Bill
             </button>
 
             <button
-              className="text-xs text-[var(--muted-light)] hover:text-[var(--muted)] underline inline-flex gap-1 items-center pt-1"
+              className="text-xs text-[var(--muted-light)] hover:text-[var(--muted)] underline inline-flex gap-1 items-center justify-center pt-1 w-full"
               onClick={() => setShowShortcuts(true)}
             >
               <Keyboard size={13} /> Keyboard shortcuts
@@ -1489,23 +1503,11 @@ export default function NewBill() {
       <button
         type="button"
         onClick={() => setCartOpen(true)}
-        className="md:hidden fixed bottom-3 inset-x-3 z-20 min-h-12 rounded-xl bg-[var(--primary)] text-white px-4 shadow-2xl flex items-center justify-between font-bold text-sm border border-white/10"
+        className="md:hidden fixed bottom-3 inset-x-3 z-20 min-h-13 rounded-xl bg-[var(--primary)] text-white px-4 shadow-2xl flex items-center justify-between font-bold text-sm border border-white/10"
       >
         <span className="flex items-center gap-2"><Receipt size={17} /> Cart ({cart.reduce((count, item) => count + Number(item.qty || 0), 0)})</span>
         <span>{fmt(grandTotal)}</span>
       </button>
-
-      {/* Fixed quick customer payment action — available whenever UPI ID is configured */}
-      {upiId && (
-        <button
-          onClick={openQuickPayment}
-          title="Quick customer UPI payment"
-          className="fixed right-3 bottom-20 md:right-5 md:bottom-5 z-20 inline-flex items-center gap-2 h-12 px-4 sm:px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-2xl border border-emerald-700 transition active:scale-[0.98]"
-        >
-          <QrCode size={18} />
-          Quick Pay{cart.length > 0 ? ` · ${fmt(grandTotal)}` : ''}
-        </button>
-      )}
 
       {/* ============================ MODALS ============================ */}
       <Modal open={showCustomerModal} onClose={() => setShowCustomerModal(false)} title="Add new customer" size="sm">
@@ -1525,10 +1527,16 @@ export default function NewBill() {
 
       <Modal open={showSuccess && Boolean(lastInvoice)} onClose={() => setShowSuccess(false)} title="Bill Saved Successfully" size="sm">
         <div className="space-y-4">
-          <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 p-4 text-center">
-            <CheckCircle2 size={34} className="mx-auto text-emerald-600 dark:text-emerald-400" />
-            <div className="mt-2 text-2xl font-bold text-emerald-800">{fmt(lastInvoice?.grand_total)}</div>
-            <div className="text-xs text-emerald-700 mt-1">Invoice {lastInvoice?.invoice_number}</div>
+          <div className="rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 p-4 text-center">
+            <CheckCircle2 size={34} className="mx-auto text-blue-600 dark:text-blue-400" />
+            <div className="mt-2 text-2xl font-bold text-blue-800 dark:text-blue-300">{fmt(lastInvoice?.grand_total)}</div>
+            <div className="text-xs text-blue-700 dark:text-blue-400 mt-1">Invoice {lastInvoice?.invoice_number}</div>
+            <button
+              className="btn-solid bg-blue-600 hover:bg-blue-700 border-blue-600 hover:border-blue-700 w-full mt-3 h-10"
+              onClick={() => { setShowSuccess(false); resetBill() }}
+            >
+              <RefreshCw size={14} /> Start New Bill
+            </button>
           </div>
           <dl className="grid grid-cols-2 gap-2 text-sm">
             <dt className="text-[var(--muted)]">Payment method</dt>
@@ -1543,7 +1551,6 @@ export default function NewBill() {
             <button className="btn-outline" onClick={() => downloadInvoiceDocument(lastInvoice?.id)}><Download size={14} /> PDF</button>
             <button className="btn-outline col-span-2" onClick={shareInvoice}><Share2 size={14} /> Share Bill + PDF</button>
             <button className="btn-outline col-span-2" onClick={() => navigate(`/invoice/${lastInvoice?.id}`)}><FileText size={14} /> View Invoice</button>
-            <button className="btn-solid col-span-2" onClick={() => { setShowSuccess(false); resetBill() }}><RefreshCw size={14} /> New Bill</button>
           </div>
         </div>
       </Modal>
@@ -1567,9 +1574,35 @@ export default function NewBill() {
         open={showRazorpay}
         onClose={() => setShowRazorpay(false)}
         invoice={lastInvoice}
-        onSuccess={(invoiceId) => {
+        onSuccess={async (invoiceId) => {
           setShowRazorpay(false)
           setPayment(x => ({ ...x, method: 'razorpay', status: 'paid' }))
+          // The invoice held in state was created before checkout, so its
+          // payment_status is still "pending". Reload the backend-confirmed
+          // record before showing the receipt or allowing it to be printed.
+          try {
+            const paidInvoice = await invoiceService.getInvoice(invoiceId)
+            setLastInvoice(previous => ({
+              ...previous,
+              ...paidInvoice,
+              payment_method: paidInvoice?.payment_method || 'razorpay',
+              payment_status: paidInvoice?.payment_status || 'paid',
+              paid_amount: paidInvoice?.paid_amount ?? paidInvoice?.grand_total ?? previous?.grand_total,
+              balance_due: paidInvoice?.balance_due ?? 0,
+              amount_received: paidInvoice?.paid_amount ?? paidInvoice?.grand_total ?? previous?.grand_total,
+            }))
+          } catch {
+            // Payment verification has already completed server-side. Keep
+            // the receipt truthful even if the follow-up display fetch fails.
+            setLastInvoice(previous => previous && ({
+              ...previous,
+              payment_method: 'razorpay',
+              payment_status: 'paid',
+              paid_amount: previous.grand_total,
+              balance_due: 0,
+              amount_received: previous.grand_total,
+            }))
+          }
           toast.success('Razorpay payment confirmed — invoice marked paid')
           setShowSuccess(true)
         }}

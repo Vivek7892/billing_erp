@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { API_BASE_URL } from '../api'
 import invoiceService from '../features/billing/api/invoiceService'
 import settingsService from '../features/settings/api/settingsService'
-import { Badge, Spinner, EmptyState, ConfirmDialog } from '../components/UI'
+import { Spinner, ConfirmDialog } from '../components/UI'
 import toast from 'react-hot-toast'
 
 import {
@@ -39,7 +39,11 @@ import {
 } from 'lucide-react'
 
 /* =========================================================
-   HELPERS
+   ERP BILLING UI — CLEAN BUSINESS / POS STYLE
+   - White / soft-gray surfaces
+   - Indigo primary actions
+   - Thin borders and restrained radius
+   - Monospaced, tabular financial figures
 ========================================================= */
 
 const fmt = v =>
@@ -175,8 +179,8 @@ function ShareMenu({ bill, shopName, onClose }) {
     },
     {
       label: 'SMS',
-      icon: <Phone size={16} className="text-blue-600 dark:text-blue-400" />,
-      hover: 'hover:bg-blue-50 dark:bg-blue-950/60',
+      icon: <Phone size={16} className="text-[#4338CA]" />,
+      hover: 'hover:bg-indigo-50',
       action: async () => {
         if (!phone) {
           toast.error('No phone number for this customer')
@@ -252,7 +256,7 @@ function ShareMenu({ bill, shopName, onClose }) {
 
   return (
     <div
-      className="absolute right-0 top-11 z-[70] w-52 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[var(--shadow-lg)]"
+      className="absolute right-0 top-11 z-[70] w-52 overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-lg"
       onClick={e => e.stopPropagation()}
     >
       <div className="px-3 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--muted-light)]">
@@ -266,7 +270,7 @@ function ShareMenu({ bill, shopName, onClose }) {
             action.action()
             onClose()
           }}
-          className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[var(--ink-secondary)] transition ${action.hover}`}
+          className={`flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm font-medium text-[var(--ink-secondary)] transition ${action.hover}`}
         >
           {action.icon}
           {action.label}
@@ -288,7 +292,7 @@ function StatCard({
   tone = 'blue',
 }) {
   const tones = {
-    blue:   { icon: 'bg-white border border-blue-100 text-blue-600',    accent: 'text-blue-600' },
+    blue:   { icon: 'bg-white border border-blue-100 text-[#4338CA]',    accent: 'text-[#4338CA]' },
     green:  { icon: 'bg-white border border-emerald-100 text-emerald-600', accent: 'text-emerald-600' },
     violet: { icon: 'bg-white border border-violet-100 text-violet-600', accent: 'text-violet-600' },
     amber:  { icon: 'bg-white border border-amber-100 text-amber-600',   accent: 'text-amber-600' },
@@ -298,13 +302,13 @@ function StatCard({
   const style = tones[tone] || tones.blue
 
   return (
-    <div className="group rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-[var(--shadow-card)] transition hover:shadow-md sm:p-4">
+    <div className="group rounded-md border border-[var(--line)] bg-[var(--surface)] p-3 shadow-none transition hover:shadow-md sm:p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted-light)]">
             {label}
           </p>
-          <p className="mt-1.5 truncate text-base font-bold tracking-tight text-[var(--ink)] sm:text-xl">
+          <p className="mt-1.5 truncate font-mono text-base font-semibold tabular-nums tracking-tight text-[var(--ink)] sm:text-xl">
             {value}
           </p>
           {helper && (
@@ -313,7 +317,7 @@ function StatCard({
             </p>
           )}
         </div>
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm ${style.icon}`}>
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md shadow-sm ${style.icon}`}>
           <Icon size={18} />
         </div>
       </div>
@@ -371,7 +375,7 @@ function StatusPill({ bill }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${item.className}`}
+      className={`inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1 text-[11px] font-semibold ${item.className}`}
     >
       <Icon size={12} />
       {item.label}
@@ -398,7 +402,7 @@ function PaymentBadge({ method }) {
 
   return (
     <span
-      className={`inline-flex items-center rounded-lg px-2 py-1 text-[11px] font-semibold ${
+      className={`inline-flex items-center rounded-sm px-2 py-1 text-[11px] font-semibold ${
         styles[value] || 'bg-slate-400 text-white'
       }`}
     >
@@ -500,7 +504,7 @@ function InvoiceActions({
 
           {menuOpen && (
             <div
-              className="absolute right-0 top-10 z-50 w-44 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl"
+              className="absolute right-0 top-10 z-50 w-44 overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl"
               onClick={e => e.stopPropagation()}
             >
               <button
@@ -508,7 +512,7 @@ function InvoiceActions({
                   setMenuOpen(false)
                   onRefresh('cancel', bill.id)
                 }}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-[var(--ink-secondary)] hover:bg-red-50 dark:hover:bg-red-950/60 hover:text-red-600 dark:hover:text-red-400"
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-sm text-[var(--ink-secondary)] hover:bg-red-50 dark:hover:bg-red-950/60 hover:text-red-600 dark:hover:text-red-400"
               >
                 <XCircle size={15} />
                 Cancel invoice
@@ -519,7 +523,7 @@ function InvoiceActions({
                   setMenuOpen(false)
                   onRefresh('refund', bill.id)
                 }}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-[var(--ink-secondary)] hover:bg-amber-50 dark:hover:bg-amber-950/60 hover:text-amber-700"
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-sm text-[var(--ink-secondary)] hover:bg-amber-50 dark:hover:bg-amber-950/60 hover:text-amber-700"
               >
                 <RotateCcw size={15} />
                 Refund invoice
@@ -551,14 +555,14 @@ function InvoiceModal({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-[var(--surface)] shadow-2xl"
+        className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-[var(--surface)] shadow-lg"
         onClick={e => e.stopPropagation()}
       >
         {/* Modal header */}
         <div className="border-b border-[var(--line-subtle)] bg-[var(--surface)] px-4 py-3.5 sm:px-6 sm:py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-[#4338CA]">
                 <Receipt size={19} />
               </div>
 
@@ -588,7 +592,7 @@ function InvoiceModal({
           <div className="mt-3 flex flex-wrap gap-2 sm:mt-4">
             <button
               onClick={() => openPdf(selected.id, false)}
-              className="inline-flex items-center gap-2 rounded-xl border border-[var(--line)] px-3.5 py-2 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
+              className="inline-flex items-center gap-2 rounded-md border border-[var(--line)] px-3.5 py-2 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
             >
               <Download size={14} />
               Download PDF
@@ -596,7 +600,7 @@ function InvoiceModal({
 
             <button
               onClick={() => openPdf(selected.id, true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-[var(--line)] px-3.5 py-2 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
+              className="inline-flex items-center gap-2 rounded-md border border-[var(--line)] px-3.5 py-2 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
             >
               <Printer size={14} />
               Thermal
@@ -608,7 +612,7 @@ function InvoiceModal({
                   e.stopPropagation()
                   setShareOpen(v => !v)
                 }}
-                className="inline-flex items-center gap-2 rounded-xl border border-[var(--line)] px-3.5 py-2 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
+                className="inline-flex items-center gap-2 rounded-md border border-[var(--line)] px-3.5 py-2 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
               >
                 <Share2 size={14} />
                 Share
@@ -629,7 +633,7 @@ function InvoiceModal({
         <div className="overflow-y-auto bg-[var(--surface-elevated)] p-3 sm:p-6">
           {/* Information cards */}
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
-            <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
+            <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
               <div className="flex items-center gap-2 text-[var(--muted-light)]">
                 <UserRound size={14} />
                 <span className="text-[10px] font-bold uppercase tracking-wider">
@@ -637,7 +641,7 @@ function InvoiceModal({
                 </span>
               </div>
 
-              <p className="mt-2 truncate text-sm font-bold text-[var(--ink)]">
+              <p className="mt-2 truncate font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
                 {selected.customer_name || 'Walk-in customer'}
               </p>
 
@@ -648,7 +652,7 @@ function InvoiceModal({
               )}
             </div>
 
-            <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
+            <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
               <div className="flex items-center gap-2 text-[var(--muted-light)]">
                 <CalendarDays size={14} />
                 <span className="text-[10px] font-bold uppercase tracking-wider">
@@ -656,7 +660,7 @@ function InvoiceModal({
                 </span>
               </div>
 
-              <p className="mt-2 text-sm font-bold text-[var(--ink)]">
+              <p className="mt-2 font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
                 {formatDate(selected.created_at)}
               </p>
 
@@ -665,7 +669,7 @@ function InvoiceModal({
               </p>
             </div>
 
-            <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
+            <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
               <div className="flex items-center gap-2 text-[var(--muted-light)]">
                 <CreditCard size={14} />
                 <span className="text-[10px] font-bold uppercase tracking-wider">
@@ -678,7 +682,7 @@ function InvoiceModal({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
+            <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
               <div className="flex items-center gap-2 text-[var(--muted-light)]">
                 <CircleDollarSign size={14} />
                 <span className="text-[10px] font-bold uppercase tracking-wider">
@@ -686,7 +690,7 @@ function InvoiceModal({
                 </span>
               </div>
 
-              <p className="mt-2 text-sm font-bold text-[var(--ink)]">
+              <p className="mt-2 font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
                 {fmt(selected.grand_total)}
               </p>
 
@@ -697,10 +701,10 @@ function InvoiceModal({
           </div>
 
           {/* Items */}
-          <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
+          <div className="mt-4 overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)]">
             <div className="flex items-center justify-between border-b border-[var(--line-subtle)] px-4 py-3">
               <div>
-                <h3 className="text-sm font-bold text-[var(--ink)]">
+                <h3 className="font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
                   Invoice items
                 </h3>
                 <p className="mt-0.5 text-[11px] text-[var(--muted-light)]">
@@ -708,7 +712,7 @@ function InvoiceModal({
                 </p>
               </div>
 
-              <span className="rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)] px-2.5 py-1 text-[11px] font-semibold text-[var(--muted)]">
+              <span className="rounded-sm bg-[var(--surface-elevated)] border border-[var(--line)] px-2.5 py-1 text-[11px] font-semibold text-[var(--muted)]">
                 {selected.items?.length || 0} items
               </span>
             </div>
@@ -770,8 +774,8 @@ function InvoiceModal({
 
           {/* Summary */}
           <div className="mt-4 flex justify-end">
-            <div className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5">
-              <h3 className="mb-4 text-sm font-bold text-[var(--ink)]">
+            <div className="w-full max-w-md rounded-md border border-[var(--line)] bg-[var(--surface)] p-5">
+              <h3 className="mb-4 font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
                 Payment summary
               </h3>
 
@@ -804,7 +808,7 @@ function InvoiceModal({
                     Grand total
                   </span>
 
-                  <span className="text-xl font-bold text-gray-950">
+                  <span className="font-mono text-xl font-semibold tabular-nums text-[#0F172A]">
                     {fmt(selected.grand_total)}
                   </span>
                 </div>
@@ -841,7 +845,7 @@ function MobileInvoiceCard({ bill, shopName, onView, onRefresh }) {
   const navigate = useNavigate()
   return (
     <article
-      className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow-card)] transition active:bg-[var(--surface-elevated)]"
+      className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none transition active:bg-[var(--surface-elevated)]"
       onClick={() => navigate(`/invoice/${bill.id}`)}
     >
       <div className="flex items-start justify-between gap-3">
@@ -851,7 +855,7 @@ function MobileInvoiceCard({ bill, shopName, onView, onRefresh }) {
               e.stopPropagation()
               navigate(`/invoice/${bill.id}`)
             }}
-            className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400"
+            className="font-mono text-xs font-bold text-[#4338CA]"
           >
             {bill.invoice_number}
           </button>
@@ -869,7 +873,7 @@ function MobileInvoiceCard({ bill, shopName, onView, onRefresh }) {
         </div>
 
         <div className="shrink-0 text-right">
-          <p className="text-base font-bold text-gray-950">
+          <p className="font-mono text-base font-semibold tabular-nums text-[#0F172A]">
             {fmt(bill.grand_total)}
           </p>
           <div className="mt-1 flex justify-end">
@@ -878,7 +882,7 @@ function MobileInvoiceCard({ bill, shopName, onView, onRefresh }) {
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-[var(--surface-elevated)] p-2.5">
+      <div className="mt-3 grid grid-cols-2 gap-2 rounded-md bg-[var(--surface-elevated)] p-2.5">
         <div>
           <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
             Date
@@ -924,6 +928,17 @@ function MobileInvoiceCard({ bill, shopName, onView, onRefresh }) {
           -{fmt(bill.discount_amount)} discount
         </p>
       )}
+
+      <button
+        type="button"
+        onClick={e => {
+          e.stopPropagation()
+          navigate(`/invoice/${bill.id}`)
+        }}
+        className="btn-primary mt-3 w-full sm:hidden"
+      >
+        <Eye size={15} /> Open bill
+      </button>
 
       <div
         className="mt-3 border-t border-[var(--line-subtle)] pt-2.5"
@@ -1116,7 +1131,7 @@ export default function Bills() {
             HEADER
         ================================================= */}
 
-        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-4 shadow-[var(--shadow-card)] sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <div className="flex flex-col gap-3 rounded-md border border-[var(--line)] bg-[var(--surface)] px-4 py-4 shadow-none sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div>
             <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold text-[var(--muted-light)]">
               <Receipt size={13} />
@@ -1138,7 +1153,7 @@ export default function Bills() {
 
           <button
             onClick={() => navigate('/billing/new')}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 active:scale-[0.98] sm:w-auto"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-sm bg-[#4338CA] px-4 py-2.5 text-sm font-semibold text-white shadow-none transition hover:bg-[#3730A3] active:scale-[0.98] sm:w-auto"
           >
             <Plus size={17} />
             New Bill
@@ -1187,7 +1202,7 @@ export default function Bills() {
             FILTER BAR
         ================================================= */}
 
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-[var(--shadow-card)] sm:p-3">
+        <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-none sm:p-3">
           {/* Date filter tabs */}
           <div className="flex gap-1.5 overflow-x-auto pb-1 mb-2" style={{ scrollbarWidth: 'none' }}>
             {DATE_FILTERS.map(f => (
@@ -1197,7 +1212,7 @@ export default function Bills() {
                 onClick={() => setDateFilter(f.value)}
                 className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
                   dateFilter === f.value
-                    ? 'bg-blue-600 border-blue-600 text-white'
+                    ? 'bg-[#4338CA] border-blue-600 text-white'
                     : 'border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
                 }`}
               >
@@ -1215,7 +1230,7 @@ export default function Bills() {
               />
 
               <input
-                className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] py-2.5 pl-10 pr-3 text-sm outline-none transition placeholder:text-[var(--muted-light)] focus:border-blue-300 focus:bg-[var(--surface)] focus:ring-4 focus:ring-blue-50"
+                className="w-full rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] py-2.5 pl-10 pr-3 text-sm outline-none transition placeholder:text-[var(--muted-light)] focus:border-[#818CF8] focus:bg-[var(--surface)] focus:ring-4 focus:ring-indigo-50"
                 placeholder="Search invoice, customer or phone..."
                 value={search}
                 onChange={e => {
@@ -1233,9 +1248,9 @@ export default function Bills() {
                   e.stopPropagation()
                   setFilterOpen(v => !v)
                 }}
-                className={`inline-flex h-[42px] items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition ${
+                className={`inline-flex h-[42px] items-center justify-center gap-1.5 rounded-md border px-3 text-xs font-semibold transition ${
                   statusFilter
-                    ? 'border-blue-200 bg-blue-50 dark:bg-blue-950/60 text-blue-700'
+                    ? 'border-indigo-200 bg-indigo-50 text-[#3730A3]'
                     : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
                 }`}
                 title="Filter invoices"
@@ -1245,7 +1260,7 @@ export default function Bills() {
                 <span className="hidden sm:inline">Filter</span>
 
                 {statusFilter && (
-                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] text-white">
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#4338CA] px-1 text-[9px] text-white">
                     1
                   </span>
                 )}
@@ -1253,7 +1268,7 @@ export default function Bills() {
 
               {filterOpen && (
                 <div
-                  className="absolute right-0 top-11 z-50 w-48 max-w-[calc(100vw-1rem)] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-xl"
+                  className="absolute right-0 top-11 z-50 w-48 max-w-[calc(100vw-1rem)] rounded-md border border-[var(--line)] bg-[var(--surface)] p-2 shadow-xl"
                   onClick={e => e.stopPropagation()}
                 >
                   <p className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
@@ -1268,9 +1283,9 @@ export default function Bills() {
                         setStatusFilter(filter.value)
                         setFilterOpen(false)
                       }}
-                      className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold ${
+                      className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-xs font-semibold ${
                         statusFilter === filter.value
-                          ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700'
+                          ? 'bg-indigo-50 text-[#3730A3]'
                           : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
                       }`}
                     >
@@ -1289,7 +1304,7 @@ export default function Bills() {
             <button
               type="button"
               onClick={() => load(page)}
-              className="inline-flex h-[42px] shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]"
+              className="inline-flex h-[42px] shrink-0 items-center justify-center gap-1.5 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]"
               title="Refresh invoices"
               aria-label="Refresh invoices"
             >
@@ -1303,16 +1318,16 @@ export default function Bills() {
             INVOICE TABLE
         ================================================= */}
 
-        <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-card)]">
+        <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] shadow-none">
           {/* Table header */}
           <div className="flex items-center justify-between border-b border-[var(--line-subtle)] px-3.5 py-3 sm:px-5">
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold text-[var(--ink)]">
+                <h2 className="font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
                   Invoices
                 </h2>
 
-                <span className="rounded-full bg-[var(--surface-elevated)] border border-[var(--line)] px-2 py-0.5 text-[10px] font-bold text-[var(--muted)]">
+                <span className="rounded-sm bg-[var(--surface-elevated)] border border-[var(--line)] px-2 py-0.5 text-[10px] font-bold text-[var(--muted)]">
                   {visibleBills.length}
                 </span>
               </div>
@@ -1339,11 +1354,11 @@ export default function Bills() {
             </div>
           ) : visibleBills.length === 0 ? (
             <div className="flex min-h-[300px] flex-col items-center justify-center px-5">
-              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--surface-elevated)] border border-[var(--line)] text-[var(--muted-light)]">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-md bg-[var(--surface-elevated)] border border-[var(--line)] text-[var(--muted-light)]">
                 <FileText size={22} />
               </div>
 
-              <h3 className="text-sm font-bold text-[var(--ink)]">
+              <h3 className="font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
                 No invoices found
               </h3>
 
@@ -1415,7 +1430,7 @@ export default function Bills() {
                   {visibleBills.map(bill => (
                     <tr
                       key={bill.id}
-                      className="group transition hover:bg-blue-50 dark:bg-blue-950/60/30"
+                      className="group transition hover:bg-indigo-50"
                     >
                       {/* Invoice */}
                       <td className="px-5 py-3.5">
@@ -1423,7 +1438,7 @@ export default function Bills() {
                           onClick={() =>
                             navigate(`/invoice/${bill.id}`)
                           }
-                          className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline"
+                          className="font-mono text-xs font-bold text-[#4338CA] hover:text-[#312E81] hover:underline"
                         >
                           {bill.invoice_number}
                         </button>
@@ -1465,7 +1480,7 @@ export default function Bills() {
 
                       {/* Items */}
                       <td className="px-3 py-3.5 text-center">
-                        <span className="inline-flex items-center gap-1 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)] px-2 py-1 text-[10px] font-bold text-[var(--muted)]">
+                        <span className="inline-flex items-center gap-1 rounded-sm bg-[var(--surface-elevated)] border border-[var(--line)] px-2 py-1 text-[10px] font-bold text-[var(--muted)]">
                           <ShoppingBag size={11} />
                           {bill.items?.length || 0}
                         </span>
@@ -1473,7 +1488,7 @@ export default function Bills() {
 
                       {/* Total */}
                       <td className="px-3 py-3.5 text-right">
-                        <div className="text-sm font-bold text-[var(--ink)]">
+                        <div className="font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
                           {fmt(bill.grand_total)}
                         </div>
 
@@ -1543,12 +1558,12 @@ export default function Bills() {
                   onClick={() =>
                     setPage(p => p - 1)
                   }
-                  className="rounded-lg border border-[var(--line)] p-2 text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-sm border border-[var(--line)] p-2 text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <ChevronLeft size={15} />
                 </button>
 
-                <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-[var(--primary)] px-2 text-xs font-semibold text-white">
+                <span className="flex h-8 min-w-8 items-center justify-center rounded-sm bg-[var(--primary)] px-2 text-xs font-semibold text-white">
                   {page}
                 </span>
 
@@ -1557,7 +1572,7 @@ export default function Bills() {
                   onClick={() =>
                     setPage(p => p + 1)
                   }
-                  className="rounded-lg border border-[var(--line)] p-2 text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-sm border border-[var(--line)] p-2 text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <ChevronRight size={15} />
                 </button>

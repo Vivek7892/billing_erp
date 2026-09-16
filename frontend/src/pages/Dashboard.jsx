@@ -249,40 +249,88 @@ function Stat({
   trend,
   highlight
 }) {
-  const palette = {
-    blue:   { icon: 'text-gray-600', border: 'border-l-gray-300', shadow: '', ring: '' },
-    green:  { icon: 'text-gray-600', border: 'border-l-gray-300', shadow: '', ring: '' },
-    orange: { icon: 'text-gray-600', border: 'border-l-gray-300', shadow: '', ring: '' },
-    red:    { icon: 'text-gray-600', border: 'border-l-gray-300', shadow: '', ring: '' },
-    purple: { icon: 'text-gray-600', border: 'border-l-gray-300', shadow: '', ring: '' },
-    cyan:   { icon: 'text-gray-600', border: 'border-l-gray-300', shadow: '', ring: '' },
-    indigo: { icon: 'text-gray-600', border: 'border-l-gray-300', shadow: '', ring: '' },
-    amber:  { icon: 'text-gray-600', border: 'border-l-gray-300', shadow: '', ring: '' },
-  }
+  // Blue is used for normal/positive business KPIs.
+  // Red is reserved for attention/obligation KPIs such as credit and purchases.
+  const isRed = ['red', 'amber'].includes(color)
 
-  const style = palette[color] || palette.blue
+  const accent = isRed
+    ? {
+        line: 'bg-red-500',
+        iconBg: 'bg-red-50',
+        iconBorder: 'border-red-100',
+        icon: 'text-red-600',
+      }
+    : {
+        line: 'bg-blue-600',
+        iconBg: 'bg-blue-50',
+        iconBorder: 'border-blue-100',
+        icon: 'text-blue-600',
+      }
 
   return (
-    <div className={`kpi-card border-l-[3px] ${style.border} flex flex-col gap-2.5`}>
-      <div className="flex items-start justify-between gap-3">
-        <span className="text-[10px] font-semibold text-[var(--muted-light)] uppercase tracking-[0.1em] leading-tight mt-0.5">
-          {label}
-        </span>
-        <div className="p-2 rounded-xl flex-shrink-0 bg-white border border-[var(--line)]">
-          <Icon size={17} className={style.icon} strokeWidth={2} />
+    <div
+      className="
+        relative overflow-hidden
+        bg-[var(--surface)]
+        border border-[var(--line)]
+        rounded-xl
+        shadow-[0_3px_14px_rgba(15,23,42,0.045)]
+        hover:shadow-[0_7px_22px_rgba(15,23,42,0.08)]
+        hover:-translate-y-[1px]
+        transition-all duration-200
+        flex flex-col
+        p-3
+        sm:p-5
+        gap-2.5 sm:gap-3
+        min-w-0
+      "
+    >
+      {/* KPI accent line */}
+      <div className={`absolute top-0 left-0 right-0 h-[3px] ${accent.line}`} />
+
+      <div className="flex items-start justify-between gap-3 pt-1">
+        <div className="min-w-0">
+          <span className="block text-[9px] sm:text-[10px] font-bold text-[var(--muted-light)] uppercase tracking-[0.08em] sm:tracking-[0.12em] leading-tight truncate">
+            {label}
+          </span>
+          {highlight && (
+            <span className="inline-flex items-center mt-1.5 text-[9px] font-semibold uppercase tracking-wider text-blue-600">
+              Today
+            </span>
+          )}
+        </div>
+
+        <div
+          className={`
+            w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex-shrink-0
+            ${accent.iconBg}
+            border ${accent.iconBorder}
+            flex items-center justify-center
+          `}
+        >
+          <Icon size={17} className={accent.icon} strokeWidth={2.1} />
         </div>
       </div>
 
       <div
-        className="text-[1.875rem] font-bold tracking-tight text-[var(--ink)] truncate leading-none"
-        style={{fontVariantNumeric:'tabular-nums',fontFeatureSettings:'"tnum"'}}
+        className="text-[1.35rem] sm:text-[1.9rem] font-bold tracking-tight text-[var(--ink)] truncate leading-none"
+        style={{ fontVariantNumeric: 'tabular-nums', fontFeatureSettings: '"tnum"' }}
       >
         {value}
       </div>
 
-      {sub && <div className="text-xs text-[var(--muted)] truncate">{sub}</div>}
-
-      {trend !== undefined && <Trend value={trend} />}
+      <div className="flex items-center justify-between gap-2 min-h-[18px]">
+        {sub && (
+          <div className="text-[11px] sm:text-xs text-[var(--muted)] truncate">
+            {sub}
+          </div>
+        )}
+        {trend !== undefined && (
+          <div className="shrink-0">
+            <Trend value={trend} />
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -298,34 +346,71 @@ function Insight({
   color,
   note
 }) {
-  const palette = {
-    blue:   { icon: 'text-gray-600', border: 'border-l-gray-300', value: 'text-[var(--ink)]' },
-    green:  { icon: 'text-gray-600', border: 'border-l-gray-300', value: 'text-[var(--ink)]' },
-    orange: { icon: 'text-gray-600', border: 'border-l-gray-300', value: 'text-[var(--ink)]' },
-    purple: { icon: 'text-gray-600', border: 'border-l-gray-300', value: 'text-[var(--ink)]' },
-  }
+  const isRed = color === 'orange'
 
-  const c = palette[color] || palette.blue
+  const accent = isRed
+    ? {
+        line: 'bg-red-500',
+        iconBg: 'bg-red-50',
+        iconBorder: 'border-red-100',
+        icon: 'text-red-600',
+      }
+    : {
+        line: 'bg-blue-600',
+        iconBg: 'bg-blue-50',
+        iconBorder: 'border-blue-100',
+        icon: 'text-blue-600',
+      }
 
   return (
-    <div className={`kpi-card border-l-[3px] ${c.border} flex flex-col gap-2.5`}>
-      <div className="flex items-start justify-between gap-3">
-        <span className="text-[10px] font-semibold text-[var(--muted-light)] uppercase tracking-[0.1em] leading-tight mt-0.5">
+    <div
+      className="
+        relative overflow-hidden
+        bg-[var(--surface)]
+        border border-[var(--line)]
+        rounded-xl
+        shadow-[0_3px_14px_rgba(15,23,42,0.045)]
+        hover:shadow-[0_7px_22px_rgba(15,23,42,0.08)]
+        hover:-translate-y-[1px]
+        transition-all duration-200
+        flex flex-col
+        gap-3
+        p-4
+        sm:p-5
+      "
+    >
+      {/* KPI accent line */}
+      <div className={`absolute top-0 left-0 right-0 h-[3px] ${accent.line}`} />
+
+      <div className="flex items-start justify-between gap-3 pt-1">
+        <span className="text-[10px] font-bold text-[var(--muted-light)] uppercase tracking-[0.12em] leading-tight mt-0.5">
           {label}
         </span>
-        <div className="p-2 rounded-xl flex-shrink-0 bg-white border border-[var(--line)]">
-          <Icon size={17} className={c.icon} strokeWidth={2} />
+
+        <div
+          className={`
+            w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex-shrink-0
+            ${accent.iconBg}
+            border ${accent.iconBorder}
+            flex items-center justify-center
+          `}
+        >
+          <Icon size={17} className={accent.icon} strokeWidth={2.1} />
         </div>
       </div>
 
       <div
-        className={`text-[1.875rem] font-bold tracking-tight leading-none ${c.value}`}
-        style={{fontVariantNumeric:'tabular-nums',fontFeatureSettings:'"tnum"'}}
+        className="text-[1.35rem] sm:text-[1.9rem] font-bold tracking-tight leading-none text-[var(--ink)] truncate"
+        style={{ fontVariantNumeric: 'tabular-nums', fontFeatureSettings: '"tnum"' }}
       >
         {value}
       </div>
 
-      {note && <div className="text-xs text-[var(--muted)]">{note}</div>}
+      {note && (
+        <div className="text-[11px] sm:text-xs text-[var(--muted)] truncate">
+          {note}
+        </div>
+      )}
     </div>
   )
 }
@@ -841,8 +926,8 @@ export default function Dashboard() {
       ================================================= */}
 
       <section>
-        <p className="section-label">Today's Performance</p>
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="flex items-center gap-2 mb-2"><span className="w-1 h-4 rounded-full bg-blue-600"></span><p className="section-label mb-0">Today's Performance</p></div>
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-3.5">
           <Stat
             label="Today's Sales"
             value={fmt(
@@ -855,6 +940,14 @@ export default function Dashboard() {
             sub={`Yesterday: ${fmt(
               dashboard.yesterday_sales
             )}`}
+          />
+
+          <Stat
+            label="Today's Collection"
+            value={fmt(dashboard.today_collection)}
+            icon={CreditCard}
+            color="orange"
+            sub={`Tax: ${fmt(dashboard.today_tax)}`}
           />
 
           <Stat
@@ -882,14 +975,6 @@ export default function Dashboard() {
               dashboard.avg_bill_today
             )}/bill`}
           />
-
-          <Stat
-            label="Today's Collection"
-            value={fmt(dashboard.today_collection)}
-            icon={CreditCard}
-            color="orange"
-            sub={`Tax: ${fmt(dashboard.today_tax)}`}
-          />
         </div>
       </section>
 
@@ -898,8 +983,8 @@ export default function Dashboard() {
       ================================================= */}
 
       <section>
-        <p className="section-label">This Month</p>
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="flex items-center gap-2 mb-2"><span className="w-1 h-4 rounded-full bg-blue-600"></span><p className="section-label mb-0">This Month</p></div>
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-3.5">
           <Stat
             label="Month Sales"
             value={fmt(
@@ -983,8 +1068,8 @@ export default function Dashboard() {
       ================================================= */}
 
       <section>
-        <p className="section-label">Business Insights</p>
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="flex items-center gap-2 mb-2"><span className="w-1 h-4 rounded-full bg-blue-600"></span><p className="section-label mb-0">Business Insights</p></div>
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-3.5">
           <Insight
             label="Sales Growth"
             value={`${

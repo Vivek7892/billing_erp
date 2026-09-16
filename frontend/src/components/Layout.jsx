@@ -89,8 +89,8 @@ const GROUP_ACCENT = {
   Contacts: 'text-slate-300', Business: 'text-slate-300', Administration: 'text-slate-400'
 }
 const ACTIVE_BG = {
-  Overview: 'bg-white/20', Sales: 'bg-white/20', Inventory: 'bg-white/20',
-  Contacts: 'bg-white/20', Business: 'bg-white/20', Administration: 'bg-white/20'
+  Overview: 'bg-blue-600', Sales: 'bg-blue-600', Inventory: 'bg-blue-600',
+  Contacts: 'bg-blue-600', Business: 'bg-blue-600', Administration: 'bg-blue-600'
 }
 const ACCENT_HEX = {
   Overview: '#9ca3af', Sales: '#9ca3af', Inventory: '#9ca3af',
@@ -130,7 +130,7 @@ function NavGroupItems({ items, collapsed, activeBg, accent, groupLabel, open, s
           <NavLink key={to} to={to} end={to === '/'} onClick={onNav} title={label}
             className={({ isActive }) =>
               `relative flex items-center justify-center w-10 h-10 rounded-xl mb-1 transition-all duration-150 group ${
-                isActive ? `${activeBg} text-white shadow-lg` : 'text-slate-400 hover:bg-white/10 hover:text-white'
+                isActive ? `${activeBg} text-white shadow-lg` : 'text-slate-400 hover:bg-white/[0.08] hover:text-white'
               }`
             }
           >
@@ -154,7 +154,7 @@ function NavGroupItems({ items, collapsed, activeBg, accent, groupLabel, open, s
       <button
         onClick={() => setOpen(v => !v)}
         className={`w-full flex items-center justify-between px-3 py-1.5 mb-0.5 rounded-md transition-colors ${
-          isGroupActive ? accent : 'text-slate-500 hover:text-slate-300'
+          isGroupActive ? accent : 'text-slate-400 hover:text-slate-300'
         }`}
       >
         <span className="text-[9.5px] font-bold uppercase tracking-[0.12em]">{groupLabel}</span>
@@ -166,7 +166,7 @@ function NavGroupItems({ items, collapsed, activeBg, accent, groupLabel, open, s
             <NavLink key={to} to={to} end={to === '/'} onClick={onNav}
               className={({ isActive }) =>
                 `relative flex items-center gap-2.5 px-2.5 py-[7px] rounded-xl text-[13px] font-medium transition-all duration-150 ${
-                  isActive ? `${activeBg} text-white shadow-sm` : 'text-slate-400 hover:bg-white/[0.07] hover:text-slate-100'
+                  isActive ? `${activeBg} text-white shadow-sm` : 'text-slate-400 hover:bg-white/[0.08] hover:text-slate-100'
                 }`
               }
             >
@@ -193,7 +193,7 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
       className={`flex flex-col h-full transition-all duration-300 ease-in-out ${
         mobile ? 'w-64' : collapsed ? 'w-[62px]' : 'w-[220px]'
       }`}
-      style={{ background: 'linear-gradient(180deg, #0d1526 0%, #0f172a 55%, #111827 100%)' }}
+      style={{ background: 'linear-gradient(180deg, #0f172a 0%, #111827 55%, #0b1220 100%)' }}
     >
       <div
         onMouseEnter={() => setHeaderHovered(true)}
@@ -210,7 +210,7 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
             </div>
             <div
               title="Expand sidebar"
-              className={`absolute inset-0 w-8 h-8 rounded-xl flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 transition-all duration-200 ${headerHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
+              className={`absolute inset-0 w-8 h-8 rounded-xl flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/[0.08] transition-all duration-200 ${headerHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
             >
               <MenuIcon size={18} />
             </div>
@@ -220,17 +220,17 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
             <img src={logoSrc} alt={shopName} className="w-8 h-8 object-contain rounded-xl flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="font-bold text-[13px] text-white truncate leading-tight">{shopName}</div>
-              <div className="text-[9px] text-slate-500 uppercase tracking-[0.15em] font-medium mt-0.5">ERP System</div>
+              <div className="text-[9px] text-slate-400 uppercase tracking-[0.15em] font-medium mt-0.5">ERP System</div>
             </div>
             {!mobile && (
               <button onClick={onToggle} title="Collapse sidebar" aria-label="Collapse sidebar"
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all duration-200 flex-shrink-0">
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all duration-200 flex-shrink-0">
                 <MenuIcon size={20} />
               </button>
             )}
             {mobile && (
               <button onClick={onClose} title="Close menu" aria-label="Close menu"
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all flex-shrink-0">
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all flex-shrink-0">
                 <X size={18} />
               </button>
             )}
@@ -247,22 +247,22 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
       <div className={`border-t border-white/[0.06] flex-shrink-0 ${collapsed && !mobile ? 'px-2 py-3' : 'px-3 py-3'}`}>
         {collapsed && !mobile ? (
           <button onClick={onLogout} title="Sign Out"
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all mx-auto">
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all mx-auto">
             <LogOut size={16} />
           </button>
         ) : (
           <div className="flex items-center gap-2.5 px-1">
-            <div className="w-8 h-8 rounded-full bg-white/20 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
               {((user?.first_name?.[0] || '') + (user?.last_name?.[0] || '')) || user?.username?.[0]?.toUpperCase() || 'U'}
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-[12px] font-semibold text-slate-200 truncate leading-tight">
                 {[user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username}
               </div>
-              <div className="text-[10px] text-slate-500 capitalize font-medium">{user?.role}</div>
+              <div className="text-[10px] text-slate-400 capitalize font-medium">{user?.role}</div>
             </div>
             <button onClick={onLogout} title="Sign Out"
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all flex-shrink-0">
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all flex-shrink-0">
               <LogOut size={14} />
             </button>
           </div>
@@ -324,8 +324,8 @@ function GlobalSearch() {
     <div ref={ref} className="relative">
       <div className={`flex items-center gap-2 rounded-xl px-3.5 py-2 w-full max-w-md transition-all duration-200 border ${
         open || q
-          ? 'bg-[var(--surface)] border-gray-400 shadow-sm ring-2 ring-gray-100'
-          : 'bg-[var(--surface-elevated)] border-[var(--line)] hover:border-gray-400'
+          ? 'bg-[var(--surface)] border-slate-300 shadow-sm ring-2 ring-slate-100'
+          : 'bg-[var(--surface-elevated)] border-[var(--line)] hover:border-slate-300'
       }`}>
         <Search size={16} className="text-[var(--muted)] flex-shrink-0" />
         <input
@@ -351,7 +351,7 @@ function GlobalSearch() {
         <div className="absolute top-full mt-2 left-0 w-80 bg-[var(--surface)] rounded-2xl shadow-[var(--shadow-lg)] border border-[var(--line)] z-50 overflow-hidden">
           {searching ? (
             <div className="px-4 py-3 text-xs text-[var(--muted)] flex items-center gap-2">
-              <div className="w-3 h-3 border-2 border-gray-200 border-t-gray-600 rounded-full animate-spin" />
+              <div className="w-3 h-3 border-2 border-slate-200 border-t-slate-600 rounded-full animate-spin" />
               Searching...
             </div>
           ) : results.length ? (
@@ -390,11 +390,11 @@ function NotificationBell() {
   useEffect(() => {
     api.get('/dashboard/').then(({ data }) => {
       const iconMap = { stock: Activity, credit: CreditCard, purchases: ShoppingBag, invoices: FileText }
-      const colorMap = { stock: 'text-gray-600 bg-gray-100', credit: 'text-gray-600 bg-gray-100', purchases: 'text-gray-600 bg-gray-100', invoices: 'text-gray-600 bg-gray-100' }
+      const colorMap = { stock: 'text-slate-600 bg-slate-100', credit: 'text-slate-600 bg-slate-100', purchases: 'text-slate-600 bg-slate-100', invoices: 'text-slate-600 bg-slate-100' }
       setNotifications((data.action_required || []).filter(item => Number(item.count || 0) > 0).map(item => ({
         ...item,
         icon: iconMap[item.key] || Bell,
-        color: colorMap[item.key] || 'text-slate-500 bg-slate-50',
+        color: colorMap[item.key] || 'text-slate-400 bg-slate-50',
         title: 'Action required',
         desc: `${item.count} ${item.label}`,
       })))
@@ -418,7 +418,7 @@ function NotificationBell() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--line)]">
             <span className="font-semibold text-[var(--ink)] text-sm">Notifications</span>
             {hasNotifications && (
-              <span className="text-[10px] font-bold bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">{notifications.length}</span>
+              <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full">{notifications.length}</span>
             )}
           </div>
           <div className="divide-y divide-[var(--line-subtle)] max-h-72 overflow-y-auto">
@@ -461,7 +461,7 @@ function ProfileMenu({ user, onLogout }) {
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(v => !v)} className="flex items-center gap-2 hover:bg-[var(--surface-hover)] rounded-xl px-2 py-1.5 transition-all">
-        <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-800 text-xs font-bold flex items-center justify-center flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-800 text-xs font-bold flex items-center justify-center flex-shrink-0">
           {initials}
         </div>
         <div className="text-left hidden sm:block">
@@ -475,7 +475,7 @@ function ProfileMenu({ user, onLogout }) {
         <div className="absolute right-0 top-full mt-2 w-56 bg-[var(--surface)] rounded-2xl shadow-[var(--shadow-lg)] border border-[var(--line)] z-50 overflow-hidden">
           <div className="px-4 py-3 bg-[var(--surface-elevated)] border-b border-[var(--line)]">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gray-200 text-gray-800 text-sm font-bold flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-800 text-sm font-bold flex items-center justify-center">
                 {initials}
               </div>
               <div className="min-w-0">
@@ -516,7 +516,7 @@ function PageHeading({ shopName, pathname }) {
 
   return (
     <div className="flex items-center gap-2.5 min-w-0 flex-shrink">
-      <div className="hidden sm:flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0 bg-gray-100 text-gray-600">
+      <div className="hidden sm:flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0 bg-slate-100 text-gray-600">
         <Icon size={16} />
       </div>
       <div className="min-w-0 flex flex-col justify-center leading-tight">

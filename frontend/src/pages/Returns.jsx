@@ -73,7 +73,7 @@ function ReturnModal({ open, onClose, invoice, onDone }) {
   return (
     <Modal open={open} onClose={onClose} title={`Process Return — ${invoice?.invoice_number}`} size="md">
       <div className="space-y-4">
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2 text-xs text-amber-800">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex gap-2 text-xs text-amber-900">
           <AlertCircle size={14} className="shrink-0 mt-0.5" />
           Stock will be restored for returned items. This action cannot be undone.
         </div>
@@ -81,9 +81,9 @@ function ReturnModal({ open, onClose, invoice, onDone }) {
         <div className="space-y-2">
           <div className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wide">Select Items to Return</div>
           {items.map(it => (
-            <div key={it.id} className={`flex flex-wrap sm:flex-nowrap items-center gap-2.5 sm:gap-3 p-3 rounded-lg border transition-colors ${it.selected ? 'border-blue-200 bg-blue-50 dark:bg-blue-950/60' : 'border-[var(--line)] bg-[var(--surface)]'}`}>
+            <div key={it.id} className={`flex flex-wrap sm:flex-nowrap items-center gap-2.5 sm:gap-3 p-3.5 rounded-xl border transition-all duration-200 ${it.selected ? 'border-blue-300 bg-blue-50 ring-1 ring-inset ring-blue-100' : 'border-[var(--line)] bg-[var(--surface)] hover:border-slate-300'}`}>
               <input type="checkbox" checked={it.selected} onChange={() => toggle(it.id)}
-                className="w-4 h-4 accent-blue-600 shrink-0" />
+                className="w-4 h-4 accent-blue-600 shrink-0 cursor-pointer" />
               <div className="flex-1 min-w-[calc(100%-2rem)] sm:min-w-0">
                 <div className="text-sm font-medium text-[var(--ink)] truncate">{it.product_name}</div>
                 <div className="text-xs text-[var(--muted-light)]">Billed: {it.quantity} × {fmt(it.unit_price)}</div>
@@ -94,7 +94,7 @@ function ReturnModal({ open, onClose, invoice, onDone }) {
                   <input type="number" min="0.01" max={it.quantity} step="0.01"
                     value={it.return_qty}
                     onChange={e => setQty(it.id, e.target.value)}
-                    className="w-20 h-9 sm:h-7 text-center border border-[var(--line)] rounded text-xs bg-[var(--surface)]" />
+                    className="w-20 h-9 sm:h-8 text-center border border-[var(--line)] rounded-lg text-xs bg-[var(--surface)] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
                 </div>
               )}
               <div className="text-sm font-semibold text-[var(--ink-secondary)] w-full sm:w-20 text-right shrink-0 mt-1 sm:mt-0">
@@ -108,28 +108,28 @@ function ReturnModal({ open, onClose, invoice, onDone }) {
           <div>
             <label className="text-xs font-medium text-[var(--muted)] block mb-1">Refund Method</label>
             <select value={refundMethod} onChange={e => setRefundMethod(e.target.value)}
-              className="input w-full capitalize">
+              className="input w-full capitalize focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
               {REFUND_METHODS.map(m => <option key={m} value={m}>{m.toUpperCase()}</option>)}
             </select>
           </div>
           <div>
             <label className="text-xs font-medium text-[var(--muted)] block mb-1">Reason</label>
             <input value={reason} onChange={e => setReason(e.target.value)}
-              placeholder="Optional reason" className="input w-full" />
+              placeholder="Optional reason" className="input w-full focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
           </div>
         </div>
 
-        <div className="flex items-center justify-between bg-[var(--surface-elevated)] rounded-lg px-4 py-3 border border-[var(--line)]">
+        <div className="flex items-center justify-between bg-[var(--surface-elevated)] rounded-xl px-4 py-3.5 border border-[var(--line)]">
           <span className="text-sm font-medium text-[var(--muted)]">Refund Amount</span>
           <span className="text-lg font-bold text-[var(--ink)]">{fmt(refundTotal)}</span>
         </div>
 
         <div className="flex flex-col-reverse sm:flex-row gap-2">
           <button onClick={submit} disabled={saving || !selectedItems.length}
-            className="btn-primary flex-1 min-h-11 sm:h-10">
+            className="btn-primary flex-1 min-h-11 sm:h-10 shadow-sm hover:shadow-md transition-all active:scale-[0.99]">
             {saving ? 'Processing…' : 'Confirm Return'}
           </button>
-          <button onClick={onClose} className="btn-secondary min-h-11 sm:h-10 px-5">Cancel</button>
+          <button onClick={onClose} className="btn-secondary min-h-11 sm:h-10 px-5 border border-[var(--line)] hover:bg-[var(--surface-elevated)] transition-all">Cancel</button>
         </div>
       </div>
     </Modal>
@@ -223,36 +223,36 @@ export default function Returns() {
   const toggleExpand = (id) => setExpandedReturns(prev => ({ ...prev, [id]: !prev[id] }))
 
   return (
-    <div className="space-y-4 sm:space-y-5 min-w-0">
+    <div className="space-y-5 sm:space-y-6 min-w-0 pb-4">
       <div className="grid grid-cols-1 min-[380px]:grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((s, i) => (
-          <div key={i} className={`bg-[var(--surface)] rounded-xl border ${s.border} p-3 sm:p-4 flex flex-col gap-2 min-w-0`}>
+          <div key={i} className={`bg-[var(--surface)] rounded-xl border ${s.border} p-4 sm:p-5 flex flex-col gap-3 min-w-0 shadow-sm hover:shadow-md transition-shadow`}>
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-wide">{s.label}</span>
-              <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center`}>
+              <div className={`w-9 h-9 rounded-lg ${s.bg} flex items-center justify-center ring-1 ring-inset ring-black/5`}>
                 <s.icon size={15} className={s.text} />
               </div>
             </div>
-            <div className="text-xl font-bold text-[var(--ink)]">{s.value}</div>
+            <div className="text-2xl font-bold tracking-tight text-[var(--ink)]">{s.value}</div>
           </div>
         ))}
       </div>
 
       {/* Sales Returns (item-level) */}
-      <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)] shadow-[var(--shadow-card)] overflow-hidden min-w-0">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 px-4 sm:px-5 py-3.5 sm:py-4 border-b border-[var(--line-subtle)]">
+      <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)] shadow-sm overflow-hidden min-w-0">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 px-4 sm:px-5 py-4 sm:py-5 border-b border-[var(--line-subtle)] bg-[var(--surface)]">
           <div className="flex items-center gap-2">
-            <RotateCcw size={16} className="text-blue-500" />
-            <h2 className="font-semibold text-[var(--ink)] text-sm leading-5">Sales Returns (Item-level)</h2>
+            <RotateCcw size={16} className="text-blue-600" />
+            <h2 className="font-semibold text-[var(--ink)] text-sm leading-5 tracking-tight">Sales Returns (Item-level)</h2>
           </div>
-          <button onClick={load} className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-[var(--muted-light)] hover:bg-slate-100" aria-label="Refresh returns">
+          <button onClick={load} className="w-10 h-10 sm:w-9 sm:h-9 flex items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] hover:border-slate-300 text-[var(--muted)] hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all active:scale-95" aria-label="Refresh returns">
             <RefreshCw size={14} />
           </button>
         </div>
         {loading ? <Spinner /> : (
           <>
             <div className="hidden md:block overflow-x-auto">
-              <table className="table min-w-[900px]">
+              <table className="table min-w-[900px] [&_th]:whitespace-nowrap [&_td]:align-middle">
                 <thead>
                   <tr><th>Return #</th><th>Invoice</th><th>Customer</th><th>Date</th><th>Refund Method</th><th>Refund Amt</th><th>Reason</th><th></th></tr>
                 </thead>
@@ -270,7 +270,7 @@ export default function Returns() {
                         <td className="font-bold text-[var(--ink)] text-sm">{fmt(r.refund_amount)}</td>
                         <td className="text-xs text-[var(--muted-light)] max-w-[120px] truncate">{r.reason || '—'}</td>
                         <td>
-                          <button onClick={() => toggleExpand(r.id)} className="w-9 h-9 inline-flex items-center justify-center text-[var(--muted-light)] hover:text-[var(--ink-secondary)] rounded-lg hover:bg-slate-100" aria-label="Toggle return details">
+                          <button onClick={() => toggleExpand(r.id)} className="w-9 h-9 inline-flex items-center justify-center text-[var(--muted)] bg-[var(--surface-elevated)] border border-[var(--line)] rounded-lg hover:text-[var(--ink)] hover:bg-slate-100 transition-all active:scale-95" aria-label="Toggle return details">
                             {expandedReturns[r.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                           </button>
                         </td>
@@ -294,7 +294,7 @@ export default function Returns() {
               {returns.length === 0 ? (
                 <div className="text-center py-10 text-[var(--muted-light)] text-sm">No sales returns yet</div>
               ) : returns.map(r => (
-                <div key={r.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow-card)]">
+                <div key={r.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] hover:border-slate-300 p-3.5 shadow-[var(--shadow-card)]">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="font-mono font-semibold text-blue-600 dark:text-blue-400 text-sm break-all">{r.return_number}</div>
@@ -314,7 +314,7 @@ export default function Returns() {
                   {expandedReturns[r.id] && (r.items || []).length > 0 && (
                     <div className="mt-3 pt-3 border-t border-[var(--line-subtle)] space-y-2">
                       {(r.items || []).map(it => (
-                        <div key={`${r.id}-${it.id}`} className="rounded-lg bg-[var(--surface-elevated)] p-2.5">
+                        <div key={`${r.id}-${it.id}`} className="rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-elevated)] p-3">
                           <div className="text-xs font-medium text-[var(--ink-secondary)] break-words">{it.product_name}</div>
                           <div className="flex justify-between gap-3 mt-1 text-xs text-[var(--muted)]">
                             <span>Qty: {it.quantity}</span>
@@ -333,17 +333,17 @@ export default function Returns() {
       </div>
 
       {/* Cancelled / Refunded invoices */}
-      <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)] shadow-[var(--shadow-card)] overflow-hidden min-w-0">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 px-4 sm:px-5 py-3.5 sm:py-4 border-b border-[var(--line-subtle)]">
+      <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)] shadow-sm overflow-hidden min-w-0">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 px-4 sm:px-5 py-4 sm:py-5 border-b border-[var(--line-subtle)] bg-[var(--surface)]">
           <div className="flex items-center gap-2">
-            <PackageX size={16} className="text-rose-500" />
-            <h2 className="font-semibold text-[var(--ink)] text-sm leading-5">Cancelled & Refunded Invoices</h2>
+            <PackageX size={16} className="text-rose-600" />
+            <h2 className="font-semibold text-[var(--ink)] text-sm leading-5 tracking-tight">Cancelled & Refunded Invoices</h2>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="flex gap-1 bg-slate-100 rounded-lg p-1 w-full sm:w-auto">
+            <div className="flex gap-1 bg-[var(--surface-elevated)] border border-[var(--line)] rounded-lg p-1 w-full sm:w-auto">
               {FILTERS.map(f => (
                 <button key={f.key} onClick={() => setFilter(f.key)}
-                  className={`flex-1 sm:flex-none px-3 py-2 sm:py-1 rounded-md text-xs font-medium transition-all ${filter === f.key ? 'bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-card)]' : 'text-[var(--muted)] hover:text-[var(--ink-secondary)]'}`}>
+                  className={`flex-1 sm:flex-none px-3 py-2 sm:py-1 rounded-md text-xs font-medium transition-all ${filter === f.key ? 'bg-white text-[var(--ink)] shadow-sm ring-1 ring-inset ring-black/5' : 'text-[var(--muted)] hover:text-[var(--ink)] hover:bg-white/70'}`}>
                   {f.label}
                 </button>
               ))}
@@ -353,7 +353,7 @@ export default function Returns() {
         {loading ? <Spinner /> : (
           <>
             <div className="hidden md:block overflow-x-auto">
-              <table className="table min-w-[760px]">
+              <table className="table min-w-[760px] [&_th]:whitespace-nowrap [&_td]:align-middle">
                 <thead>
                   <tr><th>Invoice</th><th>Customer</th><th>Date</th><th>Payment</th><th>Amount</th><th>Status</th><th>Actions</th></tr>
                 </thead>
@@ -379,11 +379,11 @@ export default function Returns() {
                         <td><Badge status={b.status} /></td>
                         <td>
                           <div className="flex items-center gap-1">
-                            <button onClick={() => setViewModal(b)} className="w-9 h-9 inline-flex items-center justify-center text-[var(--muted-light)] hover:text-blue-600 dark:text-blue-400 rounded-lg hover:bg-slate-100" title="View" aria-label="View invoice">
+                            <button onClick={() => setViewModal(b)} className="w-9 h-9 inline-flex items-center justify-center text-blue-600 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 hover:border-blue-200 transition-all active:scale-95" title="View" aria-label="View invoice">
                               <Eye size={14} />
                             </button>
                             <a href={`${API_BASE_URL}/invoices/${b.id}/pdf/?token=${localStorage.getItem('access_token')}`}
-                              target="_blank" rel="noreferrer" className="w-9 h-9 inline-flex items-center justify-center text-[var(--muted-light)] hover:text-[var(--ink-secondary)] rounded-lg hover:bg-slate-100" title="Print" aria-label="Print invoice">
+                              target="_blank" rel="noreferrer" className="w-9 h-9 inline-flex items-center justify-center text-[var(--muted)] bg-[var(--surface-elevated)] border border-[var(--line)] rounded-lg hover:text-[var(--ink)] hover:bg-slate-100 transition-all active:scale-95" title="Print" aria-label="Print invoice">
                               <Printer size={14} />
                             </a>
                           </div>
@@ -407,7 +407,7 @@ export default function Returns() {
               ) : [...cancelledInvoices, ...refundedInvoices]
                 .filter(b => filter === 'all' || b.status === filter)
                 .map(b => (
-                  <div key={b.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow-card)]">
+                  <div key={b.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] hover:border-slate-300 p-3.5 shadow-[var(--shadow-card)]">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="font-mono font-semibold text-blue-600 dark:text-blue-400 text-sm break-all">{b.invoice_number}</div>
@@ -425,11 +425,11 @@ export default function Returns() {
                         <div className="text-base font-bold text-[var(--ink)]">{fmt(b.grand_total)}</div>
                       </div>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => setViewModal(b)} className="w-10 h-10 inline-flex items-center justify-center text-[var(--muted)] rounded-lg bg-[var(--surface-elevated)]" title="View" aria-label="View invoice">
+                        <button onClick={() => setViewModal(b)} className="w-10 h-10 inline-flex items-center justify-center text-blue-600 rounded-lg bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-all active:scale-95" title="View" aria-label="View invoice">
                           <Eye size={16} />
                         </button>
                         <a href={`${API_BASE_URL}/invoices/${b.id}/pdf/?token=${localStorage.getItem('access_token')}`}
-                          target="_blank" rel="noreferrer" className="w-10 h-10 inline-flex items-center justify-center text-[var(--muted)] rounded-lg bg-[var(--surface-elevated)]" title="Print" aria-label="Print invoice">
+                          target="_blank" rel="noreferrer" className="w-10 h-10 inline-flex items-center justify-center text-blue-600 rounded-lg bg-blue-50 border border-blue-100 hover:bg-blue-100 transition-all active:scale-95" title="Print" aria-label="Print invoice">
                           <Printer size={16} />
                         </a>
                       </div>
@@ -442,18 +442,18 @@ export default function Returns() {
       </div>
 
       {/* New Return from completed invoices */}
-      <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)] shadow-[var(--shadow-card)] overflow-hidden min-w-0">
-        <div className="px-4 sm:px-5 py-3.5 sm:py-4 border-b border-[var(--line-subtle)]">
+      <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)] shadow-sm overflow-hidden min-w-0">
+        <div className="px-4 sm:px-5 py-4 sm:py-5 border-b border-[var(--line-subtle)] bg-[var(--surface)]">
           <div className="flex items-center gap-2">
-            <RotateCcw size={16} className="text-green-500" />
-            <h2 className="font-semibold text-[var(--ink)] text-sm leading-5">Process New Return</h2>
+            <RotateCcw size={16} className="text-emerald-600" />
+            <h2 className="font-semibold text-[var(--ink)] text-sm leading-5 tracking-tight">Process New Return</h2>
             <span className="text-xs text-[var(--muted-light)]">— select a completed invoice</span>
           </div>
         </div>
         {loading ? <Spinner /> : (
           <>
             <div className="hidden md:block overflow-x-auto">
-              <table className="table min-w-[700px]">
+              <table className="table min-w-[700px] [&_th]:whitespace-nowrap [&_td]:align-middle">
                 <thead>
                   <tr><th>Invoice</th><th>Customer</th><th>Date</th><th>Amount</th><th>Status</th><th>Action</th></tr>
                 </thead>
@@ -469,7 +469,7 @@ export default function Returns() {
                       <td><Badge status={b.payment_status} /></td>
                       <td>
                         <button onClick={() => setReturnModal(b)}
-                          className="min-h-10 text-xs bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 dark:bg-rose-950/60 dark:text-rose-400 hover:bg-rose-100 border border-rose-200 dark:border-rose-800 px-3 py-2 rounded-lg font-medium transition-colors inline-flex items-center gap-1">
+                          className="min-h-10 text-xs bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 border border-rose-600 hover:border-rose-700 px-3.5 py-2 rounded-lg font-semibold shadow-sm hover:shadow transition-all active:scale-[0.98] inline-flex items-center justify-center gap-1.5">
                           <RotateCcw size={12} /> Return
                         </button>
                       </td>
@@ -483,7 +483,7 @@ export default function Returns() {
               {completedInvoices.slice(0, 30).length === 0 ? (
                 <div className="text-center py-8 text-[var(--muted-light)] text-sm">No completed invoices</div>
               ) : completedInvoices.slice(0, 30).map(b => (
-                <div key={b.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow-card)]">
+                <div key={b.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] hover:border-slate-300 p-3.5 shadow-[var(--shadow-card)]">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="font-mono font-semibold text-blue-600 dark:text-blue-400 text-sm break-all">{b.invoice_number}</div>
@@ -499,7 +499,7 @@ export default function Returns() {
                       <div className="text-base font-bold text-[var(--ink)]">{fmt(b.grand_total)}</div>
                     </div>
                     <button onClick={() => setReturnModal(b)}
-                      className="min-h-11 px-4 text-xs bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 dark:bg-rose-950/60 dark:text-rose-400 hover:bg-rose-100 border border-rose-200 dark:border-rose-800 rounded-lg font-semibold transition-colors inline-flex items-center gap-1.5 shrink-0">
+                      className="min-h-11 px-4 text-xs bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 border border-rose-600 hover:border-rose-700 rounded-lg font-semibold shadow-sm hover:shadow transition-all active:scale-[0.98] inline-flex items-center justify-center gap-1.5 shrink-0">
                       <RotateCcw size={13} /> Return
                     </button>
                   </div>

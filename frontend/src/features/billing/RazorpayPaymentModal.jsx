@@ -75,8 +75,12 @@ export default function RazorpayPaymentModal({ open, onClose, invoice, onSuccess
       },
       handler: async (response) => {
         try {
+          // Verify against the order ID received from our server, never a
+          // value supplied by Checkout. This is the order tied to the saved
+          // invoice and is the value Razorpay requires in the HMAC payload.
           const res = await api.post('/payments/razorpay/verify/', {
-            razorpay_order_id: response.razorpay_order_id,
+            razorpay_order_id: orderData.order_id,
+            razorpay_checkout_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,
           })

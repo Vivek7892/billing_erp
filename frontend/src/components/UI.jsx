@@ -19,12 +19,12 @@ export function StatCard({ label, value, icon: Icon, color = 'blue', sub, trend,
   return (
     <Tag
       onClick={onClick}
-      className={`kpi-card border-l-[3px] border-l-gray-300 flex flex-col gap-2 w-full text-left ${onClick ? 'cursor-pointer hover:ring-2 hover:ring-gray-200' : 'cursor-default'}`}
+      className={`kpi-card border-l-[3px] border-l-[var(--primary)] flex flex-col gap-2 w-full text-left ${onClick ? 'cursor-pointer hover:ring-2 hover:ring-blue-200' : 'cursor-default'}`}
     >
       <div className="flex items-start justify-between gap-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--muted-light)] leading-tight">{label}</p>
-        <div className="p-1.5 rounded-lg flex-shrink-0 bg-white border border-[var(--line)]">
-          <Icon size={15} className="text-[var(--ink-secondary)]" />
+        <div className="p-1.5 rounded-lg flex-shrink-0 bg-[var(--primary-light)] border border-[var(--primary-border)]">
+          <Icon size={15} className="text-[var(--primary)]" />
         </div>
       </div>
       <div>
@@ -54,11 +54,11 @@ export function Badge({ status }) {
   const label = status?.replace(/_/g, ' ')
   const type = map[status] || 'neutral'
   const styles = {
-    success: 'bg-gray-50 text-gray-700 border border-gray-200',
-    warning: 'bg-gray-50 text-gray-700 border border-gray-200',
-    danger:  'bg-gray-50 text-gray-700 border border-gray-200',
-    info:    'bg-gray-50 text-gray-700 border border-gray-200',
-    neutral: 'bg-gray-50 text-gray-600 border border-gray-200',
+    success: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+    warning: 'bg-amber-50 text-amber-700 border border-amber-200',
+    danger:  'bg-rose-50 text-rose-700 border border-rose-200',
+    info:    'bg-blue-50 text-blue-700 border border-blue-200',
+    neutral: 'bg-slate-50 text-slate-600 border border-slate-200',
   }
   return <span className={`status-badge ${styles[type]}`}>{label}</span>
 }
@@ -80,7 +80,7 @@ export function Tabs({ tabs, active, onChange, className = '' }) {
           onClick={() => onChange(tab.value)}
           className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 whitespace-nowrap ${
             active === tab.value
-              ? 'bg-[var(--ink)] text-white shadow-[var(--shadow-xs)]'
+              ? 'bg-[var(--primary)] text-white shadow-[var(--shadow-primary)]'
               : 'text-[var(--muted)] hover:text-[var(--ink-secondary)]'
           }`}
         >
@@ -119,7 +119,7 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }) {
 
   return (
     <div
-      className="modal-backdrop fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/55 backdrop-blur-sm"
+      className="modal-backdrop fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm"
       role="presentation"
       onMouseDown={e => e.target === e.currentTarget && onClose()}
     >
@@ -159,16 +159,16 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }) {
 export function ConfirmDialog({ open, onClose, onConfirm, title, message, danger, confirmLabel, loading }) {
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
       <div className="modal-shell bg-[var(--surface)] rounded-2xl shadow-[var(--shadow-modal)] w-full max-w-sm p-6 border border-[var(--line)]">
-        <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 bg-gray-100 border border-gray-200">
+        <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${danger ? 'bg-rose-50 border border-rose-200' : 'bg-blue-50 border border-blue-200'}`}>
           {danger ? (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
               <path d="M12 9v4"/><path d="M12 17h.01"/>
             </svg>
           ) : (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
             </svg>
           )}
@@ -280,8 +280,8 @@ export function CardSkeleton({ count = 4 }) {
 export function ErrorState({ title = 'Unable to load data', message = 'Something went wrong. Please try again.', onRetry }) {
   return (
     <div role="alert" className="flex flex-col items-center justify-center py-14 text-center px-6">
-      <div className="mb-4 w-12 h-12 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <div className="mb-4 w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
         </svg>
       </div>
@@ -308,8 +308,8 @@ export function ErrorState({ title = 'Unable to load data', message = 'Something
 export function SuccessState({ title = 'Done!', message, action }) {
   return (
     <div className="flex flex-col items-center justify-center py-14 text-center px-6">
-      <div className="mb-4 w-12 h-12 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <div className="mb-4 w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20 6 9 17l-5-5"/>
         </svg>
       </div>
@@ -398,10 +398,10 @@ export function DateFilterBar({ active, onChange, className = '' }) {
 ============================================================ */
 export function AlertBanner({ type = 'info', title, message, onDismiss }) {
   const styles = {
-    info:    { wrap: 'bg-gray-50 border-gray-200', icon: 'text-gray-500', text: 'text-gray-800' },
-    success: { wrap: 'bg-gray-50 border-gray-200', icon: 'text-gray-500', text: 'text-gray-800' },
-    warning: { wrap: 'bg-gray-50 border-gray-200', icon: 'text-gray-500', text: 'text-gray-800' },
-    danger:  { wrap: 'bg-gray-50 border-gray-200', icon: 'text-gray-500', text: 'text-gray-800' },
+    info:    { wrap: 'bg-blue-50 border-blue-200', icon: 'text-blue-700', text: 'text-blue-900' },
+    success: { wrap: 'bg-emerald-50 border-emerald-200', icon: 'text-emerald-700', text: 'text-emerald-900' },
+    warning: { wrap: 'bg-amber-50 border-amber-200', icon: 'text-amber-700', text: 'text-amber-900' },
+    danger:  { wrap: 'bg-rose-50 border-rose-200', icon: 'text-rose-700', text: 'text-rose-900' },
   }
   const s = styles[type] || styles.info
   return (

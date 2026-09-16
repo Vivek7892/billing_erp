@@ -1990,7 +1990,10 @@ class RazorpayWebhookView(APIView):
         new_status = 'success' if event == 'payment.captured' else 'failed'
 
         with db_transaction.atomic():
-            txn = RazorpayTransaction.objects.select_for_update().select_related('invoice').get(
+            # `invoice` is nullable. PostgreSQL cannot apply FOR UPDATE to the
+            # nullable side of select_related's OUTER JOIN, so lock only the
+            # transaction row and load its invoice separately when needed.
+            txn = RazorpayTransaction.objects.select_for_update().get(
                 razorpay_order_id=order_id
             )
             if txn.status == 'success':
@@ -2147,6 +2150,7 @@ class RazorpayVerifyView(APIView):
         logger = logging.getLogger('razorpay')
 
         order_id = request.data.get('razorpay_order_id')
+        checkout_order_id = request.data.get('razorpay_checkout_order_id')
         payment_id = request.data.get('razorpay_payment_id')
         signature = request.data.get('razorpay_signature')
 
@@ -2161,6 +2165,12 @@ class RazorpayVerifyView(APIView):
         if txn.invoice and txn.invoice.business_id != request.user.business_id:
             return Response({'error': 'Transaction not found'}, status=404)
 
+        # Checkout should echo the server-created order ID. Treat a mismatch
+        # as invalid rather than calculating a signature with attacker input.
+        if checkout_order_id and checkout_order_id != order_id:
+            logger.warning('Razorpay checkout order mismatch for order %s', order_id)
+            return Response({'error': 'Payment order does not match this invoice', 'success': False}, status=400)
+
         if txn.status == 'success':
             return Response({
                 'status': 'success', 'success': True,
@@ -2170,7 +2180,10 @@ class RazorpayVerifyView(APIView):
                 'invoice_id': txn.invoice_id,
             })
 
-        if not verify_signature(order_id, payment_id, signature):
+        # Razorpay's required HMAC is calculated using the order ID stored on
+        # our server and the checkout payment ID. Do not use the checkout
+        # order field as the HMAC source.
+        if not verify_signature(txn.razorpay_order_id, payment_id, signature):
             logger.warning('Razorpay signature verification failed for order %s', order_id)
             txn.status = 'failed'
             txn.response_data = 'SIGNATURE_MISMATCH'
@@ -2184,7 +2197,9 @@ class RazorpayVerifyView(APIView):
             razorpay_amount = payment_result['payment'].get('amount')
 
         with db_transaction.atomic():
-            txn = RazorpayTransaction.objects.select_for_update().select_related('invoice').get(
+            # Do not combine select_for_update() with select_related('invoice'):
+            # Invoice is nullable and PostgreSQL rejects that OUTER JOIN lock.
+            txn = RazorpayTransaction.objects.select_for_update().get(
                 razorpay_order_id=order_id
             )
             if txn.status == 'success':
