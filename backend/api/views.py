@@ -1019,6 +1019,10 @@ class SettingViewSet(viewsets.ModelViewSet):
             'invoice_terms': '', 'invoice_footer': '',
             'show_discount_col': 'true', 'show_hsn_col': 'true',
             'show_batch_col': 'false', 'show_expiry_col': 'false',
+            # Invoice appearance
+            'invoice_font': 'default', 'invoice_header_layout': 'logo_left',
+            'invoice_footer_layout': 'text_center', 'invoice_paper_size': 'a4',
+            'upi_qr_size_a4': 'medium', 'upi_qr_size_thermal': 'medium',
             # GST
             'gst_reg_type': 'regular', 'default_gst_rate': '18',
             'place_of_supply': '', 'tax_on_price': 'exclusive',
@@ -1039,6 +1043,9 @@ class SettingViewSet(viewsets.ModelViewSet):
             'open_cash_drawer': 'false', 'print_duplicate': 'false',
             # System
             'currency': '₹', 'allow_negative_stock': 'false',
+            # Policies & Legal
+            'terms_url': '', 'privacy_url': '', 'refund_url': '',
+            'return_url': '', 'shipping_url': '',
         }
         saved = {s.key: s.value for s in self.get_queryset()}
         return Response({**defaults, **saved})
@@ -1919,5 +1926,309 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         return AuditLog.objects.select_related('user').filter(
             business=self.request.user.business
         )
+
+
+# ─────────────────────────────────────────────────────────────
+# Razorpay Payment Gateway
+# ─────────────────────────────────────────────────────────────
+
+class RazorpayWebhookView(APIView):
+    """S2S webhook from Razorpay — verifies the X-Razorpay-Signature and marks
+    the invoice paid without any frontend involvement.
+
+    Register this URL in the Razorpay Dashboard under Webhooks.
+    """
+    authentication_classes = []
+    permission_classes = []
+    throttle_classes = [AnonRateThrottle]
+
+    def post(self, request):
+        import hmac
+        import hashlib
+        import json
+        import logging
+        from django.db import transaction as db_transaction
+        from decouple import config as env
+
+        logger = logging.getLogger('razorpay')
+
+        webhook_secret = env('RAZORPAY_WEBHOOK_SECRET', default='').strip()
+        signature = request.headers.get('X-Razorpay-Signature', '')
+
+        if webhook_secret and signature:
+            body = request.body
+            expected = hmac.new(webhook_secret.encode(), body, hashlib.sha256).hexdigest()
+            if not hmac.compare_digest(expected, signature):
+                logger.warning('Razorpay webhook: signature mismatch')
+                return Response({'error': 'Invalid signature'}, status=400)
+
+        try:
+            payload = json.loads(request.body)
+        except Exception:
+            return Response({'error': 'Invalid payload'}, status=400)
+
+        event = payload.get('event', '')
+        payment_entity = payload.get('payload', {}).get('payment', {}).get('entity', {})
+        order_id = payment_entity.get('order_id', '')
+        payment_id = payment_entity.get('id', '')
+        razorpay_amount = payment_entity.get('amount', 0)
+
+        if not order_id:
+            return Response({'error': 'Missing order_id'}, status=400)
+
+        try:
+            txn = RazorpayTransaction.objects.select_related('invoice').get(razorpay_order_id=order_id)
+        except RazorpayTransaction.DoesNotExist:
+            logger.warning('Razorpay webhook: unknown order %s', order_id)
+            return Response({'error': 'Transaction not found'}, status=404)
+
+        if txn.status == 'success':
+            return Response({'status': 'already_processed'})
+
+        new_status = 'success' if event == 'payment.captured' else 'failed'
+
+        with db_transaction.atomic():
+            txn = RazorpayTransaction.objects.select_for_update().select_related('invoice').get(
+                razorpay_order_id=order_id
+            )
+            if txn.status == 'success':
+                return Response({'status': 'already_processed'})
+
+            txn.status = new_status
+            txn.razorpay_payment_id = payment_id
+            txn.response_data = str(payload)
+            txn.save(update_fields=['status', 'razorpay_payment_id', 'response_data', 'updated_at'])
+
+            if new_status == 'success' and txn.invoice_id:
+                invoice = txn.invoice
+                expected_paise = int(txn.amount * 100)
+                if razorpay_amount and razorpay_amount != expected_paise:
+                    logger.error('Razorpay webhook amount mismatch order %s: expected %s got %s', order_id, expected_paise, razorpay_amount)
+                    txn.status = 'failed'
+                    txn.response_data = f'AMOUNT_MISMATCH expected={expected_paise} got={razorpay_amount}'
+                    txn.save(update_fields=['status', 'response_data', 'updated_at'])
+                    return Response({'status': 'amount_mismatch'}, status=400)
+
+                if invoice.payment_status != 'paid':
+                    invoice.payment_status = 'paid'
+                    invoice.paid_amount = invoice.grand_total
+                    invoice.balance_due = Decimal('0')
+                    invoice.payment_method = 'razorpay'
+                    invoice.save(update_fields=['payment_status', 'paid_amount', 'balance_due', 'payment_method'])
+                    Payment.objects.get_or_create(
+                        invoice=invoice,
+                        method='razorpay',
+                        defaults={'amount': txn.amount, 'reference': payment_id},
+                    )
+                    logger.info('Razorpay webhook: invoice %s marked PAID via order %s', invoice.invoice_number, order_id)
+
+        return Response({'status': 'processed'})
+
+
+class PublicDocView(APIView):
+    """Serve a static document (e.g. T&C PDF) publicly without authentication."""
+    authentication_classes = []
+    permission_classes = []
+
+    ALLOWED_DOCS = {'terms': 'docs/terms.pdf'}
+
+    def get(self, request, doc):
+        import os
+        from django.conf import settings as django_settings
+        rel = self.ALLOWED_DOCS.get(doc)
+        if not rel:
+            raise Http404
+        path = os.path.join(django_settings.MEDIA_ROOT, rel)
+        if not os.path.exists(path):
+            raise Http404('Document not found. Please upload the PDF to backend/media/docs/terms.pdf')
+        with open(path, 'rb') as f:
+            response = HttpResponse(f.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="{doc}.pdf"'
+        response['Cache-Control'] = 'public, max-age=86400'
+        return response
+
+
+class RazorpayCreateOrderView(APIView):
+    """Create a Razorpay order for an invoice.
+
+    Security rules:
+    - Amount is always taken from the saved invoice grand_total, never from the frontend.
+    - Idempotent: returns existing initiated/pending order if created within last 30 minutes.
+    - Returns the order_id and key_id needed by the Razorpay JS SDK on the frontend.
+    """
+    permission_classes = [IsCashierOrAdmin]
+
+    def post(self, request):
+        import logging
+        from .services.razorpay_service import create_order, generate_receipt
+        from decouple import config as env
+
+        logger = logging.getLogger('razorpay')
+
+        invoice_id = request.data.get('invoice_id')
+        if not invoice_id:
+            return Response({'error': 'invoice_id is required'}, status=400)
+
+        try:
+            invoice = Invoice.objects.get(pk=invoice_id, business=request.user.business)
+        except Invoice.DoesNotExist:
+            return Response({'error': 'Invoice not found'}, status=404)
+
+        if invoice.payment_status == 'paid':
+            return Response({'error': 'Invoice is already paid'}, status=400)
+
+        amount_rupees = invoice.grand_total
+        amount_paise = int(amount_rupees * 100)
+        if amount_paise <= 0:
+            return Response({'error': 'Invoice amount must be greater than zero'}, status=400)
+
+        # Idempotency: reuse existing initiated/pending order within last 30 minutes
+        cutoff = timezone.now() - timedelta(minutes=30)
+        existing = RazorpayTransaction.objects.filter(
+            invoice=invoice,
+            status__in=['initiated', 'pending'],
+            created_at__gte=cutoff,
+        ).order_by('-created_at').first()
+        if existing:
+            logger.info('Razorpay: reusing existing order %s for invoice %s', existing.razorpay_order_id, invoice.invoice_number)
+            return Response({
+                'order_id': existing.razorpay_order_id,
+                'amount': amount_paise,
+                'currency': 'INR',
+                'key_id': env('RAZORPAY_KEY_ID', default='').strip(),
+            })
+
+        receipt = generate_receipt(invoice.invoice_number)
+        result = create_order(
+            amount_paise=amount_paise,
+            receipt=receipt,
+            notes={'invoice_number': invoice.invoice_number, 'invoice_id': str(invoice.pk)},
+        )
+
+        RazorpayTransaction.objects.create(
+            invoice=invoice,
+            razorpay_order_id=result['order_id'] if result['success'] else f'FAILED-{receipt}',
+            amount=amount_rupees,
+            status='initiated' if result['success'] else 'failed',
+            response_data=str(result.get('error', '')),
+        )
+
+        if not result['success']:
+            logger.warning('Razorpay order creation failed for invoice %s: %s', invoice.invoice_number, result.get('error'))
+            return Response({'error': result.get('error', 'Razorpay order creation failed')}, status=502)
+
+        logger.info('Razorpay: created order %s for invoice %s amount=%s', result['order_id'], invoice.invoice_number, amount_rupees)
+        return Response({
+            'order_id': result['order_id'],
+            'amount': amount_paise,
+            'currency': 'INR',
+            'key_id': env('RAZORPAY_KEY_ID', default='').strip(),
+        })
+
+
+class RazorpayVerifyView(APIView):
+    """Verify Razorpay payment after the JS SDK callback.
+
+    Security rules:
+    - Verifies the Razorpay signature using HMAC-SHA256.
+    - Checks amount from Razorpay API matches the transaction record.
+    - Idempotent: already-success transactions return immediately.
+    - Only marks invoice PAID after confirmed signature verification.
+    """
+    permission_classes = [IsCashierOrAdmin]
+
+    def post(self, request):
+        import logging
+        from django.db import transaction as db_transaction
+        from .services.razorpay_service import verify_signature, fetch_payment
+
+        logger = logging.getLogger('razorpay')
+
+        order_id = request.data.get('razorpay_order_id')
+        payment_id = request.data.get('razorpay_payment_id')
+        signature = request.data.get('razorpay_signature')
+
+        if not all([order_id, payment_id, signature]):
+            return Response({'error': 'razorpay_order_id, razorpay_payment_id and razorpay_signature are required'}, status=400)
+
+        try:
+            txn = RazorpayTransaction.objects.select_related('invoice').get(razorpay_order_id=order_id)
+        except RazorpayTransaction.DoesNotExist:
+            return Response({'error': 'Transaction not found'}, status=404)
+
+        if txn.invoice and txn.invoice.business_id != request.user.business_id:
+            return Response({'error': 'Transaction not found'}, status=404)
+
+        if txn.status == 'success':
+            return Response({
+                'status': 'success', 'success': True,
+                'razorpay_payment_id': txn.razorpay_payment_id,
+                'razorpay_order_id': order_id,
+                'amount': str(txn.amount),
+                'invoice_id': txn.invoice_id,
+            })
+
+        if not verify_signature(order_id, payment_id, signature):
+            logger.warning('Razorpay signature verification failed for order %s', order_id)
+            txn.status = 'failed'
+            txn.response_data = 'SIGNATURE_MISMATCH'
+            txn.save(update_fields=['status', 'response_data', 'updated_at'])
+            return Response({'error': 'Payment signature verification failed', 'success': False}, status=400)
+
+        # Fetch authoritative payment details from Razorpay
+        payment_result = fetch_payment(payment_id)
+        razorpay_amount = None
+        if payment_result['success']:
+            razorpay_amount = payment_result['payment'].get('amount')
+
+        with db_transaction.atomic():
+            txn = RazorpayTransaction.objects.select_for_update().select_related('invoice').get(
+                razorpay_order_id=order_id
+            )
+            if txn.status == 'success':
+                return Response({
+                    'status': 'success', 'success': True,
+                    'razorpay_payment_id': txn.razorpay_payment_id,
+                    'razorpay_order_id': order_id,
+                    'amount': str(txn.amount),
+                    'invoice_id': txn.invoice_id,
+                })
+
+            expected_paise = int(txn.amount * 100)
+            if razorpay_amount is not None and razorpay_amount != expected_paise:
+                logger.error('Razorpay amount mismatch for order %s: expected %s got %s', order_id, expected_paise, razorpay_amount)
+                txn.status = 'failed'
+                txn.response_data = f'AMOUNT_MISMATCH expected={expected_paise} got={razorpay_amount}'
+                txn.save(update_fields=['status', 'response_data', 'updated_at'])
+                return Response({'error': 'Payment amount mismatch. Contact support.', 'success': False}, status=400)
+
+            txn.status = 'success'
+            txn.razorpay_payment_id = payment_id
+            txn.razorpay_signature = signature
+            txn.response_data = str(payment_result.get('payment', ''))
+            txn.save(update_fields=['status', 'razorpay_payment_id', 'razorpay_signature', 'response_data', 'updated_at'])
+
+            if txn.invoice_id:
+                invoice = txn.invoice
+                if invoice.payment_status != 'paid':
+                    invoice.payment_status = 'paid'
+                    invoice.paid_amount = invoice.grand_total
+                    invoice.balance_due = Decimal('0')
+                    invoice.payment_method = 'razorpay'
+                    invoice.save(update_fields=['payment_status', 'paid_amount', 'balance_due', 'payment_method'])
+                    Payment.objects.get_or_create(
+                        invoice=invoice,
+                        method='razorpay',
+                        defaults={'amount': txn.amount, 'reference': payment_id},
+                    )
+                    logger.info('Razorpay: invoice %s marked PAID via order %s', invoice.invoice_number, order_id)
+
+        return Response({
+            'status': 'success', 'success': True,
+            'razorpay_payment_id': payment_id,
+            'razorpay_order_id': order_id,
+            'amount': str(txn.amount),
+            'invoice_id': txn.invoice_id,
+        })
 
 

@@ -53,7 +53,7 @@ Frontend runs at: http://localhost:3000
 - Keyboard-friendly (Enter to add product)
 - Cart with qty, discount, GST per item
 - Customer selection / walk-in
-- Mixed payment (Cash + UPI + Card + Credit)
+- Mixed payment (Cash + UPI + Card + Credit + **PhonePe**)
 - Auto invoice numbering
 - Save, Print (PDF), New Bill
 
@@ -124,3 +124,83 @@ python manage.py seed_data
 ```
 
 Adds 33 products, 10 customers, 4 suppliers, 10 categories, 15 sample invoices.
+
+---
+
+## PhonePe Payment Gateway Setup
+
+### 1. Get Credentials
+- **Sandbox/UAT**: Use the public test credentials (already in `.env.example`).
+- **Production**: Register at [PhonePe Business](https://business.phonepe.com/) and get your `Merchant ID`, `Salt Key`, and `Salt Index`.
+
+### 2. Configure Backend Environment
+
+Copy `backend/.env.example` to `backend/.env` and fill in:
+
+```env
+# Sandbox testing
+PHONEPE_ENV=UAT
+PHONEPE_MERCHANT_ID=PGTESTPAYUAT
+PHONEPE_SALT_KEY=099eb0cd-02cf-4dc2-a4c3-df3f7d11b3b4
+PHONEPE_SALT_INDEX=1
+
+# IMPORTANT: Set to your deployed frontend URL (Vercel URL in production)
+FRONTEND_URL=https://your-app.vercel.app
+```
+
+For production:
+```env
+PHONEPE_ENV=PRODUCTION
+PHONEPE_MERCHANT_ID=<your-merchant-id>
+PHONEPE_SALT_KEY=<your-salt-key>
+PHONEPE_SALT_INDEX=<your-salt-index>
+FRONTEND_URL=https://your-app.vercel.app
+```
+
+### 3. Run Migration
+
+```bash
+cd backend
+python manage.py migrate
+```
+
+### 4. PhonePe Billing Flow
+
+```
+1. Add items to cart
+2. Select PhonePe as payment method
+3. Click "Save Bill" → bill saved with status=pending
+4. PhonePe modal opens automatically
+5. Click "Pay with PhonePe" → redirected to PhonePe checkout
+6. Customer completes payment on PhonePe
+7. PhonePe redirects to /billing/phonepe-callback
+8. Backend verifies payment with PhonePe API
+9. On success: invoice marked PAID, Payment record created
+10. Receipt/invoice available for print/download
+```
+
+### 5. New API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/payments/phonepe/initiate/` | Create PhonePe payment, returns `payment_url` |
+| POST | `/api/payments/phonepe/verify/` | Verify payment status with PhonePe, marks invoice PAID |
+| POST | `/api/payments/phonepe/webhook/` | S2S callback from PhonePe (register in merchant dashboard) |
+
+### 6. Security Notes
+
+- PhonePe credentials are **never** exposed to the frontend.
+- The bill amount is always taken from the **saved invoice** on the backend — the frontend cannot modify it.
+- A bill is only marked `PAID` after the backend calls PhonePe's status API and confirms `COMPLETED`.
+- Duplicate payment protection: if an `initiated`/`pending` transaction already exists for an invoice, the same `payment_url` is returned.
+- Amount mismatch between PhonePe response and our record causes the transaction to be marked `failed`.
+- All PhonePe operations are idempotent — safe to retry.
+
+### 7. Deployment (Vercel Frontend)
+
+Set `FRONTEND_URL` in your backend environment to your Vercel deployment URL:
+```
+FRONTEND_URL=https://your-app.vercel.app
+```
+
+PhonePe will redirect to `{FRONTEND_URL}/billing/phonepe-callback?txn=<id>` after payment.

@@ -3,7 +3,7 @@ import api from '../api'
 import { Card, PageHeader } from '../components/UI'
 import toast from 'react-hot-toast'
 import {
-  Building2, FileText, Percent, CreditCard, Printer, Upload, CheckCircle2, Info, XCircle, Trash2, ImageIcon
+  Building2, FileText, Percent, CreditCard, Printer, Upload, CheckCircle2, Info, XCircle, Trash2, ImageIcon, Scale
 } from 'lucide-react'
 
 // ── tiny helpers ────────────────────────────────────────────────────────────
@@ -69,6 +69,7 @@ const TABS = [
   { id: 'gst', label: 'GST Settings', Icon: Percent },
   { id: 'payment', label: 'Payment Settings', Icon: CreditCard },
   { id: 'printer', label: 'Printer Settings', Icon: Printer },
+  
 ]
 
 // ── section wrapper ──────────────────────────────────────────────────────────
@@ -253,6 +254,38 @@ function InvoiceTab({ s, set }) {
         </F>
       </Section>
 
+      <Section title="Appearance">
+        <F label="Invoice Font">
+          <Sel value={s.invoice_font || 'default'} onChange={v => set('invoice_font', v)} options={[
+            ['default', 'Default (Helvetica)'],
+            ['dejavu', 'DejaVu Sans (Unicode)'],
+            ['courier', 'Courier (Monospace)'],
+          ]} />
+          <p className="mt-1 text-xs text-[var(--muted-light)]">DejaVu supports ₹ and regional characters. Helvetica is the most compact.</p>
+        </F>
+        <F label="Header Layout">
+          <Sel value={s.invoice_header_layout || 'logo_left'} onChange={v => set('invoice_header_layout', v)} options={[
+            ['logo_left', 'Logo left · Business name right'],
+            ['logo_center', 'Logo + name centered'],
+            ['name_only', 'Business name only (no logo)'],
+          ]} />
+        </F>
+        <F label="Footer Layout">
+          <Sel value={s.invoice_footer_layout || 'text_center'} onChange={v => set('invoice_footer_layout', v)} options={[
+            ['text_center', 'Footer text centered'],
+            ['text_left', 'Footer text left-aligned'],
+            ['none', 'No footer'],
+          ]} />
+        </F>
+        <F label="Paper Size">
+          <Sel value={s.invoice_paper_size || 'a4'} onChange={v => set('invoice_paper_size', v)} options={[
+            ['a4', 'A4 (210 × 297 mm)'],
+            ['letter', 'US Letter (216 × 279 mm)'],
+            ['a5', 'A5 (148 × 210 mm)'],
+          ]} />
+        </F>
+      </Section>
+
       <Section title="Content">
         <F label="Terms & Conditions" full>
           <Txt
@@ -285,6 +318,62 @@ function InvoiceTab({ s, set }) {
           </label>
         ))}
       </Section>
+
+      {/* UPI QR Block */}
+      <Card className="p-5">
+        <h3 className="text-sm font-semibold text-[var(--ink-secondary)] uppercase tracking-wide mb-4">UPI QR Block on Invoice</h3>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <F label="UPI ID for QR">
+            <Inp value={s.shop_upi_id} onChange={v => set('shop_upi_id', v)} placeholder="balajitraders@okhdfcbank" />
+            <p className="mt-1 text-xs text-[var(--muted-light)]">Printed as a scannable QR on the invoice so customers can pay instantly.</p>
+          </F>
+          <F label="UPI Merchant Name">
+            <Inp value={s.upi_merchant_name} onChange={v => set('upi_merchant_name', v)} placeholder="Balaji Traders" />
+          </F>
+          <F label="QR Size on A4">
+            <Sel value={s.upi_qr_size_a4 || 'medium'} onChange={v => set('upi_qr_size_a4', v)} options={[
+              ['small', 'Small (18mm)'],
+              ['medium', 'Medium (22mm)'],
+              ['large', 'Large (28mm)'],
+            ]} />
+          </F>
+          <F label="QR Size on Thermal">
+            <Sel value={s.upi_qr_size_thermal || 'medium'} onChange={v => set('upi_qr_size_thermal', v)} options={[
+              ['small', 'Small (20mm)'],
+              ['medium', 'Medium (28mm)'],
+              ['large', 'Large (36mm)'],
+            ]} />
+          </F>
+          <div className="sm:col-span-2 flex flex-wrap gap-4">
+            {[
+              ['show_upi_qr_on_invoice', 'Show QR on A4 invoice'],
+              ['show_upi_qr_on_thermal', 'Show QR on thermal receipt'],
+            ].map(([key, label]) => (
+              <label key={key} className="flex items-center gap-2 text-sm text-[var(--ink-secondary)] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={s[key] === 'true' || s[key] === true}
+                  onChange={e => set(key, String(e.target.checked))}
+                  className="rounded"
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+          {s.shop_upi_id && (
+            <div className="sm:col-span-2 flex items-center gap-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 rounded-xl p-3">
+              <div className="w-10 h-10 bg-white rounded-lg border border-emerald-200 flex items-center justify-center shrink-0">
+                <span className="text-lg">📱</span>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-emerald-800">QR configured</p>
+                <p className="text-xs text-emerald-700 font-mono">{s.shop_upi_id}</p>
+                <p className="text-[11px] text-emerald-600 mt-0.5">Customers can scan this on the printed invoice to pay instantly.</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
     </div>
   )
 }
@@ -475,6 +564,26 @@ function PrinterTab({ s, set }) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// 3.6 Policies & Legal
+// ══════════════════════════════════════════════════════════════════════════════
+function PoliciesTab({ s, set }) {
+  const tcUrl = `${(import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')}/api/docs/terms/`
+  return (
+    <div className="space-y-4">
+      <Section title="Terms & Conditions">
+        <F label="Terms & Conditions PDF URL" full>
+          <Inp value={s.terms_url} onChange={v => set('terms_url', v)} type="url" placeholder={tcUrl} />
+          <p className="mt-1 text-xs text-[var(--muted-light)]">
+            Upload your PDF to <code className="font-mono">backend/media/docs/terms.pdf</code> — it will be served at{' '}
+            <a href={tcUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{tcUrl}</a>
+          </p>
+        </F>
+      </Section>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // Root
 // ══════════════════════════════════════════════════════════════════════════════
 export default function Settings() {
@@ -589,6 +698,7 @@ export default function Settings() {
           {tab === 'gst'      && <GstTab      {...tabProps} />}
           {tab === 'payment'  && <PaymentTab  {...tabProps} />}
           {tab === 'printer'  && <PrinterTab  {...tabProps} />}
+          {tab === 'policies' && <PoliciesTab {...tabProps} />}
         </div>
       </div>
     </div>

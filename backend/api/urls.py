@@ -46,6 +46,10 @@ urlpatterns = [
     path('inventory/adjust/', views.StockAdjustView.as_view(), name='stock-adjust'),
     path('inventory/bulk-adjust/', views.BulkStockAdjustView.as_view(), name='bulk-stock-adjust'),
     path('inventory/import/', views.StockImportView.as_view(), name='stock-import'),
+    path('payments/razorpay/create-order/', views.RazorpayCreateOrderView.as_view(), name='razorpay-create-order'),
+    path('payments/razorpay/verify/', views.RazorpayVerifyView.as_view(), name='razorpay-verify'),
+    path('payments/razorpay/webhook/', views.RazorpayWebhookView.as_view(), name='razorpay-webhook'),
+    path('docs/<str:doc>/', views.PublicDocView.as_view(), name='public-doc'),
     # Keep explicit actions ahead of router detail patterns such as /inventory/<pk>/.
     path('', include(router.urls)),
 ]

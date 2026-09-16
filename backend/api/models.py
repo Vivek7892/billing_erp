@@ -332,7 +332,7 @@ class InvoiceItem(models.Model):
 
 
 class Payment(models.Model):
-    METHOD_CHOICES = [('cash', 'Cash'), ('upi', 'UPI'), ('card', 'Card'), ('online', 'Online'), ('credit', 'Credit')]
+    METHOD_CHOICES = [('cash', 'Cash'), ('upi', 'UPI'), ('card', 'Card'), ('online', 'Online'), ('credit', 'Credit'), ('razorpay', 'Razorpay')]
     invoice = models.ForeignKey(Invoice, related_name='payments', on_delete=models.CASCADE)
     method = models.CharField(max_length=10, choices=METHOD_CHOICES)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
@@ -562,3 +562,25 @@ class PurchaseReturnItem(models.Model):
             models.CheckConstraint(check=Q(purchase_price__gte=0), name='purchase_return_item_price_nonnegative'),
             models.CheckConstraint(check=Q(total__gte=0), name='purchase_return_item_total_nonnegative'),
         ]
+
+
+class RazorpayTransaction(models.Model):
+    STATUS_CHOICES = [
+        ('initiated', 'Initiated'), ('pending', 'Pending'),
+        ('success', 'Success'), ('failed', 'Failed'), ('cancelled', 'Cancelled'),
+    ]
+    invoice = models.ForeignKey(Invoice, on_delete=models.SET_NULL, null=True, blank=True, related_name='razorpay_transactions')
+    razorpay_order_id = models.CharField(max_length=100, unique=True)
+    razorpay_payment_id = models.CharField(max_length=100, blank=True)
+    razorpay_signature = models.CharField(max_length=200, blank=True)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='initiated')
+    response_data = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.razorpay_order_id} ({self.status})'

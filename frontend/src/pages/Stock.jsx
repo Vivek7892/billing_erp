@@ -32,7 +32,7 @@ export default function Stock() {
   const stats = [
     { label: 'Total Products', value: products.length, icon: Boxes, bg: 'bg-blue-50 dark:bg-blue-950/60', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-100', key: 'all' },
     { label: 'In Stock', value: inStock, icon: CheckCircle, bg: 'bg-green-50 dark:bg-green-950/60', text: 'text-green-600 dark:text-green-400', border: 'border-green-100', key: 'in_stock' },
-    { label: 'Low Stock', value: lowStock, icon: AlertTriangle, bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100', key: 'low_stock' },
+    { label: 'Low Stock', value: lowStock, icon: AlertTriangle, bg: 'bg-orange-50 dark:bg-orange-950/60', text: 'text-orange-500 dark:text-orange-400', border: 'border-orange-100', key: 'low_stock' },
     { label: 'Out of Stock', value: outStock, icon: XCircle, bg: 'bg-red-50 dark:bg-red-950/60', text: 'text-red-600 dark:text-red-400', border: 'border-red-100', key: 'out_of_stock' },
   ]
 
@@ -70,17 +70,17 @@ export default function Stock() {
           <h2 className="font-semibold text-[var(--ink)] text-sm">Stock Levels</h2>
           <div className="flex items-center gap-2">
             {/* Search */}
-            <div className="flex items-center gap-2 bg-[var(--surface-elevated)] border border-[var(--line)] rounded-lg px-3 py-1.5">
-              <Search size={13} className="text-[var(--muted-light)]" />
+            <div className="relative">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)] pointer-events-none" />
               <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search product…"
-                className="bg-transparent text-sm outline-none w-36 text-[var(--ink-secondary)] placeholder-slate-400" />
+                className="input pl-8 w-40 text-sm" />
             </div>
             {/* Filter tabs */}
-            <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+            <div className="flex gap-1 bg-[var(--surface-elevated)] border border-[var(--line)] rounded-lg p-1">
               {FILTERS.map(f => (
                 <button key={f.key} onClick={() => setFilter(f.key)}
-                  className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                    filter === f.key ? 'bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-card)]' : 'text-[var(--muted)] hover:text-[var(--ink-secondary)]'
+                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                    filter === f.key ? 'bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-xs)]' : 'text-[var(--muted)] hover:text-[var(--ink-secondary)]'
                   }`}>
                   {f.label}
                 </button>
@@ -117,7 +117,7 @@ export default function Stock() {
                   </tr>
                 ) : filtered.map(p => {
                   const status = getStatus(p)
-                  const stockColor = status === 'out_of_stock' ? 'text-red-600 dark:text-red-400 font-bold' : status === 'low_stock' ? 'text-amber-600 font-bold' : 'text-green-700 font-semibold'
+                  const stockColor = status === 'out_of_stock' ? 'text-red-600 dark:text-red-400 font-bold' : status === 'low_stock' ? 'text-orange-500 dark:text-orange-400 font-bold' : 'text-green-700 dark:text-green-400 font-semibold'
                   return (
                     <tr key={p.id}>
                       <td>

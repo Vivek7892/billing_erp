@@ -78,20 +78,20 @@ const pct = (a, b) => {
 ===================================================== */
 
 const PAY_COLORS = {
-  cash: '#16a34a',
-  upi: '#2563eb',
-  card: '#7c3aed',
-  online: '#0891b2',
-  credit: '#dc2626'
+  cash: '#374151',
+  upi: '#374151',
+  card: '#374151',
+  online: '#374151',
+  credit: '#374151'
 }
 
 const CAT_COLORS = [
-  '#2563eb',
-  '#16a34a',
-  '#d97706',
-  '#7c3aed',
-  '#0891b2',
-  '#dc2626'
+  '#374151',
+  '#6b7280',
+  '#9ca3af',
+  '#4b5563',
+  '#1f2937',
+  '#d1d5db'
 ]
 
 /* =====================================================
@@ -250,25 +250,26 @@ function Stat({
   highlight
 }) {
   const palette = {
-    blue:   { bg: 'bg-blue-50 dark:bg-blue-950/50',    icon: 'text-blue-600 dark:text-blue-400',    ring: 'ring-blue-100 dark:ring-blue-900/40',    accent: 'border-l-blue-500' },
-    green:  { bg: 'bg-green-50 dark:bg-green-950/50',  icon: 'text-green-600 dark:text-green-400',  ring: 'ring-green-100 dark:ring-green-900/40',  accent: 'border-l-green-500' },
-    orange: { bg: 'bg-orange-50 dark:bg-orange-950/50',icon: 'text-orange-500 dark:text-orange-400',ring: 'ring-orange-100 dark:ring-orange-900/40',accent: 'border-l-orange-500' },
-    red:    { bg: 'bg-red-50 dark:bg-red-950/50',      icon: 'text-red-500 dark:text-red-400',      ring: 'ring-red-100 dark:ring-red-900/40',      accent: 'border-l-red-500' },
-    purple: { bg: 'bg-purple-50 dark:bg-purple-950/50',icon: 'text-purple-600 dark:text-purple-400',ring: 'ring-purple-100 dark:ring-purple-900/40',accent: 'border-l-purple-500' },
-    cyan:   { bg: 'bg-cyan-50 dark:bg-cyan-950/50',    icon: 'text-cyan-600 dark:text-cyan-400',    ring: 'ring-cyan-100 dark:ring-cyan-900/40',    accent: 'border-l-cyan-500' },
-    indigo: { bg: 'bg-indigo-50 dark:bg-indigo-950/50',icon: 'text-indigo-600 dark:text-indigo-400',ring: 'ring-indigo-100 dark:ring-indigo-900/40',accent: 'border-l-indigo-500' },
+    blue:   { icon: 'text-gray-600', border: 'border-l-gray-300', shadow: '', ring: '' },
+    green:  { icon: 'text-gray-600', border: 'border-l-gray-300', shadow: '', ring: '' },
+    orange: { icon: 'text-gray-600', border: 'border-l-gray-300', shadow: '', ring: '' },
+    red:    { icon: 'text-gray-600', border: 'border-l-gray-300', shadow: '', ring: '' },
+    purple: { icon: 'text-gray-600', border: 'border-l-gray-300', shadow: '', ring: '' },
+    cyan:   { icon: 'text-gray-600', border: 'border-l-gray-300', shadow: '', ring: '' },
+    indigo: { icon: 'text-gray-600', border: 'border-l-gray-300', shadow: '', ring: '' },
+    amber:  { icon: 'text-gray-600', border: 'border-l-gray-300', shadow: '', ring: '' },
   }
 
   const style = palette[color] || palette.blue
 
   return (
-    <div className={`kpi-card border-l-[3px] ${style.accent} flex flex-col gap-2 ${highlight ? 'ring-2 ring-blue-100 dark:ring-blue-900/40' : ''}`}>
+    <div className={`kpi-card border-l-[3px] ${style.border} flex flex-col gap-2.5`}>
       <div className="flex items-start justify-between gap-3">
-        <span className="text-[10px] font-semibold text-[var(--muted-light)] uppercase tracking-[0.1em] leading-tight">
+        <span className="text-[10px] font-semibold text-[var(--muted-light)] uppercase tracking-[0.1em] leading-tight mt-0.5">
           {label}
         </span>
-        <div className={`p-1.5 rounded-lg flex-shrink-0 ring-1 ${style.bg} ${style.ring}`}>
-          <Icon size={15} className={style.icon} />
+        <div className="p-2 rounded-xl flex-shrink-0 bg-white border border-[var(--line)]">
+          <Icon size={17} className={style.icon} strokeWidth={2} />
         </div>
       </div>
 
@@ -298,27 +299,27 @@ function Insight({
   note
 }) {
   const palette = {
-    blue:   { bg: 'bg-blue-50 dark:bg-blue-950/50',    icon: 'text-blue-600 dark:text-blue-400',    ring: 'ring-blue-100 dark:ring-blue-900/40',    accent: 'border-l-blue-500' },
-    green:  { bg: 'bg-green-50 dark:bg-green-950/50',  icon: 'text-green-600 dark:text-green-400',  ring: 'ring-green-100 dark:ring-green-900/40',  accent: 'border-l-green-500' },
-    orange: { bg: 'bg-orange-50 dark:bg-orange-950/50',icon: 'text-orange-500 dark:text-orange-400',ring: 'ring-orange-100 dark:ring-orange-900/40',accent: 'border-l-orange-500' },
-    purple: { bg: 'bg-purple-50 dark:bg-purple-950/50',icon: 'text-purple-600 dark:text-purple-400',ring: 'ring-purple-100 dark:ring-purple-900/40',accent: 'border-l-purple-500' },
+    blue:   { icon: 'text-gray-600', border: 'border-l-gray-300', value: 'text-[var(--ink)]' },
+    green:  { icon: 'text-gray-600', border: 'border-l-gray-300', value: 'text-[var(--ink)]' },
+    orange: { icon: 'text-gray-600', border: 'border-l-gray-300', value: 'text-[var(--ink)]' },
+    purple: { icon: 'text-gray-600', border: 'border-l-gray-300', value: 'text-[var(--ink)]' },
   }
 
   const c = palette[color] || palette.blue
 
   return (
-    <div className={`kpi-card border-l-[3px] ${c.accent} flex flex-col gap-2`}>
+    <div className={`kpi-card border-l-[3px] ${c.border} flex flex-col gap-2.5`}>
       <div className="flex items-start justify-between gap-3">
-        <span className="text-[10px] font-semibold text-[var(--muted-light)] uppercase tracking-[0.1em] leading-tight">
+        <span className="text-[10px] font-semibold text-[var(--muted-light)] uppercase tracking-[0.1em] leading-tight mt-0.5">
           {label}
         </span>
-        <div className={`p-1.5 rounded-lg flex-shrink-0 ring-1 ${c.bg} ${c.ring}`}>
-          <Icon size={14} className={c.icon} />
+        <div className="p-2 rounded-xl flex-shrink-0 bg-white border border-[var(--line)]">
+          <Icon size={17} className={c.icon} strokeWidth={2} />
         </div>
       </div>
 
       <div
-        className={`text-[1.875rem] font-bold tracking-tight leading-none ${c.icon}`}
+        className={`text-[1.875rem] font-bold tracking-tight leading-none ${c.value}`}
         style={{fontVariantNumeric:'tabular-nums',fontFeatureSettings:'"tnum"'}}
       >
         {value}
@@ -484,7 +485,7 @@ export default function Dashboard() {
   useEffect(() => {
     const timer = setInterval(() => {
       setNow(new Date())
-    }, 30000)
+    }, 1000)
 
     return () => {
       clearInterval(timer)
@@ -752,166 +753,39 @@ export default function Dashboard() {
           HEADER
       ================================================= */}
 
-      <div
-        className="
-          w-full
-          bg-[var(--surface)]
-          border border-[var(--line)]
-          rounded-2xl
-          px-4 sm:px-5
-          py-3.5
-          shadow-[var(--shadow-card)]
-        "
-      >
-        <div
-          className="
-            flex
-            flex-col
-            gap-3
-            sm:flex-row
-            sm:items-center
-            sm:justify-between
-          "
-        >
-
-          {/* SHOP INFO */}
-
-          <div className="min-w-0 flex-1">
-            <h2
-              className="
-                text-base
-                sm:text-lg
-                lg:text-xl
-                font-bold
-                tracking-tight
-                text-[var(--ink)]
-                truncate
-              "
-            >
-              {shopName}
-            </h2>
-
-            <div
-              className="
-                mt-0.5
-                flex
-                flex-wrap
-                items-center
-                gap-x-2
-                gap-y-0.5
-                text-[11px]
-                text-[var(--muted-light)]
-              "
-            >
-              <span>
-                {now.toLocaleDateString(
-                  'en-IN',
-                  {
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric'
-                  }
-                )}
-              </span>
-
-              <span className="text-[var(--muted-light)]">
-                ·
-              </span>
-
-              <span>
-                {now.toLocaleTimeString(
-                  'en-IN',
-                  {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true
-                  }
-                )}
-              </span>
-            </div>
+      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl shadow-[var(--shadow-card)] px-3 sm:px-5 py-3.5 flex items-center gap-3 min-w-0">
+        {/* Left: headline + date/time */}
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-[var(--muted-light)] uppercase tracking-widest mb-0.5">Dashboard</p>
+          <p className="text-sm sm:text-base font-bold text-[var(--ink)] truncate leading-tight">{shopName}</p>
+          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+            <span className="inline-flex items-center gap-1 text-[11px] text-[var(--muted)] font-medium bg-[var(--surface-elevated)] border border-[var(--line-subtle)] rounded-md px-2 py-0.5">
+              <Clock size={10} className="text-gray-500 shrink-0" />
+              {now.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+            </span>
+            <span className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-[var(--ink)] bg-[var(--surface-elevated)] border border-[var(--line)] rounded-md px-2 py-0.5 tabular-nums">
+              {now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+            </span>
           </div>
+        </div>
 
-          {/* ACTIONS */}
-
-          <div
-            className="
-              flex
-              items-center
-              gap-2
-              w-full
-              sm:w-auto
-            "
+        {/* Right: actions */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => navigate('/billing/new')}
+            className="flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-xl bg-[var(--ink)] hover:bg-black text-white text-xs sm:text-sm font-bold transition-colors whitespace-nowrap"
           >
-            <button
-              onClick={() =>
-                navigate('/billing/new')
-              }
-              className="
-                flex-1
-                sm:flex-none
-                h-8
-                sm:h-9
-                px-3
-                sm:px-4
-                rounded-lg
-                bg-[var(--primary)]
-                hover:bg-[var(--primary-hover)]
-                active:bg-[var(--primary-active)]
-                text-white
-                text-xs
-                sm:text-sm
-                font-semibold
-                flex
-                items-center
-                justify-center
-                gap-1.5
-                transition-colors
-                shadow-[var(--shadow-primary)]
-                whitespace-nowrap
-              "
-            >
-              <ShoppingCart size={13} />
-              <span>New Bill</span>
-            </button>
-
-            <button
-              onClick={() =>
-                loadDashboard({
-                  force: true
-                })
-              }
-              disabled={refreshing}
-              aria-label="Refresh"
-              title="Refresh dashboard"
-              className="
-                shrink-0
-                w-8
-                h-8
-                rounded-lg
-                border
-                border-[var(--line)]
-                bg-[var(--surface)]
-                text-[var(--muted)]
-                flex
-                items-center
-                justify-center
-                hover:bg-[var(--surface-hover)]
-                active:bg-[var(--line-subtle)]
-                disabled:opacity-50
-                transition-colors
-              "
-            >
-              <RefreshCw
-                size={13}
-                className={
-                  refreshing
-                    ? 'animate-spin'
-                    : ''
-                }
-              />
-            </button>
-          </div>
+            <ShoppingCart size={14} />
+            <span>New Bill</span>
+          </button>
+          <button
+            onClick={() => loadDashboard({ force: true })}
+            disabled={refreshing}
+            aria-label="Refresh"
+            className="w-9 h-9 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] flex items-center justify-center hover:bg-[var(--surface-hover)] disabled:opacity-50 transition-colors shrink-0"
+          >
+            <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
+          </button>
         </div>
       </div>
 
@@ -930,15 +804,13 @@ export default function Dashboard() {
       {(dashboard.out_of_stock > 0 ||
         dashboard.low_stock_count > 0) && (
         <div
-          className="
-            flex flex-wrap items-center justify-between gap-3
+          className="flex flex-wrap items-center justify-between gap-3
             rounded-2xl px-4 py-3
-            bg-[var(--danger-light)] border border-[var(--danger-border)]
-          "
+            bg-[var(--surface-elevated)] border border-[var(--line)]"
         >
           <div className="flex items-center gap-2">
-            <AlertTriangle size={15} className="text-[var(--danger)] shrink-0" />
-            <span className="text-sm font-semibold text-[var(--danger-text)]">
+            <AlertTriangle size={15} className="text-[var(--muted)] shrink-0" />
+            <span className="text-sm font-semibold text-[var(--ink-secondary)]">
               Stock Alert:
               {dashboard.out_of_stock > 0 && (
                 <span className="ml-1">
@@ -957,7 +829,7 @@ export default function Dashboard() {
           </div>
           <button
             onClick={() => navigate('/inventory')}
-            className="text-xs font-semibold text-[var(--danger-text)] underline underline-offset-2 hover:text-[var(--danger)] transition-colors"
+            className="text-xs font-semibold text-[var(--muted)] underline underline-offset-2 hover:text-[var(--ink)] transition-colors"
           >
             View Inventory →
           </button>
@@ -1034,7 +906,7 @@ export default function Dashboard() {
               dashboard.month_sales
             )}
             icon={BarChart2}
-            color="blue"
+            color="indigo"
             sub={`Last month: ${fmt(
               dashboard.last_month_sales
             )}`}
@@ -1074,7 +946,7 @@ export default function Dashboard() {
               dashboard.pending_purchases
             )}
             icon={Truck}
-            color="orange"
+            color="amber"
             sub={`${
               dashboard.total_suppliers || 0
             } suppliers`}
@@ -1083,23 +955,23 @@ export default function Dashboard() {
       </section>
 
       {actionRequired.length > 0 && (
-        <section className="rounded-2xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/70 dark:bg-amber-950/20 p-4 sm:p-5">
+        <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4 sm:p-5">
           <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle size={16} className="text-amber-600" />
-            <h2 className="text-sm font-bold text-amber-900 dark:text-amber-400">Action Required</h2>
+            <AlertTriangle size={16} className="text-[var(--muted)]" />
+            <h2 className="text-sm font-bold text-[var(--ink)]">Action Required</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
             {actionRequired.map(item => (
               <button
                 key={item.key}
                 onClick={() => navigate(item.route)}
-                className="flex items-center justify-between gap-3 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-[var(--surface)] px-3 py-3 text-left hover:border-amber-400 hover:shadow-[var(--shadow-card)] transition"
+                className="flex items-center justify-between gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-3 text-left hover:border-gray-400 hover:shadow-[var(--shadow-card)] transition"
               >
                 <span className="text-xs font-medium text-[var(--ink-secondary)]">
                    <strong className="text-base text-[var(--ink)] mr-1">{item.count}</strong>
                   {item.label}
                 </span>
-                <ArrowUpRight size={15} className="text-amber-600 shrink-0" />
+                <ArrowUpRight size={15} className="text-[var(--muted)] shrink-0" />
               </button>
             ))}
           </div>
@@ -1364,7 +1236,7 @@ export default function Dashboard() {
           >
             <div>
               <h3 className="font-bold text-[var(--ink)] text-sm tracking-tight">
-                Today's Hourly Sales
+                Today&#39;s Hourly Sales
               </h3>
 
               <p className="text-xs text-[var(--muted)]">
@@ -1375,8 +1247,9 @@ export default function Dashboard() {
             <span
               className="
                 text-[11px]
-                bg-violet-50 dark:bg-violet-950/60
-                text-violet-700 dark:text-violet-300
+                bg-[var(--surface-elevated)]
+                border border-[var(--line)]
+                text-[var(--ink-secondary)]
                 font-bold
                 px-2.5
                 py-1.5
@@ -1414,14 +1287,14 @@ export default function Dashboard() {
                 >
                   <stop
                     offset="0%"
-                    stopColor="#7c3aed"
+                    stopColor="#2563eb"
                     stopOpacity={0.9}
                   />
 
                   <stop
                     offset="100%"
-                    stopColor="#a78bfa"
-                    stopOpacity={0.5}
+                    stopColor="#3b82f6"
+                    stopOpacity={0.4}
                   />
                 </linearGradient>
               </defs>
@@ -1492,7 +1365,8 @@ export default function Dashboard() {
           className="
             bg-[var(--surface)]
             rounded-2xl
-            border border-[var(--line)]\r\n            shadow-[var(--shadow-card)]
+            border border-[var(--line)]
+            shadow-[var(--shadow-card)]
             p-5
             sm:p-6
           "
@@ -1518,8 +1392,9 @@ export default function Dashboard() {
             <span
               className="
                 text-[11px]
-                bg-emerald-50 dark:bg-emerald-950/60
-                text-emerald-700 dark:text-emerald-300
+                bg-[var(--surface-elevated)]
+                border border-[var(--line)]
+                text-[var(--ink-secondary)]
                 font-bold
                 px-2.5
                 py-1.5
@@ -1601,7 +1476,8 @@ export default function Dashboard() {
           className="
             bg-[var(--surface)]
             rounded-2xl
-            border border-[var(--line)]\r\n            shadow-[var(--shadow-card)]
+            border border-[var(--line)]
+            shadow-[var(--shadow-card)]
             p-5
             sm:p-6
           "
@@ -1740,7 +1616,8 @@ export default function Dashboard() {
           className="
             bg-[var(--surface)]
             rounded-2xl
-            border border-[var(--line)]\r\n            shadow-[var(--shadow-card)]
+            border border-[var(--line)]
+            shadow-[var(--shadow-card)]
             p-5
             sm:p-6
           "
@@ -1897,7 +1774,8 @@ export default function Dashboard() {
           className="
             bg-[var(--surface)]
             rounded-2xl
-            border border-[var(--line)]\r\n            shadow-[var(--shadow-card)]
+            border border-[var(--line)]
+            shadow-[var(--shadow-card)]
             p-5
             sm:p-6
           "
@@ -2055,7 +1933,8 @@ export default function Dashboard() {
           className="
             bg-[var(--surface)]
             rounded-2xl
-            border border-[var(--line)]\r\n            shadow-[var(--shadow-card)]
+            border border-[var(--line)]
+            shadow-[var(--shadow-card)]
             p-5
             sm:p-6
           "
@@ -2093,8 +1972,9 @@ export default function Dashboard() {
                 <span
                   className="
                     text-xs
-                    bg-red-50 dark:bg-red-950/60
-                    text-red-600 dark:text-red-400
+                    bg-[var(--surface-elevated)]
+                    text-[var(--ink-secondary)]
+                    border border-[var(--line)]
                     font-semibold
                     px-2
                     py-1
@@ -2113,8 +1993,9 @@ export default function Dashboard() {
                 <span
                   className="
                     text-xs
-                    bg-orange-50 dark:bg-orange-950/60
-                    text-orange-600 dark:text-orange-400
+                    bg-[var(--surface-elevated)]
+                    text-[var(--ink-secondary)]
+                    border border-[var(--line)]
                     font-semibold
                     px-2
                     py-1
@@ -2146,7 +2027,8 @@ export default function Dashboard() {
                   w-10
                   h-10
                   rounded-full
-                  bg-green-50 dark:bg-green-950/60
+                  bg-[var(--surface-elevated)]
+                  border border-[var(--line)]
                   flex
                   items-center
                   justify-center
@@ -2154,7 +2036,7 @@ export default function Dashboard() {
               >
                 <Package
                   size={20}
-                  className="text-green-500"
+                  className="text-[var(--muted)]"
                 />
               </div>
 
@@ -2219,12 +2101,7 @@ export default function Dashboard() {
                           className={`
                             text-sm
                             font-bold
-                            ${
-                              product.current_stock <=
-                              0
-                                ? 'text-red-600 dark:text-red-400'
-                                : 'text-orange-500'
-                            }
+                            text-[var(--ink)]
                           `}
                         >
                           {
@@ -2267,7 +2144,8 @@ export default function Dashboard() {
           className="
             bg-[var(--surface)]
             rounded-2xl
-            border border-[var(--line)]\r\n            shadow-[var(--shadow-card)]
+            border border-[var(--line)]
+            shadow-[var(--shadow-card)]
             p-5
             sm:p-6
           "
@@ -2324,7 +2202,7 @@ export default function Dashboard() {
                           text-sm
                           font-mono
                           font-semibold
-                          text-blue-600 dark:text-blue-400
+                          text-[var(--ink-secondary)]
                         "
                       >
                         {
@@ -2423,7 +2301,7 @@ export default function Dashboard() {
           FIRST LOAD BACKGROUND INDICATOR
       ================================================= */}
 
-      {firstLoad && !refreshing && (
+      {firstLoad && refreshing && (
         <div
           className="
             fixed
@@ -2448,7 +2326,7 @@ export default function Dashboard() {
             className="
               w-2
               h-2
-              bg-blue-400
+              bg-gray-400
               rounded-full
               animate-pulse
             "

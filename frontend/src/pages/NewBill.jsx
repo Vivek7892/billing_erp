@@ -9,10 +9,11 @@ import toast from 'react-hot-toast'
 import {
   Search, Plus, Minus, Trash2, User, Printer, Download, RefreshCw, QrCode,
   Keyboard, CheckCircle2, Share2, Clock, Package, Layers, X, Banknote,
-  CreditCard, Wallet, Receipt, AlertTriangle
+  CreditCard, Wallet, Receipt, AlertTriangle, FileText
 } from 'lucide-react'
 import { ErrorState, Modal, Skeleton } from '../components/UI'
 import { useNavigate } from 'react-router-dom'
+import RazorpayPaymentModal from '../features/billing/RazorpayPaymentModal'
 
 // ---------------------------------------------------------------------------
 // Local drafts (parked bills) — unchanged storage contract
@@ -32,6 +33,7 @@ const PAYMENT_METHODS = [
   { id: 'upi', label: 'UPI', icon: QrCode },
   { id: 'card', label: 'Card', icon: CreditCard },
   { id: 'credit', label: 'Credit', icon: Wallet },
+  { id: 'razorpay', label: 'Razorpay', icon: CreditCard },
 ]
 const CASH_CHIPS = [50, 100, 200, 500, 1000, 2000]
 const QR_PRESETS = [100, 200, 500, 1000, 2000]
@@ -299,7 +301,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
             Scan & Pay
           </div>
           <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
-            Customer scans this QR with Google Pay, PhonePe, Paytm, BHIM or another UPI app.
+            Customer scans this QR with Google Pay, Paytm, BHIM or another UPI app.
           </div>
         </div>
 
@@ -425,6 +427,7 @@ export default function NewBill() {
   const [showQr, setShowQr] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [showRazorpay, setShowRazorpay] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
   const [newCustomer, setNewCustomer] = useState({ name: '', mobile: '', email: '' })
   const [now, setNow] = useState(new Date())
@@ -502,12 +505,17 @@ export default function NewBill() {
   const roundOff = Math.round(raw) - raw
   const grandTotal = raw + roundOff
 
-  const selectPayment = method => setPayment({
-    method,
-    amount: method === 'credit' ? '' : grandTotal.toFixed(2),
-    reference: '',
-    status: method === 'cash' ? 'paid' : method === 'credit' ? 'credit' : 'pending',
-  })
+  const selectPayment = method => {
+    setPayment({
+      method,
+      amount: method === 'credit' ? '' : grandTotal.toFixed(2),
+      reference: '',
+      status: method === 'cash' ? 'paid' : method === 'credit' ? 'credit' : method === 'razorpay' ? 'pending' : 'pending',
+    })
+    if (method === 'razorpay' && !lastInvoice) {
+      toast('Save the bill first, then use Razorpay to collect payment.', { icon: 'ℹ️' })
+    }
+  }
 
   const balance = Math.max(0, grandTotal - (payment.status === 'paid' ? Number(payment.amount || 0) : 0))
   const change = payment.method === 'cash' && payment.status === 'paid' ? Math.max(0, Number(payment.amount || 0) - grandTotal) : 0
@@ -708,8 +716,10 @@ export default function NewBill() {
       : Number(payment.amount || 0)
     const effectivePaymentStatus = payment.method === 'cash' && payment.status === 'pending'
       ? 'paid'
+      : payment.method === 'razorpay'
+      ? 'pending'
       : payment.status
-    if (payment.method !== 'credit' && !receivedAmount) {
+    if (payment.method !== 'credit' && payment.method !== 'razorpay' && !receivedAmount) {
       return toast.error('Enter payment amount')
     }
 
@@ -749,7 +759,7 @@ export default function NewBill() {
           discount_percent: i.discount_percent,
           gst_percent: i.gst_percent
         })),
-        payments: payment.method === 'credit'
+        payments: payment.method === 'credit' || payment.method === 'razorpay'
           ? []
           : [{
               method: payment.method,
@@ -782,7 +792,14 @@ export default function NewBill() {
       }
 
       resetBill()
-      setShowSuccess(true)
+      if (payment.method === 'razorpay') {
+        // Keep the saved invoice reference so Razorpay modal can use it,
+        // then open the modal. resetBill() clears cart but not lastInvoice.
+        setLastInvoice(savedInvoice)
+        setShowRazorpay(true)
+      } else {
+        setShowSuccess(true)
+      }
     } catch (err) {
       if (printWindow && !printWindow.closed) {
         try { printWindow.close() } catch {}
@@ -1257,7 +1274,30 @@ export default function NewBill() {
               <p className="text-xs text-[var(--muted)] mt-3 bg-[var(--surface-elevated)] rounded-lg px-3 py-2">This amount will be recorded as customer credit and settled later.</p>
             )}
 
-            {!['cash', 'credit'].includes(payment.method) && (
+            {payment.method === 'razorpay' && (
+              <div className="mt-3 space-y-2.5">
+                <div className="w-full px-3 py-3 rounded-lg border border-indigo-200 bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-between">
+                  <span className="text-xs text-indigo-700 font-medium">Customer pays via Razorpay</span>
+                  <strong className="text-xl text-indigo-800 tabular-nums">{fmt(grandTotal)}</strong>
+                </div>
+                {!lastInvoice ? (
+                  <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-700 flex items-start gap-2">
+                    <span className="shrink-0 mt-0.5">&#9432;</span>
+                    <span>Save the bill first using <b>Save Bill</b>, then click <b>Pay with Razorpay</b> to collect payment.</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowRazorpay(true)}
+                    className="w-full h-12 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2"
+                    style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)' }}
+                  >
+                    Pay {fmt(grandTotal)} with Razorpay
+                  </button>
+                )}
+              </div>
+            )}
+
+            {!['cash', 'credit', 'razorpay'].includes(payment.method) && (
               <div className="mt-3">
                 <span className="text-xs text-[var(--muted)]">Payment status</span>
                 <div className="flex gap-1.5 mt-1">
@@ -1417,6 +1457,7 @@ export default function NewBill() {
             <button className="btn-outline" onClick={() => printInvoiceDocument(lastInvoice?.id)}><Printer size={14} /> Print</button>
             <button className="btn-outline" onClick={() => downloadInvoiceDocument(lastInvoice?.id)}><Download size={14} /> PDF</button>
             <button className="btn-outline col-span-2" onClick={shareInvoice}><Share2 size={14} /> Share Bill + PDF</button>
+            <button className="btn-outline col-span-2" onClick={() => navigate(`/invoice/${lastInvoice?.id}`)}><FileText size={14} /> View Invoice</button>
             <button className="btn-solid col-span-2" onClick={() => { setShowSuccess(false); resetBill() }}><RefreshCw size={14} /> New Bill</button>
           </div>
         </div>
@@ -1434,6 +1475,18 @@ export default function NewBill() {
           setPayment(x => ({ ...x, method: 'upi', amount: amount.toFixed(2), status: 'paid' }))
           setShowQr(false)
           toast.success(`UPI payment of ${fmt(amount)} marked paid`)
+        }}
+      />
+
+      <RazorpayPaymentModal
+        open={showRazorpay}
+        onClose={() => setShowRazorpay(false)}
+        invoice={lastInvoice}
+        onSuccess={(invoiceId) => {
+          setShowRazorpay(false)
+          setPayment(x => ({ ...x, method: 'razorpay', status: 'paid' }))
+          toast.success('Razorpay payment confirmed — invoice marked paid')
+          setShowSuccess(true)
         }}
       />
 

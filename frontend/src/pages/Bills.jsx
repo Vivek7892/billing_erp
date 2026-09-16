@@ -285,11 +285,11 @@ function StatCard({
       value: 'text-gray-950',
     },
     violet: {
-      icon: 'bg-violet-50 text-violet-600 dark:bg-violet-950/60 dark:text-violet-400',
+      icon: 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400',
       value: 'text-gray-950',
     },
     amber: {
-      icon: 'bg-amber-50 text-amber-600',
+      icon: 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400',
       value: 'text-gray-950',
     },
   }
@@ -353,7 +353,7 @@ function StatusPill({ bill }) {
       label: 'Partial',
       icon: AlertCircle,
       className:
-        'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-100',
+        'bg-orange-50 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 ring-1 ring-inset ring-orange-100 dark:ring-orange-900/40',
     },
 
     pending: {
@@ -374,7 +374,7 @@ function StatusPill({ bill }) {
       label: 'Refunded',
       icon: RefundIcon,
       className:
-        'bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-100',
+        'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 ring-1 ring-inset ring-amber-100 dark:ring-amber-900/40',
     },
   }
 
@@ -407,9 +407,9 @@ function PaymentBadge({ method }) {
   const styles = {
     cash: 'bg-[var(--surface-elevated)] text-[var(--ink-secondary)] border-[var(--line)]',
     upi: 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 border-blue-100',
-    card: 'bg-violet-50 text-violet-700 border-violet-100',
-    credit: 'bg-amber-50 text-amber-700 border-amber-100',
-    bank: 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-100',
+    card: 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-100',
+    credit: 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border-red-200 dark:border-red-900/40',
+    bank: 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-100',
   }
 
   return (
@@ -433,6 +433,7 @@ function InvoiceActions({
   onView,
   onRefresh,
 }) {
+  const navigate = useNavigate()
   const [shareOpen, setShareOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -467,27 +468,27 @@ function InvoiceActions({
   return (
     <div className="flex items-center justify-end gap-1">
       <button
-        onClick={() => onView(bill)}
-        className="rounded-lg p-2 text-[var(--muted-light)] transition hover:bg-blue-50 dark:bg-blue-950/60 hover:text-blue-600 dark:text-blue-400"
+        onClick={() => navigate(`/invoice/${bill.id}`)}
+        className="icon-btn"
         title="View invoice"
       >
-        <Eye size={16} />
+        <Eye size={15} />
       </button>
 
       <button
         onClick={() => openPdf(false)}
-        className="rounded-lg p-2 text-[var(--muted-light)] transition hover:bg-gray-100 hover:text-[var(--ink)]"
+        className="icon-btn"
         title="Download PDF"
       >
-        <Download size={16} />
+        <Download size={15} />
       </button>
 
       <button
         onClick={() => openPdf(true)}
-        className="rounded-lg p-2 text-[var(--muted-light)] transition hover:bg-gray-100 hover:text-[var(--ink)]"
+        className="icon-btn"
         title="Thermal print"
       >
-        <Printer size={16} />
+        <Printer size={15} />
       </button>
 
       <div className="relative">
@@ -497,7 +498,7 @@ function InvoiceActions({
             setShareOpen(v => !v)
             setMenuOpen(false)
           }}
-          className="rounded-lg p-2 text-[var(--muted-light)] transition hover:bg-emerald-50 dark:bg-emerald-950/60 hover:text-emerald-600 dark:text-emerald-400"
+          className="icon-btn"
           title="Share invoice"
         >
           <Share2 size={16} />
@@ -521,7 +522,7 @@ function InvoiceActions({
               setMenuOpen(v => !v)
               setShareOpen(false)
             }}
-            className="rounded-lg p-2 text-[var(--muted-light)] transition hover:bg-gray-100 hover:text-[var(--ink)]"
+            className="icon-btn"
             title="More actions"
           >
             <MoreHorizontal size={17} />
@@ -537,7 +538,7 @@ function InvoiceActions({
                   setMenuOpen(false)
                   onRefresh('cancel', bill.id)
                 }}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-[var(--ink-secondary)] hover:bg-red-50 dark:bg-red-950/60 hover:text-red-600 dark:text-red-400"
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-[var(--ink-secondary)] hover:bg-red-50 dark:hover:bg-red-950/60 hover:text-red-600 dark:hover:text-red-400"
               >
                 <XCircle size={15} />
                 Cancel invoice
@@ -548,7 +549,7 @@ function InvoiceActions({
                   setMenuOpen(false)
                   onRefresh('refund', bill.id)
                 }}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-[var(--ink-secondary)] hover:bg-violet-50 hover:text-violet-600"
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-[var(--ink-secondary)] hover:bg-amber-50 dark:hover:bg-amber-950/60 hover:text-amber-700"
               >
                 <RotateCcw size={15} />
                 Refund invoice
@@ -622,9 +623,9 @@ function InvoiceModal({
 
             <button
               onClick={onClose}
-              className="rounded-xl p-2 text-[var(--muted-light)] hover:bg-gray-100 hover:text-[var(--ink-secondary)]"
+              className="icon-btn"
             >
-              <XCircle size={21} />
+              <XCircle size={16} />
             </button>
           </div>
 
@@ -651,7 +652,7 @@ function InvoiceModal({
                   e.stopPropagation()
                   setShareOpen(v => !v)
                 }}
-                className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/60 px-3.5 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--line)] px-3.5 py-2 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
               >
                 <Share2 size={14} />
                 Share
@@ -751,7 +752,7 @@ function InvoiceModal({
                 </p>
               </div>
 
-              <span className="rounded-lg bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-[var(--muted)]">
+              <span className="rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)] px-2.5 py-1 text-[11px] font-semibold text-[var(--muted)]">
                 {selected.items?.length || 0} items
               </span>
             </div>
@@ -881,17 +882,18 @@ function InvoiceModal({
 ========================================================= */
 
 function MobileInvoiceCard({ bill, shopName, onView, onRefresh }) {
+  const navigate = useNavigate()
   return (
     <article
       className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow-card)] transition active:bg-[var(--surface-elevated)]"
-      onClick={() => onView(bill)}
+      onClick={() => navigate(`/invoice/${bill.id}`)}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <button
             onClick={e => {
               e.stopPropagation()
-              onView(bill)
+              navigate(`/invoice/${bill.id}`)
             }}
             className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400"
           >
@@ -1025,21 +1027,17 @@ export default function Bills() {
      LOAD BILLS
   ------------------------------------------------------- */
 
+  // Reset to page 1 whenever filters change
+  useEffect(() => { setPage(1) }, [dateFilter, statusFilter])
+
   const load = useCallback(
     (pg = 1, q = search) => {
       setLoading(true)
 
-      const params = new URLSearchParams({
-        page: pg,
-      })
+      const params = new URLSearchParams({ page: pg })
 
-      if (dateFilter) {
-        params.set('date_filter', dateFilter)
-      }
-
-      if (q.trim()) {
-        params.set('search', q.trim())
-      }
+      if (dateFilter) params.set('date_filter', dateFilter)
+      if (q.trim()) params.set('search', q.trim())
 
       invoiceService
         .getInvoices(params)
@@ -1047,12 +1045,8 @@ export default function Bills() {
           setBills(items)
           setCount(totalCount)
         })
-        .catch(() => {
-          toast.error('Failed to load bills')
-        })
-        .finally(() => {
-          setLoading(false)
-        })
+        .catch(() => toast.error('Failed to load bills'))
+        .finally(() => setLoading(false))
     },
     [dateFilter]
   )
@@ -1070,10 +1064,11 @@ export default function Bills() {
 
   const visibleBills = useMemo(() => {
     if (!statusFilter) return bills
-
-    return bills.filter(
-      bill => getStatus(bill) === statusFilter
-    )
+    // cancelled / refunded live on invoice.status; others are payment_status
+    if (statusFilter === 'cancelled' || statusFilter === 'refunded') {
+      return bills.filter(bill => bill.status === statusFilter)
+    }
+    return bills.filter(bill => bill.payment_status === statusFilter)
   }, [bills, statusFilter])
 
   /* -------------------------------------------------------
@@ -1237,6 +1232,24 @@ export default function Bills() {
         ================================================= */}
 
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-[var(--shadow-card)] sm:p-3">
+          {/* Date filter tabs */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1 mb-2" style={{ scrollbarWidth: 'none' }}>
+            {DATE_FILTERS.map(f => (
+              <button
+                key={f.value}
+                type="button"
+                onClick={() => setDateFilter(f.value)}
+                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                  dateFilter === f.value
+                    ? 'bg-blue-600 border-blue-600 text-white'
+                    : 'border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
           <div className="flex w-full items-center gap-2">
             {/* Search */}
             <div className="relative min-w-0 flex-1">
@@ -1343,7 +1356,7 @@ export default function Bills() {
                   Invoices
                 </h2>
 
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-[var(--muted)]">
+                <span className="rounded-full bg-[var(--surface-elevated)] border border-[var(--line)] px-2 py-0.5 text-[10px] font-bold text-[var(--muted)]">
                   {visibleBills.length}
                 </span>
               </div>
@@ -1370,7 +1383,7 @@ export default function Bills() {
             </div>
           ) : visibleBills.length === 0 ? (
             <div className="flex min-h-[300px] flex-col items-center justify-center px-5">
-              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-100 text-[var(--muted-light)]">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--surface-elevated)] border border-[var(--line)] text-[var(--muted-light)]">
                 <FileText size={22} />
               </div>
 
@@ -1452,7 +1465,7 @@ export default function Bills() {
                       <td className="px-5 py-3.5">
                         <button
                           onClick={() =>
-                            setSelected(bill)
+                            navigate(`/invoice/${bill.id}`)
                           }
                           className="font-mono text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 hover:underline"
                         >
@@ -1496,7 +1509,7 @@ export default function Bills() {
 
                       {/* Items */}
                       <td className="px-3 py-3.5 text-center">
-                        <span className="inline-flex items-center gap-1 rounded-lg bg-gray-100 px-2 py-1 text-[10px] font-bold text-[var(--muted)]">
+                        <span className="inline-flex items-center gap-1 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)] px-2 py-1 text-[10px] font-bold text-[var(--muted)]">
                           <ShoppingBag size={11} />
                           {bill.items?.length || 0}
                         </span>
@@ -1579,7 +1592,7 @@ export default function Bills() {
                   <ChevronLeft size={15} />
                 </button>
 
-                <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-gray-900 px-2 text-xs font-semibold text-white">
+                <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-[var(--primary)] px-2 text-xs font-semibold text-white">
                   {page}
                 </span>
 

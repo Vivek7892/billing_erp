@@ -17,3 +17,4 @@ supabase
 httpx
 whitenoise[brotli]
 twilio>=8.0.0
+razorpay

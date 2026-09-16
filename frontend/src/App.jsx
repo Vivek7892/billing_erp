@@ -99,6 +99,7 @@ export default function App() {
           {/* Misc */}
           <Route path="/support" element={<Guard><Support /></Guard>} />
           <Route path="/invoice-preview" element={<Guard><InvoicePreview /></Guard>} />
+          <Route path="/invoice/:id" element={<Guard><InvoicePreview /></Guard>} />
 
           {/* Legacy redirects */}
           <Route path="/new-bill" element={<Navigate to="/billing/new" replace />} />

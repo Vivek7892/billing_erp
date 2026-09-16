@@ -541,7 +541,7 @@ function SalesReport({ data }) {
         </Card>
 
         <Card className="p-3 sm:p-4 text-center">
-          <div className="text-lg sm:text-2xl font-bold text-amber-600 break-words">
+          <div className="text-lg sm:text-2xl font-bold text-blue-600 dark:text-blue-400 break-words">
             {fmt(data.summary?.returns)}
           </div>
           <div className="text-sm text-[var(--muted)]">Returns</div>
@@ -1349,7 +1349,8 @@ function ExpensesReport({ data }) {
                   <td>
                     <span className="
                       text-xs
-                      bg-gray-100
+                      bg-[var(--surface-elevated)]
+                      border border-[var(--line)]
                       text-[var(--muted)]
                       px-2
                       py-0.5

@@ -15,33 +15,23 @@ export function Card({ children, className = '' }) {
    KPI / STAT CARD
 ============================================================ */
 export function StatCard({ label, value, icon: Icon, color = 'blue', sub, trend, onClick }) {
-  const palette = {
-    blue:   { bg: 'bg-blue-50 dark:bg-blue-950/50',    icon: 'text-blue-600 dark:text-blue-400',    ring: 'ring-blue-100 dark:ring-blue-900/40',    accent: 'border-l-blue-500' },
-    green:  { bg: 'bg-green-50 dark:bg-green-950/50',  icon: 'text-green-600 dark:text-green-400',  ring: 'ring-green-100 dark:ring-green-900/40',  accent: 'border-l-green-500' },
-    amber:  { bg: 'bg-amber-50 dark:bg-amber-950/50',  icon: 'text-amber-600 dark:text-amber-400',  ring: 'ring-amber-100 dark:ring-amber-900/40',  accent: 'border-l-amber-500' },
-    red:    { bg: 'bg-red-50 dark:bg-red-950/50',      icon: 'text-red-500 dark:text-red-400',      ring: 'ring-red-100 dark:ring-red-900/40',      accent: 'border-l-red-500' },
-    purple: { bg: 'bg-purple-50 dark:bg-purple-950/50',icon: 'text-purple-600 dark:text-purple-400',ring: 'ring-purple-100 dark:ring-purple-900/40',accent: 'border-l-purple-500' },
-    orange: { bg: 'bg-orange-50 dark:bg-orange-950/50',icon: 'text-orange-500 dark:text-orange-400',ring: 'ring-orange-100 dark:ring-orange-900/40',accent: 'border-l-orange-500' },
-    cyan:   { bg: 'bg-cyan-50 dark:bg-cyan-950/50',    icon: 'text-cyan-600 dark:text-cyan-400',    ring: 'ring-cyan-100 dark:ring-cyan-900/40',    accent: 'border-l-cyan-500' },
-  }
-  const c = palette[color] || palette.blue
   const Tag = onClick ? 'button' : 'div'
   return (
     <Tag
       onClick={onClick}
-      className={`kpi-card border-l-[3px] ${c.accent} flex flex-col gap-2 w-full text-left ${onClick ? 'cursor-pointer hover:ring-2 hover:ring-[var(--primary-border)]' : 'cursor-default'}`}
+      className={`kpi-card border-l-[3px] border-l-gray-300 flex flex-col gap-2 w-full text-left ${onClick ? 'cursor-pointer hover:ring-2 hover:ring-gray-200' : 'cursor-default'}`}
     >
       <div className="flex items-start justify-between gap-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--muted-light)] leading-tight">{label}</p>
-        <div className={`p-1.5 rounded-lg flex-shrink-0 ring-1 ${c.bg} ${c.ring}`}>
-          <Icon size={15} className={c.icon} />
+        <div className="p-1.5 rounded-lg flex-shrink-0 bg-white border border-[var(--line)]">
+          <Icon size={15} className="text-[var(--ink-secondary)]" />
         </div>
       </div>
       <div>
         <p className="text-[1.875rem] font-bold text-[var(--ink)] tracking-tight truncate leading-none" style={{fontVariantNumeric:'tabular-nums',fontFeatureSettings:'"tnum"'}}>{value}</p>
         {sub && <p className="text-xs text-[var(--muted)] mt-1 truncate">{sub}</p>}
         {trend !== undefined && (
-          <div className={`mt-1.5 text-xs font-semibold flex items-center gap-0.5 ${trend > 0 ? 'text-green-600 dark:text-green-400' : trend < 0 ? 'text-red-500' : 'text-[var(--muted-light)]'}`}>
+          <div className="mt-1.5 text-xs font-semibold flex items-center gap-0.5 text-[var(--muted)]">
             <span>{trend > 0 ? '↑' : trend < 0 ? '↓' : '—'}</span>
             <span>{trend !== 0 ? `${Math.abs(trend)}%` : 'No change'}</span>
           </div>
@@ -57,18 +47,18 @@ export function StatCard({ label, value, icon: Icon, color = 'blue', sub, trend,
 export function Badge({ status }) {
   const map = {
     in_stock: 'success', low_stock: 'warning', out_of_stock: 'danger',
-    paid: 'success', partial: 'warning', credit: 'info', completed: 'success',
-    cancelled: 'danger', refunded: 'info', active: 'success', inactive: 'neutral',
+    paid: 'success', partial: 'warning', credit: 'danger', completed: 'success',
+    cancelled: 'danger', refunded: 'warning', active: 'success', inactive: 'neutral',
     pending: 'warning', failed: 'danger', processing: 'info', draft: 'neutral',
   }
   const label = status?.replace(/_/g, ' ')
   const type = map[status] || 'neutral'
   const styles = {
-    success: 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/50 dark:text-green-300 dark:border-green-800',
-    warning: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
-    danger:  'bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/50 dark:text-red-300 dark:border-red-800',
-    info:    'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800',
-    neutral: 'bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-800/50 dark:text-slate-400 dark:border-slate-700',
+    success: 'bg-gray-50 text-gray-700 border border-gray-200',
+    warning: 'bg-gray-50 text-gray-700 border border-gray-200',
+    danger:  'bg-gray-50 text-gray-700 border border-gray-200',
+    info:    'bg-gray-50 text-gray-700 border border-gray-200',
+    neutral: 'bg-gray-50 text-gray-600 border border-gray-200',
   }
   return <span className={`status-badge ${styles[type]}`}>{label}</span>
 }
@@ -90,14 +80,14 @@ export function Tabs({ tabs, active, onChange, className = '' }) {
           onClick={() => onChange(tab.value)}
           className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 whitespace-nowrap ${
             active === tab.value
-              ? 'bg-[var(--surface)] text-[var(--ink)] shadow-[var(--shadow-xs)]'
+              ? 'bg-[var(--ink)] text-white shadow-[var(--shadow-xs)]'
               : 'text-[var(--muted)] hover:text-[var(--ink-secondary)]'
           }`}
         >
           {tab.label}
           {tab.count != null && (
             <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-              active === tab.value ? 'bg-[var(--primary-light)] text-[var(--primary-text)]' : 'bg-[var(--line)] text-[var(--muted)]'
+              active === tab.value ? 'bg-white/20 text-white' : 'bg-[var(--line)] text-[var(--muted)]'
             }`}>{tab.count}</span>
           )}
         </button>
@@ -171,14 +161,14 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, message, danger
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/55 backdrop-blur-sm">
       <div className="modal-shell bg-[var(--surface)] rounded-2xl shadow-[var(--shadow-modal)] w-full max-w-sm p-6 border border-[var(--line)]">
-        <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${danger ? 'bg-[var(--danger-light)]' : 'bg-[var(--primary-light)]'}`}>
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4 bg-gray-100 border border-gray-200">
           {danger ? (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
               <path d="M12 9v4"/><path d="M12 17h.01"/>
             </svg>
           ) : (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
             </svg>
           )}
@@ -274,7 +264,7 @@ export function CardSkeleton({ count = 4 }) {
         <div key={i} className="kpi-card border-l-[3px] border-l-[var(--line)] space-y-3">
           <div className="flex justify-between items-start">
             <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-7 w-7 rounded-lg" />
+            <Skeleton className="h-8 w-8 rounded-xl" />
           </div>
           <Skeleton className="h-8 w-28" />
           <Skeleton className="h-3 w-16" />
@@ -290,8 +280,8 @@ export function CardSkeleton({ count = 4 }) {
 export function ErrorState({ title = 'Unable to load data', message = 'Something went wrong. Please try again.', onRetry }) {
   return (
     <div role="alert" className="flex flex-col items-center justify-center py-14 text-center px-6">
-      <div className="mb-4 w-12 h-12 rounded-2xl bg-[var(--danger-light)] flex items-center justify-center">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <div className="mb-4 w-12 h-12 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
         </svg>
       </div>
@@ -318,8 +308,8 @@ export function ErrorState({ title = 'Unable to load data', message = 'Something
 export function SuccessState({ title = 'Done!', message, action }) {
   return (
     <div className="flex flex-col items-center justify-center py-14 text-center px-6">
-      <div className="mb-4 w-12 h-12 rounded-2xl bg-[var(--success-light)] flex items-center justify-center">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <div className="mb-4 w-12 h-12 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20 6 9 17l-5-5"/>
         </svg>
       </div>
@@ -408,10 +398,10 @@ export function DateFilterBar({ active, onChange, className = '' }) {
 ============================================================ */
 export function AlertBanner({ type = 'info', title, message, onDismiss }) {
   const styles = {
-    info:    { wrap: 'bg-blue-50 border-blue-200 dark:bg-blue-950/40 dark:border-blue-800',    icon: 'text-blue-500',  text: 'text-blue-800 dark:text-blue-200' },
-    success: { wrap: 'bg-green-50 border-green-200 dark:bg-green-950/40 dark:border-green-800', icon: 'text-green-500', text: 'text-green-800 dark:text-green-200' },
-    warning: { wrap: 'bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800', icon: 'text-amber-500', text: 'text-amber-800 dark:text-amber-200' },
-    danger:  { wrap: 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800',         icon: 'text-red-500',   text: 'text-red-800 dark:text-red-200' },
+    info:    { wrap: 'bg-gray-50 border-gray-200', icon: 'text-gray-500', text: 'text-gray-800' },
+    success: { wrap: 'bg-gray-50 border-gray-200', icon: 'text-gray-500', text: 'text-gray-800' },
+    warning: { wrap: 'bg-gray-50 border-gray-200', icon: 'text-gray-500', text: 'text-gray-800' },
+    danger:  { wrap: 'bg-gray-50 border-gray-200', icon: 'text-gray-500', text: 'text-gray-800' },
   }
   const s = styles[type] || styles.info
   return (

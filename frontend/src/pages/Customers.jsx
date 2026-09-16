@@ -374,12 +374,12 @@ export default function Customers() {
                 Credit Limit
               </p>
 
-              <p className="text-lg sm:text-2xl font-bold text-amber-600 mt-1 sm:mt-2 truncate">
+              <p className="text-lg sm:text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1 sm:mt-2 truncate">
                 {currency(stats.totalCreditLimit)}
               </p>
             </div>
 
-            <div className="p-2 rounded-lg sm:rounded-xl bg-amber-50 text-amber-600 shrink-0">
+            <div className="p-2 rounded-lg sm:rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 shrink-0">
               <WalletCards size={17} />
             </div>
           </div>
