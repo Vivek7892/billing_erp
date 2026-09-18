@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import api from '../api'
+import api, { API_BASE_URL } from '../api'
 import { Badge, Card, PageHeader, Modal, ConfirmDialog, Spinner, EmptyState } from '../components/UI'
 import toast from 'react-hot-toast'
-import { Plus, Search, Edit2, Trash2, Eye } from 'lucide-react'
+import { Plus, Search, Edit2, Trash2, Barcode } from 'lucide-react'
 
 const UNITS = ['pcs', 'kg', 'g', 'L', 'ml', 'box', 'pack', 'dozen', 'pair']
 
@@ -12,6 +12,11 @@ const emptyForm = {
   current_stock: '0', minimum_stock: '5', supplier: '', status: 'active'
 }
 
+// Auto-generate a barcode from product id + timestamp when barcode is blank
+function autoBarcode(productId) {
+  return String(productId).padStart(12, '0').slice(-12)
+}
+
 export default function Products() {
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
@@ -19,11 +24,13 @@ export default function Products() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('')
-  const [modal, setModal] = useState(null) // null | 'add' | 'edit' | 'view'
+  const [modal, setModal] = useState(null) // null | 'add' | 'edit' | 'barcode'
   const [form, setForm] = useState(emptyForm)
   const [editId, setEditId] = useState(null)
   const [deleteId, setDeleteId] = useState(null)
   const [count, setCount] = useState(0)
+  const [barcodeProduct, setBarcodeProduct] = useState(null)
+  const [barcodeCopies, setBarcodeCopies] = useState(1)
 
   const load = useCallback((q, cat) => {
     setLoading(true)
@@ -60,16 +67,33 @@ export default function Products() {
     setEditId(p.id); setModal('edit')
   }
 
+  const openBarcode = p => { setBarcodeProduct(p); setBarcodeCopies(1); setModal('barcode') }
+
+  const printBarcodeLabel = () => {
+    const token = localStorage.getItem('access_token') || ''
+    const url = `${API_BASE_URL}/products/${barcodeProduct.id}/barcode-label/?copies=${barcodeCopies}&token=${token}`
+    window.open(url, '_blank')
+    setModal(null)
+  }
+
   const save = async () => {
     try {
       const payload = { ...form }
       if (!payload.category) delete payload.category
       if (!payload.supplier) delete payload.supplier
+      let saved
       if (editId) {
-        await api.patch(`/products/${editId}/`, payload)
+        const r = await api.patch(`/products/${editId}/`, payload)
+        saved = r.data
         toast.success('Product updated')
       } else {
-        await api.post('/products/', payload)
+        const r = await api.post('/products/', payload)
+        saved = r.data
+        // Auto-assign barcode from product id if none provided
+        if (!saved.barcode && saved.id) {
+          const bc = autoBarcode(saved.id)
+          await api.patch(`/products/${saved.id}/`, { barcode: bc })
+        }
         toast.success('Product added')
       }
       setModal(null); load()
@@ -163,6 +187,7 @@ export default function Products() {
                     <td>
                       <div className="flex gap-1">
                         <button onClick={() => openEdit(p)} className="icon-btn" title="Edit product"><Edit2 size={14} /></button>
+                        <button onClick={() => openBarcode(p)} className="icon-btn" title="Print barcode label"><Barcode size={14} /></button>
                         <button onClick={() => setDeleteId(p.id)} className="icon-btn danger" title="Delete product"><Trash2 size={14} /></button>
                       </div>
                     </td>
@@ -188,8 +213,13 @@ export default function Products() {
           </div>
           <div><label className="label">SKU *</label>
             <input className="input" value={form.sku} onChange={e => f('sku', e.target.value)} /></div>
-          <div><label className="label">Barcode</label>
-            <input className="input" value={form.barcode} onChange={e => f('barcode', e.target.value)} /></div>
+          <div>
+            <label className="label">
+              Barcode
+              <span className="ml-1 text-[var(--muted)] font-normal text-xs">(auto-assigned if blank)</span>
+            </label>
+            <input className="input" value={form.barcode} onChange={e => f('barcode', e.target.value)} placeholder="Leave blank to auto-assign" />
+          </div>
           <div><label className="label">Category</label>
             <select className="input" value={form.category} onChange={e => f('category', e.target.value)}>
               <option value="">Select category</option>
@@ -197,8 +227,13 @@ export default function Products() {
             </select></div>
           <div><label className="label">Brand</label>
             <input className="input" value={form.brand} onChange={e => f('brand', e.target.value)} /></div>
-          <div><label className="label">HSN Code</label>
-            <input className="input" value={form.hsn_code} onChange={e => f('hsn_code', e.target.value)} /></div>
+          <div>
+            <label className="label">
+              HSN Code
+              <span className="ml-1 text-[var(--muted)] font-normal text-xs">(GST classification)</span>
+            </label>
+            <input className="input" value={form.hsn_code} onChange={e => f('hsn_code', e.target.value)} placeholder="e.g. 1905" />
+          </div>
           <div><label className="label">MRP</label>
             <input type="number" className="input" value={form.mrp} onChange={e => f('mrp', e.target.value)} /></div>
           <div><label className="label">Unit</label>
@@ -232,6 +267,42 @@ export default function Products() {
           <button onClick={save} className="btn-primary btn-base flex-1">Save Product</button>
           <button onClick={() => setModal(null)} className="btn-secondary btn-base flex-1">Cancel</button>
         </div>
+      </Modal>
+
+      {/* Barcode label print modal */}
+      <Modal open={modal === 'barcode'} onClose={() => setModal(null)} title="Print Barcode Labels">
+        {barcodeProduct && (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4 text-sm space-y-1">
+              <div className="font-semibold text-[var(--ink)]">{barcodeProduct.name}</div>
+              <div className="text-[var(--muted)] font-mono text-xs">
+                {barcodeProduct.barcode || barcodeProduct.sku}
+              </div>
+              <div className="text-[var(--muted)] text-xs">
+                SKU: {barcodeProduct.sku} · ₹{barcodeProduct.selling_price}
+                {barcodeProduct.hsn_code && ` · HSN: ${barcodeProduct.hsn_code}`}
+              </div>
+            </div>
+            <div>
+              <label className="label">Number of labels</label>
+              <input
+                type="number"
+                min={1}
+                max={100}
+                className="input w-32"
+                value={barcodeCopies}
+                onChange={e => setBarcodeCopies(Math.max(1, Math.min(100, Number(e.target.value))))}
+              />
+              <p className="text-xs text-[var(--muted)] mt-1">Prints on A4 (2 × 5 grid, 10 labels per page)</p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={printBarcodeLabel} className="btn-primary btn-base flex-1 flex items-center justify-center gap-2">
+                <Barcode size={15} /> Print / Download PDF
+              </button>
+              <button onClick={() => setModal(null)} className="btn-secondary btn-base flex-1">Cancel</button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={del}

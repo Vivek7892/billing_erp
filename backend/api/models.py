@@ -254,7 +254,6 @@ class Invoice(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True)
     customer_name = models.CharField(max_length=200, default='Walk-in Customer')
     customer_phone = models.CharField(max_length=15, blank=True)
-    date = models.DateTimeField(auto_now_add=True)
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -566,15 +565,24 @@ class PurchaseReturnItem(models.Model):
 
 class RazorpayTransaction(models.Model):
     STATUS_CHOICES = [
-        ('initiated', 'Initiated'), ('pending', 'Pending'),
-        ('success', 'Success'), ('failed', 'Failed'), ('cancelled', 'Cancelled'),
+        ('created', 'Created'),
+        ('initiated', 'Initiated'),
+        ('pending', 'Pending'),
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+        ('expired', 'Expired'),
     ]
     invoice = models.ForeignKey(Invoice, on_delete=models.SET_NULL, null=True, blank=True, related_name='razorpay_transactions')
+    provider = models.CharField(max_length=50, default='razorpay')
+    merchant_transaction_id = models.CharField(max_length=100, blank=True)
     razorpay_order_id = models.CharField(max_length=100, unique=True)
     razorpay_payment_id = models.CharField(max_length=100, blank=True)
     razorpay_signature = models.CharField(max_length=200, blank=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='initiated')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='created')
+    response_code = models.CharField(max_length=50, blank=True)
+    provider_reference = models.CharField(max_length=200, blank=True)
+    failure_reason = models.TextField(blank=True)
     response_data = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

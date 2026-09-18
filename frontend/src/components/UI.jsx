@@ -158,33 +158,84 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }) {
 ============================================================ */
 export function ConfirmDialog({ open, onClose, onConfirm, title, message, danger, confirmLabel, loading }) {
   if (!open) return null
+
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[var(--overlay)] backdrop-blur-sm">
       <div className="modal-shell bg-[var(--surface)] rounded-2xl shadow-[var(--shadow-modal)] w-full max-w-sm p-6 border border-[var(--line)]">
-        <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${danger ? 'bg-rose-50 border border-rose-200' : 'bg-blue-50 border border-blue-200'}`}>
+
+        <div
+          className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${
+            danger
+              ? 'bg-[var(--danger-bg)] border border-[var(--danger-line)]'
+              : 'bg-[var(--primary-bg)] border border-[var(--primary-line)]'
+          }`}
+        >
           {danger ? (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
-              <path d="M12 9v4"/><path d="M12 17h.01"/>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--danger)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+              <path d="M12 9v4" />
+              <path d="M12 17h.01" />
             </svg>
           ) : (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--primary)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v4" />
+              <path d="M12 16h.01" />
             </svg>
           )}
         </div>
-        <h3 className="text-base font-bold text-[var(--ink)] mb-1.5">{title}</h3>
-        <p className="text-[var(--muted)] text-sm leading-relaxed mb-6">{message}</p>
+
+        <h3 className="text-base font-bold text-[var(--ink)] mb-1.5">
+          {title}
+        </h3>
+
+        <p className="text-[var(--muted)] text-sm leading-relaxed mb-6">
+          {message}
+        </p>
+
         <div className="flex gap-3">
-          <button onClick={onClose} disabled={loading} className="btn-secondary flex-1">Cancel</button>
           <button
-            onClick={() => { onConfirm(); onClose() }}
+            onClick={onClose}
             disabled={loading}
-            className={`flex-1 btn-base ${danger ? 'btn-danger' : 'btn-primary'}`}
+            className="btn-secondary flex-1"
           >
-            {loading ? 'Processing…' : (confirmLabel || (danger ? 'Delete' : 'Confirm'))}
+            Cancel
+          </button>
+
+          <button
+            onClick={() => {
+              onConfirm()
+              onClose()
+            }}
+            disabled={loading}
+            className={`flex-1 btn-base ${
+              danger ? 'btn-danger' : 'btn-primary'
+            }`}
+          >
+            {loading
+              ? 'Processing…'
+              : (confirmLabel || (danger ? 'Delete' : 'Confirm'))}
           </button>
         </div>
+
       </div>
     </div>
   )

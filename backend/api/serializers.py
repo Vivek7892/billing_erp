@@ -150,7 +150,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
         model = Invoice
         fields = '__all__'
         read_only_fields = [
-            'business', 'invoice_number', 'date', 'subtotal', 'discount_amount',
+            'business', 'invoice_number', 'subtotal', 'discount_amount',
             'tax_amount', 'round_off', 'grand_total', 'paid_amount', 'balance_due',
             'payment_status', 'status', 'created_by', 'created_at',
         ]
@@ -309,5 +309,18 @@ class AuditLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = AuditLog
         fields = '__all__'
+
+
+class RazorpayTransactionSerializer(serializers.ModelSerializer):
+    invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
+
+    class Meta:
+        model = RazorpayTransaction
+        fields = [
+            'id', 'invoice', 'invoice_number', 'provider',
+            'merchant_transaction_id', 'razorpay_order_id', 'razorpay_payment_id',
+            'amount', 'status', 'response_code', 'provider_reference',
+            'failure_reason', 'created_at', 'updated_at',
+        ]
 
 

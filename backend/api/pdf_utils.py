@@ -49,7 +49,7 @@ from urllib.parse import urlencode
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
-from reportlab.lib.pagesizes import A4, portrait
+from reportlab.lib.pagesizes import A4, A5, letter, portrait
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
@@ -546,7 +546,7 @@ def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
             ("BOTTOMPADDING", (0, 0), (-1, -1), 0.3),
         ])
 
-    inv_date = _date_text(getattr(invoice, "created_at", None) or getattr(invoice, "date", None))
+    inv_date = _date_text(invoice.created_at)
     due_date = getattr(invoice, "due_date", None)
     payment_mode = getattr(invoice, "payment_method", None) or s.get("default_payment_method")
     place_of_supply = (
@@ -913,7 +913,7 @@ def _bill_reference_token(invoice):
 
 
 def _invoice_datetime(invoice):
-    value = getattr(invoice, "created_at", None) or getattr(invoice, "date", None)
+    value = invoice.created_at
     if not value:
         return "", ""
     try:
@@ -945,19 +945,36 @@ def _page_chrome(canvas, doc):
     canvas.restoreState()
 
 
+_PAPER_SIZES = {
+    'a4': A4,
+    'letter': letter,
+    'a5': A5,
+}
+
+
 def generate_invoice_pdf(invoice, force_a4=False):
-    """Generate the redesigned A4 monochrome GST invoice."""
+    """Generate the redesigned monochrome GST invoice (A4, Letter or A5)."""
     raw_settings = invoice_settings(invoice)
     if raw_settings.get("invoice_template", "gst_a4") == "thermal_80" and not force_a4:
         raise ValueError("invoice_template is 'thermal_80' — use generate_thermal_invoice_pdf() instead.")
 
+    paper_key = str(raw_settings.get("invoice_paper_size", "a4")).lower()
+    pagesize = _PAPER_SIZES.get(paper_key, A4)
+    page_w, page_h = pagesize
+    margin = 8 * mm
+
     buffer = BytesIO()
     doc = SimpleDocTemplate(
-        buffer, pagesize=A4,
-        topMargin=8*mm, bottomMargin=8*mm,
-        leftMargin=8*mm, rightMargin=8*mm,
+        buffer, pagesize=pagesize,
+        topMargin=margin, bottomMargin=margin,
+        leftMargin=margin, rightMargin=margin,
         title=f"Tax Invoice {invoice.invoice_number}", author="Billing Application",
     )
+    # Recalculate body width for the chosen paper size.
+    global BODY_W
+    _orig_body_w = BODY_W
+    BODY_W = page_w - 2 * margin
+
     s = Settings(raw_settings)
     document_title, show_tax = resolve_document_mode(s, invoice)
     interstate = resolve_interstate(s, invoice)
@@ -984,10 +1001,26 @@ def generate_invoice_pdf(invoice, force_a4=False):
     notes_terms = build_notes_and_terms(s, invoice)
     if notes_terms:
         story.extend(notes_terms)
+
+    # Signature area (A4 only)
+    if s.flag("show_signature_area", False):
+        sig_rows = [[para("Prepared by", size=7.0), para("Checked by", size=7.0, align=TA_CENTER), para("Authorised Signatory", size=7.0, align=TA_RIGHT)]]
+        sig_tbl = _tbl(sig_rows, [BODY_W / 3] * 3, [
+            ("LINEABOVE", (0, 0), (-1, 0), 0.4, INK),
+            ("TOPPADDING", (0, 0), (-1, -1), 10 * mm),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ])
+        story.append(Spacer(1, 3 * mm))
+        story.append(sig_tbl)
+        story.extend(_rule(0.4, 1.5 * mm, 1.5 * mm))
+
     story.extend(build_footer(s, invoice))
 
     doc.build(story, onFirstPage=_page_chrome, onLaterPages=_page_chrome)
     FONT_R, FONT_B = _orig_r, _orig_b
+    BODY_W = _orig_body_w
     buffer.seek(0)
     return buffer
 
@@ -1056,7 +1089,7 @@ def generate_thermal_invoice_pdf(invoice):
     show_qr = s.flag("show_upi_qr_on_thermal", True) and has_val(upi_id)
 
     items = list(invoice.items.all())
-    inv_date = _date_text(getattr(invoice, "created_at", None) or getattr(invoice, "date", None))
+    inv_date = _date_text(invoice.created_at)
     cust = getattr(invoice, "customer", None)
     cust_name = getattr(cust, "name", None) if cust else getattr(invoice, "customer_name", None)
     cust_name = _fmt_value(cust_name, "Walk-in Customer")

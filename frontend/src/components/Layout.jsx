@@ -7,7 +7,7 @@ import {
   LayoutDashboard, ShoppingCart, FileText, Package, Users, BarChart2,
   UserCog, Settings, LogOut, ChevronDown, ChevronUp, ChevronRight,
   Search, Bell, RotateCcw, CreditCard, Boxes, ShoppingBag, Building2,
-  IndianRupee, HelpCircle, Layers, Activity, X, Sun, Moon
+  IndianRupee, HelpCircle, Layers, Activity, X, Sun, Moon, Clock, ScanLine
 } from 'lucide-react'
 import { useEffect, useState, createContext, useContext, useRef } from 'react'
 
@@ -69,6 +69,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/users', icon: UserCog, label: 'Users', adminOnly: true },
       { to: '/settings', icon: Settings, label: 'Settings', adminOnly: true },
+      { to: '/payments/reconciliation', icon: ScanLine, label: 'Reconciliation', adminOnly: true },
       { to: '/support', icon: HelpCircle, label: 'Support' }
     ]
   }
@@ -85,16 +86,16 @@ const PAGE_META = NAV_GROUPS.reduce((acc, group) => {
 const SUPPORT_ITEM = { to: '/support', icon: HelpCircle, label: 'Support' }
 
 const GROUP_ACCENT = {
-  Overview: 'text-slate-300', Sales: 'text-slate-300', Inventory: 'text-slate-300',
-  Contacts: 'text-slate-300', Business: 'text-slate-300', Administration: 'text-slate-400'
+  Overview: 'text-blue-300', Sales: 'text-blue-300', Inventory: 'text-blue-300',
+  Contacts: 'text-blue-300', Business: 'text-blue-300', Administration: 'text-blue-300'
 }
 const ACTIVE_BG = {
   Overview: 'bg-blue-600', Sales: 'bg-blue-600', Inventory: 'bg-blue-600',
   Contacts: 'bg-blue-600', Business: 'bg-blue-600', Administration: 'bg-blue-600'
 }
 const ACCENT_HEX = {
-  Overview: '#9ca3af', Sales: '#9ca3af', Inventory: '#9ca3af',
-  Contacts: '#9ca3af', Business: '#9ca3af', Administration: '#9ca3af'
+  Overview: '#2563eb', Sales: '#2563eb', Inventory: '#2563eb',
+  Contacts: '#2563eb', Business: '#2563eb', Administration: '#2563eb'
 }
 
 function NavGroup({ group, collapsed, user, onNav }) {
@@ -130,7 +131,7 @@ function NavGroupItems({ items, collapsed, activeBg, accent, groupLabel, open, s
           <NavLink key={to} to={to} end={to === '/'} onClick={onNav} title={label}
             className={({ isActive }) =>
               `relative flex items-center justify-center w-10 h-10 rounded-xl mb-1 transition-all duration-150 group ${
-                isActive ? `${activeBg} text-white shadow-lg` : 'text-slate-400 hover:bg-white/[0.08] hover:text-white'
+                isActive ? `${activeBg} text-white shadow-lg` : 'text-blue-200 hover:bg-white/[0.12] hover:text-white'
               }`
             }
           >
@@ -138,7 +139,7 @@ function NavGroupItems({ items, collapsed, activeBg, accent, groupLabel, open, s
               <>
                 {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r bg-white/70" />}
                 <Icon size={16} />
-                <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-slate-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-[100] shadow-xl border border-slate-700/80">
+                <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-slate-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-[100] shadow-xl border border-blue-800/60">
                   {label}
                 </span>
               </>
@@ -154,7 +155,7 @@ function NavGroupItems({ items, collapsed, activeBg, accent, groupLabel, open, s
       <button
         onClick={() => setOpen(v => !v)}
         className={`w-full flex items-center justify-between px-3 py-1.5 mb-0.5 rounded-md transition-colors ${
-          isGroupActive ? accent : 'text-slate-400 hover:text-slate-300'
+          isGroupActive ? accent : 'text-blue-200 hover:text-blue-100'
         }`}
       >
         <span className="text-[9.5px] font-bold uppercase tracking-[0.12em]">{groupLabel}</span>
@@ -166,7 +167,7 @@ function NavGroupItems({ items, collapsed, activeBg, accent, groupLabel, open, s
             <NavLink key={to} to={to} end={to === '/'} onClick={onNav}
               className={({ isActive }) =>
                 `relative flex items-center gap-2.5 px-2.5 py-[7px] rounded-xl text-[13px] font-medium transition-all duration-150 ${
-                  isActive ? `${activeBg} text-white shadow-sm` : 'text-slate-400 hover:bg-white/[0.08] hover:text-slate-100'
+                  isActive ? `${activeBg} text-white shadow-sm` : 'text-blue-200 hover:bg-white/[0.12] hover:text-white'
                 }`
               }
             >
@@ -206,7 +207,7 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
         {collapsed && !mobile ? (
           <div className="relative w-8 h-8 flex items-center justify-center">
             <div className={`absolute inset-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 ${headerHovered ? 'opacity-0 scale-75' : 'opacity-100 scale-100'}`}>
-              <img src={logoSrc} alt={shopName} className="w-8 h-8 object-contain rounded-xl" />
+              <img src={logoSrc} alt={shopName} className="w-8 h-8 object-contain rounded-md" />
             </div>
             <div
               title="Expand sidebar"
@@ -217,20 +218,20 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
           </div>
         ) : (
           <>
-            <img src={logoSrc} alt={shopName} className="w-8 h-8 object-contain rounded-xl flex-shrink-0" />
+            <img src={logoSrc} alt={shopName} className="w-8 h-8 object-contain rounded-md flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <div className="font-bold text-[13px] text-white truncate leading-tight">{shopName}</div>
               <div className="text-[9px] text-slate-400 uppercase tracking-[0.15em] font-medium mt-0.5">ERP System</div>
             </div>
             {!mobile && (
               <button onClick={onToggle} title="Collapse sidebar" aria-label="Collapse sidebar"
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all duration-200 flex-shrink-0">
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-blue-200 hover:text-white hover:bg-white/[0.12] transition-all duration-200 flex-shrink-0">
                 <MenuIcon size={20} />
               </button>
             )}
             {mobile && (
               <button onClick={onClose} title="Close menu" aria-label="Close menu"
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all flex-shrink-0">
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-blue-200 hover:text-white hover:bg-white/[0.12] transition-all flex-shrink-0">
                 <X size={18} />
               </button>
             )}
@@ -247,7 +248,7 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
       <div className={`border-t border-white/[0.06] flex-shrink-0 ${collapsed && !mobile ? 'px-2 py-3' : 'px-3 py-3'}`}>
         {collapsed && !mobile ? (
           <button onClick={onLogout} title="Sign Out"
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all mx-auto">
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-blue-200 hover:text-white hover:bg-white/[0.12] transition-all mx-auto">
             <LogOut size={16} />
           </button>
         ) : (
@@ -256,13 +257,13 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
               {((user?.first_name?.[0] || '') + (user?.last_name?.[0] || '')) || user?.username?.[0]?.toUpperCase() || 'U'}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-[12px] font-semibold text-slate-200 truncate leading-tight">
+              <div className="text-[12px] font-semibold text-blue-100 truncate leading-tight">
                 {[user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username}
               </div>
-              <div className="text-[10px] text-slate-400 capitalize font-medium">{user?.role}</div>
+              <div className="text-[10px] text-blue-300 capitalize font-medium">{user?.role}</div>
             </div>
             <button onClick={onLogout} title="Sign Out"
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.08] transition-all flex-shrink-0">
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-blue-200 hover:text-white hover:bg-white/[0.12] transition-all flex-shrink-0">
               <LogOut size={14} />
             </button>
           </div>
@@ -324,8 +325,8 @@ function GlobalSearch() {
     <div ref={ref} className="relative">
       <div className={`flex items-center gap-2 rounded-xl px-3.5 py-2 w-full max-w-md transition-all duration-200 border ${
         open || q
-          ? 'bg-[var(--surface)] border-slate-300 shadow-sm ring-2 ring-slate-100'
-          : 'bg-[var(--surface-elevated)] border-[var(--line)] hover:border-slate-300'
+          ? 'bg-[var(--surface)] border-[var(--primary-border)] shadow-sm ring-2 ring-[var(--primary-light)]'
+          : 'bg-[var(--surface-elevated)] border-[var(--line)] hover:border-[var(--primary-border)]'
       }`}>
         <Search size={16} className="text-[var(--muted)] flex-shrink-0" />
         <input
@@ -351,7 +352,7 @@ function GlobalSearch() {
         <div className="absolute top-full mt-2 left-0 w-80 bg-[var(--surface)] rounded-2xl shadow-[var(--shadow-lg)] border border-[var(--line)] z-50 overflow-hidden">
           {searching ? (
             <div className="px-4 py-3 text-xs text-[var(--muted)] flex items-center gap-2">
-              <div className="w-3 h-3 border-2 border-slate-200 border-t-slate-600 rounded-full animate-spin" />
+              <div className="w-3 h-3 border-2 border-[var(--line)] border-t-[var(--primary)] rounded-full animate-spin" />
               Searching...
             </div>
           ) : results.length ? (
@@ -390,7 +391,7 @@ function NotificationBell() {
   useEffect(() => {
     api.get('/dashboard/').then(({ data }) => {
       const iconMap = { stock: Activity, credit: CreditCard, purchases: ShoppingBag, invoices: FileText }
-      const colorMap = { stock: 'text-slate-600 bg-slate-100', credit: 'text-slate-600 bg-slate-100', purchases: 'text-slate-600 bg-slate-100', invoices: 'text-slate-600 bg-slate-100' }
+      const colorMap = { stock: 'text-blue-600 bg-blue-50', credit: 'text-blue-600 bg-blue-50', purchases: 'text-blue-600 bg-blue-50', invoices: 'text-blue-600 bg-blue-50' }
       setNotifications((data.action_required || []).filter(item => Number(item.count || 0) > 0).map(item => ({
         ...item,
         icon: iconMap[item.key] || Bell,
@@ -409,7 +410,7 @@ function NotificationBell() {
         className="relative flex items-center justify-center w-9 h-9 rounded-xl text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-all">
         <Bell size={17} />
         {hasNotifications && (
-          <span aria-hidden="true" className="absolute top-1.5 right-1.5 w-2 h-2 bg-gray-600 rounded-full ring-2 ring-[var(--surface)]" />
+          <span aria-hidden="true" className="absolute top-1.5 right-1.5 w-2 h-2 bg-[var(--primary)] rounded-full ring-2 ring-[var(--surface)]" />
         )}
       </button>
 
@@ -418,7 +419,7 @@ function NotificationBell() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--line)]">
             <span className="font-semibold text-[var(--ink)] text-sm">Notifications</span>
             {hasNotifications && (
-              <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full">{notifications.length}</span>
+              <span className="text-[10px] font-bold bg-[var(--primary-light)] text-[var(--primary-text)] px-2 py-0.5 rounded-full">{notifications.length}</span>
             )}
           </div>
           <div className="divide-y divide-[var(--line-subtle)] max-h-72 overflow-y-auto">
@@ -461,7 +462,7 @@ function ProfileMenu({ user, onLogout }) {
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen(v => !v)} className="flex items-center gap-2 hover:bg-[var(--surface-hover)] rounded-xl px-2 py-1.5 transition-all">
-        <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-800 text-xs font-bold flex items-center justify-center flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-[var(--primary-light)] text-[var(--primary-text)] text-xs font-bold flex items-center justify-center flex-shrink-0">
           {initials}
         </div>
         <div className="text-left hidden sm:block">
@@ -475,7 +476,7 @@ function ProfileMenu({ user, onLogout }) {
         <div className="absolute right-0 top-full mt-2 w-56 bg-[var(--surface)] rounded-2xl shadow-[var(--shadow-lg)] border border-[var(--line)] z-50 overflow-hidden">
           <div className="px-4 py-3 bg-[var(--surface-elevated)] border-b border-[var(--line)]">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-800 text-sm font-bold flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-[var(--primary-light)] text-[var(--primary-text)] text-sm font-bold flex items-center justify-center">
                 {initials}
               </div>
               <div className="min-w-0">
@@ -516,7 +517,7 @@ function PageHeading({ shopName, pathname }) {
 
   return (
     <div className="flex items-center gap-2.5 min-w-0 flex-shrink">
-      <div className="hidden sm:flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0 bg-slate-100 text-gray-600">
+      <div className="hidden sm:flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0 bg-[var(--primary-light)] text-[var(--primary-text)]">
         <Icon size={16} />
       </div>
       <div className="min-w-0 flex flex-col justify-center leading-tight">
@@ -526,6 +527,39 @@ function PageHeading({ shopName, pathname }) {
         <h1 className="font-bold text-[var(--ink)] text-[15px] sm:text-[17px] tracking-tight truncate max-w-[130px] sm:max-w-[240px] lg:max-w-[340px]">
           {title}
         </h1>
+      </div>
+    </div>
+  )
+}
+
+
+function LiveDateTime() {
+  const [now, setNow] = useState(new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const date = now.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  })
+
+  const time = now.toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true
+  })
+
+  return (
+    <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--surface-elevated)] border border-[var(--line)]">
+      <Clock size={15} className="text-[var(--muted)] flex-shrink-0" />
+      <div className="leading-tight text-right">
+        <div className="text-[11px] font-semibold text-[var(--ink)] whitespace-nowrap">{date}</div>
+        <div className="text-[10px] text-[var(--muted)] whitespace-nowrap">{time}</div>
       </div>
     </div>
   )
@@ -604,6 +638,10 @@ export default function Layout({ children }) {
               <div className="hidden lg:block w-px h-5 bg-[var(--line)]" />
 
               <NotificationBell />
+
+              <div className="w-px h-5 bg-[var(--line)]" />
+
+              <LiveDateTime />
 
               <div className="w-px h-5 bg-[var(--line)]" />
 

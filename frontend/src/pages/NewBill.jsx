@@ -8,8 +8,8 @@ import settingsService from '../features/settings/api/settingsService'
 import toast from 'react-hot-toast'
 import {
   Search, Plus, Minus, Trash2, User, Printer, Download, RefreshCw, QrCode,
-  Keyboard, CheckCircle2, Share2, Clock, Package, Layers, X, Banknote,
-  CreditCard, Wallet, Receipt, AlertTriangle, FileText
+  Keyboard, CheckCircle2, Share2, Clock, Layers, X, Banknote,
+  CreditCard, Wallet, Receipt, AlertTriangle, FileText, Maximize2, Minimize2, LogOut, MoreHorizontal
 } from 'lucide-react'
 import { ErrorState, Modal, Skeleton } from '../components/UI'
 import { useNavigate } from 'react-router-dom'
@@ -295,7 +295,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
   return (
     <Modal open={open} onClose={onClose} title="Quick Customer Payment" size="sm"><div className="mobile-modal-content">
       <div className="text-center space-y-4">
-        <div className="rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 p-3 shadow-sm">
+        <div className="flex flex-col items-center justify-center gap-1.5 text-center px-3 sm:px-6 rounded-lg py-3">
           <div className="flex items-center justify-center gap-2 text-blue-700 dark:text-blue-300 font-bold">
             <QrCode size={18} />
             Scan & Pay
@@ -429,6 +429,9 @@ export default function NewBill() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [showRazorpay, setShowRazorpay] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
+  const [searchActive, setSearchActive] = useState(false)
+  const [showMoreActions, setShowMoreActions] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(Boolean(document.fullscreenElement))
   const [newCustomer, setNewCustomer] = useState({ name: '', mobile: '', email: '' })
   const [now, setNow] = useState(new Date())
   const searchRef = useRef()
@@ -467,6 +470,14 @@ export default function NewBill() {
     return { ...item, total: basic + basic * item.gst_percent / 100 }
   }
 
+  const addRecentProduct = product => {
+    try {
+      const current = JSON.parse(localStorage.getItem('pos_recent_products') || '[]')
+      const next = [product, ...current.filter(p => p?.id !== product?.id)].slice(0, 8)
+      localStorage.setItem('pos_recent_products', JSON.stringify(next))
+    } catch {}
+  }
+
   const addToCart = useCallback(product => {
     setCart(prev => {
       const found = prev.find(item => item.id === product.id)
@@ -480,6 +491,7 @@ export default function NewBill() {
           })]
     })
     setLastAddedId(product.id)
+    addRecentProduct(product)
     setTimeout(() => setLastAddedId(null), 800)
     setSearch('')
     searchRef.current?.focus()
@@ -487,13 +499,28 @@ export default function NewBill() {
 
   const updateQty = (id, qty) => setCart(prev => qty <= 0 ? prev.filter(item => item.id !== id) : prev.map(item => item.id === id ? recalc({ ...item, qty }) : item))
 
-  const filtered = useMemo(() => products.filter(p => {
-    const q = search.toLowerCase()
-    return (!q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || (p.barcode || '').includes(q)) &&
-      (!catFilter || String(p.category) === catFilter)
-  }), [products, search, catFilter])
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return products.filter(p => {
+      const name = String(p?.name || '').toLowerCase()
+      const sku = String(p?.sku || '').toLowerCase()
+      const barcode = String(p?.barcode || '').toLowerCase()
+      return (!q || name.includes(q) || sku.includes(q) || barcode.includes(q)) &&
+        (!catFilter || String(p?.category ?? '') === catFilter)
+    })
+  }, [products, search, catFilter])
 
-  const availableProducts = useMemo(() => filtered.filter(p => p.current_stock > 0), [filtered])
+  const availableProducts = useMemo(() => filtered.filter(p => Number(p?.current_stock || 0) > 0), [filtered])
+  const recentProducts = useMemo(() => {
+    try {
+      const ids = JSON.parse(localStorage.getItem('pos_recent_products') || '[]').map(p => p?.id)
+      return ids.map(id => products.find(p => p?.id === id)).filter(Boolean).filter(p => Number(p.current_stock || 0) > 0).slice(0, 5)
+    } catch { return [] }
+  }, [products, cart])
+  const recommendedProducts = useMemo(() => {
+    const base = search.trim() ? filtered : (catFilter ? filtered : availableProducts)
+    return base.filter(p => Number(p?.current_stock || 0) > 0 && !cart.some(i => i.id === p.id)).slice(0, 6)
+  }, [search, filtered, catFilter, availableProducts, cart])
 
   const subtotal = cart.reduce((sum, item) => sum + item.unit_price * item.qty, 0)
   const discount = cart.reduce((sum, item) => sum + item.unit_price * item.qty * item.discount_percent / 100, 0)
@@ -520,7 +547,13 @@ export default function NewBill() {
   const balance = Math.max(0, grandTotal - (payment.status === 'paid' ? Number(payment.amount || 0) : 0))
   const change = payment.method === 'cash' && payment.status === 'paid' ? Math.max(0, Number(payment.amount || 0) - grandTotal) : 0
 
-  const filteredCustomers = customers.filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || (c.mobile || '').includes(customerSearch))
+  const filteredCustomers = useMemo(() => {
+    const q = customerSearch.trim().toLowerCase()
+    return customers.filter(c =>
+      String(c?.name || '').toLowerCase().includes(q) ||
+      String(c?.mobile || '').includes(customerSearch)
+    )
+  }, [customers, customerSearch])
 
   const shopName = settings.shop_name || 'Dreamwithtech'
   const upiId = settings.shop_upi_id || ''
@@ -539,7 +572,7 @@ export default function NewBill() {
   const resetBill = () => {
     setCart([]); setCustomer(null); setCustomerSearch('')
     setPayment({ method: 'cash', amount: '', reference: '', status: 'pending' })
-    setBillDiscountInput(''); setNotes(''); setLastAddedId(null); setShowSuccess(false)
+    setBillDiscountInput(''); setNotes(''); setLastAddedId(null); setShowSuccess(false); setShowMoreActions(false); setSearchActive(false)
     searchRef.current?.focus()
   }
 
@@ -946,10 +979,25 @@ export default function NewBill() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [grandTotal, payment, cart, lastInvoice, upiId, billDiscount, navigate])
+  }, [grandTotal, payment, cart, lastInvoice, upiId, billDiscountInput, navigate])
+
+  useEffect(() => {
+    const onFullscreen = () => setIsFullscreen(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', onFullscreen)
+    return () => document.removeEventListener('fullscreenchange', onFullscreen)
+  }, [])
+
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen()
+      else await document.documentElement.requestFullscreen()
+    } catch {
+      toast.error('Fullscreen is not available in this browser')
+    }
+  }
 
   return (
-    <div className="pos-page min-h-screen w-full overflow-x-hidden bg-[var(--app-bg)] text-[var(--ink)]">
+    <div className="pos-page pos-theme-light min-h-screen w-full overflow-x-hidden" data-theme="light">
       <style>{`
         /* ------------------------------------------------------------------
            POS visual system
@@ -986,7 +1034,7 @@ export default function NewBill() {
         .pos-select{appearance:auto;cursor:pointer}
         .pos-money{font-variant-numeric:tabular-nums}
         .pos-icon-button{
-          display:inline-flex;align-items:center;justify-content:center;width:2.25rem;height:2.25rem;
+          display:inline-flex;align-items:center;justify-content:center;width:2rem;height:2rem;
           border:1px solid var(--line);border-radius:var(--pos-radius-sm);background:var(--surface);
           color:var(--muted);transition:all .15s ease;
         }
@@ -1011,7 +1059,7 @@ export default function NewBill() {
         .btn-outline:active:not(:disabled){transform:translateY(1px)}
         .btn-outline:disabled{opacity:.45;cursor:not-allowed}
         .pos-payment-method{
-          min-height:3.5rem;border:1px solid var(--line);background:var(--surface);
+          min-height:2.75rem;border:1px solid var(--line);background:var(--surface);
           color:var(--muted);border-radius:var(--pos-radius-sm);transition:all .15s ease
         }
         .pos-payment-method:hover{border-color:var(--primary);background:var(--surface-elevated);color:var(--ink)}
@@ -1079,125 +1127,192 @@ export default function NewBill() {
         @media (max-width: 639px){
           .pos-sale-toolbar{padding:.7rem .75rem}
           .pos-sale-title{font-size:.9375rem}
-          .mobile-safe-button{min-height:2.75rem}
+          .mobile-safe-button{min-height:2.5rem}
           .mobile-modal-content{max-height:calc(100dvh - 1.5rem);overflow-y:auto}
           .pos-grand-total{font-size:1.75rem}
         }
+
+        .pos-theme-light{--app-bg:#f8fafc;--surface:#ffffff;--surface-elevated:#f7f9fc;--ink:#0f172a;--ink-secondary:#334155;--muted:#64748b;--muted-light:#94a3b8;--line:#cbd5e1;--line-subtle:#e2e8f0;--primary:#2563eb;--primary-hover:#1d4ed8;--primary-light:#eff6ff;--primary-border:#bfdbfe;--primary-text:#1d4ed8;--success:#059669;--shadow-card:0 2px 8px rgba(15,23,42,.06);--shadow-xs:0 1px 3px rgba(15,23,42,.08);--shadow-primary:0 3px 10px rgba(37,99,235,.2)}
+        .pos-page{background:var(--app-bg);color:var(--ink);transition:background .2s ease,color .2s ease}
+        .pos-search-popover{background:var(--surface);border-color:var(--line);box-shadow:0 18px 40px rgba(15,23,42,.18);max-width:100vw}
+        .pos-search-input{font-size:16px!important;font-weight:600;border-width:2px}
+        .pos-search-input:focus{border-color:var(--primary);box-shadow:0 0 0 4px color-mix(in srgb,var(--primary) 14%,transparent)}
+        .pos-razorpay{border-color:#6366f1;color:#4f46e5}
+        .pos-razorpay:hover{background:#eef2ff;border-color:#4f46e5}
+        .pos-money,.pos-grand-total,.tabular-nums,input[type=number]{font-family:Arial,Helvetica,sans-serif!important;font-variant-numeric:tabular-nums lining-nums!important;font-feature-settings:"tnum" 1,"lnum" 1}
+        .pos-page button,.pos-page input,.pos-page select{touch-action:manipulation}
+        .pos-toolbar-control{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;height:2.25rem;padding:0 .6rem;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink-secondary);font-size:.75rem;font-weight:700;box-shadow:var(--shadow-xs);transition:all .15s ease;white-space:nowrap}
+        .pos-toolbar-control:hover{background:var(--surface-elevated);color:var(--ink);border-color:var(--muted-light)}
+        .pos-toolbar-control:active{transform:translateY(1px)}
+        .pos-toolbar-exit{border-color:#fecaca;color:#b91c1c;background:var(--surface)}
+        .pos-toolbar-exit:hover{background:#fef2f2;border-color:#fca5a5;color:#991b1b}
+.pos-floating-quick-pay{
+          position:fixed;right:1rem;bottom:1rem;z-index:55;
+          display:inline-flex;align-items:center;justify-content:center;gap:.4rem;
+          min-height:2.5rem;padding:0 .9rem;border:1px solid #059669;border-radius:999px;
+          background:#059669;color:#fff;font-size:.78rem;font-weight:800;
+          box-shadow:0 8px 24px rgba(5,150,105,.22);transition:transform .15s ease,background .15s ease;
+        }
+        .pos-floating-quick-pay:hover{background:#047857}
+        .pos-floating-quick-pay:active{transform:translateY(1px)}
+        .pos-floating-quick-pay:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+        .pos-mobile-checkout{padding-bottom:calc(.75rem + env(safe-area-inset-bottom))}
+        .pos-mobile-cart-bar{bottom:calc(.65rem + env(safe-area-inset-bottom))}
+        @media(max-width:1023px){.pos-page .pos-shell{padding:0.65rem}.pos-checkout{max-height:88dvh}}
+        @media(max-width:767px){
+          .pos-page{min-height:100dvh;padding-bottom:5.25rem}
+          .pos-shell{padding:0!important;gap:.65rem!important}
+          .pos-sale-toolbar{position:sticky;top:0;z-index:25;border-radius:0!important;border-left:0;border-right:0;padding:.65rem .75rem}
+          .pos-sale-toolbar .pos-sale-title{font-size:.95rem}
+          .pos-sale-toolbar .pos-sale-kicker{font-size:.56rem}
+          .pos-toolbar-control{height:2.25rem;width:2.25rem;padding:0;border-radius:9px}
+          .pos-toolbar-control .pos-control-label{display:none}
+          .pos-search-panel{border-radius:0;border-left:0;border-right:0;padding:.65rem .75rem!important}
+          .pos-search-popover{position:absolute;left:0;right:0;width:100%;max-height:60dvh;border-radius:12px;overflow-y:auto}
+          .pos-search-popover>div{grid-template-columns:1fr!important}
+          .pos-search-popover>div>div{border-right:0!important}
+          .pos-cart-panel{border-radius:0;border-left:0;border-right:0;min-height:12rem!important}
+          .pos-table{min-width:680px}
+          .pos-cart-panel .overflow-auto{max-height:55dvh}
+          .pos-checkout{position:fixed!important;left:0;right:0;bottom:0;top:auto!important;width:100%!important;max-height:88dvh!important;margin:0!important;padding:.65rem .65rem 0!important;border-radius:16px 16px 0 0!important;border:1px solid var(--line)!important;background:var(--app-bg)!important;box-shadow:0 -14px 40px rgba(15,23,42,.22);z-index:40}
+          .pos-checkout .pos-card,.pos-checkout .pos-checkout-actions{border-radius:12px}
+          .pos-checkout .pos-card{padding:.8rem!important}
+          .pos-checkout-actions{padding:.8rem!important}
+          .pos-checkout-actions .btn-outline,.pos-checkout-actions .btn-solid{min-height:2.5rem}
+          .pos-payment-method{min-height:3.1rem}
+          .pos-total-panel{padding:.85rem}
+          .pos-grand-total{font-size:1.65rem}
+          .mobile-safe-button{min-height:2.5rem}
+          .mobile-modal-content{width:100%;min-width:0;max-height:calc(100dvh - 1rem);overflow-y:auto}
+          .mobile-modal-content input{max-width:100%;font-size:16px}
+        }
+        @media(max-width:639px){
+          .pos-sale-toolbar{padding:.55rem .65rem}
+          .pos-sale-toolbar .hidden.sm\:flex{display:none!important}
+          .pos-search-input{height:3.1rem!important}
+          .pos-page .pos-card{box-shadow:0 1px 4px rgba(15,23,42,.05)}
+          .pos-checkout{max-height:92dvh!important}
+          .pos-checkout-actions .grid{gap:.5rem}
+          .pos-checkout-actions .btn-outline,.pos-checkout-actions .btn-solid{font-size:.78rem;padding:0 .55rem}
+        }
+        @media(min-width:768px){.pos-checkout{max-height:calc(100dvh - 1rem)}}
       `}</style>
 
-      <div className="flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_minmax(300px,36%)] lg:flex lg:flex-row gap-3 lg:gap-4 p-2.5 sm:p-3 lg:p-4 max-w-[1600px] mx-auto">
+      <div className="pos-shell flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_minmax(300px,36%)] lg:flex lg:flex-row gap-3 lg:gap-4 p-2.5 sm:p-3 lg:p-4 max-w-[1600px] mx-auto">
         {/* ============================= MAIN ============================= */}
         <section className="flex-1 min-w-0 flex flex-col gap-3">
 
           {/* POS sale command bar */}
-          <div className="pos-sale-toolbar">
+          <div className="">
             <div className="w-full flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-lg bg-[var(--primary)] text-white flex items-center justify-center shadow-[var(--shadow-primary)]">
                   <Receipt size={17} />
                 </div>
                 <div>
-                  <div className="pos-sale-kicker">Counter sale</div>
+                  <div className="pos-sale-kicker">POS SCREEN</div>
                   <div className="pos-sale-title">New bill</div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 {dashboard && (dashboard.today_sales != null || dashboard.today_bills != null) && (
-                  <div className="hidden lg:flex items-center gap-3 text-xs text-[var(--muted)]">
+                  <div className="hidden xl:flex items-center gap-3 text-xs text-[var(--muted)]">
                     {dashboard.today_bills != null && <span><b className="text-[var(--ink-secondary)]">{dashboard.today_bills}</b> bills today</span>}
                     {dashboard.today_sales != null && <span><b className="text-[var(--ink-secondary)]">{fmt(dashboard.today_sales)}</b> sold today</span>}
                   </div>
                 )}
-                <div className="hidden sm:flex items-center gap-1.5 text-xs text-[var(--muted)] border-l border-[var(--primary-border)] pl-3">
+                <div className="hidden lg:flex items-center gap-1.5 text-xs text-[var(--muted)] border-l border-[var(--primary-border)] pl-3 mr-1">
                   <Clock size={13} className="text-[var(--primary)]" />
                   <span className="font-medium">{fmtDate(now)}</span>
                   <span className="font-mono text-[var(--primary-text)] font-semibold">{fmtTime(now)}</span>
                 </div>
+                <button type="button" className="pos-toolbar-control" onClick={toggleFullscreen} aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'} title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
+                  {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}<span className="pos-control-label">{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+                </button>
+               
               </div>
             </div>
           </div>
 
           {/* Search + category chips */}
-          <div className="pos-card pos-scan-panel p-3 space-y-2.5">
-            <div className="relative">
-              <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" />
+          <div className="pos-card pos-scan-panel pos-search-panel p-3 space-y-2.5">
+            <div className="relative" onMouseEnter={() => setSearchActive(true)} onMouseLeave={() => { if (!search) setSearchActive(false) }}>
+              <Search size={1} className="absolute left- top-1/2 -translate-y-1/2 text-[var(--muted-light)] pointer-events-none" />
               <input
                 ref={searchRef}
-                className="pos-input h-11 pl-10 pr-16 text-sm"
-                placeholder="Scan barcode, or search product / SKU"
+                className=" pos-input pos-search-input w-full pl-9 pr-10 h-11 rounded-lg text-[var(--ink)] placeholder:text-[var(--muted-light)]"
+                placeholder="Scan barcode, search product or SKU"
                 value={search}
-                onChange={e => setSearch(e.target.value)}
+                onFocus={() => setSearchActive(true)}
+                onBlur={() => setTimeout(() => setSearchActive(false), 180)}
+                onChange={e => { setSearch(e.target.value); setSearchActive(true) }}
                 onKeyDown={e => e.key === 'Enter' && filtered[0] && addToCart(filtered[0])}
                 autoFocus
+                inputMode="search"
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
               />
+              {search ? (
+                <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setSearch(''); setSearchActive(true); searchRef.current?.focus() }}
+                  className="absolute right-12 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg text-[var(--muted)] hover:bg-[var(--surface-elevated)]" aria-label="Clear search">
+                  <X size={15} className="mx-auto" />
+                </button>
+              ) : null}
               <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--muted-light)] border border-[var(--line)] rounded px-1.5 py-0.5">Ctrl K</kbd>
-              {search && (
-                <div className="absolute z-20 mt-1 w-full bg-[var(--surface)] border border-[var(--line)] rounded-lg shadow-lg max-h-72 overflow-y-auto">
-                  {filtered.length ? filtered.slice(0, 10).map(p => (
-                    <button key={p.id} onClick={() => addToCart(p)} className="pos-search-result w-full flex items-center justify-between px-3 py-2.5 text-left last:border-0">
-                      <span>
-                        <span className="block text-sm font-medium text-[var(--ink)]">{p.name}</span>
-                        <span className="block text-[11px] text-[var(--muted-light)]">SKU {p.sku} · Stock {p.current_stock}</span>
-                      </span>
-                      <span className="text-right">
-                        <span className="block text-sm font-semibold text-[var(--ink)]">{fmt(p.selling_price)}</span>
-                        <span className="block text-[11px] text-[var(--muted-light)]">MRP {fmt(p.mrp || p.selling_price)}</span>
-                      </span>
-                    </button>
-                  )) : <div className="p-3 text-sm text-[var(--muted-light)]">No products found</div>}
+
+              {searchActive && (
+                <div className="pos-search-popover absolute z-30 mt-2 w-full overflow-hidden rounded-xl border shadow-2xl">
+                  {search.trim() ? (
+                    <>
+                      <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--muted-light)]">Search results</div>
+                      {filtered.length ? filtered.slice(0, 8).map(p => (
+                        <button type="button" key={p.id} onMouseDown={e => e.preventDefault()} onClick={() => addToCart(p)}
+                          className="pos-search-result w-full flex items-center justify-between gap-3 px-3 py-3 text-left">
+                          <span className="min-w-0">
+                            <span className="block text-sm font-semibold text-[var(--ink)] truncate">{p.name}</span>
+                            <span className="block text-[11px] text-[var(--muted-light)] truncate">SKU {p.sku || '—'} · Stock {p.current_stock ?? 0}</span>
+                          </span>
+                          <span className="text-right shrink-0">
+                            <span className="block text-sm font-bold text-[var(--primary-text)]">{fmt(p.selling_price)}</span>
+                            <span className="block text-[10px] text-[var(--muted-light)]">MRP {fmt(p.mrp || p.selling_price)}</span>
+                          </span>
+                        </button>
+                      )) : <div className="p-4 text-sm text-[var(--muted-light)]">No products found</div>}
+                    </>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-0">
+                      <div className="border-r border-[var(--line)]">
+                        <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--muted-light)]">Recent items</div>
+                        {recentProducts.length ? recentProducts.map(p => (
+                          <button type="button" key={p.id} onMouseDown={e => e.preventDefault()} onClick={() => addToCart(p)}
+                            className="pos-search-result w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left">
+                            <span className="truncate text-sm font-medium text-[var(--ink)]">{p.name}</span>
+                            <span className="text-xs font-semibold text-[var(--primary-text)] shrink-0">{fmt(p.selling_price)}</span>
+                          </button>
+                        )) : <div className="px-3 py-3 text-xs text-[var(--muted-light)]">Your recently billed items will appear here.</div>}
+                      </div>
+                      <div>
+                        <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--muted-light)]">Recommended</div>
+                        {recommendedProducts.length ? recommendedProducts.map(p => (
+                          <button type="button" key={p.id} onMouseDown={e => e.preventDefault()} onClick={() => addToCart(p)}
+                            className="pos-search-result w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left">
+                            <span className="truncate text-sm font-medium text-[var(--ink)]">{p.name}</span>
+                            <span className="text-xs font-semibold text-[var(--primary-text)] shrink-0">{fmt(p.selling_price)}</span>
+                          </button>
+                        )) : <div className="px-3 py-3 text-xs text-[var(--muted-light)]">No recommendations available.</div>}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'thin' }}>
-              <button
-                onClick={() => setCatFilter('')}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition ${catFilter === '' ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-[var(--shadow-primary)]' : 'bg-[var(--surface)] border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'}`}
-              >All</button>
-              {categories.map(c => (
-                <button
-                  key={c.id}
-                  onClick={() => setCatFilter(String(c.id))}
-                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition ${catFilter === String(c.id) ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-[var(--shadow-primary)]' : 'bg-[var(--surface)] border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'}`}
-                >{c.name}</button>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick-add product grid */}
-          <div className="pos-products-panel bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3 shadow-[var(--shadow-card)]">
-            <div className="flex items-center justify-between gap-2 text-xs font-semibold text-[var(--muted)] mb-2">
-              <span className="flex items-center gap-1.5"><Package size={13} /> Quick add <span className="font-normal text-[var(--muted-light)]">({availableProducts.length} in stock)</span></span>
-              <span className="hidden sm:inline text-[10px] font-medium text-[var(--primary-text)]">Tap to add</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-2 max-h-[15rem] overflow-y-auto pr-0.5">
-              {initializing && Array.from({ length: 10 }, (_, index) => <Skeleton key={index} className="h-20" />)}
-              {!initializing && availableProducts.slice(0, 30).map(p => {
-                const inCart = cart.find(i => i.id === p.id)
-                return (
-                  <button
-                    key={p.id}
-                    onClick={() => addToCart(p)}
-                    className={`pos-product ${inCart ? 'pos-product-in-cart' : ''}`}
-                  >
-                    {inCart && <span className="absolute top-1.5 right-1.5 bg-[var(--primary)] text-white text-[10px] font-bold rounded-full h-4 min-w-4 px-1 flex items-center justify-center">{inCart.qty}</span>}
-                    <div className="text-xs font-medium text-[var(--ink)] truncate pr-4">{p.name}</div>
-                    <div className="text-[10px] text-[var(--muted-light)] truncate">{p.sku}</div>
-                    <div className="flex items-center justify-between mt-1.5">
-                      <span className="text-xs font-semibold text-[var(--primary-text)]">{fmt(p.selling_price)}</span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${p.current_stock <= 5 ? 'bg-rose-100 text-rose-600 dark:text-rose-400' : 'bg-emerald-100 text-emerald-600 dark:text-emerald-400'}`}>{p.current_stock}</span>
-                    </div>
-                  </button>
-                )
-              })}
-              {!initializing && availableProducts.length === 0 && <div className="col-span-full text-center text-sm text-[var(--muted-light)] py-4">No products match this filter</div>}
-            </div>
-            {loadError && <ErrorState title="Some billing data could not be loaded" message="Products already loaded remain available. Retry to refresh products, customers, and settings." onRetry={loadInitialData} />}
           </div>
 
           {/* Cart */}
-          <div className="pos-card pos-cart-panel flex-1 flex flex-col min-h-[16rem] overflow-hidden">
+          <div className="pos-card pos-cart-panel flex flex-col min-h-[12rem] lg:min-h-[calc(100dvh-16rem)] overflow-hidden">
             <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-[var(--line-subtle)]">
               <div><b className="text-sm text-[var(--ink)]">Items in bill</b> <span className="font-normal text-[var(--muted-light)]">({cart.length} item{cart.length === 1 ? '' : 's'})</span></div>
               {cart.length > 0 && <button onClick={() => setCart([])} className="text-xs text-rose-500 hover:text-rose-600 dark:text-rose-400 font-medium">Clear cart</button>}
@@ -1239,7 +1354,7 @@ export default function NewBill() {
         </section>
 
         {/* ============================ SIDEBAR ============================ */}
-        <aside className={`pos-checkout w-full md:w-auto lg:w-[380px] shrink-0 flex-col gap-3 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto ${cartOpen ? 'flex' : 'hidden'} md:flex max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:max-h-[90dvh] max-md:overflow-y-auto max-md:rounded-t-2xl max-md:bg-[var(--surface-elevated)] max-md:p-3 max-md:shadow-2xl`}>
+        <aside className={`pos-checkout pos-mobile-checkout w-full md:w-auto lg:w-[380px] shrink-0 flex-col gap-3 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto ${cartOpen ? 'flex' : 'hidden'} md:flex max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:max-h-[90dvh] max-md:overflow-y-auto max-md:rounded-t-2xl max-md:bg-[var(--surface-elevated)] max-md:p-3 max-md:shadow-2xl`}>
           <div className="md:hidden flex items-center justify-between rounded-xl bg-[var(--surface)] border border-[var(--line)] px-3 py-2">
             <b className="text-sm text-[var(--ink)]">Cart and checkout</b>
             <button type="button" onClick={() => setCartOpen(false)} aria-label="Close cart" className="icon-btn min-w-10 min-h-10 justify-center"><X size={18} /></button>
@@ -1272,7 +1387,7 @@ export default function NewBill() {
               <div className="mt-1.5 border border-[var(--line)] rounded-lg overflow-hidden divide-y divide-slate-50 max-h-40 overflow-y-auto">
                 <button onClick={() => { setCustomer(null); setCustomerSearch('Walk-in Customer') }} className="w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors">Walk-in Customer</button>
                 {filteredCustomers.slice(0, 6).map(c => (
-                  <button key={c.id} onClick={() => { setCustomer(c); setCustomerSearch(c.name) }} className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors">
+                  <button type="button" key={c.id} onClick={() => { setCustomer(c); setCustomerSearch(c.name) }} className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors">
                     <div className="text-sm font-medium text-[var(--ink)]">{c.name}</div>
                     <div className="text-[11px] text-[var(--muted-light)]">{c.mobile}</div>
                   </button>
@@ -1367,7 +1482,7 @@ export default function NewBill() {
                   />
                 </label>
 
-                <div className="w-full h-12 mt-1 px-3 rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/60 flex items-center justify-between">
+                <div className=" flex items-center justify-between px-3 py-3 rounded-lg border border-emerald-200 bg-emerald-50  flex items-center justify-between">
                   <span className="text-xs text-emerald-700">Customer pays</span>
                   <strong className="text-xl text-emerald-700 tabular-nums">{fmt(grandTotal)}</strong>
                 </div>
@@ -1440,62 +1555,74 @@ export default function NewBill() {
             )}
           </div>
 
-          {/* Invoice actions */}
+          {/* Primary POS actions */}
           <div className="pos-checkout-actions bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3.5 shadow-[var(--shadow-card)] space-y-2.5">
             <div className="flex items-center justify-between gap-2 pb-1">
               <div>
-                <div className="text-sm font-bold text-[var(--ink)]">Invoice actions</div>
-                <div className="text-[11px] text-[var(--muted-light)]">Print, share, hold or start a fresh bill</div>
+                <div className="text-sm font-bold text-[var(--ink)]">Complete sale</div>
+                <div className="text-[11px] text-[var(--muted-light)]">Save or print the current bill</div>
               </div>
               <Receipt size={17} className="text-[var(--primary)]" />
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <button className="btn-outline mobile-safe-button" onClick={() => saveBill(true)} disabled={saving || !cart.length}>
-                <Printer size={14} /> Save & Print
+            <div className="grid grid-cols-2 gap-2">
+              <button className="btn-solid mobile-safe-button" onClick={() => saveBill(false)} disabled={saving || !cart.length}>
+                <CheckCircle2 size={15} /> {saving ? 'Saving…' : 'Save Bill'}
               </button>
-              <button className="btn-outline mobile-safe-button" onClick={() => openInvoiceDocument(lastInvoice?.id, false)} disabled={!lastInvoice}>
-                <FileText size={14} /> Invoice
-              </button>
-              <button className="btn-outline mobile-safe-button" onClick={() => printInvoiceDocument(lastInvoice?.id, true)} disabled={!lastInvoice}>
-                <Printer size={14} /> Thermal
+              <button className="btn-outline mobile-safe-button" onClick={() => lastInvoice?.id ? printInvoiceDocument(lastInvoice.id, false) : saveBill(true)} disabled={saving || (!cart.length && !lastInvoice)}>
+                <Printer size={15} /> Print Bill
               </button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <button className="btn-outline mobile-safe-button" onClick={openQuickPayment} disabled={!upiId}>
-                <QrCode size={14} /> Scan & Pay
-              </button>
-              <button className="btn-outline mobile-safe-button" onClick={shareInvoice} disabled={!lastInvoice}>
-                <Share2 size={14} /> Share
-              </button>
-              <button className="btn-outline border-amber-300 text-amber-700 hover:border-amber-500 hover:bg-amber-50 hover:text-amber-800 mobile-safe-button" onClick={saveDraft} disabled={!cart.length}>
-                <Layers size={14} /> Hold
+            <div className="grid grid-cols-1 gap-2">
+              <button className="btn-outline mobile-safe-button pos-razorpay" onClick={() => {
+                if (!lastInvoice) {
+                  if (!cart.length) return toast.error('Add items before using Razorpay')
+                  setPayment(x => ({ ...x, method: 'razorpay', amount: grandTotal.toFixed(2), status: 'pending' }))
+                  toast('Save the bill first, then pay with Razorpay.', { icon: 'ℹ️' })
+                } else setShowRazorpay(true)
+              }}>
+                <CreditCard size={15} /> Razorpay
               </button>
             </div>
 
-            {lastInvoice && (
-              <div className="grid grid-cols-2 gap-2">
-                <button className="btn-outline mobile-safe-button" onClick={() => downloadInvoiceDocument(lastInvoice.id, false)}>
-                  <Download size={14} /> PDF
+            <button className="btn-outline w-full mobile-safe-button" onClick={() => setShowMoreActions(v => !v)} aria-expanded={showMoreActions}>
+              <MoreHorizontal size={15} /> {showMoreActions ? 'Hide More Actions' : 'More Actions'}
+            </button>
+
+            {showMoreActions && (
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button className="btn-outline mobile-safe-button" onClick={() => openInvoiceDocument(lastInvoice?.id, false)} disabled={!lastInvoice}>
+                  <FileText size={14} /> Invoice
                 </button>
-                <button className="btn-outline mobile-safe-button" onClick={() => downloadInvoiceDocument(lastInvoice.id, true)}>
-                  <Download size={14} /> Thermal PDF
+                <button className="btn-outline mobile-safe-button" onClick={() => printInvoiceDocument(lastInvoice?.id, true)} disabled={!lastInvoice}>
+                  <Printer size={14} /> Thermal
+                </button>
+                <button className="btn-outline mobile-safe-button" onClick={shareInvoice} disabled={!lastInvoice}>
+                  <Share2 size={14} /> Share
+                </button>
+                <button className="btn-outline mobile-safe-button border-amber-300 text-amber-700" onClick={saveDraft} disabled={!cart.length}>
+                  <Layers size={14} /> Hold
+                </button>
+                {lastInvoice && <>
+                  <button className="btn-outline mobile-safe-button" onClick={() => downloadInvoiceDocument(lastInvoice.id, false)}>
+                    <Download size={14} /> PDF
+                  </button>
+                  <button className="btn-outline mobile-safe-button" onClick={() => downloadInvoiceDocument(lastInvoice.id, true)}>
+                    <Download size={14} /> Thermal PDF
+                  </button>
+                </>}
+                <button className="btn-outline mobile-safe-button col-span-2" onClick={resetBill} disabled={!cart.length && !lastInvoice}>
+                  <RefreshCw size={14} /> New Bill
                 </button>
               </div>
             )}
 
-            <button className="btn-outline w-full mobile-safe-button" onClick={resetBill} disabled={!cart.length && !lastInvoice}>
-              <RefreshCw size={14} /> New Bill
-            </button>
-
-            <button
-              className="text-xs text-[var(--muted-light)] hover:text-[var(--muted)] underline inline-flex gap-1 items-center justify-center pt-1 w-full"
-              onClick={() => setShowShortcuts(true)}
-            >
+            <button className="text-xs text-[var(--muted-light)] hover:text-[var(--muted)] underline inline-flex gap-1 items-center justify-center pt-1 w-full" onClick={() => setShowShortcuts(true)}>
               <Keyboard size={13} /> Keyboard shortcuts
             </button>
           </div>
+
         </aside>
       </div>
 
@@ -1503,11 +1630,24 @@ export default function NewBill() {
       <button
         type="button"
         onClick={() => setCartOpen(true)}
-        className="md:hidden fixed bottom-3 inset-x-3 z-20 min-h-13 rounded-xl bg-[var(--primary)] text-white px-4 shadow-2xl flex items-center justify-between font-bold text-sm border border-white/10"
+        className="pos-mobile-cart-bar md:hidden fixed inset-x-3 z-20 min-h-13 rounded-xl bg-[var(--primary)] text-white px-4 shadow-2xl flex items-center justify-between font-bold text-sm border border-white/10"
       >
         <span className="flex items-center gap-2"><Receipt size={17} /> Cart ({cart.reduce((count, item) => count + Number(item.qty || 0), 0)})</span>
         <span>{fmt(grandTotal)}</span>
       </button>
+
+      {/* Floating Quick Pay — kept outside checkout actions so it is always easy to reach. */}
+      {!cartOpen && <button
+        type="button"
+        onClick={openQuickPayment}
+        disabled={!upiId}
+        aria-label="Quick Pay"
+        title={upiId ? 'Quick Pay' : 'Configure UPI ID in Settings'}
+        className="pos-floating-quick-pay"
+      >
+        <QrCode size={17} />
+        <span>Quick Pay</span>
+      </button>}
 
       {/* ============================ MODALS ============================ */}
       <Modal open={showCustomerModal} onClose={() => setShowCustomerModal(false)} title="Add new customer" size="sm">
@@ -1527,7 +1667,7 @@ export default function NewBill() {
 
       <Modal open={showSuccess && Boolean(lastInvoice)} onClose={() => setShowSuccess(false)} title="Bill Saved Successfully" size="sm">
         <div className="space-y-4">
-          <div className="rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 p-4 text-center">
+<div className="flex flex-col items-center justify-center gap-1.5">
             <CheckCircle2 size={34} className="mx-auto text-blue-600 dark:text-blue-400" />
             <div className="mt-2 text-2xl font-bold text-blue-800 dark:text-blue-300">{fmt(lastInvoice?.grand_total)}</div>
             <div className="text-xs text-blue-700 dark:text-blue-400 mt-1">Invoice {lastInvoice?.invoice_number}</div>
@@ -1538,7 +1678,7 @@ export default function NewBill() {
               <RefreshCw size={14} /> Start New Bill
             </button>
           </div>
-          <dl className="grid grid-cols-2 gap-2 text-sm">
+          <dl className="grid grid-cols-2 gap-2 text-sm mt-3  border-t border-[var(--line)] pt-3">
             <dt className="text-[var(--muted)]">Payment method</dt>
             <dd className="text-right font-semibold text-[var(--ink)] capitalize">{lastInvoice?.payment_method || 'cash'}</dd>
             <dt className="text-[var(--muted)]">Amount received</dt>

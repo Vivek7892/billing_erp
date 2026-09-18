@@ -255,16 +255,16 @@ function Stat({
 
   const accent = isRed
     ? {
-        line: 'bg-red-500',
-        iconBg: 'bg-red-50',
-        iconBorder: 'border-red-100',
-        icon: 'text-red-600',
+        line: 'bg-[var(--danger)]',
+        iconBg: 'bg-[var(--danger-light)]',
+        iconBorder: 'border-[var(--danger-border)]',
+        icon: 'text-[var(--danger)]',
       }
     : {
-        line: 'bg-blue-600',
-        iconBg: 'bg-blue-50',
-        iconBorder: 'border-blue-100',
-        icon: 'text-blue-600',
+        line: 'bg-[var(--primary)]',
+        iconBg: 'bg-[var(--primary-light)]',
+        iconBorder: 'border-[var(--primary-border)]',
+        icon: 'text-[var(--primary)]',
       }
 
   return (
@@ -273,8 +273,8 @@ function Stat({
         relative overflow-hidden
         bg-[var(--surface)]
         border border-[var(--line)]
-        rounded-xl
-        shadow-[0_3px_14px_rgba(15,23,42,0.045)]
+        rounded-2xl
+        shadow-[0_8px_28px_rgba(15,23,42,0.055)]
         hover:shadow-[0_7px_22px_rgba(15,23,42,0.08)]
         hover:-translate-y-[1px]
         transition-all duration-200
@@ -294,7 +294,7 @@ function Stat({
             {label}
           </span>
           {highlight && (
-            <span className="inline-flex items-center mt-1.5 text-[9px] font-semibold uppercase tracking-wider text-blue-600">
+            <span className="inline-flex items-center mt-1.5 text-[9px] font-semibold uppercase tracking-wider text-[var(--primary)]">
               Today
             </span>
           )}
@@ -350,16 +350,16 @@ function Insight({
 
   const accent = isRed
     ? {
-        line: 'bg-red-500',
-        iconBg: 'bg-red-50',
-        iconBorder: 'border-red-100',
-        icon: 'text-red-600',
+        line: 'bg-[var(--danger)]',
+        iconBg: 'bg-[var(--danger-light)]',
+        iconBorder: 'border-[var(--danger-border)]',
+        icon: 'text-[var(--danger)]',
       }
     : {
-        line: 'bg-blue-600',
-        iconBg: 'bg-blue-50',
-        iconBorder: 'border-blue-100',
-        icon: 'text-blue-600',
+        line: 'bg-[var(--primary)]',
+        iconBg: 'bg-[var(--primary-light)]',
+        iconBorder: 'border-[var(--primary-border)]',
+        icon: 'text-[var(--primary)]',
       }
 
   return (
@@ -368,8 +368,8 @@ function Insight({
         relative overflow-hidden
         bg-[var(--surface)]
         border border-[var(--line)]
-        rounded-xl
-        shadow-[0_3px_14px_rgba(15,23,42,0.045)]
+        rounded-2xl
+        shadow-[0_8px_28px_rgba(15,23,42,0.055)]
         hover:shadow-[0_7px_22px_rgba(15,23,42,0.08)]
         hover:-translate-y-[1px]
         transition-all duration-200
@@ -472,46 +472,6 @@ const ChartTooltip = ({
 }
 
 /* =====================================================
-   SIMPLE LOADING INDICATOR
-===================================================== */
-
-function BackgroundLoading() {
-  return (
-    <div
-      className="
-        fixed
-        bottom-4
-        right-4
-        z-50
-        flex
-        items-center
-        gap-2
-        bg-[var(--ink)]
-        text-[var(--surface)]
-        text-xs
-        font-medium
-        px-3
-        py-2
-        rounded-full
-        shadow-lg
-      "
-    >
-      <span
-        className="
-          w-2
-          h-2
-          rounded-full
-          bg-[var(--surface)]
-          animate-pulse
-        "
-      />
-
-      Updating...
-    </div>
-  )
-}
-
-/* =====================================================
    DASHBOARD
 ===================================================== */
 
@@ -540,9 +500,6 @@ export default function Dashboard() {
 
     Cached data is displayed immediately.
   */
-
-  const [refreshing, setRefreshing] =
-    useState(false)
 
   const [firstLoad, setFirstLoad] =
     useState(() => {
@@ -596,7 +553,6 @@ export default function Dashboard() {
         return
       }
 
-      setRefreshing(true)
       setLoadError(false)
 
       const controller =
@@ -655,7 +611,6 @@ export default function Dashboard() {
       } finally {
         clearTimeout(timeout)
 
-        setRefreshing(false)
         setFirstLoad(false)
       }
     },
@@ -773,7 +728,7 @@ export default function Dashboard() {
           className="
             w-12 h-12
             rounded-full
-            bg-red-50 dark:bg-red-950/60
+            bg-[var(--danger-light)]
             flex
             items-center
             justify-center
@@ -803,8 +758,8 @@ export default function Dashboard() {
             px-4
             py-2
             rounded-xl
-            bg-blue-600
-            hover:bg-blue-700
+            bg-[var(--primary)]
+            hover:bg-[var(--primary-hover)]
             text-white
             text-sm
             font-semibold
@@ -845,7 +800,7 @@ export default function Dashboard() {
           <p className="text-sm sm:text-base font-bold text-[var(--ink)] truncate leading-tight">{shopName}</p>
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             <span className="inline-flex items-center gap-1 text-[11px] text-[var(--muted)] font-medium bg-[var(--surface-elevated)] border border-[var(--line-subtle)] rounded-md px-2 py-0.5">
-              <Clock size={10} className="text-gray-500 shrink-0" />
+              <Clock size={10} className="text-[var(--muted)] shrink-0" />
               {now.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
             </span>
             <span className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-[var(--ink)] bg-[var(--surface-elevated)] border border-[var(--line)] rounded-md px-2 py-0.5 tabular-nums">
@@ -858,18 +813,11 @@ export default function Dashboard() {
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => navigate('/billing/new')}
-            className="flex items-center gap-1.5 h-9 px-3 sm:px-4 rounded-xl bg-[var(--ink)] hover:bg-black text-white text-xs sm:text-sm font-bold transition-colors whitespace-nowrap"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-sm font-semibold transition"
+            
           >
             <ShoppingCart size={14} />
             <span>New Bill</span>
-          </button>
-          <button
-            onClick={() => loadDashboard({ force: true })}
-            disabled={refreshing}
-            aria-label="Refresh"
-            className="w-9 h-9 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] flex items-center justify-center hover:bg-[var(--surface-hover)] disabled:opacity-50 transition-colors shrink-0"
-          >
-            <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
@@ -877,10 +825,6 @@ export default function Dashboard() {
       {/* =================================================
           BACKGROUND REFRESH
       ================================================= */}
-
-      {refreshing && (
-        <BackgroundLoading />
-      )}
 
       {/* =================================================
           STOCK ALERT
@@ -926,7 +870,7 @@ export default function Dashboard() {
       ================================================= */}
 
       <section>
-        <div className="flex items-center gap-2 mb-2"><span className="w-1 h-4 rounded-full bg-blue-600"></span><p className="section-label mb-0">Today's Performance</p></div>
+        <div className="flex items-center gap-2 mb-2"><span className="w-1 h-4 rounded-full bg-[var(--primary)]"></span><p className="section-label mb-0">Today's Performance</p></div>
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-3.5">
           <Stat
             label="Today's Sales"
@@ -983,7 +927,7 @@ export default function Dashboard() {
       ================================================= */}
 
       <section>
-        <div className="flex items-center gap-2 mb-2"><span className="w-1 h-4 rounded-full bg-blue-600"></span><p className="section-label mb-0">This Month</p></div>
+        <div className="flex items-center gap-2 mb-2"><span className="w-1 h-4 rounded-full bg-[var(--primary)]"></span><p className="section-label mb-0">This Month</p></div>
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-3.5">
           <Stat
             label="Month Sales"
@@ -1050,7 +994,7 @@ export default function Dashboard() {
               <button
                 key={item.key}
                 onClick={() => navigate(item.route)}
-                className="flex items-center justify-between gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-3 text-left hover:border-gray-400 hover:shadow-[var(--shadow-card)] transition"
+                className="flex items-center justify-between gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-3 text-left hover:border-[var(--primary-border)] hover:shadow-[var(--shadow-card)] transition"
               >
                 <span className="text-xs font-medium text-[var(--ink-secondary)]">
                    <strong className="text-base text-[var(--ink)] mr-1">{item.count}</strong>
@@ -1068,7 +1012,7 @@ export default function Dashboard() {
       ================================================= */}
 
       <section>
-        <div className="flex items-center gap-2 mb-2"><span className="w-1 h-4 rounded-full bg-blue-600"></span><p className="section-label mb-0">Business Insights</p></div>
+        <div className="flex items-center gap-2 mb-2"><span className="w-1 h-4 rounded-full bg-[var(--primary)]"></span><p className="section-label mb-0">Business Insights</p></div>
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5 sm:gap-3.5">
           <Insight
             label="Sales Growth"
@@ -1151,9 +1095,9 @@ export default function Dashboard() {
         <div
           className="
             bg-[var(--surface)]
-            rounded-2xl
+            rounded-3xl
             border border-[var(--line)]
-            shadow-[var(--shadow-card)]
+            shadow-[0_10px_35px_rgba(15,23,42,0.055)]
             p-5
             sm:p-6
           "
@@ -1449,9 +1393,9 @@ export default function Dashboard() {
         <div
           className="
             bg-[var(--surface)]
-            rounded-2xl
+            rounded-3xl
             border border-[var(--line)]
-            shadow-[var(--shadow-card)]
+            shadow-[0_10px_35px_rgba(15,23,42,0.055)]
             p-5
             sm:p-6
           "
@@ -1560,9 +1504,9 @@ export default function Dashboard() {
         <div
           className="
             bg-[var(--surface)]
-            rounded-2xl
+            rounded-3xl
             border border-[var(--line)]
-            shadow-[var(--shadow-card)]
+            shadow-[0_10px_35px_rgba(15,23,42,0.055)]
             p-5
             sm:p-6
           "
@@ -1700,9 +1644,9 @@ export default function Dashboard() {
         <div
           className="
             bg-[var(--surface)]
-            rounded-2xl
+            rounded-3xl
             border border-[var(--line)]
-            shadow-[var(--shadow-card)]
+            shadow-[0_10px_35px_rgba(15,23,42,0.055)]
             p-5
             sm:p-6
           "
@@ -1858,9 +1802,9 @@ export default function Dashboard() {
         <div
           className="
             bg-[var(--surface)]
-            rounded-2xl
+            rounded-3xl
             border border-[var(--line)]
-            shadow-[var(--shadow-card)]
+            shadow-[0_10px_35px_rgba(15,23,42,0.055)]
             p-5
             sm:p-6
           "
@@ -2017,9 +1961,9 @@ export default function Dashboard() {
         <div
           className="
             bg-[var(--surface)]
-            rounded-2xl
+            rounded-3xl
             border border-[var(--line)]
-            shadow-[var(--shadow-card)]
+            shadow-[0_10px_35px_rgba(15,23,42,0.055)]
             p-5
             sm:p-6
           "
@@ -2228,9 +2172,9 @@ export default function Dashboard() {
         <div
           className="
             bg-[var(--surface)]
-            rounded-2xl
+            rounded-3xl
             border border-[var(--line)]
-            shadow-[var(--shadow-card)]
+            shadow-[0_10px_35px_rgba(15,23,42,0.055)]
             p-5
             sm:p-6
           "
@@ -2385,41 +2329,6 @@ export default function Dashboard() {
       {/* =================================================
           FIRST LOAD BACKGROUND INDICATOR
       ================================================= */}
-
-      {firstLoad && refreshing && (
-        <div
-          className="
-            fixed
-            bottom-4
-            right-4
-            z-40
-            bg-[var(--surface)]
-            border
-            border-[var(--line)]
-            shadow-lg
-            rounded-full
-            px-3
-            py-2
-            text-xs
-            text-[var(--muted)]
-            flex
-            items-center
-            gap-2
-          "
-        >
-          <span
-            className="
-              w-2
-              h-2
-              bg-gray-400
-              rounded-full
-              animate-pulse
-            "
-          />
-
-          Loading latest data...
-        </div>
-      )}
 
     </div>
   )

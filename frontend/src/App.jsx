@@ -21,6 +21,7 @@ import Users from './pages/Users'
 import Settings from './pages/Settings'
 import Support from './pages/Support'
 import InvoicePreview from './pages/InvoicePreview'
+import PaymentReconciliation from './pages/PaymentReconciliation'
 
 function Guard({ children, adminOnly, roles }) {
   const { user, loading } = useAuth()
@@ -95,6 +96,7 @@ export default function App() {
           {/* System */}
           <Route path="/users" element={<Guard adminOnly><Users /></Guard>} />
           <Route path="/settings" element={<Guard adminOnly><Settings /></Guard>} />
+          <Route path="/payments/reconciliation" element={<Guard adminOnly><PaymentReconciliation /></Guard>} />
 
           {/* Misc */}
           <Route path="/support" element={<Guard><Support /></Guard>} />

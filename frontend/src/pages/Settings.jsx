@@ -303,6 +303,23 @@ function InvoiceTab({ s, set }) {
         ))}
       </Section>
 
+      <Section title="Additional Options" description="Extra fields and sections printed on the invoice.">
+        {[
+          ['show_signature_area', 'Signature area (Prepared by / Authorised Signatory)', 'Adds a signature strip at the bottom of A4 invoices.'],
+          ['show_fssai_on_invoice', 'Print FSSAI licence number', 'Shown in the business header when a licence is configured.'],
+          ['show_cin_on_invoice', 'Print CIN number', 'Shown in the business header when a CIN is configured.'],
+        ].map(([key, label, desc]) => (
+          <Toggle key={key} checked={s[key] === 'true' || s[key] === true}
+            onChange={e => set(key, String(e.target.checked))}
+            label={label} description={desc} />
+        ))}
+        <F label="Invoice Notes" full>
+          <Txt value={s.invoice_notes} onChange={v => set('invoice_notes', v)} rows={2}
+            placeholder="e.g. Subject to jurisdiction of local courts only." />
+          <p className="mt-1 text-xs text-[var(--muted-light)]">Printed above Terms &amp; Conditions on every invoice.</p>
+        </F>
+      </Section>
+
       <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <h3 className="text-[11px] font-700 uppercase tracking-widest text-[var(--muted)] mb-4">UPI QR on Invoice</h3>
         <div className="grid sm:grid-cols-2 gap-3">
@@ -464,7 +481,7 @@ function PrinterTab({ s, set }) {
         </F>
         <F label="Receipt Footer Text" full>
           <Inp value={s.invoice_footer} onChange={v => set('invoice_footer', v)} placeholder="Thank you for shopping with us!" />
-          <p className="mt-1 text-xs text-[var(--muted-light)]">Used on both A4 invoices and thermal receipts.</p>
+          <p className="mt-1 text-xs text-[var(--muted-light)]">Shared with Invoice Settings — used on both A4 and thermal.</p>
         </F>
       </Section>
       <Section title="Options" description="Enable or disable optional billing behaviour.">
@@ -526,6 +543,9 @@ function BillPreviewTab({ s, embedded = false }) {
   const upiId        = s.shop_upi_id
   const showUpiA4    = (s.show_upi_qr_on_invoice === 'true' || s.show_upi_qr_on_invoice === true) && upiId
   const showUpiThermal = (s.show_upi_qr_on_thermal === 'true' || s.show_upi_qr_on_thermal === true) && upiId
+  const showSignature  = s.show_signature_area === 'true' || s.show_signature_area === true
+  const showFssai      = (s.show_fssai_on_invoice === 'true' || s.show_fssai_on_invoice === true) && s.fssai_licence
+  const showCin        = (s.show_cin_on_invoice === 'true' || s.show_cin_on_invoice === true) && s.cin
   const footerLayout = s.invoice_footer_layout || 'text_center'
   const headerLayout = s.invoice_header_layout || 'logo_left'
   const a4Font = s.invoice_font === 'courier' ? 'Courier New, monospace' : 'Helvetica, Arial, sans-serif'
@@ -621,7 +641,7 @@ function BillPreviewTab({ s, embedded = false }) {
               <div style={{ fontWeight: 'bold', fontSize: 16, textTransform: 'uppercase' }}>{shopName}</div>
               {address.split('\n').map((l, i) => <div key={i} style={{ fontSize: 10, color: '#444' }}>{l}</div>)}
               <div style={{ fontSize: 10, color: '#444' }}>Mobile: {phone}{s.shop_email ? ` | Email: ${s.shop_email}` : ''}</div>
-              {gstin && <div style={{ fontSize: 10, color: '#444' }}>GSTIN: {gstin}{s.shop_pan ? ` | PAN: ${s.shop_pan}` : ''}</div>}
+              {gstin && <div style={{ fontSize: 10, color: '#444' }}>GSTIN: {gstin}{s.shop_pan ? ` | PAN: ${s.shop_pan}` : ''}{showFssai ? ` | FSSAI: ${s.fssai_licence}` : ''}{showCin ? ` | CIN: ${s.cin}` : ''}</div>}
             </div>
             <div style={{ textAlign: 'right', minWidth: 200 }}>
               <div style={{ fontWeight: 'bold', fontSize: 18 }}>TAX INVOICE</div>
@@ -711,6 +731,14 @@ function BillPreviewTab({ s, embedded = false }) {
             <div style={{ borderTop: '0.8px solid #000', marginTop: 10, paddingTop: 6, textAlign: footerLayout === 'text_left' ? 'left' : 'center', fontSize: 10, color: '#555' }}>
               <b>{footer.toUpperCase()}</b>
               <div style={{ marginTop: 2, fontSize: 9 }}>Date: {today} | Bill Ref: {invoiceNo}</div>
+            </div>
+          )}
+
+          {showSignature && (
+            <div style={{ borderTop: '0.8px solid #000', marginTop: 14, paddingTop: 18, display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#555' }}>
+              <span>Prepared by</span>
+              <span>Checked by</span>
+              <span>Authorised Signatory</span>
             </div>
           )}
         </div>

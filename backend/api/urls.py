@@ -39,6 +39,7 @@ urlpatterns = [
     path('reports/payments/', views.PaymentReportView.as_view(), name='payment-report'),
     path('reports/expenses/', views.ExpenseReportView.as_view(), name='expense-report'),
     path('bills/', views.BillsListView.as_view(), name='bills-list'),
+    path('products/<int:pk>/barcode-label/', views.BarcodeLabelView.as_view(), name='barcode-label'),
     path('invoices/<int:pk>/pdf/', views.InvoicePDFView.as_view(), name='invoice-pdf'),
     path('invoices/<int:pk>/short-link/', views.InvoiceShortLinkView.as_view(), name='invoice-short-link-create'),
     path('invoices/<int:pk>/cancel/', views.CancelInvoiceView.as_view(), name='cancel-invoice'),
@@ -49,6 +50,7 @@ urlpatterns = [
     path('payments/razorpay/create-order/', views.RazorpayCreateOrderView.as_view(), name='razorpay-create-order'),
     path('payments/razorpay/verify/', views.RazorpayVerifyView.as_view(), name='razorpay-verify'),
     path('payments/razorpay/webhook/', views.RazorpayWebhookView.as_view(), name='razorpay-webhook'),
+    path('payments/razorpay/reconciliation/', views.PaymentReconciliationView.as_view(), name='razorpay-reconciliation'),
     path('docs/<str:doc>/', views.PublicDocView.as_view(), name='public-doc'),
     # Keep explicit actions ahead of router detail patterns such as /inventory/<pk>/.
     path('', include(router.urls)),
