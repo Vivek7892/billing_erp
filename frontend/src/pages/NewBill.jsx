@@ -1,3 +1,18 @@
+/*
+ * NewBill.jsx
+ * Professional responsive POS billing screen.
+ *
+ * Preserved functionality:
+ * - Product search, barcode/SKU search and category filtering
+ * - Cart calculations, GST, discounts and round-off
+ * - Customer search and creation
+ * - Cash, UPI, Card, Credit and Razorpay workflows
+ * - Draft bills, invoice printing, PDF download and sharing
+ * - QR payments and keyboard shortcuts
+ *
+ * Styling follows the application's global light/dark CSS variables.
+ */
+
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import api, { API_BASE_URL } from '../api'
@@ -9,7 +24,7 @@ import toast from 'react-hot-toast'
 import {
   Search, Plus, Minus, Trash2, User, Printer, Download, RefreshCw, QrCode,
   Keyboard, CheckCircle2, Share2, Clock, Layers, X, Banknote,
-  CreditCard, Wallet, Receipt, AlertTriangle, FileText, Maximize2, Minimize2, LogOut, MoreHorizontal
+  CreditCard, Wallet, Receipt, AlertTriangle, FileText, Maximize2, Minimize2, MoreHorizontal
 } from 'lucide-react'
 import { ErrorState, Modal, Skeleton } from '../components/UI'
 import { useNavigate } from 'react-router-dom'
@@ -124,7 +139,7 @@ function CartRow({ item, index, onQty, onRemove, showGst, justAdded }) {
               </div>
               <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 px-2.5 py-2">
                 <div className="text-[10px] text-blue-500 dark:text-blue-400">Total</div>
-                <div className="font-bold text-blue-700 dark:text-blue-300 mt-0.5">{fmt(item.total)}</div>
+                <div className="font-bold text-[var(--amount-sales)] mt-0.5">{fmt(item.total)}</div>
               </div>
             </div>
 
@@ -296,11 +311,11 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
     <Modal open={open} onClose={onClose} title="Quick Customer Payment" size="sm"><div className="mobile-modal-content">
       <div className="text-center space-y-4">
         <div className="flex flex-col items-center justify-center gap-1.5 text-center px-3 sm:px-6 rounded-lg py-3">
-          <div className="flex items-center justify-center gap-2 text-blue-700 dark:text-blue-300 font-bold">
+          <div className="flex items-center justify-center gap-2 text-[var(--success-text)] font-bold">
             <QrCode size={18} />
             Scan & Pay
           </div>
-          <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+          <div className="text-xs text-[var(--success-text)] mt-1">
             Customer scans this QR with Google Pay, Paytm, BHIM or another UPI app.
           </div>
         </div>
@@ -348,7 +363,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
           </div>
         )}
 
-        <div ref={qrRef} className="inline-flex max-w-full p-3 sm:p-4 border-2 border-blue-200 dark:border-blue-900/60 rounded-2xl bg-[var(--surface)] shadow-[var(--shadow-card)]">
+        <div ref={qrRef} className="inline-flex max-w-full p-3 sm:p-4 border-2 border-[var(--success-border)] rounded-2xl bg-[var(--surface)] shadow-[var(--shadow-card)]">
           {numericAmount > 0 ? (
             <QRCodeSVG
               value={uri}
@@ -367,7 +382,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
         </div>
 
         <div>
-          <div className="text-4xl font-extrabold text-blue-700 dark:text-blue-300 tabular-nums">{fmt(numericAmount)}</div>
+          <div className="text-4xl font-extrabold text-[var(--amount-sales)] tabular-nums">{fmt(numericAmount)}</div>
           <div className="text-sm font-semibold text-[var(--ink-secondary)] mt-1">{shopName}</div>
           <div className="text-xs text-[var(--muted-light)] mt-1">{upiId || 'UPI ID not configured'}</div>
           <div className="text-xs text-[var(--muted-light)]">Invoice: {invoice || 'NEW-BILL'}</div>
@@ -997,7 +1012,7 @@ export default function NewBill() {
   }
 
   return (
-    <div className="pos-page pos-theme-light min-h-screen w-full overflow-x-hidden" data-theme="light">
+    <div className="pos-page min-h-screen w-full overflow-x-hidden">
       <style>{`
         /* ------------------------------------------------------------------
            POS visual system
@@ -1131,8 +1146,6 @@ export default function NewBill() {
           .mobile-modal-content{max-height:calc(100dvh - 1.5rem);overflow-y:auto}
           .pos-grand-total{font-size:1.75rem}
         }
-
-        .pos-theme-light{--app-bg:#f8fafc;--surface:#ffffff;--surface-elevated:#f7f9fc;--ink:#0f172a;--ink-secondary:#334155;--muted:#64748b;--muted-light:#94a3b8;--line:#cbd5e1;--line-subtle:#e2e8f0;--primary:#2563eb;--primary-hover:#1d4ed8;--primary-light:#eff6ff;--primary-border:#bfdbfe;--primary-text:#1d4ed8;--success:#059669;--shadow-card:0 2px 8px rgba(15,23,42,.06);--shadow-xs:0 1px 3px rgba(15,23,42,.08);--shadow-primary:0 3px 10px rgba(37,99,235,.2)}
         .pos-page{background:var(--app-bg);color:var(--ink);transition:background .2s ease,color .2s ease}
         .pos-search-popover{background:var(--surface);border-color:var(--line);box-shadow:0 18px 40px rgba(15,23,42,.18);max-width:100vw}
         .pos-search-input{font-size:16px!important;font-weight:600;border-width:2px}
@@ -1196,6 +1209,85 @@ export default function NewBill() {
           .pos-checkout-actions .btn-outline,.pos-checkout-actions .btn-solid{font-size:.78rem;padding:0 .55rem}
         }
         @media(min-width:768px){.pos-checkout{max-height:calc(100dvh - 1rem)}}
+
+        /* ================================================================
+           PROFESSIONAL WHITE ERP REDESIGN OVERRIDES
+           UI-only layer: business logic and integrations remain unchanged.
+        ================================================================= */
+        .pos-page{
+          --erp-primary:#2563eb;
+          --erp-primary-dark:#1d4ed8;
+          --erp-ink:#0f172a;
+          --erp-muted:#64748b;
+          --erp-line:#e2e8f0;
+          --erp-soft:#f8fafc;
+          --erp-blue-soft:#eff6ff;
+          background:#f1f5f9!important;
+          color:var(--erp-ink)!important;
+          font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+        }
+        .pos-page *{box-sizing:border-box}
+        .pos-page .bg-\[var\(--surface\)\]{background:#fff!important}
+        .pos-page [class*="bg-[var(--surface)]"]{background:#fff!important}
+        .pos-page [class*="border-[var(--line)]"]{border-color:var(--erp-line)!important}
+        .pos-page [class*="text-[var(--ink)]"]{color:var(--erp-ink)!important}
+        .pos-page [class*="text-[var(--muted)]"],[class*="text-[var(--muted-light)]"]{color:var(--erp-muted)!important}
+        .pos-page .pos-sale-toolbar{
+          background:#fff!important;border:1px solid var(--erp-line)!important;
+          border-radius:14px!important;padding:14px 18px!important;
+          box-shadow:0 1px 2px rgba(15,23,42,.03)!important;
+        }
+        .pos-page .pos-sale-title{font-weight:800!important;letter-spacing:-.025em}
+        .pos-page .pos-search-input,.pos-page .pos-input{
+          background:#fff!important;border:1px solid #cbd5e1!important;
+          color:var(--erp-ink)!important;border-radius:10px!important;
+          box-shadow:none!important;transition:border-color .15s,box-shadow .15s;
+        }
+        .pos-page .pos-search-input:focus,.pos-page .pos-input:focus{
+          border-color:var(--erp-primary)!important;
+          box-shadow:0 0 0 3px rgba(37,99,235,.12)!important;outline:none!important;
+        }
+        .pos-page .pos-product{
+          background:#fff!important;border:1px solid var(--erp-line)!important;
+          border-radius:10px!important;box-shadow:0 1px 2px rgba(15,23,42,.025)!important;
+          transition:border-color .15s,box-shadow .15s,transform .15s;
+        }
+        .pos-page .pos-product:hover{
+          border-color:#93c5fd!important;box-shadow:0 5px 16px rgba(37,99,235,.08)!important;
+          transform:translateY(-1px);
+        }
+        .pos-page .pos-checkout-actions,.pos-page .pos-total-panel{
+          background:#fff!important;border:1px solid var(--erp-line)!important;
+          border-radius:14px!important;box-shadow:0 2px 8px rgba(15,23,42,.04)!important;
+        }
+        .pos-page .pos-checkout-actions{position:sticky;top:12px}
+        .pos-page .btn-solid{
+          background:var(--erp-primary)!important;border-color:var(--erp-primary)!important;
+          border-radius:9px!important;font-weight:750!important;box-shadow:0 2px 4px rgba(37,99,235,.14)!important;
+        }
+        .pos-page .btn-solid:hover{background:var(--erp-primary-dark)!important;border-color:var(--erp-primary-dark)!important}
+        .pos-page .btn-outline{
+          background:#fff!important;border:1px solid #cbd5e1!important;color:#334155!important;
+          border-radius:9px!important;font-weight:650!important;
+        }
+        .pos-page .btn-outline:hover{background:#f8fafc!important;border-color:#94a3b8!important;color:#0f172a!important}
+        .pos-page .pos-razorpay{color:#4338ca!important;border-color:#c7d2fe!important;background:#eef2ff!important}
+        .pos-page .pos-grand-total{font-size:2rem!important;font-weight:850!important;letter-spacing:-.045em}
+        .pos-page .pos-payment-method,.pos-page [class*="payment-method"]{border-radius:10px!important}
+        .pos-page .pos-mobile-cart-bar{background:var(--erp-primary)!important}
+        .pos-page .pos-floating-quick-pay{background:#0f766e!important;border-color:#0f766e!important}
+        .pos-page .pos-floating-quick-pay:hover{background:#115e59!important}
+        .pos-page .pos-search-popover{border:1px solid var(--erp-line)!important;border-radius:12px!important}
+        .pos-page .pos-empty-state{min-height:260px!important}
+        @media (min-width:1024px){
+          .pos-page .pos-main-grid{align-items:start!important}
+          .pos-page .pos-cart-panel{min-height:calc(100vh - 250px)!important}
+        }
+        @media (max-width:767px){
+          .pos-page .pos-sale-toolbar{padding:12px!important}
+          .pos-page .pos-checkout-actions{position:static!important}
+          .pos-page .pos-grand-total{font-size:1.75rem!important}
+        }
       `}</style>
 
       <div className="pos-shell flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_minmax(300px,36%)] lg:flex lg:flex-row gap-3 lg:gap-4 p-2.5 sm:p-3 lg:p-4 max-w-[1600px] mx-auto">
@@ -1206,11 +1298,11 @@ export default function NewBill() {
           <div className="">
             <div className="w-full flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-lg bg-[var(--primary)] text-white flex items-center justify-center shadow-[var(--shadow-primary)]">
+                <div className="">
                   <Receipt size={17} />
                 </div>
                 <div>
-                  <div className="pos-sale-kicker">POS SCREEN</div>
+                  <div className="text-sm font-medium text-[var(--ink-secondary)]">POS SCREEN</div>
                   <div className="pos-sale-title">New bill</div>
                 </div>
               </div>
@@ -1238,11 +1330,11 @@ export default function NewBill() {
           {/* Search + category chips */}
           <div className="pos-card pos-scan-panel pos-search-panel p-3 space-y-2.5">
             <div className="relative" onMouseEnter={() => setSearchActive(true)} onMouseLeave={() => { if (!search) setSearchActive(false) }}>
-              <Search size={1} className="absolute left- top-1/2 -translate-y-1/2 text-[var(--muted-light)] pointer-events-none" />
+              <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)] pointer-events-none" />
               <input
                 ref={searchRef}
                 className=" pos-input pos-search-input w-full pl-9 pr-10 h-11 rounded-lg text-[var(--ink)] placeholder:text-[var(--muted-light)]"
-                placeholder="Scan barcode, search product or SKU"
+                placeholder="         Scan barcode, search product or SKU"
                 value={search}
                 onFocus={() => setSearchActive(true)}
                 onBlur={() => setTimeout(() => setSearchActive(false), 180)}
@@ -1275,7 +1367,7 @@ export default function NewBill() {
                             <span className="block text-[11px] text-[var(--muted-light)] truncate">SKU {p.sku || '—'} · Stock {p.current_stock ?? 0}</span>
                           </span>
                           <span className="text-right shrink-0">
-                            <span className="block text-sm font-bold text-[var(--primary-text)]">{fmt(p.selling_price)}</span>
+                            <span className="block text-sm font-bold text-[var(--amount-sales)]">{fmt(p.selling_price)}</span>
                             <span className="block text-[10px] text-[var(--muted-light)]">MRP {fmt(p.mrp || p.selling_price)}</span>
                           </span>
                         </button>
@@ -1373,7 +1465,7 @@ export default function NewBill() {
               <input
                 ref={customerRef}
                 className="pos-input h-9 pl-8 pr-3 text-sm"
-                placeholder="Walk-in customer, or search"
+                placeholder="      Walk -in customer, or search"
                 value={customerSearch}
                 onChange={e => { setCustomerSearch(e.target.value); if (!e.target.value) setCustomer(null) }}
               />
@@ -1482,9 +1574,9 @@ export default function NewBill() {
                   />
                 </label>
 
-                <div className=" flex items-center justify-between px-3 py-3 rounded-lg border border-emerald-200 bg-emerald-50  flex items-center justify-between">
-                  <span className="text-xs text-emerald-700">Customer pays</span>
-                  <strong className="text-xl text-emerald-700 tabular-nums">{fmt(grandTotal)}</strong>
+                <div className="flex items-center justify-between px-3 py-3 rounded-lg border border-[var(--success-border)] bg-[var(--success-light)]">
+                  <span className="text-xs text-[var(--success-text)]">Customer pays</span>
+                  <strong className="text-xl text-[var(--amount-sales)] tabular-nums">{fmt(grandTotal)}</strong>
                 </div>
 
                 <button
@@ -1669,7 +1761,7 @@ export default function NewBill() {
         <div className="space-y-4">
 <div className="flex flex-col items-center justify-center gap-1.5">
             <CheckCircle2 size={34} className="mx-auto text-blue-600 dark:text-blue-400" />
-            <div className="mt-2 text-2xl font-bold text-blue-800 dark:text-blue-300">{fmt(lastInvoice?.grand_total)}</div>
+            <div className="mt-2 text-2xl font-bold text-[var(--amount-sales)]">{fmt(lastInvoice?.grand_total)}</div>
             <div className="text-xs text-blue-700 dark:text-blue-400 mt-1">Invoice {lastInvoice?.invoice_number}</div>
             <button
               className="btn-solid bg-blue-600 hover:bg-blue-700 border-blue-600 hover:border-blue-700 w-full mt-3 h-10"

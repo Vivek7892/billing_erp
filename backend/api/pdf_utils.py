@@ -461,34 +461,87 @@ def resolve_document_mode(s, invoice):
 
 
 def _logo_for_a4(s):
-    path = s.get("shop_logo_path") or s.get("shop_logo")
-    if not has_val(path):
+    """Resolve the configured business logo for PDF output.
+
+    Supports:
+    - absolute filesystem paths
+    - Django FieldFile values
+    - MEDIA_ROOT-relative paths
+    - MEDIA_URL values only when they resolve to a local file
+    """
+    raw = s.get("shop_logo_path") or s.get("shop_logo")
+    if not has_val(raw):
         return None
+
     try:
         from reportlab.platypus import Image as RLImage
-        if os.path.exists(str(path)):
-            img = RLImage(str(path), width=15 * mm, height=15 * mm)
-            img.hAlign = "LEFT"
-            return img
+        from django.conf import settings as django_settings
+
+        candidates = []
+
+        # Django FileField / FieldFile
+        name = getattr(raw, "name", None)
+        path = getattr(raw, "path", None)
+        if path:
+            candidates.append(str(path))
+        if name:
+            candidates.append(str(name))
+
+        raw_text = str(raw).strip()
+        candidates.append(raw_text)
+
+        media_root = getattr(django_settings, "MEDIA_ROOT", "")
+        base_dir = getattr(django_settings, "BASE_DIR", "")
+
+        resolved = []
+        for candidate in candidates:
+            if not candidate:
+                continue
+            candidate = candidate.replace("/", os.sep)
+            if os.path.isabs(candidate):
+                resolved.append(candidate)
+            else:
+                if media_root:
+                    resolved.append(os.path.join(str(media_root), candidate))
+                if base_dir:
+                    resolved.append(os.path.join(str(base_dir), candidate))
+                resolved.append(candidate)
+
+        for candidate in resolved:
+            if os.path.isfile(candidate):
+                img = RLImage(candidate, width=25 * mm, height=25 * mm)
+                img.hAlign = "LEFT"
+                return img
     except Exception:
         pass
+
     return None
 
 
 def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
-    """Professional A4 masthead: identity left, invoice control right."""
+    """A4 header matching the reference invoice image.
+
+    Left:
+        logo (when enabled/configured), business name, address, contacts,
+        registration identifiers.
+    Right:
+        TAX INVOICE, invoice number/date/payment mode/place of supply.
+    """
     brand = _fmt_value(s.shop_name, "Business Name Not Configured")
 
     identity_rows = []
+
+    # Logo is intentionally above the business name, matching the reference.
     if logo_flowable is not None:
-        identity_rows.append([logo_flowable, para(brand.upper(), size=13.5, bold=True)])
-    else:
-        identity_rows.append([para(brand.upper(), size=13.5, bold=True)])
+        identity_rows.append([logo_flowable])
+
+    identity_rows.append([para(brand.upper(), size=13.5, bold=True)])
 
     if has_val(s.shop_address):
         for line in str(s.shop_address).splitlines():
             if line.strip():
                 identity_rows.append([para(line.strip(), size=7.0)])
+
     contact = []
     if has_val(s.shop_phone):
         contact.append(f"Mobile: {s.shop_phone}")
@@ -509,62 +562,31 @@ def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
     if registrations:
         identity_rows.append([para(" | ".join(registrations), size=6.4)])
 
-    if logo_flowable is not None:
-        identity = _tbl(identity_rows[:1], [None], [
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ("TOPPADDING", (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-        ])
-        # Rebuild the remaining identity text below the logo/name row.
-        text_rows = identity_rows[1:]
-        text_block = _tbl(text_rows, [None], [
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ("TOPPADDING", (0, 0), (-1, -1), 0.3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0.3),
-        ]) if text_rows else None
-        first = _tbl([[logo_flowable, para(brand.upper(), size=13.5, bold=True)]], [17*mm, None], [
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ("TOPPADDING", (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ])
-        identity = _tbl([[first], [text_block or para("", size=1)]], [None], [
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ("TOPPADDING", (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ])
-    else:
-        identity = _tbl(identity_rows, [None], [
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ("TOPPADDING", (0, 0), (-1, -1), 0.3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0.3),
-        ])
+    identity = _tbl(identity_rows, [None], [
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0.2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0.2),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ])
 
-    inv_date = _date_text(invoice.created_at)
-    due_date = getattr(invoice, "due_date", None)
+    inv_date = _date_text(getattr(invoice, "created_at", None))
     payment_mode = getattr(invoice, "payment_method", None) or s.get("default_payment_method")
-    place_of_supply = (
-        getattr(invoice, "place_of_supply", None)
-        or getattr(getattr(invoice, "customer", None), "state", None)
-        or s.get("place_of_supply")
-    )
 
     control = [[para("TAX INVOICE", size=15, bold=True, align=TA_RIGHT)]]
-    control.append([para(f"Invoice No: {_fmt_value(invoice.invoice_number)}", size=7.3, align=TA_RIGHT, bold=True)])
+    control.append([
+        para(
+            f"Invoice No: {_fmt_value(invoice.invoice_number)}",
+            size=7.3, align=TA_RIGHT, bold=True
+        )
+    ])
     if inv_date:
         control.append([para(f"Invoice Date: {inv_date}", size=7.0, align=TA_RIGHT)])
-    if due_date:
-        control.append([para(f"Due Date: {_date_text(due_date)}", size=7.0, align=TA_RIGHT)])
     if has_val(payment_mode):
-        control.append([para(f"Payment Mode: {str(payment_mode).upper()}", size=7.0, align=TA_RIGHT)])
-    if has_val(place_of_supply):
-        control.append([para(f"Place of Supply: {place_of_supply}", size=7.0, align=TA_RIGHT)])
+        control.append([
+            para(f"Payment Mode: {str(payment_mode).upper()}", size=7.0, align=TA_RIGHT)
+        ])
+
     right = _tbl(control, [None], [
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
         ("RIGHTPADDING", (0, 0), (-1, -1), 0),
@@ -574,14 +596,14 @@ def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
     ])
 
     return [
-        _tbl([[identity, right]], [BODY_W*0.61, BODY_W*0.39], [
+        _tbl([[identity, right]], [BODY_W * 0.61, BODY_W * 0.39], [
             ("LEFTPADDING", (0, 0), (-1, -1), 0),
             ("RIGHTPADDING", (0, 0), (-1, -1), 0),
             ("TOPPADDING", (0, 0), (-1, -1), 0),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ]),
-        *_rule(0.8, 1.5*mm, 2.0*mm),
+        *_rule(0.8, 1.5 * mm, 2.0 * mm),
     ]
 
 
@@ -892,7 +914,7 @@ def build_notes_and_terms(s, invoice):
     if has_val(terms_text):
         if flow:
             flow.append(Spacer(1, 1.0*mm))
-        flow.append(para(f"<b>Terms &amp; Conditions</b><br/>{str(terms_text).replace(chr(10), '<br/>')}", size=6.8, leading=8.5))
+        flow.append(para(f"{str(terms_text).replace(chr(10), '<br/>')}", size=6.8, leading=8.5))
     flow.extend(_rule(0.4, 1.4*mm, 1.4*mm))
     return flow
 
@@ -1052,7 +1074,7 @@ def _tdashed(story, content_w, gap_above=1.0*mm, gap_below=1.0*mm):
     story.append(Spacer(1, gap_above))
     story.append(HRFlowable(
         width=content_w, thickness=0.55, color=INK,
-        dash=(2, 1.4), spaceBefore=0, spaceAfter=0, hAlign="CENTER"
+        dash=(2,1), spaceBefore=0, spaceAfter=0, hAlign="CENTER"
     ))
     story.append(Spacer(1, gap_below))
 

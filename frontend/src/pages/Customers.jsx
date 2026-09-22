@@ -47,6 +47,40 @@ const currency = value =>
     maximumFractionDigits: 0,
   })}`
 
+const getInitials = name =>
+  String(name || 'Customer')
+    .trim()
+    .split(/\\s+/)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase() || '')
+    .join('')
+
+const avatarColors = [
+  'bg-blue-100 text-blue-700',
+  'bg-indigo-100 text-indigo-700',
+  'bg-cyan-100 text-cyan-700',
+  'bg-violet-100 text-violet-700',
+  'bg-emerald-100 text-emerald-700',
+]
+
+const CustomerAvatar = ({ customer, size = 'md' }) => {
+  const initials = getInitials(customer?.name)
+  const color = avatarColors[(Number(customer?.id) || 0) % avatarColors.length]
+  const dimensions = size === 'lg' ? 'w-16 h-16 text-xl' : size === 'sm' ? 'w-9 h-9 text-xs' : 'w-11 h-11 text-sm'
+
+  return customer?.profile_picture || customer?.profile_image || customer?.avatar ? (
+    <img
+      src={customer.profile_picture || customer.profile_image || customer.avatar}
+      alt={customer?.name || 'Customer'}
+      className={`${dimensions} rounded-full object-cover ring-2 ring-white shadow-sm shrink-0`}
+    />
+  ) : (
+    <div className={`${dimensions} ${color} rounded-full flex items-center justify-center font-bold ring-2 ring-white shadow-sm shrink-0`}>
+      {initials || <UserRound size={18} />}
+    </div>
+  )
+}
+
 const getErrorMessage = error => {
   const data = error?.response?.data
 
@@ -322,21 +356,21 @@ export default function Customers() {
         <Card className="p-3 sm:p-4">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs font-medium text-[var(--muted)] uppercase tracking-wide truncate">
+              <p className="text-[10px] sm:text-xs font-medium text-slate-600 uppercase tracking-wide truncate">
                 Total Customers
               </p>
 
-              <p className="text-xl sm:text-2xl font-bold text-[var(--ink)] mt-1 sm:mt-2">
+              <p className="text-xl sm:text-2xl font-bold text-slate-900 mt-1 sm:mt-2">
                 {stats.total}
               </p>
             </div>
 
-            <div className="p-2 rounded-lg sm:rounded-xl bg-white border border-blue-200 text-blue-600 shadow-sm shrink-0">
+            <div className="p-2 rounded-lg sm:rounded-xl bg-blue-50 border border-blue-100 text-blue-600 shadow-sm shrink-0">
               <Users size={17} />
             </div>
           </div>
 
-          <p className="text-[10px] sm:text-xs text-[var(--muted)] mt-2 sm:mt-3 truncate">
+          <p className="text-[10px] sm:text-xs text-slate-600 mt-2 sm:mt-3 truncate">
             {stats.customersWithDue} with pending credit
           </p>
         </Card>
@@ -346,7 +380,7 @@ export default function Customers() {
         <Card className="p-3 sm:p-4">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs font-medium text-[var(--muted)] uppercase tracking-wide truncate">
+              <p className="text-[10px] sm:text-xs font-medium text-slate-600 uppercase tracking-wide truncate">
                 Outstanding
               </p>
 
@@ -360,7 +394,7 @@ export default function Customers() {
             </div>
           </div>
 
-          <p className="text-[10px] sm:text-xs text-[var(--muted)] mt-2 sm:mt-3 truncate">
+          <p className="text-[10px] sm:text-xs text-slate-600 mt-2 sm:mt-3 truncate">
             Amount pending
           </p>
         </Card>
@@ -370,7 +404,7 @@ export default function Customers() {
         <Card className="p-3 sm:p-4">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs font-medium text-[var(--muted)] uppercase tracking-wide truncate">
+              <p className="text-[10px] sm:text-xs font-medium text-slate-600 uppercase tracking-wide truncate">
                 Credit Limit
               </p>
 
@@ -379,12 +413,12 @@ export default function Customers() {
               </p>
             </div>
 
-            <div className="p-2 rounded-lg sm:rounded-xl bg-white border border-blue-200 text-blue-600 shadow-sm shrink-0">
+            <div className="p-2 rounded-lg sm:rounded-xl bg-blue-50 border border-blue-100 text-blue-600 shadow-sm shrink-0">
               <WalletCards size={17} />
             </div>
           </div>
 
-          <p className="text-[10px] sm:text-xs text-[var(--muted)] mt-2 sm:mt-3 truncate">
+          <p className="text-[10px] sm:text-xs text-slate-600 mt-2 sm:mt-3 truncate">
             Combined limit
           </p>
         </Card>
@@ -394,7 +428,7 @@ export default function Customers() {
         <Card className="p-3 sm:p-4">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs font-medium text-[var(--muted)] uppercase tracking-wide truncate">
+              <p className="text-[10px] sm:text-xs font-medium text-slate-600 uppercase tracking-wide truncate">
                 Total Bills
               </p>
 
@@ -408,7 +442,7 @@ export default function Customers() {
             </div>
           </div>
 
-          <p className="text-[10px] sm:text-xs text-[var(--muted)] mt-2 sm:mt-3 truncate">
+          <p className="text-[10px] sm:text-xs text-slate-600 mt-2 sm:mt-3 truncate">
             Linked bills
           </p>
         </Card>
@@ -425,12 +459,12 @@ export default function Customers() {
           <div className="relative min-w-0 flex-1">
             <Search
               size={15}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
             />
 
             <input
               className="input w-full pl-9 pr-9 text-sm"
-              placeholder="Search by customer name, mobile, email..."
+              placeholder="       Search by customer name, mobile, email..."
               value={search}
               onChange={event => setSearch(event.target.value)}
             />
@@ -439,7 +473,7 @@ export default function Customers() {
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)] hover:text-[var(--ink-secondary)]"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
                 title="Clear search"
                 aria-label="Clear search"
               >
@@ -479,13 +513,13 @@ export default function Customers() {
         </div>
 
         {(hasSearch || onlyCredit) && (
-          <div className="flex items-center gap-2 mt-3 text-xs text-[var(--muted)]">
+          <div className="flex items-center gap-2 mt-3 text-xs text-slate-600">
             <span>
               Showing {displayed.length} result(s)
             </span>
 
             {onlyCredit && (
-              <span className="px-2 py-1 rounded-full bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 font-medium">
+              <span className="px-2 py-1 rounded-full bg-rose-50 text-red-600 dark:text-red-400 font-medium">
                 Credit due
               </span>
             )}
@@ -578,18 +612,18 @@ export default function Customers() {
 
                           <div className="flex items-center gap-3 min-w-[190px]">
 
-                            <div className="w-9 h-9 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                            <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
                               <UserRound size={16} />
                             </div>
 
                             <div className="min-w-0">
 
-                              <p className="font-semibold text-[var(--ink)] truncate">
+                              <p className="font-semibold text-slate-900 truncate">
                                 {customer.name}
                               </p>
 
                               {customer.address && (
-                                <p className="text-xs text-[var(--muted-light)] truncate max-w-[180px]">
+                                <p className="text-xs text-slate-500 truncate max-w-[180px]">
                                   {customer.address}
                                 </p>
                               )}
@@ -618,7 +652,7 @@ export default function Customers() {
                             {customer.email ? (
                               <a
                                 href={`mailto:${customer.email}`}
-                                className="flex items-center gap-1.5 text-[var(--muted)] hover:text-blue-600 dark:text-blue-400 truncate max-w-[200px]"
+                                className="flex items-center gap-1.5 text-slate-600 hover:text-blue-600 dark:text-blue-400 truncate max-w-[200px]"
                               >
                                 <Mail size={12} />
                                 {customer.email}
@@ -627,7 +661,7 @@ export default function Customers() {
 
                             {!customer.mobile &&
                               !customer.email && (
-                                <span className="text-[var(--muted-light)]">
+                                <span className="text-slate-500">
                                   —
                                 </span>
                               )}
@@ -641,7 +675,7 @@ export default function Customers() {
                         <td className="text-sm">
 
                           {customer.gstin ? (
-                            <span className="font-mono text-[var(--muted)]">
+                            <span className="font-mono text-slate-600">
                               {customer.gstin}
                             </span>
                           ) : (
@@ -768,7 +802,7 @@ export default function Customers() {
                 Each customer is a compact single row.
             ================================================== */}
 
-            <div className="lg:hidden divide-y divide-[var(--line-subtle)]">
+            <div className="lg:hidden divide-y divide-blue-100">
 
               {displayed.map(customer => {
 
@@ -786,7 +820,7 @@ export default function Customers() {
 
                       {/* Avatar */}
 
-                      <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
                         <UserRound size={14} />
                       </div>
 
@@ -796,23 +830,23 @@ export default function Customers() {
 
                         <div className="flex items-center gap-2 min-w-0">
 
-                          <p className="font-semibold text-[13px] text-[var(--ink)] truncate">
+                          <p className="font-semibold text-[13px] text-slate-900 truncate">
                             {customer.name}
                           </p>
 
                           {outstanding > 0 ? (
-                            <span className="shrink-0 text-[9px] leading-4 px-1.5 rounded-full bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 font-semibold">
+                            <span className="shrink-0 text-[9px] leading-4 px-1.5 rounded-full bg-rose-50 text-red-600 dark:text-red-400 font-semibold">
                               Due
                             </span>
                           ) : (
-                            <span className="shrink-0 text-[9px] leading-4 px-1.5 rounded-full bg-green-50 dark:bg-green-950/60 text-green-600 dark:text-green-400 font-semibold">
+                            <span className="shrink-0 text-[9px] leading-4 px-1.5 rounded-full bg-emerald-50 text-green-600 dark:text-green-400 font-semibold">
                               Paid
                             </span>
                           )}
 
                         </div>
 
-                        <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-[var(--muted-light)] min-w-0">
+                        <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-500 min-w-0">
 
                           {customer.mobile ? (
                             <a
@@ -851,7 +885,7 @@ export default function Customers() {
                             : '₹0'}
                         </p>
 
-                        <p className="text-[9px] text-[var(--muted-light)]">
+                        <p className="text-[9px] text-slate-500">
                           {outstanding > 0
                             ? 'outstanding'
                             : 'clear'}
@@ -937,11 +971,11 @@ export default function Customers() {
         {reminderCustomer && (
           <div className="space-y-4">
 
-            <div className="rounded-xl border border-orange-200 bg-orange-50 dark:bg-orange-950/60 p-4">
+            <div className="rounded-xl border border-orange-200 bg-amber-50 p-4">
 
               <div className="flex items-center gap-3">
 
-                <div className="w-10 h-10 rounded-full bg-[var(--surface)] text-orange-600 dark:text-orange-400 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-white text-orange-600 dark:text-orange-400 flex items-center justify-center">
                   <WalletCards size={18} />
                 </div>
 
@@ -965,14 +999,14 @@ export default function Customers() {
               </div>
 
               {reminderCustomer.mobile && (
-                <p className="text-xs text-[var(--muted)] mt-3">
+                <p className="text-xs text-slate-600 mt-3">
                   Mobile: {reminderCustomer.mobile}
                 </p>
               )}
 
             </div>
 
-            <p className="text-sm text-[var(--muted)]">
+            <p className="text-sm text-slate-600">
               Choose how you want to send the payment
               reminder.
             </p>
@@ -982,7 +1016,7 @@ export default function Customers() {
               <button
                 onClick={() => sendReminder('sms')}
                 disabled={!!sending}
-                className="flex flex-col items-center gap-2 border-2 border-blue-200 rounded-xl p-4 hover:bg-blue-50 dark:bg-blue-950/60 transition disabled:opacity-50"
+                className="flex flex-col items-center gap-2 border-2 border-blue-200 rounded-xl p-4 hover:bg-blue-50 transition disabled:opacity-50"
               >
 
                 <MessageSquare
@@ -1003,7 +1037,7 @@ export default function Customers() {
                   sendReminder('whatsapp')
                 }
                 disabled={!!sending}
-                className="flex flex-col items-center gap-2 border-2 border-green-200 rounded-xl p-4 hover:bg-green-50 dark:bg-green-950/60 transition disabled:opacity-50"
+                className="flex flex-col items-center gap-2 border-2 border-green-200 rounded-xl p-4 hover:bg-emerald-50 transition disabled:opacity-50"
               >
 
                 <Send
@@ -1024,11 +1058,11 @@ export default function Customers() {
             {reminderCustomer.mobile && (
               <a
                 href={`tel:${reminderCustomer.mobile}`}
-                className="flex items-center justify-center gap-2 w-full border-2 border-[var(--line)] rounded-xl p-3 hover:bg-[var(--surface-elevated)] transition text-sm font-semibold text-[var(--ink-secondary)]"
+                className="flex items-center justify-center gap-2 w-full border-2 border-blue-100 rounded-xl p-3 hover:bg-white transition text-sm font-semibold text-slate-700"
               >
                 <Phone
                   size={16}
-                  className="text-[var(--muted)]"
+                  className="text-slate-600"
                 />
 
                 Call {reminderCustomer.mobile}
@@ -1057,9 +1091,9 @@ export default function Customers() {
 
         <div className="space-y-5">
 
-          <div className="flex items-center gap-3 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-100 p-4">
+          <div className="flex items-center gap-3 rounded-xl bg-blue-50 border border-blue-100 p-4">
 
-            <div className="w-10 h-10 rounded-lg bg-[var(--surface)] text-blue-600 dark:text-blue-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-lg bg-white text-blue-600 dark:text-blue-400 flex items-center justify-center">
 
               {editId ? (
                 <Edit2 size={18} />
@@ -1276,7 +1310,7 @@ export default function Customers() {
         {viewCustomer && (
           <div className="space-y-5">
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-elevated)] p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-blue-100 bg-white p-4">
 
               <div className="flex items-center gap-3">
 
@@ -1286,11 +1320,11 @@ export default function Customers() {
 
                 <div>
 
-                  <h3 className="font-bold text-[var(--ink)]">
+                  <h3 className="font-bold text-slate-900">
                     {viewCustomer.name}
                   </h3>
 
-                  <p className="text-xs text-[var(--muted)] mt-0.5">
+                  <p className="text-xs text-slate-600 mt-0.5">
                     Customer ID: #{viewCustomer.id}
                   </p>
 
@@ -1303,10 +1337,10 @@ export default function Customers() {
 
                   <Building2
                     size={14}
-                    className="text-[var(--muted-light)]"
+                    className="text-slate-500"
                   />
 
-                  <span className="font-mono text-[var(--muted)]">
+                  <span className="font-mono text-slate-600">
                     {viewCustomer.gstin}
                   </span>
 
@@ -1319,9 +1353,9 @@ export default function Customers() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
 
-              <div className="bg-blue-50 dark:bg-blue-950/60 rounded-xl p-4">
+              <div className="bg-blue-50 rounded-xl p-4">
 
-                <div className="text-xs text-[var(--muted)]">
+                <div className="text-xs text-slate-600">
                   Total Bills
                 </div>
 
@@ -1331,9 +1365,9 @@ export default function Customers() {
 
               </div>
 
-              <div className="bg-green-50 dark:bg-green-950/60 rounded-xl p-4">
+              <div className="bg-emerald-50 rounded-xl p-4">
 
-                <div className="text-xs text-[var(--muted)]">
+                <div className="text-xs text-slate-600">
                   Total Purchases
                 </div>
 
@@ -1345,9 +1379,9 @@ export default function Customers() {
 
               </div>
 
-              <div className="bg-red-50 dark:bg-red-950/60 rounded-xl p-4">
+              <div className="bg-rose-50 rounded-xl p-4">
 
-                <div className="text-xs text-[var(--muted)]">
+                <div className="text-xs text-slate-600">
                   Outstanding
                 </div>
 
@@ -1368,7 +1402,7 @@ export default function Customers() {
               {viewCustomer.mobile && (
                 <a
                   href={`tel:${viewCustomer.mobile}`}
-                  className="flex items-center gap-3 rounded-xl border border-[var(--line)] p-3 hover:bg-[var(--surface-elevated)]"
+                  className="flex items-center gap-3 rounded-xl border border-blue-100 p-3 hover:bg-white"
                 >
 
                   <Phone
@@ -1378,11 +1412,11 @@ export default function Customers() {
 
                   <div>
 
-                    <p className="text-[11px] text-[var(--muted-light)] uppercase">
+                    <p className="text-[11px] text-slate-500 uppercase">
                       Mobile
                     </p>
 
-                    <p className="text-sm font-medium text-[var(--ink-secondary)]">
+                    <p className="text-sm font-medium text-slate-700">
                       {viewCustomer.mobile}
                     </p>
 
@@ -1394,7 +1428,7 @@ export default function Customers() {
               {viewCustomer.email && (
                 <a
                   href={`mailto:${viewCustomer.email}`}
-                  className="flex items-center gap-3 rounded-xl border border-[var(--line)] p-3 hover:bg-[var(--surface-elevated)] min-w-0"
+                  className="flex items-center gap-3 rounded-xl border border-blue-100 p-3 hover:bg-white min-w-0"
                 >
 
                   <Mail
@@ -1404,11 +1438,11 @@ export default function Customers() {
 
                   <div className="min-w-0">
 
-                    <p className="text-[11px] text-[var(--muted-light)] uppercase">
+                    <p className="text-[11px] text-slate-500 uppercase">
                       Email
                     </p>
 
-                    <p className="text-sm font-medium text-[var(--ink-secondary)] truncate">
+                    <p className="text-sm font-medium text-slate-700 truncate">
                       {viewCustomer.email}
                     </p>
 
@@ -1418,7 +1452,7 @@ export default function Customers() {
               )}
 
               {viewCustomer.address && (
-                <div className="sm:col-span-2 flex items-start gap-3 rounded-xl border border-[var(--line)] p-3">
+                <div className="sm:col-span-2 flex items-start gap-3 rounded-xl border border-blue-100 p-3">
 
                   <MapPin
                     size={16}
@@ -1427,11 +1461,11 @@ export default function Customers() {
 
                   <div>
 
-                    <p className="text-[11px] text-[var(--muted-light)] uppercase">
+                    <p className="text-[11px] text-slate-500 uppercase">
                       Address
                     </p>
 
-                    <p className="text-sm font-medium text-[var(--ink-secondary)] mt-0.5">
+                    <p className="text-sm font-medium text-slate-700 mt-0.5">
                       {viewCustomer.address}
                     </p>
 
@@ -1450,17 +1484,17 @@ export default function Customers() {
 
                 <div>
 
-                  <h4 className="font-semibold text-[var(--ink)]">
+                  <h4 className="font-semibold text-slate-900">
                     Recent Bills
                   </h4>
 
-                  <p className="text-xs text-[var(--muted-light)] mt-0.5">
+                  <p className="text-xs text-slate-500 mt-0.5">
                     Billing history for this customer
                   </p>
 
                 </div>
 
-                <span className="text-xs font-medium text-[var(--muted)]">
+                <span className="text-xs font-medium text-slate-600">
                   {customerBills.length} record(s)
                 </span>
 
@@ -1472,14 +1506,14 @@ export default function Customers() {
                 </div>
               ) : customerBills.length === 0 ? (
 
-                <div className="rounded-xl border border-dashed border-[var(--line)] py-8 text-center">
+                <div className="rounded-xl border border-dashed border-blue-100 py-8 text-center">
 
                   <FileText
                     size={24}
                     className="mx-auto text-gray-300"
                   />
 
-                  <p className="text-sm text-[var(--muted-light)] mt-2">
+                  <p className="text-sm text-slate-500 mt-2">
                     No bills yet
                   </p>
 
@@ -1487,7 +1521,7 @@ export default function Customers() {
 
               ) : (
 
-                <div className="overflow-x-auto border border-[var(--line-subtle)] rounded-xl">
+                <div className="overflow-x-auto border border-blue-100 rounded-xl">
 
                   <table className="table">
 
@@ -1532,8 +1566,8 @@ export default function Customers() {
                                   bill.payment_status
                                 ).toLowerCase() ===
                                 'paid'
-                                  ? 'bg-green-50 dark:bg-green-950/60 text-green-600 dark:text-green-400'
-                                  : 'bg-orange-50 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400'
+                                  ? 'bg-emerald-50 text-green-600 dark:text-green-400'
+                                  : 'bg-amber-50 text-orange-600 dark:text-orange-400'
                               }`}
                             >
                               {bill.payment_status ||

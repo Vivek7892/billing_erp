@@ -1,13 +1,19 @@
-import { useState, useEffect } from 'react'
+import { Fragment, useState, useEffect } from 'react'
 import api from '../api'
 import { Badge, Card, PageHeader, Modal, Spinner, EmptyState, ConfirmDialog } from '../components/UI'
 import toast from 'react-hot-toast'
 import {
   Plus, Trash2, Printer, Package, ChevronDown, ChevronRight,
-  Building2, Phone, Mail, MapPin, Edit2, Search, Save
+  Building2, Phone, Mail, MapPin, Edit2, Search, Save,
+  Wallet, Clock3, ClipboardList, TrendingUp, Filter, Download
 } from 'lucide-react'
 
 const fmt = v => `₹${Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+const fmtDate = value => value
+  ? new Date(`${value}T00:00:00`).toLocaleDateString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric'
+    })
+  : '—'
 const emptyForm = {
   supplier: '', invoice_number: '',
   purchase_date: new Date().toISOString().slice(0, 10),
@@ -16,11 +22,35 @@ const emptyForm = {
 }
 const emptySupplier = { name: '', phone: '', email: '', address: '', gstin: '' }
 
+/* Shared field style — light tokens first, dark tokens unchanged */
+const inputCls =
+  'input !bg-white !text-slate-900 dark:text-slate-100 !border-slate-300 placeholder:!text-slate-500 dark:text-slate-400 ' +
+  'dark:!bg-slate-950 dark:!text-slate-100 dark:!border-slate-700 dark:placeholder:!text-slate-400 dark:[color-scheme:dark]'
+
+const fmt2 = v => Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const dueOf = p => Math.max(0, Number(p.total_amount || 0) - Number(p.paid_amount || 0))
+
+/* Shared surface tokens — white cards in light, unchanged slate cards in dark */
+const cardCls =
+  'rounded-2xl border border-slate-200 dark:border-slate-800/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_4px_16px_rgba(15,23,42,0.05)] ' +
+  'dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20'
+const cardHover =
+  'transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 ' +
+  'hover:shadow-[0_2px_4px_rgba(15,23,42,0.05),0_14px_30px_rgba(15,23,42,0.10)] dark:hover:shadow-black/40'
+const tableCls =
+  '[&_thead]:bg-white dark:bg-slate-800 dark:bg-slate-800/60 dark:[&_thead]:bg-slate-800/80 ' +
+  '[&_th]:text-[11px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wider [&_th]:text-slate-500 dark:text-slate-400 dark:[&_th]:text-slate-300 ' +
+  '[&_td]:border-slate-100 dark:[&_td]:border-slate-800 [&_td]:text-slate-700 dark:[&_td]:text-slate-200'
+
 /* ── Print purchase order ── */
 function printPO(purchase, suppliers) {
   const sup = suppliers.find(s => s.id === purchase.supplier) || {}
   const win = window.open('', '_blank')
   if (!win) return
+  const subtotal = (purchase.items || []).reduce((s, it) => s + Number(it.quantity || 0) * Number(it.purchase_price || 0), 0)
+  const total = Number(purchase.total_amount || 0)
+  const gstTotal = total - subtotal
+  const balance = dueOf(purchase)
   const rows = (purchase.items || []).map((it, i) => `
     <tr>
       <td>${i + 1}</td><td>${it.product_name || it.product}</td>
@@ -34,7 +64,7 @@ function printPO(purchase, suppliers) {
   h2{margin:0 0 4px}p{margin:2px 0;font-size:13px;color:#555}
   table{width:100%;border-collapse:collapse;margin-top:16px}
   th{background:#1e40af;color:#fff;padding:8px;font-size:12px;text-align:left}
-  td{padding:7px 8px;border-bottom:1px solid #e5e7eb;font-size:12px}
+  td{padding:7px 8px;border-bottom:1px solid #e9eef7;font-size:12px}
   .total{text-align:right;font-size:16px;font-weight:bold;margin-top:12px}
   .footer{margin-top:32px;font-size:11px;color:#94a3b8;text-align:center;border-top:1px solid #e5e7eb;padding-top:12px}
   @media print{button{display:none}}</style></head><body>
@@ -44,7 +74,10 @@ function printPO(purchase, suppliers) {
   <p>Payment: ${purchase.payment_status?.toUpperCase()}</p>
   <table><thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Price</th><th>GST</th><th>Total</th></tr></thead>
   <tbody>${rows}</tbody></table>
-  <div class="total">Grand Total: ₹${Number(purchase.total_amount).toFixed(2)}</div>
+  <div class="total" style="font-weight:normal;font-size:13px;color:#555">Subtotal: ₹${subtotal.toFixed(2)}</div>
+  <div class="total" style="font-weight:normal;font-size:13px;color:#555;margin-top:4px">GST: ₹${gstTotal.toFixed(2)}</div>
+  <div class="total" style="margin-top:8px">Grand Total: ₹${total.toFixed(2)}</div>
+  <div class="total" style="font-size:13px;margin-top:4px">Balance Due: ₹${balance.toFixed(2)}</div>
   <div class="footer">This is a computer generated purchase order.</div>
   <script>window.onload=()=>{window.print();window.close()}<\/script></body></html>`)
   win.document.close()
@@ -70,14 +103,14 @@ function SupplierModal({ open, onClose, initial, onSaved }) {
   }
   return (
     <Modal open={open} onClose={onClose} title={initial?.id ? 'Edit Supplier' : 'Add Supplier'} size="sm">
-      <div className="space-y-3">
-        <div><label className="label">Name *</label><input className="input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} autoFocus /></div>
-        <div className="grid grid-cols-2 gap-3">
-          <div><label className="label">Phone</label><input className="input" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} /></div>
-          <div><label className="label">Email</label><input className="input" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} /></div>
+      <div className="space-y-4">
+        <div><label className="label">Name *</label><input className={inputCls} value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} autoFocus /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div><label className="label">Phone</label><input className={inputCls} value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} /></div>
+          <div><label className="label">Email</label><input className={inputCls} value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} /></div>
         </div>
-        <div><label className="label">Address</label><textarea className="input" rows={2} value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} /></div>
-        <div><label className="label">GSTIN</label><input className="input" value={form.gstin} onChange={e => setForm(p => ({ ...p, gstin: e.target.value }))} /></div>
+        <div><label className="label">Address</label><textarea className={inputCls} rows={2} value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} /></div>
+        <div><label className="label">GSTIN</label><input className={inputCls} value={form.gstin} onChange={e => setForm(p => ({ ...p, gstin: e.target.value }))} /></div>
         <div className="flex gap-2 pt-1">
           <button onClick={save} disabled={saving} className="btn-primary flex-1"><Save size={14} />{saving ? 'Saving…' : 'Save Supplier'}</button>
           <button onClick={onClose} className="btn-secondary">Cancel</button>
@@ -92,26 +125,26 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
   const [expanded, setExpanded] = useState(false)
   const supProducts = products.filter(p => p.supplier === supplier.id)
   return (
-    <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
-      <div className="flex items-center justify-between p-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center flex-shrink-0">
-            <Building2 size={18} className="text-blue-600 dark:text-blue-400" />
+    <div className={`group overflow-hidden ${cardCls} ${cardHover}`}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 flex items-center justify-center flex-shrink-0">
+            <Building2 size={18} className="text-indigo-600 dark:text-indigo-300" />
           </div>
           <div className="min-w-0">
-            <div className="font-semibold text-[var(--ink)] truncate">{supplier.name}</div>
+            <div className="font-semibold text-slate-900 dark:text-slate-100 truncate">{supplier.name}</div>
             <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5">
-              {supplier.phone && <span className="text-xs text-[var(--muted-light)] flex items-center gap-1"><Phone size={10} />{supplier.phone}</span>}
-              {supplier.email && <span className="text-xs text-[var(--muted-light)] flex items-center gap-1"><Mail size={10} />{supplier.email}</span>}
-              {supplier.gstin && <span className="text-xs text-[var(--muted-light)]">GST: {supplier.gstin}</span>}
+              {supplier.phone && <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1"><Phone size={10} />{supplier.phone}</span>}
+              {supplier.email && <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1"><Mail size={10} />{supplier.email}</span>}
+              {supplier.gstin && <span className="text-xs text-slate-500 dark:text-slate-400">GST: {supplier.gstin}</span>}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex w-full items-center gap-1.5 flex-wrap sm:w-auto sm:flex-nowrap sm:flex-shrink-0">
           {supplier.outstanding_amount > 0 && (
-            <span className="text-xs bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 font-semibold px-2 py-1 rounded-lg">Due: {fmt(supplier.outstanding_amount)}</span>
+            <span className="text-xs bg-red-50 border border-red-100 dark:border-transparent dark:bg-red-950/60 text-red-600 dark:text-red-400 font-semibold px-2 py-1 rounded-lg">Due: {fmt(supplier.outstanding_amount)}</span>
           )}
-          <span className="text-xs bg-gray-100 text-[var(--muted)] px-2 py-1 rounded-lg">{supProducts.length} products</span>
+          <span className="text-xs bg-slate-100 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 px-2.5 py-1 rounded-full">{supProducts.length} products</span>
           <button onClick={() => onEdit(supplier)} className="icon-btn"><Edit2 size={14} /></button>
           <button onClick={() => onDelete(supplier)} className="icon-btn text-red-400"><Trash2 size={14} /></button>
           <button onClick={() => setExpanded(x => !x)} className="icon-btn">
@@ -120,19 +153,19 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
         </div>
       </div>
       {expanded && (
-        <div className="border-t border-[var(--line-subtle)] bg-[var(--surface-elevated)] px-4 py-3">
-          {supplier.address && <p className="text-xs text-[var(--muted)] flex items-start gap-1 mb-2"><MapPin size={11} className="mt-0.5 flex-shrink-0" />{supplier.address}</p>}
+        <div className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/60 text-slate-800 dark:text-slate-100 px-4 sm:px-5 py-4">
+          {supplier.address && <p className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-300 flex items-start gap-1 mb-2"><MapPin size={11} className="mt-0.5 flex-shrink-0" />{supplier.address}</p>}
           {supProducts.length === 0 ? (
-            <p className="text-xs text-[var(--muted-light)] py-2">No products linked to this supplier.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 py-2">No products linked to this supplier.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="table text-xs">
+              <table className={`table text-xs ${tableCls}`}>
                 <thead><tr><th>Product</th><th>SKU</th><th>Stock</th><th>Purchase Price</th><th>Selling Price</th><th>Status</th></tr></thead>
-                <tbody>
+                <tbody className="text-slate-800 dark:text-slate-100">
                   {supProducts.map(p => (
-                    <tr key={p.id}>
+                    <tr key={p.id} className="text-slate-800 dark:text-slate-100">
                       <td className="font-medium">{p.name}</td>
-                      <td className="font-mono text-[var(--muted)]">{p.sku}</td>
+                      <td className="font-mono text-slate-500 dark:text-slate-400 dark:text-slate-300">{p.sku}</td>
                       <td className={p.current_stock <= 0 ? 'text-red-600 dark:text-red-400 font-semibold' : p.current_stock <= p.minimum_stock ? 'text-orange-500 font-semibold' : 'text-green-600 dark:text-green-400'}>{p.current_stock}</td>
                       <td>{fmt(p.purchase_price)}</td>
                       <td>{fmt(p.selling_price)}</td>
@@ -197,16 +230,29 @@ export default function Purchases() {
     setForm(p => ({ ...p, items }))
   }
 
-  const grandTotal = form.items.reduce((s, i) => s + parseFloat(i.total || 0), 0)
+  const grandTotal = form.items.reduce((s, i) => s + (parseFloat(i.total) || 0), 0)
+  const subtotal = form.items.reduce((s, i) => s + (parseFloat(i.quantity) || 0) * (parseFloat(i.purchase_price) || 0), 0)
+  const gstTotal = grandTotal - subtotal
+  const paidNow = form.payment_status === 'paid' ? grandTotal
+    : form.payment_status === 'partial' ? (parseFloat(form.paid_amount) || 0) : 0
+  const balanceDue = Math.max(0, grandTotal - paidNow)
+  const paymentError =
+    form.payment_status !== 'partial' ? ''
+    : paidNow <= 0 ? 'Enter the amount paid so far'
+    : paidNow >= grandTotal ? 'Must be less than the total — choose "Paid" instead'
+    : ''
 
   const save = async () => {
     if (!form.supplier) return toast.error('Select a supplier')
     if (form.items.some(i => !i.product || !i.purchase_price)) return toast.error('Fill all item details')
+    if (form.items.some(i => !(parseFloat(i.quantity) > 0))) return toast.error('Quantity must be greater than zero')
+    if (grandTotal <= 0) return toast.error('Purchase total must be greater than zero')
+    if (paymentError) return toast.error(paymentError)
     setSaving(true)
     try {
       const payload = {
         ...form,
-        paid_amount: form.payment_status === 'paid' ? grandTotal : parseFloat(form.paid_amount) || 0,
+        paid_amount: Number(paidNow.toFixed(2)),
         items: form.items.map(i => ({
           product: parseInt(i.product),
           quantity: parseFloat(i.quantity),
@@ -246,11 +292,49 @@ export default function Purchases() {
     ? products.filter(p => String(p.supplier) === String(form.supplier))
     : products
 
+  const purchaseSummary = {
+    total: purchases.reduce((sum, p) => sum + Number(p.total_amount || 0), 0),
+    paid: purchases.reduce((sum, p) => sum + Number(p.paid_amount || 0), 0),
+    due: purchases.reduce((sum, p) => sum + dueOf(p), 0),
+    orders: purchases.length,
+  }
+
+  const summaryCards = [
+    {
+      label: 'Total Purchases',
+      value: fmt(purchaseSummary.total),
+      hint: 'Across all purchase orders',
+      icon: TrendingUp,
+      iconClass: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300',
+    },
+    {
+      label: 'Amount Paid',
+      value: fmt(purchaseSummary.paid),
+      hint: 'Settled with suppliers',
+      icon: Wallet,
+      iconClass: 'bg-emerald-50 text-emerald-600 dark:bg-indigo-500/15 dark:text-emerald-300',
+    },
+    {
+      label: 'Amount Due',
+      value: fmt(purchaseSummary.due),
+      hint: purchaseSummary.due > 0 ? 'Requires payment attention' : 'No outstanding balance',
+      icon: Clock3,
+      iconClass: 'bg-amber-50 text-amber-600 dark:bg-indigo-500/15 dark:text-amber-300',
+    },
+    {
+      label: 'Purchase Orders',
+      value: purchaseSummary.orders,
+      hint: `${suppliers.length} registered suppliers`,
+      icon: ClipboardList,
+      iconClass: 'bg-sky-50 text-sky-600 dark:bg-indigo-500/15 dark:text-sky-300',
+    },
+  ]
+
   return (
-    <div className="space-y-4">
-      <PageHeader title="Purchases" subtitle="Purchase orders, suppliers & stock-in"
+    <div className="space-y-6 px-3 sm:px-0  max-w-7xl mx-auto  py-6  bg">
+      <PageHeader title="Purchases" subtitle="Manage purchase orders, suppliers, payments and stock-in"
         action={
-          <div className="flex gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
             <button onClick={() => { setEditSupplier(null); setSupModal(true) }} className="btn-secondary flex items-center gap-2 text-sm">
               <Building2 size={15} /> Add Supplier
             </button>
@@ -261,11 +345,39 @@ export default function Purchases() {
         }
       />
 
+      {/* Purchase overview */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {summaryCards.map(({ label, value, hint, icon: Icon, iconClass }) => (
+          <div
+            key={label}
+            className={`group p-5 ${cardCls} ${cardHover}`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
+                <p className="mt-2 truncate text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 dark:text-white">{value}</p>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{hint}</p>
+              </div>
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconClass}`}>
+                <Icon size={18} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-[var(--line)] pb-0">
+      <div className="flex w-full max-w-full gap-1 overflow-x-auto sm:inline-flex sm:w-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         {[['orders', 'Purchase Orders'], ['suppliers', `Suppliers (${suppliers.length})`]].map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === key ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-[var(--muted)] hover:text-[var(--ink-secondary)]'}`}>
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
+              tab === key
+                ? 'bg-indigo-600 text-white shadow-sm dark:bg-indigo-500'
+                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'
+            }`}
+          >
             {label}
           </button>
         ))}
@@ -275,42 +387,53 @@ export default function Purchases() {
         <>
           {/* ── Purchase Orders Tab ── */}
           {tab === 'orders' && (
-            <div className="space-y-3">
-              <div className="relative">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" />
-                <input className="input pl-9 text-sm" placeholder="Search by supplier or invoice number…"
-                  value={poSearch} onChange={e => setPoSearch(e.target.value)} />
+            <div className="space-y-4">
+              <div className={`flex flex-col gap-3 p-3 ${cardCls} sm:flex-row sm:items-center`}>
+                <div className="relative flex-1">
+                  <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 dark:text-slate-400" />
+                  <input
+                    className="input h-11 w-full rounded-xl border-slate-300 bg-white pl-10 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:text-slate-400"
+                    placeholder="Search supplier or invoice number..."
+                    value={poSearch}
+                    onChange={e => setPoSearch(e.target.value)}
+                  />
+                </div>
+                <div className="flex shrink-0 items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <Filter size={14} />
+                  <span>{filteredPOs.length} result{filteredPOs.length !== 1 ? 's' : ''}</span>
+                </div>
               </div>
               {filteredPOs.length === 0 ? <EmptyState message="No purchase orders yet" /> : (
-                <Card>
-                  <div className="overflow-x-auto">
-                    <table className="table">
+                <Card className={`overflow-hidden ${cardCls} dark:text-slate-100`}>
+                  <div className="w-full max-w-full overflow-x-auto overscroll-x-contain">
+                    <table className={`table min-w-[900px] ${tableCls}`}>
                       <thead>
-                        <tr><th>PO #</th><th>Supplier</th><th>Invoice</th><th>Date</th><th>Total</th><th>Paid</th><th>Status</th><th>Actions</th></tr>
+                        <tr><th>PO #</th><th>Supplier</th><th>Invoice</th><th>Date</th><th>Total</th><th>Paid</th><th>Balance Due</th><th>Status</th><th>Actions</th></tr>
                       </thead>
-                      <tbody>
+                      <tbody className="text-slate-800 dark:text-slate-100">
                         {filteredPOs.map(p => (
-                          <>
-                            <tr key={p.id} className="cursor-pointer hover:bg-blue-50 dark:bg-blue-950/60" onClick={() => setExpandedPO(expandedPO === p.id ? null : p.id)}>
-                              <td className="font-mono text-blue-600 dark:text-blue-400 font-medium">PO-{p.id}</td>
+                          <Fragment key={p.id}>
+                            <tr className="text-slate-800 dark:text-slate-100 cursor-pointer hover:bg-blue-50/60 dark:hover:bg-slate-800/70 transition-colors" onClick={() => setExpandedPO(expandedPO === p.id ? null : p.id)}>
+                              <td className="font-mono text-indigo-700 dark:text-indigo-300 font-semibold">PO-{p.id}</td>
                               <td className="font-medium">{p.supplier_name || '—'}</td>
-                              <td className="text-sm text-[var(--muted)]">{p.invoice_number || '—'}</td>
-                              <td className="text-sm">{p.purchase_date}</td>
-                              <td className="font-semibold">{fmt(p.total_amount)}</td>
-                              <td className="text-sm">{fmt(p.paid_amount)}</td>
+                              <td className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-300">{p.invoice_number || '—'}</td>
+                              <td className="text-sm whitespace-nowrap">{fmtDate(p.purchase_date)}</td>
+                              <td className="font-semibold whitespace-nowrap">{fmt(p.total_amount)}</td>
+                              <td className="text-sm whitespace-nowrap">{fmt(p.paid_amount)}</td>
+                              <td className={`text-sm font-semibold whitespace-nowrap ${dueOf(p) > 0 ? 'text-amber-600 dark:text-amber-300' : 'text-slate-400 dark:text-slate-500 dark:text-slate-400'}`}>{fmt(dueOf(p))}</td>
                               <td><Badge status={p.payment_status} /></td>
                               <td>
                                 <button onClick={e => { e.stopPropagation(); printPO(p, suppliers) }}
-                                  className="icon-btn" title="Print PO"><Printer size={15} /></button>
+                                  className="icon-btn transition-colors hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-white dark:bg-slate-800 dark:bg-slate-800/600/15 dark:hover:text-indigo-300" title="Print purchase order"><Printer size={15} /></button>
                               </td>
                             </tr>
                             {expandedPO === p.id && (
-                              <tr key={`${p.id}-detail`}>
-                                <td colSpan={8} className="bg-blue-50 dark:bg-blue-950/60 px-4 py-3">
-                                  <div className="text-xs font-semibold text-[var(--muted)] mb-2">Items in PO-{p.id}</div>
-                                  <table className="table text-xs bg-[var(--surface)] rounded-lg overflow-hidden">
+                              <tr className="text-slate-800 dark:text-slate-100">
+                                <td colSpan={9} className="border-y border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 dark:bg-slate-800/60 px-3 py-4 dark:border-indigo-900/60 dark:bg-indigo-950/30 sm:px-4">
+                                  <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 dark:text-slate-300 mb-2">Items in PO-{p.id}</div>
+                                  <table className={`table text-xs bg-white dark:bg-slate-900 rounded-xl overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.06)] min-w-[560px] ${tableCls}`}>
                                     <thead><tr><th>#</th><th>Product</th><th>Qty</th><th>Price</th><th>GST</th><th>Total</th></tr></thead>
-                                    <tbody>
+                                    <tbody className="text-slate-800 dark:text-slate-100">
                                       {(p.items || []).map((it, idx) => (
                                         <tr key={idx}>
                                           <td>{idx + 1}</td>
@@ -323,11 +446,11 @@ export default function Purchases() {
                                       ))}
                                     </tbody>
                                   </table>
-                                  {p.notes && <p className="text-xs text-[var(--muted)] mt-2">Notes: {p.notes}</p>}
+                                  {p.notes && <p className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-300 mt-2">Notes: {p.notes}</p>}
                                 </td>
                               </tr>
                             )}
-                          </>
+                          </Fragment>
                         ))}
                       </tbody>
                     </table>
@@ -339,19 +462,19 @@ export default function Purchases() {
 
           {/* ── Suppliers Tab ── */}
           {tab === 'suppliers' && (
-            <div className="space-y-3">
-              <div className="flex gap-2">
+            <div className="space-y-4">
+              <div className={`flex flex-col gap-3 p-3 ${cardCls} sm:flex-row`}>
                 <div className="relative flex-1">
-                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" />
-                  <input className="input pl-9 text-sm" placeholder="Search suppliers…"
+                  <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 dark:text-slate-400" />
+                  <input className="input h-11 w-full rounded-xl border-slate-300 bg-white pl-10 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:text-slate-400" placeholder="Search suppliers..."
                     value={supSearch} onChange={e => setSupSearch(e.target.value)} />
                 </div>
-                <button onClick={() => { setEditSupplier(null); setSupModal(true) }} className="btn-primary flex items-center gap-2 text-sm">
+                <button onClick={() => { setEditSupplier(null); setSupModal(true) }} className="btn-primary w-full justify-center flex items-center gap-2 text-sm sm:w-auto">
                   <Plus size={14} /> Add Supplier
                 </button>
               </div>
               {filteredSuppliers.length === 0 ? <EmptyState message="No suppliers found" /> : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {filteredSuppliers.map(s => (
                     <SupplierCard key={s.id} supplier={s} products={products}
                       onEdit={sup => { setEditSupplier(sup); setSupModal(true) }}
@@ -367,82 +490,94 @@ export default function Purchases() {
 
       {/* ── New Purchase Modal ── */}
       <Modal open={modal} onClose={() => { setModal(false); setForm(emptyForm) }} title="New Purchase Order" size="xl">
-        <div className="space-y-4">
-          {/* Header fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="sm:col-span-2 lg:col-span-1">
-              <label className="label">Supplier *</label>
-              <div className="flex gap-2">
-                <select className="input flex-1" value={form.supplier} onChange={e => setForm(p => ({ ...p, supplier: e.target.value }))}>
-                  <option value="">Select supplier</option>
-                  {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+        <div className="space-y-5 rounded-2xl bg-white dark:bg-slate-950 p-4 text-slate-900 dark:text-slate-100 transition-colors duration-300 dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-100 sm:p-5">
+
+          {/* Order details */}
+          <section className={`${cardCls} p-4 sm:p-5`}>
+            <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Order details</h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="sm:col-span-2 lg:col-span-1">
+                <label className="label">Supplier *</label>
+                <div className="flex flex-wrap gap-2">
+                  <select className={`${inputCls} flex-1`} value={form.supplier} onChange={e => setForm(p => ({ ...p, supplier: e.target.value }))}>
+                    <option className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100" value="">Select supplier</option>
+                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                  <button onClick={() => { setEditSupplier(null); setSupModal(true) }} className="btn-secondary px-2" title="Add new supplier">
+                    <Plus size={14} />
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="label">Invoice No.</label>
+                <input className={inputCls} value={form.invoice_number} onChange={e => setForm(p => ({ ...p, invoice_number: e.target.value }))} placeholder="Supplier's invoice #" />
+              </div>
+              <div>
+                <label className="label">Date</label>
+                <input type="date" className={inputCls} value={form.purchase_date} onChange={e => setForm(p => ({ ...p, purchase_date: e.target.value }))} />
+              </div>
+              <div>
+                <label className="label">Payment</label>
+                <select className={inputCls} value={form.payment_status} onChange={e => setForm(p => ({ ...p, payment_status: e.target.value }))}>
+                  <option className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100" value="paid">Paid</option>
+                  <option className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100" value="pending">Pending</option>
+                  <option className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100" value="partial">Partial</option>
                 </select>
-                <button onClick={() => { setEditSupplier(null); setSupModal(true) }} className="btn-secondary px-2" title="Add new supplier">
-                  <Plus size={14} />
-                </button>
               </div>
             </div>
-            <div>
-              <label className="label">Invoice No.</label>
-              <input className="input" value={form.invoice_number} onChange={e => setForm(p => ({ ...p, invoice_number: e.target.value }))} placeholder="Supplier's invoice #" />
-            </div>
-            <div>
-              <label className="label">Date</label>
-              <input type="date" className="input" value={form.purchase_date} onChange={e => setForm(p => ({ ...p, purchase_date: e.target.value }))} />
-            </div>
-            <div>
-              <label className="label">Payment</label>
-              <select className="input" value={form.payment_status} onChange={e => setForm(p => ({ ...p, payment_status: e.target.value }))}>
-                <option value="paid">Paid</option>
-                <option value="pending">Pending</option>
-                <option value="partial">Partial</option>
-              </select>
-            </div>
-          </div>
 
-          {form.payment_status === 'partial' && (
-            <div className="max-w-xs">
-              <label className="label">Paid Amount</label>
-              <input type="number" className="input" value={form.paid_amount} onChange={e => setForm(p => ({ ...p, paid_amount: e.target.value }))} />
-            </div>
-          )}
+            {form.payment_status === 'partial' && (
+              <div className="mt-3 max-w-xs">
+                <label className="label">Paid Amount</label>
+                <input
+                  type="number" min="0" step="0.01"
+                  className={paymentError ? inputCls.replace('border-slate-300', 'border-red-400').replace('dark:border-slate-700', 'dark:border-red-500') : inputCls}
+                  value={form.paid_amount}
+                  onChange={e => setForm(p => ({ ...p, paid_amount: e.target.value }))}
+                />
+                {paymentError
+                  ? <p className="mt-1 text-xs text-red-600 dark:text-red-400">{paymentError}</p>
+                  : <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Balance due: ₹{fmt2(balanceDue)}</p>}
+              </div>
+            )}
+          </section>
 
           {/* Items */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-semibold text-sm text-[var(--ink-secondary)]">Items</span>
+          <section className={`${cardCls} overflow-hidden`}>
+            <div className="flex items-center justify-between px-4 py-3 sm:px-5">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Items</h3>
               <button onClick={() => setForm(p => ({ ...p, items: [...p.items, { product: '', quantity: 1, purchase_price: '', gst_percent: 0, total: 0 }] }))}
-                className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                className="text-sm font-medium text-indigo-600 dark:text-blue-400 hover:underline flex items-center gap-1">
                 <Plus size={13} /> Add Item
               </button>
             </div>
-            <div className="overflow-x-auto rounded-lg border border-[var(--line)]">
-              <table className="table">
+            <div className="w-full max-w-full overflow-x-auto border-t border-slate-100 dark:border-slate-800">
+              <table className={`table min-w-[980px] ${tableCls}`}>
                 <thead>
                   <tr><th>Product</th><th>Qty</th><th>Purchase Price</th><th>GST%</th><th>Total</th><th></th></tr>
                 </thead>
-                <tbody>
+                <tbody className="text-slate-800 dark:text-slate-100">
                   {form.items.map((item, i) => (
                     <tr key={i}>
                       <td className="min-w-48">
-                        <select className="input text-sm" value={item.product} onChange={e => updateItem(i, 'product', e.target.value)}>
-                          <option value="">Select product</option>
+                        <select className={`${inputCls} text-sm`} value={item.product} onChange={e => updateItem(i, 'product', e.target.value)}>
+                          <option className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100" value="">Select product</option>
                           {(form.supplier && supplierProducts.length > 0 ? supplierProducts : products).map(p => (
                             <option key={p.id} value={p.id}>{p.name} (Stock: {p.current_stock})</option>
                           ))}
                         </select>
                       </td>
-                      <td><input type="number" className="input text-sm w-20" min="0.01" step="0.01" value={item.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)} /></td>
-                      <td><input type="number" className="input text-sm w-28" min="0" step="0.01" value={item.purchase_price} onChange={e => updateItem(i, 'purchase_price', e.target.value)} /></td>
+                      <td><input type="number" className={`${inputCls} text-sm w-20`} min="0.01" step="0.01" value={item.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)} /></td>
+                      <td><input type="number" className={`${inputCls} text-sm w-28`} min="0" step="0.01" value={item.purchase_price} onChange={e => updateItem(i, 'purchase_price', e.target.value)} /></td>
                       <td>
-                        <select className="input text-sm w-20" value={item.gst_percent} onChange={e => updateItem(i, 'gst_percent', e.target.value)}>
+                        <select className={`${inputCls} text-sm w-20`} value={item.gst_percent} onChange={e => updateItem(i, 'gst_percent', e.target.value)}>
                           {[0, 5, 12, 18, 28].map(g => <option key={g} value={g}>{g}%</option>)}
                         </select>
                       </td>
-                      <td className="font-semibold text-sm text-green-700">₹{item.total}</td>
+                      <td className="font-semibold text-sm text-green-700 dark:text-green-300">₹{fmt2(item.total)}</td>
                       <td>
                         <button onClick={() => setForm(p => ({ ...p, items: p.items.filter((_, j) => j !== i) }))}
-                          className="text-red-400 hover:text-red-600 dark:text-red-400 p-1" disabled={form.items.length === 1}>
+                          className="text-red-400 hover:text-red-600 dark:text-red-400 p-1 disabled:opacity-40" disabled={form.items.length === 1}>
                           <Trash2 size={14} />
                         </button>
                       </td>
@@ -451,26 +586,48 @@ export default function Purchases() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </section>
 
-          {/* Notes + Total */}
-          <div className="flex flex-col sm:flex-row gap-4 items-start justify-between">
-            <div className="flex-1">
+          {/* Notes + payment summary */}
+          <div className="flex flex-col items-stretch gap-4 lg:flex-row lg:items-start">
+            <section className={`${cardCls} flex-1 p-4 sm:p-5`}>
               <label className="label">Notes</label>
-              <textarea className="input" rows={2} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Optional notes…" />
-            </div>
-            <div className="bg-blue-50 dark:bg-blue-950/60 border border-blue-100 rounded-xl p-4 text-right min-w-48">
-              <div className="text-xs text-[var(--muted)] mb-1">Grand Total</div>
-              <div className="text-2xl font-bold text-blue-700">₹{grandTotal.toFixed(2)}</div>
-              <div className="text-xs text-[var(--muted-light)] mt-1">{form.items.length} item{form.items.length !== 1 ? 's' : ''}</div>
-            </div>
+              <textarea className={inputCls} rows={4} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Optional notes…" />
+            </section>
+
+            <section className={`${cardCls} w-full p-4 sm:p-5 lg:w-80`}>
+              <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">Payment summary</h3>
+              <dl className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <dt className="text-slate-500 dark:text-slate-400">Subtotal</dt>
+                  <dd className="font-medium text-slate-800 dark:text-slate-100">₹{fmt2(subtotal)}</dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-slate-500 dark:text-slate-400">GST</dt>
+                  <dd className="font-medium text-slate-800 dark:text-slate-100">₹{fmt2(gstTotal)}</dd>
+                </div>
+                <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-3 dark:border-slate-700">
+                  <dt className="font-semibold text-slate-900 dark:text-slate-100">Grand total</dt>
+                  <dd className="text-xl font-bold text-indigo-700 dark:text-indigo-200">₹{fmt2(grandTotal)}</dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-slate-500 dark:text-slate-400">Paid</dt>
+                  <dd className="font-medium text-slate-800 dark:text-slate-100">₹{fmt2(paidNow)}</dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-slate-500 dark:text-slate-400">Balance due</dt>
+                  <dd className={`font-semibold ${balanceDue > 0 ? 'text-amber-600 dark:text-amber-300' : 'text-emerald-600 dark:text-emerald-300'}`}>₹{fmt2(balanceDue)}</dd>
+                </div>
+              </dl>
+              <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">{form.items.length} item{form.items.length !== 1 ? 's' : ''}</p>
+            </section>
           </div>
 
-          <div className="flex gap-3">
-            <button onClick={save} disabled={saving} className="btn-primary flex-1 h-11">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:gap-3">
+            <button onClick={save} disabled={saving} className="btn-primary min-h-11 w-full flex-1 justify-center">
               <Package size={16} />{saving ? 'Saving…' : 'Save Purchase & Update Stock'}
             </button>
-            <button onClick={() => { setModal(false); setForm(emptyForm) }} className="btn-secondary px-6">Cancel</button>
+            <button onClick={() => { setModal(false); setForm(emptyForm) }} className="btn-secondary min-h-11 w-full px-6 sm:w-auto">Cancel</button>
           </div>
         </div>
       </Modal>

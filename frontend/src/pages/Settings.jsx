@@ -8,11 +8,11 @@ import { QRCodeSVG } from 'qrcode.react'
 function F({ label, children, full, hint }) {
   return (
     <div className={`${full ? 'sm:col-span-2' : ''} min-w-0`}>
-      <label className="block mb-1.5 text-xs font-semibold tracking-wide text-slate-600">
+      <label className="block mb-1.5 text-xs font-semibold tracking-wide text-[var(--muted)]">
         {label}
       </label>
       {children}
-      {hint && <p className="mt-1.5 text-[11px] leading-4 text-slate-400">{hint}</p>}
+      {hint && <p className="mt-1.5 text-[11px] leading-4 text-[var(--muted-light)]">{hint}</p>}
     </div>
   )
 }
@@ -21,7 +21,7 @@ function Inp({ value, onChange, mono, maxLength, type = 'text', placeholder }) {
   return (
     <input
       type={type}
-      className={`w-full min-h-11 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 shadow-sm outline-none transition-all focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 hover:border-slate-300 ${mono ? 'font-mono tracking-tight' : ''}`}
+      className={`w-full min-h-11 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-sm text-[var(--ink)] placeholder:text-[var(--muted-light)] shadow-sm outline-none transition-all focus:border-[var(--ink)] focus:ring-4 focus:ring-[var(--ink)]/10 hover:border-[var(--muted-light)] ${mono ? 'font-mono tracking-tight' : ''}`}
       value={value || ''}
       onChange={e => onChange(e.target.value)}
       maxLength={maxLength}
@@ -33,7 +33,7 @@ function Inp({ value, onChange, mono, maxLength, type = 'text', placeholder }) {
 function Sel({ value, onChange, options }) {
   return (
     <select
-      className="w-full min-h-11 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-800 shadow-sm outline-none transition-all focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 hover:border-slate-300"
+      className="w-full min-h-11 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-sm text-[var(--ink)] shadow-sm outline-none transition-all focus:border-[var(--ink)] focus:ring-4 focus:ring-[var(--ink)]/10 hover:border-[var(--muted-light)]"
       value={value || ''}
       onChange={e => onChange(e.target.value)}
     >
@@ -45,7 +45,7 @@ function Sel({ value, onChange, options }) {
 function Txt({ value, onChange, rows = 3, placeholder }) {
   return (
     <textarea
-      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-5 text-slate-800 placeholder:text-slate-400 shadow-sm outline-none transition-all focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 hover:border-slate-300 resize-y"
+      className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-sm leading-5 text-[var(--ink)] placeholder:text-[var(--muted-light)] shadow-sm outline-none transition-all focus:border-[var(--ink)] focus:ring-4 focus:ring-[var(--ink)]/10 hover:border-[var(--muted-light)] resize-y"
       rows={rows}
       value={value || ''}
       onChange={e => onChange(e.target.value)}
@@ -65,10 +65,10 @@ const TABS = [
 
 function Section({ title, description, children }) {
   return (
-    <Card className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-4 py-3.5 sm:px-5">
-        <h3 className="text-sm font-bold text-slate-800">{title}</h3>
-        {description && <p className="mt-0.5 text-[11px] leading-4 text-slate-500">{description}</p>}
+    <Card className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
+      <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-3.5 sm:px-5">
+        <h3 className="text-sm font-bold text-[var(--ink)]">{title}</h3>
+        {description && <p className="mt-0.5 text-[11px] leading-4 text-[var(--muted)]">{description}</p>}
       </div>
       <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">{children}</div>
     </Card>
@@ -77,7 +77,7 @@ function Section({ title, description, children }) {
 
 function Toggle({ checked, onChange, label, description }) {
   return (
-    <label className="group flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 transition-all hover:border-indigo-200 hover:bg-indigo-50/40">
+    <label className="group flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-3 transition-all hover:border-[var(--muted-light)] hover:bg-[var(--surface-hover)]/40">
       <span className="relative mt-0.5 flex-shrink-0">
         <input
           type="checkbox"
@@ -85,12 +85,12 @@ function Toggle({ checked, onChange, label, description }) {
           onChange={onChange}
           className="peer sr-only"
         />
-        <span className="block h-6 w-11 rounded-full bg-slate-300 transition-colors peer-checked:bg-indigo-600 peer-focus-visible:ring-4 peer-focus-visible:ring-indigo-500/20" />
-        <span className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-5" />
+        <span className="block h-6 w-11 rounded-full bg-slate-300 transition-colors peer-checked:bg-[var(--ink)] peer-focus-visible:ring-4 peer-focus-visible:ring-indigo-500/20" />
+        <span className="absolute left-1 top-1 h-4 w-4 rounded-full bg-[var(--surface)] shadow-sm transition-transform peer-checked:translate-x-5" />
       </span>
       <span className="min-w-0">
-        <span className="block text-sm font-medium text-slate-700">{label}</span>
-        {description && <span className="mt-0.5 block text-[11px] leading-4 text-slate-400">{description}</span>}
+        <span className="block text-sm font-medium text-[var(--ink-secondary)]">{label}</span>
+        {description && <span className="mt-0.5 block text-[11px] leading-4 text-[var(--muted-light)]">{description}</span>}
       </span>
     </label>
   )
@@ -124,15 +124,15 @@ function BusinessTab({ s, set, onLogoUpload, onLogoRemove, uploading, removing }
 
   return (
     <div className="space-y-4">
-      <Card className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 bg-gradient-to-r from-indigo-50 via-white to-white px-4 py-4 sm:px-5">
+      <Card className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
+        <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-4 sm:px-5">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--surface-hover)] text-[var(--ink)]">
               <ImageIcon size={17} />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-800">Business Logo</h3>
-              <p className="text-[11px] text-slate-500">Used on invoices, receipts and reports</p>
+              <h3 className="text-sm font-bold text-[var(--ink)]">Business Logo</h3>
+              <p className="text-[11px] text-[var(--muted)]">Used on invoices, receipts and reports</p>
             </div>
           </div>
         </div>
@@ -140,7 +140,7 @@ function BusinessTab({ s, set, onLogoUpload, onLogoRemove, uploading, removing }
           <div className="flex flex-col items-center gap-2 flex-shrink-0">
             <div
               onClick={() => fileRef.current?.click()}
-              className="w-32 h-32 rounded-xl border border-[var(--line)] bg-white flex flex-col items-center justify-center overflow-hidden cursor-pointer hover:border-[var(--muted-light)] transition-colors group relative"
+              className="w-32 h-32 rounded-xl border border-[var(--line)] bg-[var(--surface)] flex flex-col items-center justify-center overflow-hidden cursor-pointer hover:border-[var(--muted-light)] transition-colors group relative"
             >
               {previewUrl ? (
                 <img src={previewUrl} alt="Shop logo" className="w-full h-full object-contain p-2" />
@@ -154,14 +154,14 @@ function BusinessTab({ s, set, onLogoUpload, onLogoRemove, uploading, removing }
                 <Upload size={20} className="text-white" />
               </div>
             </div>
-            <span className="text-[11px] font-medium text-slate-400">Tap image to change</span>
+            <span className="text-[11px] font-medium text-[var(--muted-light)]">Tap image to change</span>
           </div>
 
           <div className="flex-1 min-w-0 flex flex-col justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-slate-800 mb-0.5">Shop / Brand Logo</p>
-              <p className="text-xs text-slate-500">PNG · JPG · WEBP · Square recommended · Max 2 MB</p>
-              <p className="text-xs text-slate-400 mt-0.5">Keep the logo simple for clear printing.</p>
+              <p className="text-sm font-semibold text-[var(--ink)] mb-0.5">Shop / Brand Logo</p>
+              <p className="text-xs text-[var(--muted)]">PNG · JPG · WEBP · Square recommended · Max 2 MB</p>
+              <p className="text-xs text-[var(--muted-light)] mt-0.5">Keep the logo simple for clear printing.</p>
             </div>
 
             {fileInfo && (
@@ -320,7 +320,7 @@ function InvoiceTab({ s, set }) {
         </F>
       </Section>
 
-      <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <Card className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm sm:p-5">
         <h3 className="text-[11px] font-700 uppercase tracking-widest text-[var(--muted)] mb-4">UPI QR on Invoice</h3>
         <div className="grid sm:grid-cols-2 gap-3">
           <F label="UPI ID">
@@ -352,8 +352,8 @@ function InvoiceTab({ s, set }) {
             ))}
           </div>
           {s.shop_upi_id && (
-            <div className="sm:col-span-2 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-              <div className="w-9 h-9 bg-white rounded-lg border border-[var(--line)] flex items-center justify-center shrink-0">
+            <div className="sm:col-span-2 flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-3">
+              <div className="w-9 h-9 bg-[var(--surface)] rounded-lg border border-[var(--line)] flex items-center justify-center shrink-0">
                 <span className="text-base">📱</span>
               </div>
               <div>
@@ -365,10 +365,10 @@ function InvoiceTab({ s, set }) {
         </div>
       </Card>
 
-      <Card className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-4 sm:px-5">
-          <h3 className="text-sm font-bold text-slate-800">Invoice Preview</h3>
-          <p className="mt-0.5 text-xs text-slate-500">Live sample — updates as you change settings above.</p>
+      <Card className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
+        <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-4 sm:px-5">
+          <h3 className="text-sm font-bold text-[var(--ink)]">Invoice Preview</h3>
+          <p className="mt-0.5 text-xs text-[var(--muted)]">Live sample — updates as you change settings above.</p>
         </div>
         <div className="p-4 sm:p-5">
         <BillPreviewTab s={s} embedded />
@@ -404,7 +404,7 @@ function GstTab({ s, set }) {
         </F>
       </Section>
 
-      <Card className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <Card className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm sm:p-5">
         <h3 className="text-[11px] font-700 uppercase tracking-widest text-[var(--muted)] mb-4">Feature Flags</h3>
         <div className="grid sm:grid-cols-2 gap-3">
           {[
@@ -560,8 +560,8 @@ function BillPreviewTab({ s, embedded = false }) {
         <button key={m} type="button" onClick={() => setMode(m)}
           className={`min-h-10 rounded-xl border px-3.5 text-xs font-semibold transition-all ${
             mode === m
-              ? 'border-indigo-600 bg-indigo-600 text-white shadow-sm'
-              : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:bg-indigo-50/50'
+              ? 'border-[var(--ink)] bg-[var(--ink)] text-white shadow-sm'
+              : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--muted-light)] hover:bg-[var(--surface-hover)]/50'
           }`}>
           {m === 'a4' ? 'A4 Invoice' : 'Thermal Receipt'}
         </button>
@@ -575,7 +575,7 @@ function BillPreviewTab({ s, embedded = false }) {
       <div>
         {modePicker}
         <div className="flex justify-center">
-          <div className="bg-white text-black shadow border border-gray-200"
+          <div className="bg-[var(--surface)] text-black shadow border border-gray-200"
             style={{ width: 302, fontFamily: 'Courier New, monospace', fontSize: 11, padding: '12px 10px' }}>
             <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 13, marginBottom: 2 }}>{shopName.toUpperCase()}</div>
             {address.split('\n').map((l, i) => <div key={i} style={{ textAlign: 'center', fontSize: 10 }}>{l}</div>)}
@@ -631,7 +631,7 @@ function BillPreviewTab({ s, embedded = false }) {
     <div>
       {modePicker}
       <div className="overflow-x-auto">
-        <div className="bg-white text-black shadow border border-gray-200 mx-auto"
+        <div className="bg-[var(--surface)] text-black shadow border border-gray-200 mx-auto"
           style={{ width: 794, minHeight: 500, fontFamily: a4Font, fontSize: 12, padding: '24px 28px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
             <div style={{ flex: 1 }}>
@@ -800,10 +800,10 @@ export default function Settings() {
   }
 
   if (loading) return (
-    <div className="flex min-h-[60vh] items-center justify-center bg-slate-50/60">
+    <div className="flex min-h-[60vh] items-center justify-center bg-[var(--page)]">
       <div className="flex flex-col items-center gap-3">
-        <div className="h-9 w-9 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600" />
-        <span className="text-xs font-medium text-slate-500">Loading settings…</span>
+        <div className="h-9 w-9 animate-spin rounded-full border-4 border-[var(--line)] border-t-[var(--ink)]" />
+        <span className="text-xs font-medium text-[var(--muted)]">Loading settings…</span>
       </div>
     </div>
   )
@@ -811,7 +811,7 @@ export default function Settings() {
   const tabProps = { s, set }
 
   return (
-    <div className="min-h-full bg-slate-50/60 pb-24 lg:pb-8">
+    <div className="min-h-full bg-[var(--page)] pb-24 lg:pb-8">
       <div className="mb-4 sm:mb-5">
         <PageHeader
           title="Settings"
@@ -820,7 +820,7 @@ export default function Settings() {
             <button
               onClick={save}
               disabled={saving}
-              className="hidden min-h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 sm:flex"
+              className="hidden min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--ink)] px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--ink-secondary)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 sm:flex"
             >
               {saving
                 ? <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />Saving…</>
@@ -832,7 +832,7 @@ export default function Settings() {
 
       {/* Mobile: compact 2-column navigation. Desktop: vertical sidebar. */}
       <div className="grid gap-4 lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-5">
-        <Card className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm lg:sticky lg:top-4">
+        <Card className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-sm lg:sticky lg:top-4">
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-1">
             {TABS.map(({ id, label, Icon }) => (
               <button
@@ -840,12 +840,12 @@ export default function Settings() {
                 onClick={() => setTab(id)}
                 className={`group flex min-h-[58px] items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-all sm:px-3 lg:min-h-11 ${
                   tab === id
-                    ? 'bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-100'
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                    ? 'bg-[var(--surface-hover)] text-[var(--ink)] ring-1 ring-inset ring-[var(--line)]'
+                    : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
                 }`}
               >
                 <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-colors ${
-                  tab === id ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'
+                  tab === id ? 'bg-[var(--ink)] text-white shadow-sm' : 'bg-[var(--surface-hover)] text-[var(--muted)] group-hover:bg-slate-200'
                 }`}>
                   <Icon size={16} />
                 </span>
@@ -866,17 +866,17 @@ export default function Settings() {
       </div>
 
       {/* Always reachable on mobile. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur sm:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--line)] bg-[var(--surface)]/95 p-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur sm:hidden">
         <button
           onClick={save}
           disabled={saving}
-          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--ink)] px-4 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--ink-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saving
             ? <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />Saving changes…</>
             : 'Save Changes'}
         </button>
       </div>
-    </div>
+    </div >
   )
 }

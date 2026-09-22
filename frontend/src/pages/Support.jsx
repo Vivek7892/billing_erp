@@ -176,7 +176,7 @@ export default function Support() {
             href="https://vivekv.me/"
             target="_blank"
             rel="noreferrer"
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-indigo-200 bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300 shadow-[var(--shadow-card)] transition hover:border-indigo-300 hover:bg-indigo-50 dark:bg-indigo-950/60"
+            className=""
           >
             Meet the developer
             <ExternalLink size={13} />
@@ -193,20 +193,20 @@ export default function Support() {
               Choose the fastest way to reach us.
             </p>
           </div>
-          <span className="hidden rounded-full bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 sm:inline-flex">
+          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:text-blue-300">
             We're here to help
           </span>
         </div>
       </section>
 
       {/* Hero / Search */}
-      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-600 to-indigo-700 p-4 text-white shadow-[var(--shadow-card)] sm:p-7">
+      <section className="">
         <div className="max-w-3xl">
           <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[var(--surface)]/15 px-3 py-1 text-xs font-medium backdrop-blur">
             <ShieldCheck size={14} />
             {totalQuestions}+ helpful answers
           </div>
-          <h2 className="text-xl font-bold sm:text-2xl text-white">How can we help?</h2>
+          <h2 className="text-xl font-bold sm:text-2xl text-whit">How can we help?</h2>
           <p className="mt-1.5 max-w-2xl text-sm leading-6 text-blue-100">
             Search billing, inventory, invoices, reports, payments, and settings.
           </p>

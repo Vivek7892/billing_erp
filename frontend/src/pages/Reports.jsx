@@ -196,7 +196,7 @@ export default function Reports() {
   )
 
   return (
-    <div className="space-y-3 sm:space-y-4 w-full min-w-0">
+    <div className="reports-page space-y-5 sm:space-y-6 w-full min-w-0 pb-8">
 
       {/* PAGE HEADER */}
       <PageHeader
@@ -226,15 +226,16 @@ export default function Reports() {
             className={`
               px-4
               py-2
-              rounded-lg
+              rounded-xl
               text-sm
-              font-medium
+              font-semibold
+              transition-all duration-200
               flex-shrink-0
               whitespace-nowrap
               ${
                 tab === t.key
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20 ring-1 ring-blue-500/20'
+                  : 'bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] hover:border-blue-300 dark:hover:border-blue-700'
               }
             `}
           >
@@ -297,7 +298,7 @@ export default function Reports() {
 
       {/* DATE / CALENDAR FILTER */}
       {tab !== 'customers' && (
-        <Card className="p-3 sm:p-4">
+        <Card className="p-4 sm:p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
           <div className="
             flex
             flex-col
@@ -470,7 +471,7 @@ function SalesReport({ data }) {
         sm:gap-4
       ">
 
-        <Card className="p-3 sm:p-4 text-center">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
           <div className="
             text-lg
             sm:text-2xl
@@ -486,7 +487,7 @@ function SalesReport({ data }) {
           </div>
         </Card>
 
-        <Card className="p-3 sm:p-4 text-center">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
           <div className="
             text-lg
             sm:text-2xl
@@ -501,7 +502,7 @@ function SalesReport({ data }) {
           </div>
         </Card>
 
-        <Card className="p-3 sm:p-4 text-center">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
           <div className="
             text-lg
             sm:text-2xl
@@ -517,7 +518,7 @@ function SalesReport({ data }) {
           </div>
         </Card>
 
-        <Card className="p-3 sm:p-4 text-center">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
           <div className="
             text-lg
             sm:text-2xl
@@ -533,28 +534,28 @@ function SalesReport({ data }) {
           </div>
         </Card>
 
-        <Card className="p-3 sm:p-4 text-center">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
           <div className="text-lg sm:text-2xl font-bold text-indigo-600 break-words">
             {fmt(data.summary?.net_sales)}
           </div>
           <div className="text-sm text-[var(--muted)]">Net Sales</div>
         </Card>
 
-        <Card className="p-3 sm:p-4 text-center">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
           <div className="text-lg sm:text-2xl font-bold text-blue-600 dark:text-blue-400 break-words">
             {fmt(data.summary?.returns)}
           </div>
           <div className="text-sm text-[var(--muted)]">Returns</div>
         </Card>
 
-        <Card className="p-3 sm:p-4 text-center">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
           <div className="text-lg sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 break-words">
             {fmt(data.summary?.collection)}
           </div>
           <div className="text-sm text-[var(--muted)]">Collection</div>
         </Card>
 
-        <Card className="p-3 sm:p-4 text-center">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
           <div className="text-lg sm:text-2xl font-bold text-rose-600 dark:text-rose-400 break-words">
             {fmt(data.summary?.outstanding)}
           </div>
@@ -570,7 +571,7 @@ function SalesReport({ data }) {
         min-w-0
         overflow-hidden
       ">
-        <h3 className="font-semibold mb-3 sm:mb-4 text-[var(--ink)]">
+        <h3 className="text-base sm:text-lg font-bold mb-4 text-[var(--ink)] tracking-tight">
           Daily Sales
         </h3>
 
@@ -622,14 +623,14 @@ function ProductReport({ data }) {
     : (data?.results ?? [])
 
   return (
-    <Card className="p-3 sm:p-5 min-w-0">
+    <Card className="p-4 sm:p-6 min-w-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
 
-      <h3 className="font-semibold mb-4 text-[var(--ink)]">
+      <h3 className="text-base sm:text-lg font-bold mb-4 text-[var(--ink)] tracking-tight">
         Product Sales
       </h3>
 
       <div className="overflow-x-auto">
-        <table className="table min-w-[560px]">
+        <table className="table min-w-[640px]">
 
           <thead>
             <tr>
@@ -640,7 +641,7 @@ function ProductReport({ data }) {
             </tr>
           </thead>
 
-          <tbody>
+          <tbody className="divide-y divide-[var(--line)]">
 
             {!rows.length && (
               <EmptyRows
@@ -703,7 +704,7 @@ function ProfitReport({ data }) {
         sm:gap-4
       ">
 
-        <Card className="p-3 sm:p-4 text-center">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
           <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
             {fmt(data.total_revenue)}
           </div>
@@ -713,7 +714,7 @@ function ProfitReport({ data }) {
           </div>
         </Card>
 
-        <Card className="p-3 sm:p-4 text-center">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
           <div className="text-2xl font-bold text-red-500">
             {fmt(data.total_cost)}
           </div>
@@ -723,7 +724,7 @@ function ProfitReport({ data }) {
           </div>
         </Card>
 
-        <Card className="p-3 sm:p-4 text-center">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
           <div className="text-2xl font-bold text-green-600 dark:text-green-400">
             {fmt(data.total_profit)}
           </div>
@@ -736,7 +737,7 @@ function ProfitReport({ data }) {
       </div>
 
       {/* PROFIT TABLE */}
-      <Card className="p-3 sm:p-5 min-w-0">
+      <Card className="p-4 sm:p-6 min-w-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
 
         <div className="
           overflow-x-auto
@@ -744,7 +745,7 @@ function ProfitReport({ data }) {
           px-1
         ">
 
-          <table className="table min-w-[560px]">
+          <table className="table min-w-[640px]">
 
             <thead>
               <tr>
@@ -756,7 +757,7 @@ function ProfitReport({ data }) {
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="divide-y divide-[var(--line)]">
 
               {!data.items?.length && (
                 <EmptyRows
@@ -841,7 +842,7 @@ function GSTReport({ data }) {
       </Card>
 
       {/* GST TABLE */}
-      <Card className="p-3 sm:p-5 min-w-0">
+      <Card className="p-4 sm:p-6 min-w-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
 
         <div className="
           overflow-x-auto
@@ -849,7 +850,7 @@ function GSTReport({ data }) {
           px-1
         ">
 
-          <table className="table min-w-[560px]">
+          <table className="table min-w-[640px]">
 
             <thead>
               <tr>
@@ -859,7 +860,7 @@ function GSTReport({ data }) {
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="divide-y divide-[var(--line)]">
 
               {!data.by_rate?.length && (
                 <EmptyRows
@@ -927,7 +928,7 @@ function CustomerCreditReport({ data }) {
       </Card>
 
       {/* CUSTOMER TABLE */}
-      <Card className="p-3 sm:p-5 min-w-0">
+      <Card className="p-4 sm:p-6 min-w-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
 
         <div className="
           overflow-x-auto
@@ -935,7 +936,7 @@ function CustomerCreditReport({ data }) {
           px-1
         ">
 
-          <table className="table min-w-[560px]">
+          <table className="table min-w-[640px]">
 
             <thead>
               <tr>
@@ -946,7 +947,7 @@ function CustomerCreditReport({ data }) {
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="divide-y divide-[var(--line)]">
 
               {!data.customers?.length && (
                 <EmptyRows
@@ -1014,7 +1015,7 @@ function PaymentReport({ data }) {
       overflow-hidden
     ">
 
-      <h3 className="font-semibold mb-3 sm:mb-4 text-[var(--ink)]">
+      <h3 className="text-base sm:text-lg font-bold mb-4 text-[var(--ink)] tracking-tight">
         Payment Method Breakdown
       </h3>
 
@@ -1160,7 +1161,7 @@ function ExpensesReport({ data }) {
         sm:gap-4
       ">
 
-        <Card className="p-3 sm:p-4 text-center">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
 
           <div className="
             text-2xl
@@ -1176,7 +1177,7 @@ function ExpensesReport({ data }) {
 
         </Card>
 
-        <Card className="p-3 sm:p-4 text-center">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
 
           <div className="
             text-2xl
@@ -1192,7 +1193,7 @@ function ExpensesReport({ data }) {
 
         </Card>
 
-        <Card className="p-3 sm:p-4 text-center">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
 
           <div className="
             text-2xl
@@ -1208,7 +1209,7 @@ function ExpensesReport({ data }) {
 
         </Card>
 
-        <Card className="p-3 sm:p-4 text-center">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
 
           <div className="
             text-2xl
@@ -1228,7 +1229,7 @@ function ExpensesReport({ data }) {
 
       {/* CATEGORY BREAKDOWN */}
       {byCategory.length > 0 && (
-        <Card className="p-3 sm:p-5 min-w-0">
+        <Card className="p-4 sm:p-6 min-w-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
 
           <h3 className="
             font-semibold
@@ -1311,7 +1312,7 @@ function ExpensesReport({ data }) {
           px-1
         ">
 
-          <table className="table min-w-[560px]">
+          <table className="table min-w-[640px]">
 
             <thead>
               <tr>
@@ -1323,7 +1324,7 @@ function ExpensesReport({ data }) {
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="divide-y divide-[var(--line)]">
 
               {!rows.length && (
                 <EmptyRows
