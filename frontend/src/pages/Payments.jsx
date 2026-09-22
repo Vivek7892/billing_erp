@@ -103,7 +103,7 @@ function SummaryCard({
             {title}
           </p>
 
-          <p className="mt-2 truncate text-xl font-bold tracking-tight text-[var(--ink)] sm:text-2xl">
+          <p className="mt-2 truncate text-lg font-bold tracking-tight text-[var(--ink)] sm:text-2xl">
             {value}
           </p>
         </div>
@@ -134,7 +134,7 @@ function SummaryCard({
       <button
         type="button"
         onClick={onClick}
-        className={`group rounded-2xl border bg-[var(--surface)] p-4 text-left shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] ${
+        className={`group rounded-2xl border bg-[var(--surface)] p-5 text-left shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] ${
           active
             ? 'border-[var(--primary-border)] ring-2 ring-[var(--focus-ring)]'
             : 'border-[var(--line)]'
@@ -146,7 +146,7 @@ function SummaryCard({
   }
 
   return (
-    <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[var(--shadow-card)]">
+    <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5 shadow-[var(--shadow-card)]">
       {content}
     </div>
   )
@@ -314,7 +314,7 @@ export default function Payments() {
   )
 
   return (
-    <div className="payments-page min-w-0 space-y-5">
+    <div className="payments-page min-w-0 space-y-4 overflow-x-hidden pb-4 sm:space-y-6 sm:pb-6">
       <style>{`
         .payments-page {
           --payment-cash-bg: #ecfdf5;
@@ -361,7 +361,28 @@ export default function Payments() {
           --payment-warning-border: #92400e;
         }
 
-        .payments-page .payment-table {
+        .payments-page .section-heading {
+          background: linear-gradient(180deg, var(--surface), var(--surface-elevated));
+        }
+        .payments-page .payment-table tbody tr:hover td {
+          background: var(--surface-elevated);
+        }
+        .payments-page .payment-table td:first-child,
+        .payments-page .payment-table th:first-child {
+          padding-left: 22px;
+        }
+        .payments-page .payment-table td:last-child,
+        .payments-page .payment-table th:last-child {
+          padding-right: 22px;
+        }
+        .payments-page .metric-accent {
+          height: 3px;
+          border-radius: 999px;
+          background: var(--primary);
+          opacity: .75;
+        }
+
+        .payments-page button, .payments-page input {\n          -webkit-tap-highlight-color: transparent;\n        }\n        .payments-page .mobile-transaction {\n          min-width: 0;\n        }\n        @media (max-width: 639px) {\n          .payments-page .section-heading {\n            border-radius: 0;\n          }\n          .payments-page .payment-table {\n            min-width: 720px;\n          }\n        }\n\n        .payments-page .payment-table {
           width: 100%;
           border-collapse: collapse;
         }
@@ -398,7 +419,7 @@ export default function Payments() {
         }
       `}</style>
 
-      <header className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="mb-2 flex items-center gap-2 text-[var(--muted-light)]">
             <Receipt size={16} />
@@ -407,7 +428,7 @@ export default function Payments() {
             </span>
           </div>
 
-          <h1 className="text-xl font-bold tracking-tight text-[var(--ink)] sm:text-2xl">
+          <h1 className="text-lg font-bold tracking-tight text-[var(--ink)] sm:text-2xl">
             Payment Sheet
           </h1>
 
@@ -420,14 +441,14 @@ export default function Payments() {
           type="button"
           onClick={loadPayments}
           disabled={loading}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 text-xs font-semibold text-[var(--ink-secondary)] shadow-sm transition hover:bg-[var(--surface-elevated)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl sm:w-auto border border-[var(--line)] bg-[var(--surface)] px-4 text-xs font-semibold text-[var(--ink-secondary)] shadow-sm transition hover:bg-[var(--surface-elevated)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
           Refresh
         </button>
       </header>
 
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
         <SummaryCard
           title="Collected"
           value={formatCurrency(totalCollected)}
@@ -478,7 +499,7 @@ export default function Payments() {
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-card)]">
-        <div className="border-b border-[var(--line)] p-4 sm:p-5">
+        <div className="section-heading border-b border-[var(--line)] p-3 sm:p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="flex items-center gap-2">
@@ -497,7 +518,7 @@ export default function Payments() {
               </p>
             </div>
 
-            <div className="flex w-full gap-2 lg:w-auto">
+            <div className="flex w-full min-w-0 gap-2 lg:w-auto">
               <div className="relative min-w-0 flex-1 lg:w-72 lg:flex-none">
                 <Search
                   size={15}
@@ -538,7 +559,7 @@ export default function Payments() {
             </div>
           </div>
 
-          <div className="mt-4 flex gap-1 overflow-x-auto rounded-xl bg-[var(--surface-elevated)] p-1">
+          <div className="mt-3 flex gap-1 overflow-x-auto rounded-xl pb-0.5 sm:mt-4 bg-[var(--surface-elevated)] p-1">
             {FILTERS.map(item => (
               <button
                 key={item.key}
@@ -592,7 +613,7 @@ export default function Payments() {
           <>
             <div className="divide-y divide-[var(--line-subtle)] sm:hidden">
               {filteredBills.map(bill => (
-                <article key={bill.id} className="p-4">
+                <article key={bill.id} className="p-3 sm:p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate font-mono text-xs font-bold text-[var(--primary)]">
@@ -615,7 +636,7 @@ export default function Payments() {
                     </p>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4">
                     <div className="rounded-xl bg-[var(--surface-elevated)] p-3">
                       <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
                         Payment method

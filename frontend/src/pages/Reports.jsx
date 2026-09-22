@@ -196,12 +196,12 @@ export default function Reports() {
   )
 
   return (
-    <div className="reports-page space-y-5 sm:space-y-6 w-full min-w-0 pb-8">
+    <div className="reports-page w-full min-w-0 space-y-6 pb-10">
 
       {/* PAGE HEADER */}
       <PageHeader
         title="Reports"
-        subtitle={`Export the selected ${
+        subtitle={`Analyze and export the selected ${
           tabs.find(item => item.key === tab)?.label || ''
         } report as PDF or Excel`}
         action={headerAction}
@@ -229,6 +229,7 @@ export default function Reports() {
               rounded-xl
               text-sm
               font-semibold
+              min-h-[42px]
               transition-all duration-200
               flex-shrink-0
               whitespace-nowrap
@@ -268,24 +269,7 @@ export default function Reports() {
         ].map(([label, from, to]) => (
           <button
             key={label}
-            className="
-              text-xs
-              sm:text-sm
-              text-blue-700 dark:text-blue-300
-              border
-              border-blue-200 dark:border-blue-800
-              bg-blue-50 dark:bg-blue-950/60
-              hover:bg-blue-100 dark:hover:bg-blue-900/60
-              active:bg-blue-100 dark:active:bg-blue-900/60
-              rounded-lg
-              px-3
-              py-2
-              min-h-[38px]
-              flex-shrink-0
-              whitespace-nowrap
-              transition-colors
-              font-medium
-            "
+            className="btn-secondary text-sm flex-shrink-0 min-h-[42px] px-3 col-span-1  bg [var(--surface)] border border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] hover:border-blue-300 dark:hover:border-blue-700" 
             onClick={() => {
               setStart(from)
               setEnd(to)
@@ -298,16 +282,8 @@ export default function Reports() {
 
       {/* DATE / CALENDAR FILTER */}
       {tab !== 'customers' && (
-        <Card className="p-4 sm:p-5 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-          <div className="
-            flex
-            flex-col
-            sm:flex-row
-            gap-3
-            sm:gap-4
-            sm:items-end
-            reports-date-row
-          ">
+        <Card className=" p-4 sm:p-5 min-w-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
+          <div className=" flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center">
 
             <div className="
               grid
@@ -321,11 +297,7 @@ export default function Reports() {
               {/* FROM DATE */}
               <div className="min-w-0">
                 <label className="
-                  block
-                  text-xs
-                  sm:text-sm
-                  text-[var(--muted)]
-                  mb-1.5
+                  
                 ">
                   From
                 </label>
@@ -471,7 +443,7 @@ function SalesReport({ data }) {
         sm:gap-4
       ">
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
           <div className="
             text-lg
             sm:text-2xl
@@ -487,7 +459,7 @@ function SalesReport({ data }) {
           </div>
         </Card>
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
           <div className="
             text-lg
             sm:text-2xl
@@ -502,7 +474,7 @@ function SalesReport({ data }) {
           </div>
         </Card>
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
           <div className="
             text-lg
             sm:text-2xl
@@ -518,7 +490,7 @@ function SalesReport({ data }) {
           </div>
         </Card>
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
           <div className="
             text-lg
             sm:text-2xl
@@ -534,28 +506,28 @@ function SalesReport({ data }) {
           </div>
         </Card>
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
           <div className="text-lg sm:text-2xl font-bold text-indigo-600 break-words">
             {fmt(data.summary?.net_sales)}
           </div>
           <div className="text-sm text-[var(--muted)]">Net Sales</div>
         </Card>
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
           <div className="text-lg sm:text-2xl font-bold text-blue-600 dark:text-blue-400 break-words">
             {fmt(data.summary?.returns)}
           </div>
           <div className="text-sm text-[var(--muted)]">Returns</div>
         </Card>
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
           <div className="text-lg sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 break-words">
             {fmt(data.summary?.collection)}
           </div>
           <div className="text-sm text-[var(--muted)]">Collection</div>
         </Card>
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
           <div className="text-lg sm:text-2xl font-bold text-rose-600 dark:text-rose-400 break-words">
             {fmt(data.summary?.outstanding)}
           </div>
@@ -571,7 +543,7 @@ function SalesReport({ data }) {
         min-w-0
         overflow-hidden
       ">
-        <h3 className="text-base sm:text-lg font-bold mb-4 text-[var(--ink)] tracking-tight">
+        <h3 className="text-base sm:text-lg font-bold mb-4 text-[var(--ink)] tracking-tight border-b border-[var(--line)] pb-3">
           Daily Sales
         </h3>
 
@@ -625,12 +597,12 @@ function ProductReport({ data }) {
   return (
     <Card className="p-4 sm:p-6 min-w-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
 
-      <h3 className="text-base sm:text-lg font-bold mb-4 text-[var(--ink)] tracking-tight">
+      <h3 className="text-base sm:text-lg font-bold mb-4 text-[var(--ink)] tracking-tight border-b border-[var(--line)] pb-3">
         Product Sales
       </h3>
 
       <div className="overflow-x-auto">
-        <table className="table min-w-[640px]">
+        <table className="table min-w-[680px] report-table">
 
           <thead>
             <tr>
@@ -704,7 +676,7 @@ function ProfitReport({ data }) {
         sm:gap-4
       ">
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
           <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
             {fmt(data.total_revenue)}
           </div>
@@ -714,7 +686,7 @@ function ProfitReport({ data }) {
           </div>
         </Card>
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
           <div className="text-2xl font-bold text-red-500">
             {fmt(data.total_cost)}
           </div>
@@ -724,7 +696,7 @@ function ProfitReport({ data }) {
           </div>
         </Card>
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
           <div className="text-2xl font-bold text-green-600 dark:text-green-400">
             {fmt(data.total_profit)}
           </div>
@@ -745,7 +717,7 @@ function ProfitReport({ data }) {
           px-1
         ">
 
-          <table className="table min-w-[640px]">
+          <table className="table min-w-[680px] report-table">
 
             <thead>
               <tr>
@@ -850,7 +822,7 @@ function GSTReport({ data }) {
           px-1
         ">
 
-          <table className="table min-w-[640px]">
+          <table className="table min-w-[680px] report-table">
 
             <thead>
               <tr>
@@ -936,7 +908,7 @@ function CustomerCreditReport({ data }) {
           px-1
         ">
 
-          <table className="table min-w-[640px]">
+          <table className="table min-w-[680px] report-table">
 
             <thead>
               <tr>
@@ -1015,7 +987,7 @@ function PaymentReport({ data }) {
       overflow-hidden
     ">
 
-      <h3 className="text-base sm:text-lg font-bold mb-4 text-[var(--ink)] tracking-tight">
+      <h3 className="text-base sm:text-lg font-bold mb-4 text-[var(--ink)] tracking-tight border-b border-[var(--line)] pb-3">
         Payment Method Breakdown
       </h3>
 
@@ -1161,7 +1133,7 @@ function ExpensesReport({ data }) {
         sm:gap-4
       ">
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
 
           <div className="
             text-2xl
@@ -1177,7 +1149,7 @@ function ExpensesReport({ data }) {
 
         </Card>
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
 
           <div className="
             text-2xl
@@ -1193,7 +1165,7 @@ function ExpensesReport({ data }) {
 
         </Card>
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
 
           <div className="
             text-2xl
@@ -1209,7 +1181,7 @@ function ExpensesReport({ data }) {
 
         </Card>
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-md transition-shadow">
+        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
 
           <div className="
             text-2xl
@@ -1312,7 +1284,7 @@ function ExpensesReport({ data }) {
           px-1
         ">
 
-          <table className="table min-w-[640px]">
+          <table className="table min-w-[680px] report-table">
 
             <thead>
               <tr>

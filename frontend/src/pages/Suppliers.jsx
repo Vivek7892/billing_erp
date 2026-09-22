@@ -97,7 +97,7 @@ function SupplierCard({ supplier, products, onEdit, onDelete, onRefresh }) {
   }
 
   return (
-    <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
+    <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl shadow-[var(--shadow-card)] overflow-hidden transition-shadow hover:shadow-md">
       <div className="flex items-center justify-between p-4 gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center flex-shrink-0">
@@ -248,36 +248,36 @@ export default function Suppliers() {
   const totalOutstanding = suppliers.reduce((s, x) => s + Number(x.outstanding_amount || 0), 0)
 
   return (
-    <div className="space-y-5">
+    <div className="suppliers-page min-w-0 space-y-6 pb-6">
 
       {/* Summary row */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="bg-[var(--surface)] rounded-xl border border-blue-100 p-4 flex flex-col gap-1">
-          <span className="text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-wide">Total Suppliers</span>
+      <div className="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="bg-[var(--surface)] rounded-2xl border border-blue-100 dark:border-blue-900/40 bg-[var(--surface)] p-5 flex flex-col gap-2 shadow-sm">
+          <span className="text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-[0.12em]">Total Suppliers</span>
           <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{suppliers.length}</div>
         </div>
-        <div className="bg-[var(--surface)] rounded-xl border border-red-100 p-4 flex flex-col gap-1">
+        <div className="bg-[var(--surface)] rounded-2xl border border-red-100 dark:border-red-900/40 bg-[var(--surface)] p-5 flex flex-col gap-2 shadow-sm">
           <span className="text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-wide">Total Outstanding</span>
           <div className="text-2xl font-bold text-red-600 dark:text-red-400">{fmt(totalOutstanding)}</div>
         </div>
-        <div className="bg-[var(--surface)] rounded-xl border border-green-100 p-4 flex flex-col gap-1">
+        <div className="bg-[var(--surface)] rounded-2xl border border-green-100 dark:border-green-900/40 bg-[var(--surface)] p-5 flex flex-col gap-2 shadow-sm">
           <span className="text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-wide">Products Supplied</span>
           <div className="text-2xl font-bold text-green-600 dark:text-green-400">{products.filter(p => p.supplier).length}</div>
         </div>
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg px-3 py-2 flex-1 max-w-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 bg-[var(--surface)] border border-[var(--line)] rounded-lg px-3 py-2 flex-1 w-full sm:max-w-md">
           <Search size={14} className="text-[var(--muted-light)] flex-shrink-0" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search suppliers…"
             className="bg-transparent text-sm outline-none w-full text-[var(--ink-secondary)] placeholder-slate-400" />
         </div>
         <div className="flex gap-2">
-          <button onClick={load} className="icon-btn" title="Refresh">
+          <button onClick={load} className="icon-btn h-11 w-11" title="Refresh">
             <RefreshCw size={14} />
           </button>
-          <button onClick={openAdd} className="btn-primary flex items-center gap-2 text-sm">
+          <button onClick={openAdd} className="btn-primary flex items-center justify-center gap-2 text-sm min-h-11 px-4">
             <Plus size={15} /> Add Supplier
           </button>
         </div>

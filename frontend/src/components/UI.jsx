@@ -3,9 +3,27 @@ import { useEffect, useId, useRef } from 'react'
 /* ============================================================
    CARD
 ============================================================ */
-export function Card({ children, className = '' }) {
+
+export function Card({
+  children,
+  className = '',
+  padding = true,
+  hover = false,
+}) {
   return (
-    <div className={`rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-card)] ${className}`}>
+    <div
+      className={[
+        'rounded-2xl border border-[var(--line)]',
+        'bg-[var(--surface)]',
+        'shadow-[var(--shadow-card)]',
+        'transition-all duration-200',
+        padding ? 'p-4 sm:p-5' : '',
+        hover
+          ? 'hover:-translate-y-0.5 hover:shadow-lg hover:border-[var(--primary-border)]'
+          : '',
+        className,
+      ].join(' ')}
+    >
       {children}
     </div>
   )
@@ -14,29 +32,123 @@ export function Card({ children, className = '' }) {
 /* ============================================================
    KPI / STAT CARD
 ============================================================ */
-export function StatCard({ label, value, icon: Icon, color = 'blue', sub, trend, onClick }) {
+
+export function StatCard({
+  label,
+  value,
+  icon: Icon,
+  color = 'blue',
+  sub,
+  trend,
+  onClick,
+}) {
   const Tag = onClick ? 'button' : 'div'
+
+  const colorStyles = {
+    blue: {
+      icon: 'bg-blue-50 text-blue-600 border-blue-100',
+      accent: 'border-l-blue-500',
+    },
+    green: {
+      icon: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+      accent: 'border-l-emerald-500',
+    },
+    orange: {
+      icon: 'bg-orange-50 text-orange-600 border-orange-100',
+      accent: 'border-l-orange-500',
+    },
+    red: {
+      icon: 'bg-rose-50 text-rose-600 border-rose-100',
+      accent: 'border-l-rose-500',
+    },
+    purple: {
+      icon: 'bg-violet-50 text-violet-600 border-violet-100',
+      accent: 'border-l-violet-500',
+    },
+    gray: {
+      icon: 'bg-slate-100 text-slate-600 border-slate-200',
+      accent: 'border-l-slate-400',
+    },
+  }
+
+  const selectedColor = colorStyles[color] || colorStyles.blue
+
   return (
     <Tag
+      type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className={`kpi-card border-l-[3px] border-l-[var(--primary)] flex flex-col gap-2 w-full text-left ${onClick ? 'cursor-pointer hover:ring-2 hover:ring-blue-200' : 'cursor-default'}`}
+      className={[
+        'group w-full text-left',
+        'rounded-2xl border border-[var(--line)]',
+        'border-l-4',
+        selectedColor.accent,
+        'bg-[var(--surface)]',
+        'p-4 sm:p-5',
+        'shadow-[var(--shadow-card)]',
+        'transition-all duration-200',
+        onClick
+          ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-lg hover:border-[var(--primary-border)]'
+          : 'cursor-default',
+      ].join(' ')}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--muted-light)] leading-tight">{label}</p>
-        <div className="p-1.5 rounded-lg flex-shrink-0 bg-[var(--primary-light)] border border-[var(--primary-border)]">
-          <Icon size={15} className="text-[var(--primary)]" />
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--muted)] leading-tight">
+            {label}
+          </p>
+
+          <p
+            className="mt-3 truncate text-2xl sm:text-[1.9rem] font-semibold tracking-tight text-[var(--ink)] leading-none"
+            style={{
+              fontVariantNumeric: 'tabular-nums',
+              fontFeatureSettings: '"tnum"',
+            }}
+          >
+            {value}
+          </p>
+
+          {sub && (
+            <p className="mt-2 truncate text-xs text-[var(--muted)]">
+              {sub}
+            </p>
+          )}
         </div>
-      </div>
-      <div>
-        <p className="text-[1.875rem] font-bold text-[var(--ink)] tracking-tight truncate leading-none" style={{fontVariantNumeric:'tabular-nums',fontFeatureSettings:'"tnum"'}}>{value}</p>
-        {sub && <p className="text-xs text-[var(--muted)] mt-1 truncate">{sub}</p>}
-        {trend !== undefined && (
-          <div className="mt-1.5 text-xs font-semibold flex items-center gap-0.5 text-[var(--muted)]">
-            <span>{trend > 0 ? '↑' : trend < 0 ? '↓' : '—'}</span>
-            <span>{trend !== 0 ? `${Math.abs(trend)}%` : 'No change'}</span>
+
+        {Icon && (
+          <div
+            className={[
+              'flex h-10 w-10 shrink-0 items-center justify-center',
+              'rounded-xl border',
+              'transition-transform duration-200',
+              'group-hover:scale-105',
+              selectedColor.icon,
+            ].join(' ')}
+          >
+            <Icon size={18} strokeWidth={1.8} />
           </div>
         )}
       </div>
+
+      {trend !== undefined && (
+        <div className="mt-4 flex items-center gap-1 text-xs">
+          <span
+            className={[
+              'font-semibold',
+              trend > 0
+                ? 'text-emerald-600'
+                : trend < 0
+                  ? 'text-rose-600'
+                  : 'text-[var(--muted)]',
+            ].join(' ')}
+          >
+            {trend > 0 ? '↑' : trend < 0 ? '↓' : '—'}
+          </span>
+
+          <span className="text-[var(--muted)]">
+            {trend !== 0 ? `${Math.abs(trend)}% from previous period` : 'No change'}
+          </span>
+        </div>
+      )}
     </Tag>
   )
 }
@@ -44,54 +156,132 @@ export function StatCard({ label, value, icon: Icon, color = 'blue', sub, trend,
 /* ============================================================
    BADGE
 ============================================================ */
-export function Badge({ status }) {
-  const map = {
-    in_stock: 'success', low_stock: 'warning', out_of_stock: 'danger',
-    paid: 'success', partial: 'warning', credit: 'danger', completed: 'success',
-    cancelled: 'danger', refunded: 'warning', active: 'success', inactive: 'neutral',
-    pending: 'warning', failed: 'danger', processing: 'info', draft: 'neutral',
+
+export function Badge({ status, label: customLabel }) {
+  const statusMap = {
+    in_stock: 'success',
+    low_stock: 'warning',
+    out_of_stock: 'danger',
+    paid: 'success',
+    partial: 'warning',
+    credit: 'danger',
+    completed: 'success',
+    cancelled: 'danger',
+    refunded: 'warning',
+    active: 'success',
+    inactive: 'neutral',
+    pending: 'warning',
+    failed: 'danger',
+    processing: 'info',
+    draft: 'neutral',
   }
-  const label = status?.replace(/_/g, ' ')
-  const type = map[status] || 'neutral'
+
   const styles = {
-    success: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
-    warning: 'bg-amber-50 text-amber-700 border border-amber-200',
-    danger:  'bg-rose-50 text-rose-700 border border-rose-200',
-    info:    'bg-blue-50 text-blue-700 border border-blue-200',
-    neutral: 'bg-slate-50 text-slate-600 border border-slate-200',
+    success:
+      'bg-emerald-50 text-emerald-700 border-emerald-200',
+    warning:
+      'bg-amber-50 text-amber-700 border-amber-200',
+    danger:
+      'bg-rose-50 text-rose-700 border-rose-200',
+    info:
+      'bg-blue-50 text-blue-700 border-blue-200',
+    neutral:
+      'bg-slate-50 text-slate-600 border-slate-200',
   }
-  return <span className={`status-badge ${styles[type]}`}>{label}</span>
+
+  const type = statusMap[status] || 'neutral'
+  const label =
+    customLabel ||
+    status?.replace(/_/g, ' ') ||
+    'Unknown'
+
+  return (
+    <span
+      className={[
+        'inline-flex items-center gap-1.5',
+        'rounded-full border px-2.5 py-1',
+        'text-[11px] font-medium capitalize',
+        'whitespace-nowrap',
+        styles[type],
+      ].join(' ')}
+    >
+      <span
+        className={[
+          'h-1.5 w-1.5 rounded-full',
+          type === 'success'
+            ? 'bg-emerald-500'
+            : type === 'warning'
+              ? 'bg-amber-500'
+              : type === 'danger'
+                ? 'bg-rose-500'
+                : type === 'info'
+                  ? 'bg-blue-500'
+                  : 'bg-slate-400',
+        ].join(' ')}
+      />
+
+      {label}
+    </span>
+  )
 }
 
 /* ============================================================
    TABS
 ============================================================ */
-export function Tabs({ tabs, active, onChange, className = '' }) {
+
+export function Tabs({
+  tabs = [],
+  active,
+  onChange,
+  className = '',
+}) {
   return (
     <div
-      className={`flex gap-1 bg-[var(--surface-elevated)] rounded-xl p-1 border border-[var(--line)] ${className}`}
+      className={[
+        'flex w-full gap-1 overflow-x-auto',
+        'rounded-xl border border-[var(--line)]',
+        'bg-[var(--surface-elevated)] p-1',
+        'no-scrollbar',
+        className,
+      ].join(' ')}
       role="tablist"
     >
-      {tabs.map(tab => (
-        <button
-          key={tab.value}
-          role="tab"
-          aria-selected={active === tab.value}
-          onClick={() => onChange(tab.value)}
-          className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 whitespace-nowrap ${
-            active === tab.value
-              ? 'bg-[var(--primary)] text-white shadow-[var(--shadow-primary)]'
-              : 'text-[var(--muted)] hover:text-[var(--ink-secondary)]'
-          }`}
-        >
-          {tab.label}
-          {tab.count != null && (
-            <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-              active === tab.value ? 'bg-white/20 text-white' : 'bg-[var(--line)] text-[var(--muted)]'
-            }`}>{tab.count}</span>
-          )}
-        </button>
-      ))}
+      {tabs.map((tab) => {
+        const isActive = active === tab.value
+
+        return (
+          <button
+            key={tab.value}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onChange(tab.value)}
+            className={[
+              'flex min-h-9 flex-1 items-center justify-center',
+              'gap-1.5 whitespace-nowrap rounded-lg',
+              'px-3 py-2 text-xs transition-all duration-200',
+              isActive
+                ? 'bg-[var(--primary)] font-medium text-white shadow-sm'
+                : 'font-normal text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--ink)]',
+            ].join(' ')}
+          >
+            {tab.label}
+
+            {tab.count !== undefined && tab.count !== null && (
+              <span
+                className={[
+                  'rounded-full px-1.5 py-0.5 text-[10px]',
+                  isActive
+                    ? 'bg-white/20 text-white'
+                    : 'bg-[var(--line)] text-[var(--muted)]',
+                ].join(' ')}
+              >
+                {tab.count}
+              </span>
+            )}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -99,52 +289,110 @@ export function Tabs({ tabs, active, onChange, className = '' }) {
 /* ============================================================
    MODAL
 ============================================================ */
-export function Modal({ open, onClose, title, children, size = 'md', footer }) {
+
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  size = 'md',
+  footer,
+}) {
   const dialogRef = useRef(null)
   const titleId = useId()
 
   useEffect(() => {
     if (!open) return undefined
-    const onKey = e => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        onClose?.()
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow
+
+    window.addEventListener('keydown', handleKeyDown)
     document.body.style.overflow = 'hidden'
+
     return () => {
-      window.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
+      window.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
     }
   }, [open, onClose])
 
   if (!open) return null
-  const sizes = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl', full: 'max-w-6xl' }
+
+  const sizes = {
+    sm: 'max-w-sm',
+    md: 'max-w-lg',
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl',
+    full: 'max-w-6xl',
+  }
 
   return (
     <div
-      className="modal-backdrop fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       role="presentation"
-      onMouseDown={e => e.target === e.currentTarget && onClose()}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose?.()
+        }
+      }}
     >
       <div
         ref={dialogRef}
-        className={`modal-shell bg-[var(--surface)] w-full ${sizes[size]} max-h-[95dvh] sm:max-h-[90vh] flex flex-col rounded-t-2xl sm:rounded-2xl shadow-[var(--shadow-modal)] border border-[var(--line)]`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        className={[
+          'flex max-h-[95dvh] w-full flex-col',
+          sizes[size] || sizes.md,
+          'overflow-hidden rounded-t-2xl sm:max-h-[90vh] sm:rounded-2xl',
+          'border border-[var(--line)]',
+          'bg-[var(--surface)]',
+          'shadow-[var(--shadow-modal)]',
+        ].join(' ')}
       >
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--line)] flex-shrink-0 bg-[var(--surface-elevated)] rounded-t-2xl sm:rounded-t-2xl">
-          <h2 id={titleId} className="text-sm font-bold text-[var(--ink)]">{title}</h2>
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[var(--line)] bg-[var(--surface-elevated)] px-5 py-4">
+          <div className="min-w-0">
+            <h2
+              id={titleId}
+              className="truncate text-base font-semibold text-[var(--ink)]"
+            >
+              {title}
+            </h2>
+          </div>
+
           <button
+            type="button"
             onClick={onClose}
             aria-label="Close dialog"
-            className="icon-btn -mr-1"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--muted)] transition-colors hover:bg-[var(--line)] hover:text-[var(--ink)]"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
             </svg>
           </button>
         </div>
-        <div className="overflow-y-auto flex-1 p-5">{children}</div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+          {children}
+        </div>
+
         {footer && (
-          <div className="px-5 py-4 border-t border-[var(--line)] bg-[var(--surface-elevated)] rounded-b-2xl flex-shrink-0">
+          <div className="shrink-0 border-t border-[var(--line)] bg-[var(--surface-elevated)] px-5 py-4">
             {footer}
           </div>
         )}
@@ -156,33 +404,96 @@ export function Modal({ open, onClose, title, children, size = 'md', footer }) {
 /* ============================================================
    CONFIRM DIALOG
 ============================================================ */
-export function ConfirmDialog({ open, onClose, onConfirm, title, message, danger, confirmLabel, loading }) {
+
+export function ConfirmDialog({
+  open,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  danger = false,
+  confirmLabel,
+  loading = false,
+}) {
   if (!open) return null
+
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
-      <div className="modal-shell bg-[var(--surface)] rounded-2xl shadow-[var(--shadow-modal)] w-full max-w-sm p-6 border border-[var(--line)]">
-        <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${danger ? 'bg-rose-50 border border-rose-200' : 'bg-blue-50 border border-blue-200'}`}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-modal)] sm:p-6">
+        <div
+          className={[
+            'mb-4 flex h-11 w-11 items-center justify-center rounded-xl border',
+            danger
+              ? 'border-rose-200 bg-rose-50 text-rose-600'
+              : 'border-blue-200 bg-blue-50 text-blue-600',
+          ].join(' ')}
+        >
           {danger ? (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
-              <path d="M12 9v4"/><path d="M12 17h.01"/>
+            <svg
+              width="21"
+              height="21"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+              <path d="M12 9v4" />
+              <path d="M12 17h.01" />
             </svg>
           ) : (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
+            <svg
+              width="21"
+              height="21"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v4" />
+              <path d="M12 16h.01" />
             </svg>
           )}
         </div>
-        <h3 className="text-base font-bold text-[var(--ink)] mb-1.5">{title}</h3>
-        <p className="text-[var(--muted)] text-sm leading-relaxed mb-6">{message}</p>
-        <div className="flex gap-3">
-          <button onClick={onClose} disabled={loading} className="btn-secondary flex-1">Cancel</button>
+
+        <h3 className="text-base font-semibold text-[var(--ink)]">
+          {title}
+        </h3>
+
+        <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
+          {message}
+        </p>
+
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row">
           <button
-            onClick={() => { onConfirm(); onClose() }}
+            type="button"
+            onClick={onClose}
             disabled={loading}
-            className={`flex-1 btn-base  ${danger ? 'btn-danger' : 'btn-primary'}`}
+            className="btn-secondary flex-1"
           >
-            {loading ? 'Processing…' : (confirmLabel || (danger ? 'Delete' : 'Confirm'))}
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              onConfirm?.()
+              onClose?.()
+            }}
+            disabled={loading}
+            className={[
+              'btn-base flex-1',
+              danger ? 'btn-danger' : 'btn-primary',
+            ].join(' ')}
+          >
+            {loading
+              ? 'Processing…'
+              : confirmLabel || (danger ? 'Delete' : 'Confirm')}
           </button>
         </div>
       </div>
@@ -193,39 +504,97 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, message, danger
 /* ============================================================
    SPINNER
 ============================================================ */
-export function Spinner({ size = 'md', label = 'Loading…' }) {
-  const s = size === 'sm' ? 'w-5 h-5 border-2' : 'w-8 h-8 border-[3px]'
+
+export function Spinner({
+  size = 'md',
+  label = 'Loading…',
+}) {
+  const spinnerSize =
+    size === 'sm'
+      ? 'h-5 w-5 border-2'
+      : size === 'lg'
+        ? 'h-10 w-10 border-4'
+        : 'h-8 w-8 border-[3px]'
+
   return (
-    <div className="flex flex-col items-center justify-center py-12 gap-3" role="status" aria-label={label}>
-      <div className={`${s} border-[var(--line)] border-t-[var(--primary)] rounded-full animate-spin`} />
-      <span className="text-xs text-[var(--muted-light)] sr-only">{label}</span>
+    <div
+      className="flex flex-col items-center justify-center gap-3 py-12"
+      role="status"
+      aria-label={label}
+    >
+      <div
+        className={[
+          spinnerSize,
+          'animate-spin rounded-full',
+          'border-[var(--line)] border-t-[var(--primary)]',
+        ].join(' ')}
+      />
+
+      <span className="sr-only">{label}</span>
     </div>
   )
 }
 
+/* ============================================================
+   INLINE SPINNER
+============================================================ */
+
 export function InlineSpinner({ className = '' }) {
   return (
-    <div className={`w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin opacity-70 ${className}`} />
+    <span
+      role="status"
+      aria-label="Loading"
+      className={[
+        'inline-block h-4 w-4 animate-spin rounded-full',
+        'border-2 border-current border-t-transparent',
+        'opacity-70',
+        className,
+      ].join(' ')}
+    />
   )
 }
 
 /* ============================================================
    EMPTY STATE
 ============================================================ */
-export function EmptyState({ message = 'No data found', description, action, icon }) {
+
+export function EmptyState({
+  message = 'No data found',
+  description,
+  action,
+  icon,
+}) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-      <div className="w-14 h-14 rounded-2xl bg-[var(--surface-elevated)] border border-[var(--line)] flex items-center justify-center mb-4 text-[var(--muted-light)]">
+    <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--muted-light)]">
         {icon || (
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect width="20" height="14" x="2" y="7" rx="2"/>
-            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+          <svg
+            width="27"
+            height="27"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect width="20" height="14" x="2" y="7" rx="2" />
+            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
           </svg>
         )}
       </div>
-      <p className="text-sm font-semibold text-[var(--ink-secondary)]">{message}</p>
-      {description && <p className="text-xs text-[var(--muted)] mt-1 max-w-xs leading-relaxed">{description}</p>}
-      {action && <div className="mt-4">{action}</div>}
+
+      <p className="text-sm font-medium text-[var(--ink-secondary)]">
+        {message}
+      </p>
+
+      {description && (
+        <p className="mt-2 max-w-sm text-xs leading-relaxed text-[var(--muted)]">
+          {description}
+        </p>
+      )}
+
+      {action && <div className="mt-5">{action}</div>}
     </div>
   )
 }
@@ -233,41 +602,76 @@ export function EmptyState({ message = 'No data found', description, action, ico
 /* ============================================================
    SKELETON
 ============================================================ */
+
 export function Skeleton({ className = '' }) {
   return (
     <div
       aria-hidden="true"
-      className={`shimmer rounded-lg ${className}`}
+      className={[
+        'animate-pulse rounded-lg',
+        'bg-[var(--surface-elevated)]',
+        className,
+      ].join(' ')}
     />
   )
 }
 
-export function TableSkeleton({ rows = 5, columns = 5 }) {
+/* ============================================================
+   TABLE SKELETON
+============================================================ */
+
+export function TableSkeleton({
+  rows = 5,
+  columns = 5,
+}) {
   return (
-    <div className="space-y-0" aria-label="Loading data" role="status">
+    <div
+      className="divide-y divide-[var(--line-subtle)]"
+      aria-label="Loading data"
+      role="status"
+    >
       {Array.from({ length: rows }, (_, row) => (
-        <div key={row} className="flex gap-3 px-4 py-3 border-b border-[var(--line-subtle)] last:border-0">
+        <div
+          key={row}
+          className="flex gap-3 px-4 py-4"
+        >
           {Array.from({ length: columns }, (_, col) => (
-            <Skeleton key={col} className={`h-5 flex-1 ${col === 0 ? 'max-w-8' : col === columns - 1 ? 'max-w-20' : ''}`} />
+            <Skeleton
+              key={col}
+              className={[
+                'h-5 flex-1',
+                col === 0 ? 'max-w-10' : '',
+                col === columns - 1 ? 'max-w-24' : '',
+              ].join(' ')}
+            />
           ))}
         </div>
       ))}
+
       <span className="sr-only">Loading data</span>
     </div>
   )
 }
 
+/* ============================================================
+   CARD SKELETON
+============================================================ */
+
 export function CardSkeleton({ count = 4 }) {
   return (
-    <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-      {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="kpi-card border-l-[3px] border-l-[var(--line)] space-y-3">
-          <div className="flex justify-between items-start">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-8 w-8 rounded-xl" />
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {Array.from({ length: count }, (_, index) => (
+        <div
+          key={index}
+          className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-10 w-10 rounded-xl" />
           </div>
-          <Skeleton className="h-8 w-28" />
-          <Skeleton className="h-3 w-16" />
+
+          <Skeleton className="mt-5 h-8 w-28" />
+          <Skeleton className="mt-3 h-3 w-20" />
         </div>
       ))}
     </div>
@@ -277,23 +681,62 @@ export function CardSkeleton({ count = 4 }) {
 /* ============================================================
    ERROR STATE
 ============================================================ */
-export function ErrorState({ title = 'Unable to load data', message = 'Something went wrong. Please try again.', onRetry }) {
+
+export function ErrorState({
+  title = 'Unable to load data',
+  message = 'Something went wrong. Please try again.',
+  onRetry,
+}) {
   return (
-    <div role="alert" className="flex flex-col items-center justify-center py-14 text-center px-6">
-      <div className="mb-4 w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>
+    <div
+      role="alert"
+      className="flex flex-col items-center justify-center px-6 py-14 text-center"
+    >
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 text-rose-600">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 8v4" />
+          <path d="M12 16h.01" />
         </svg>
       </div>
-      <h2 className="text-sm font-bold text-[var(--ink)]">{title}</h2>
-      <p className="mt-1 max-w-sm text-sm text-[var(--muted)] leading-relaxed">{message}</p>
+
+      <h2 className="text-base font-semibold text-[var(--ink)]">
+        {title}
+      </h2>
+
+      <p className="mt-2 max-w-sm text-sm leading-relaxed text-[var(--muted)]">
+        {message}
+      </p>
+
       {onRetry && (
-        <button type="button" className="btn-secondary btn-sm mt-4 flex items-center gap-2" onClick={onRetry}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-            <path d="M21 3v5h-5"/>
-            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-            <path d="M8 16H3v5"/>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="btn-secondary btn-sm mt-5 flex items-center gap-2"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+            <path d="M21 3v5h-5" />
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+            <path d="M8 16H3v5" />
           </svg>
           Try again
         </button>
@@ -305,17 +748,40 @@ export function ErrorState({ title = 'Unable to load data', message = 'Something
 /* ============================================================
    SUCCESS STATE
 ============================================================ */
-export function SuccessState({ title = 'Done!', message, action }) {
+
+export function SuccessState({
+  title = 'Done!',
+  message,
+  action,
+}) {
   return (
-    <div className="flex flex-col items-center justify-center py-14 text-center px-6">
-      <div className="mb-4 w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 6 9 17l-5-5"/>
+    <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-600">
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M20 6 9 17l-5-5" />
         </svg>
       </div>
-      <h2 className="text-sm font-bold text-[var(--ink)]">{title}</h2>
-      {message && <p className="mt-1 max-w-sm text-sm text-[var(--muted)] leading-relaxed">{message}</p>}
-      {action && <div className="mt-4">{action}</div>}
+
+      <h2 className="text-base font-semibold text-[var(--ink)]">
+        {title}
+      </h2>
+
+      {message && (
+        <p className="mt-2 max-w-sm text-sm leading-relaxed text-[var(--muted)]">
+          {message}
+        </p>
+      )}
+
+      {action && <div className="mt-5">{action}</div>}
     </div>
   )
 }
@@ -323,14 +789,38 @@ export function SuccessState({ title = 'Done!', message, action }) {
 /* ============================================================
    PAGE HEADER
 ============================================================ */
-export function PageHeader({ title, subtitle, action, className = '' }) {
+
+export function PageHeader({
+  title,
+  subtitle,
+  action,
+  className = '',
+}) {
   return (
-    <div className={`flex items-start justify-between gap-4 mb-5 ${className}`}>
+    <div
+      className={[
+        'mb-5 flex flex-col gap-4',
+        'sm:flex-row sm:items-start sm:justify-between',
+        className,
+      ].join(' ')}
+    >
       <div className="min-w-0">
-        <h1 className="text-xl sm:text-2xl font-bold text-[var(--ink)] tracking-tight leading-tight">{title}</h1>
-        {subtitle && <p className="text-[var(--muted)] text-sm mt-1 leading-relaxed">{subtitle}</p>}
+        <h1 className="text-xl font-semibold leading-tight tracking-tight text-[var(--ink)] sm:text-2xl">
+          {title}
+        </h1>
+
+        {subtitle && (
+          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-[var(--muted)]">
+            {subtitle}
+          </p>
+        )}
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+
+      {action && (
+        <div className="w-full shrink-0 sm:w-auto">
+          {action}
+        </div>
+      )}
     </div>
   )
 }
@@ -338,28 +828,64 @@ export function PageHeader({ title, subtitle, action, className = '' }) {
 /* ============================================================
    SEARCH INPUT
 ============================================================ */
-export function SearchInput({ value, onChange, placeholder = 'Search…', className = '', autoFocus }) {
+
+export function SearchInput({
+  value,
+  onChange,
+  placeholder = 'Search…',
+  className = '',
+  autoFocus = false,
+}) {
   return (
     <div className={`relative ${className}`}>
-      <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)] pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+      <svg
+        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted-light)]"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.3-4.3" />
       </svg>
+
       <input
-        className="input pl-9 pr-9 w-full"
+        type="search"
+        className={[
+          'input w-full rounded-xl',
+          'pl-10 pr-10',
+          'transition-all duration-200',
+          'focus:ring-2 focus:ring-[var(--primary)]/15',
+        ].join(' ')}
         placeholder={placeholder}
         value={value}
         onChange={onChange}
         autoFocus={autoFocus}
       />
+
       {value && (
         <button
           type="button"
           onClick={() => onChange({ target: { value: '' } })}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted-light)] hover:text-[var(--ink)] transition-colors p-0.5 rounded"
+          className="absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--muted-light)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]"
           aria-label="Clear search"
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
           </svg>
         </button>
       )}
@@ -370,7 +896,12 @@ export function SearchInput({ value, onChange, placeholder = 'Search…', classN
 /* ============================================================
    DATE FILTER BAR
 ============================================================ */
-export function DateFilterBar({ active, onChange, className = '' }) {
+
+export function DateFilterBar({
+  active,
+  onChange,
+  className = '',
+}) {
   const filters = [
     { label: 'Today', value: 'today' },
     { label: 'Yesterday', value: 'yesterday' },
@@ -378,17 +909,34 @@ export function DateFilterBar({ active, onChange, className = '' }) {
     { label: 'This Month', value: 'this_month' },
     { label: 'All Time', value: '' },
   ]
+
   return (
-    <div className={`flex gap-1.5 overflow-x-auto no-scrollbar ${className}`}>
-      {filters.map(f => (
-        <button
-          key={f.value}
-          onClick={() => onChange(f.value)}
-          className={`filter-pill ${active === f.value ? 'active' : ''}`}
-        >
-          {f.label}
-        </button>
-      ))}
+    <div
+      className={[
+        'flex gap-2 overflow-x-auto pb-1 no-scrollbar',
+        className,
+      ].join(' ')}
+    >
+      {filters.map((filter) => {
+        const isActive = active === filter.value
+
+        return (
+          <button
+            key={filter.value}
+            type="button"
+            onClick={() => onChange(filter.value)}
+            className={[
+              'shrink-0 rounded-full border px-4 py-2',
+              'text-xs transition-all duration-200',
+              isActive
+                ? 'border-[var(--primary)] bg-[var(--primary)] font-medium text-white shadow-sm'
+                : 'border-[var(--line)] bg-[var(--surface)] font-normal text-[var(--muted)] hover:border-[var(--primary-border)] hover:text-[var(--ink)]',
+            ].join(' ')}
+          >
+            {filter.label}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -396,29 +944,101 @@ export function DateFilterBar({ active, onChange, className = '' }) {
 /* ============================================================
    ALERT BANNER
 ============================================================ */
-export function AlertBanner({ type = 'info', title, message, onDismiss }) {
+
+export function AlertBanner({
+  type = 'info',
+  title,
+  message,
+  onDismiss,
+}) {
   const styles = {
-    info:    { wrap: 'bg-blue-50 border-blue-200', icon: 'text-blue-700', text: 'text-blue-900' },
-    success: { wrap: 'bg-emerald-50 border-emerald-200', icon: 'text-emerald-700', text: 'text-emerald-900' },
-    warning: { wrap: 'bg-amber-50 border-amber-200', icon: 'text-amber-700', text: 'text-amber-900' },
-    danger:  { wrap: 'bg-rose-50 border-rose-200', icon: 'text-rose-700', text: 'text-rose-900' },
+    info: {
+      wrapper: 'border-blue-200 bg-blue-50',
+      icon: 'text-blue-700',
+      text: 'text-blue-900',
+    },
+    success: {
+      wrapper: 'border-emerald-200 bg-emerald-50',
+      icon: 'text-emerald-700',
+      text: 'text-emerald-900',
+    },
+    warning: {
+      wrapper: 'border-amber-200 bg-amber-50',
+      icon: 'text-amber-700',
+      text: 'text-amber-900',
+    },
+    danger: {
+      wrapper: 'border-rose-200 bg-rose-50',
+      icon: 'text-rose-700',
+      text: 'text-rose-900',
+    },
   }
-  const s = styles[type] || styles.info
+
+  const selectedStyle = styles[type] || styles.info
+
   return (
-    <div className={`flex items-start gap-3 rounded-xl border px-4 py-3 ${s.wrap}`} role="alert">
-      <svg className={`shrink-0 mt-0.5 ${s.icon}`} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        {type === 'success'
-          ? <><path d="M20 6 9 17l-5-5"/></>
-          : <><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></>}
+    <div
+      className={[
+        'flex items-start gap-3 rounded-xl border px-4 py-3.5',
+        selectedStyle.wrapper,
+      ].join(' ')}
+      role="alert"
+    >
+      <svg
+        className={`mt-0.5 shrink-0 ${selectedStyle.icon}`}
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        {type === 'success' ? (
+          <path d="M20 6 9 17l-5-5" />
+        ) : (
+          <>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 8v4" />
+            <path d="M12 16h.01" />
+          </>
+        )}
       </svg>
-      <div className="flex-1 min-w-0">
-        {title && <p className={`text-sm font-semibold ${s.text}`}>{title}</p>}
-        {message && <p className={`text-xs mt-0.5 ${s.text} opacity-80`}>{message}</p>}
+
+      <div className="min-w-0 flex-1">
+        {title && (
+          <p className={`text-sm font-medium ${selectedStyle.text}`}>
+            {title}
+          </p>
+        )}
+
+        {message && (
+          <p className={`mt-1 text-xs leading-relaxed ${selectedStyle.text} opacity-80`}>
+            {message}
+          </p>
+        )}
       </div>
+
       {onDismiss && (
-        <button onClick={onDismiss} className={`shrink-0 ${s.icon} hover:opacity-70 transition-opacity`} aria-label="Dismiss">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className={`shrink-0 rounded-md p-1 ${selectedStyle.icon} transition-opacity hover:opacity-60`}
+          aria-label="Dismiss"
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
           </svg>
         </button>
       )}

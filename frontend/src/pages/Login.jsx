@@ -704,22 +704,12 @@ export default function Login() {
 
 function Brand() {
   return (
-    <div className="flex items-center gap-3">
+    <div className=" mb-12 flex items-center gap-3">
 
       {/* Square Logo */}
 
       <div className="
-        flex
-        h-11
-        w-11
-        shrink-0
-        items-center
-        justify-center
-        rounded-md
-        border
-        border-slate-200
-        bg-white
-        shadow-sm
+   
       ">
 
         <img

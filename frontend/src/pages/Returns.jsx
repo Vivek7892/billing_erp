@@ -223,16 +223,16 @@ export default function Returns() {
   const toggleExpand = (id) => setExpandedReturns(prev => ({ ...prev, [id]: !prev[id] }))
 
   return (
-    <div className="space-y-5 sm:space-y-6 min-w-0 pb-4">
+    <div className="space-y-6 min-w-0 pb-6">
       <div className="flex flex-col gap-1 px-0.5">
-        <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[var(--ink)]">Returns & Refunds</h1>
-        <p className="text-xs sm:text-sm text-[var(--muted)]">Review returned items, refunded invoices, and process new returns.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink)]">Returns & Refunds</h1>
+        <p className="text-sm text-[var(--muted)] max-w-2xl">Review returned items, refunded invoices, and process new returns.</p>
       </div>
       <div className="grid grid-cols-1 min-[360px]:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         {stats.map((s, i) => (
           <div
             key={i}
-            className={`group relative overflow-hidden rounded-2xl border ${s.border} bg-[var(--surface)] p-4 sm:p-5 min-w-0 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md`}
+            className={`group relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5 min-w-0 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md`}
           >
             <div className={`absolute inset-x-0 top-0 h-0.5 ${s.iconBg}`} />
             <div className="flex items-start justify-between gap-3">
@@ -253,15 +253,48 @@ export default function Returns() {
       </div>
 
       {/* Sales Returns (item-level) */}
-      <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)] shadow-sm overflow-hidden min-w-0">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-[var(--line-subtle)] bg-[var(--surface)]">
-          <div className="flex items-center gap-2">
-            <RotateCcw size={16} className="text-blue-600" />
-            <h2 className="font-semibold text-[var(--ink)] text-sm leading-5 tracking-tight">Sales Returns (Item-level)</h2>
-          </div>
-          <button onClick={load} className="w-full sm:w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-blue-700 hover:border-blue-200 hover:bg-blue-50 shadow-sm transition-all active:scale-[0.98]" aria-label="Refresh returns">
-            <RefreshCw size={14} />
-          </button>
+      <div className="bg-[var(--surface)] rounded-2xl border border-[var(--line)] shadow-sm overflow-hidden min-w-0">
+
+  {/* Header */}
+  <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-[var(--line-subtle)] bg-[var(--surface)]">
+
+    {/* Title */}
+    <div className="flex items-center gap-2 min-w-0">
+      <RotateCcw
+        size={16}
+        className="text-blue-600 flex-shrink-0"
+      />
+
+      <h2 className="font-semibold text-[var(--ink)] text-sm sm:text-base leading-5 tracking-tight truncate">
+        Sales Returns (Item-level)
+      </h2>
+    </div>
+
+    {/* Refresh Button */}
+    <button
+      onClick={load}
+      type="button"
+      className="
+        flex-shrink-0
+        inline-flex items-center justify-center
+        w-8 h-8 sm:w-9 sm:h-9
+        rounded-lg
+        border border-[var(--line)]
+        bg-[var(--surface)]
+        text-[var(--muted)]
+        hover:text-blue-600
+        hover:border-blue-200
+        hover:bg-blue-50
+        transition-all duration-200
+        active:scale-95
+        focus:outline-none
+        focus:ring-2 focus:ring-blue-500/20
+      "
+      aria-label="Refresh sales returns"
+      title="Refresh"
+    >
+      <RefreshCw size={15} strokeWidth={2} />
+    </button>
         </div>
         {loading ? <Spinner /> : (
           <>
@@ -347,11 +380,11 @@ export default function Returns() {
       </div>
 
       {/* Cancelled / Refunded invoices */}
-      <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)] shadow-sm overflow-hidden min-w-0">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-[var(--line-subtle)] bg-[var(--surface)]">
+      <div className="bg-[var(--surface)] rounded-2xl border border-[var(--line)] shadow-sm overflow-hidden min-w-0">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-[var(--line-subtle)] bg-[var(--surface)]">
           <div className="flex items-center gap-2">
             <PackageX size={16} className="text-rose-600" />
-            <h2 className="font-semibold text-[var(--ink)] text-sm leading-5 tracking-tight">Cancelled & Refunded Invoices</h2>
+            <h2 className="font-semibold text-[var(--ink)] text-base leading-5 tracking-tight">Cancelled & Refunded Invoices</h2>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="flex gap-1 bg-[var(--surface-elevated)] border border-[var(--line)] rounded-lg p-1 w-full sm:w-auto">
@@ -460,11 +493,11 @@ export default function Returns() {
       </div>
 
       {/* New Return from completed invoices */}
-      <div className="bg-[var(--surface)] rounded-xl border border-[var(--line)] shadow-sm overflow-hidden min-w-0">
+      <div className="bg-[var(--surface)] rounded-2xl border border-[var(--line)] shadow-sm overflow-hidden min-w-0">
         <div className="px-4 sm:px-5 py-4 sm:py-5 border-b border-[var(--line-subtle)] bg-[var(--surface)]">
           <div className="flex items-center gap-2">
             <RotateCcw size={16} className="text-emerald-600" />
-            <h2 className="font-semibold text-[var(--ink)] text-sm leading-5 tracking-tight">Process New Return</h2>
+            <h2 className="font-semibold text-[var(--ink)] text-base leading-5 tracking-tight">Process New Return</h2>
             <span className="text-xs text-[var(--muted-light)]">— select a completed invoice</span>
           </div>
         </div>
