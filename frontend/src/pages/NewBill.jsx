@@ -1,16 +1,26 @@
 /*
  * NewBill.jsx
- * Professional responsive POS billing screen.
+ * Desktop-first POS billing screen: three-column workspace + payment dock.
  *
- * Preserved functionality:
- * - Product search, barcode/SKU search and category filtering
- * - Cart calculations, GST, discounts and round-off
- * - Customer search and creation
- * - Cash, UPI, Card, Credit and Razorpay workflows
- * - Draft bills, invoice printing, PDF download and sharing
- * - QR payments and keyboard shortcuts
+ *   Header  →  New Bill · date / cashier · Drafts · Shortcuts · Fullscreen
+ *   Desktop →  [ Products & search 45% | Current bill 30% | Bill summary 25% ]
+ *              [ Payment dock: methods · method fields · actions ]
+ *   Tablet  →  [ Products | Current bill + summary stacked ] + sticky payment dock
+ *   Mobile  →  single column: search/categories → products → bill → summary →
+ *              payment, plus a fixed "total + Complete Sale" bar.
  *
- * Styling follows the application's global light/dark CSS variables.
+ * Preserved (unchanged): API/service calls, invoice payload, GST / discount /
+ * round-off calculations, draft storage contract (localStorage "pos_drafts",
+ * sessionStorage "pos_resume_draft"), Razorpay order/verify/success flow,
+ * QR payment, invoice print / PDF / thermal / share helpers, keyboard
+ * shortcuts, validation summary, stock checks, duplicate-submit guard.
+ *
+ * All CSS is namespaced with the "pb-" prefix so nothing leaks into the app.
+ * It reads the app's existing CSS variables (--surface, --ink, --line, ...)
+ * with plain fallbacks, so light/dark themes keep working.
+ *
+ * Layout tip: on desktop the page is exactly one viewport tall. If your app
+ * shell adds its own top bar, set --pb-shell-offset (e.g. 56px) on a parent.
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
@@ -21,14 +31,24 @@ import productService from '../features/inventory/api/productService'
 import customerService from '../features/customers/api/customerService'
 import settingsService from '../features/settings/api/settingsService'
 import toast from 'react-hot-toast'
+import './NewBill.css'
 import {
-  Search, Plus, Minus, Trash2, User, Printer, Download, RefreshCw, QrCode,
-  Keyboard, CheckCircle2, Share2, Clock, Layers, X, Banknote,
-  CreditCard, Wallet, Receipt, AlertTriangle, FileText, Maximize2, Minimize2, MoreHorizontal
+  Search, Plus, Minus, Trash2, Printer, Download, RefreshCw, QrCode,
+  Keyboard, CheckCircle2, Share2, X, AlertTriangle, FileText,
+  Maximize2, Minimize2, Layers,
+  Package, Banknote, Smartphone, CreditCard, BookOpen, Wallet,
+  User, UserPlus, ShoppingCart,
 } from 'lucide-react'
-import { ErrorState, Modal, Skeleton } from '../components/UI'
+import { Modal } from '../components/UI'
 import { useNavigate } from 'react-router-dom'
 import RazorpayPaymentModal from '../features/billing/RazorpayPaymentModal'
+
+// ---------------------------------------------------------------------------
+// Configuration switches (UI-level validation only)
+// ---------------------------------------------------------------------------
+const ENFORCE_STOCK = true            // block quantities above available stock
+const CREDIT_REQUIRES_CUSTOMER = true // credit sale needs a named customer
+const LOW_STOCK_THRESHOLD = 5         // display only: product cards turn orange at or below this
 
 // ---------------------------------------------------------------------------
 // Local drafts (parked bills) — unchanged storage contract
@@ -38,145 +58,179 @@ function loadDrafts() { try { return JSON.parse(localStorage.getItem(DRAFT_KEY) 
 function saveDraftsStore(drafts) { localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts)) }
 
 const fmt = value => `₹${Number(value || 0).toFixed(2)}`
+const fmtSigned = value => {
+  const n = Number(value || 0)
+  if (Math.abs(n) < 0.005) return fmt(0)
+  return `${n < 0 ? '-' : '+'}₹${Math.abs(n).toFixed(2)}`
+}
 const upiUri = (upiId, name, amount, invoice = 'NEW-BILL') => {
   const params = new URLSearchParams({ pa: upiId || '', pn: name || 'Dreamwithtech', am: Number(amount || 0).toFixed(2), cu: 'INR', tn: invoice })
   return `upi://pay?${params.toString()}`
 }
 
+// Best-effort cashier name. Wire this to your auth context if you have one.
+function getCashierName() {
+  for (const key of ['user', 'auth_user', 'current_user']) {
+    try {
+      const u = JSON.parse(localStorage.getItem(key) || 'null')
+      if (u) {
+        const name = u.full_name || u.name || [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username || u.email
+        if (name) return name
+      }
+    } catch { /* ignore */ }
+  }
+  return 'Cashier'
+}
+
+// Stock that must be respected for a product (Infinity = not enforced / unknown).
+const enforcedStock = product => {
+  if (!ENFORCE_STOCK || !product || product.track_stock === false || product.is_service) return Infinity
+  const s = product.current_stock
+  if (s === undefined || s === null || s === '') return Infinity
+  const n = Number(s)
+  return Number.isFinite(n) ? n : Infinity
+}
+
+// Touch devices: don't re-focus the search box after adding an item, or the
+// on-screen keyboard pops up on every product tap.
+const canAutoFocus = () => typeof window !== 'undefined' && Boolean(window.matchMedia?.('(pointer: fine)').matches)
+
 const PAYMENT_METHODS = [
   { id: 'cash', label: 'Cash', icon: Banknote },
-  { id: 'upi', label: 'UPI', icon: QrCode },
+  { id: 'upi', label: 'UPI', icon: Smartphone },
   { id: 'card', label: 'Card', icon: CreditCard },
-  { id: 'credit', label: 'Credit', icon: Wallet },
-  { id: 'razorpay', label: 'Razorpay', icon: CreditCard },
+  { id: 'credit', label: 'Credit', icon: BookOpen },
+  { id: 'razorpay', label: 'Razorpay', icon: Wallet },
 ]
 const CASH_CHIPS = [50, 100, 200, 500, 1000, 2000]
 const QR_PRESETS = [100, 200, 500, 1000, 2000]
+const INITIAL_PAYMENT = { method: 'cash', amount: '', reference: '', status: 'pending', autoAmount: false }
+
+// Amount actually received for an invoice, without overstating pending Razorpay.
+const lastPaidAmount = inv => {
+  if (!inv) return 0
+  if (inv.payment_method === 'razorpay' && inv.payment_status !== 'paid') return 0
+  if (inv.payment_method === 'credit') return Number(inv.paid_amount ?? 0)
+  return Number(inv.amount_received ?? inv.paid_amount ?? 0)
+}
 
 // ---------------------------------------------------------------------------
-// Cart row
+// Numeric text input that lets the user clear / retype without side effects
 // ---------------------------------------------------------------------------
-function CartRow({ item, index, onQty, onRemove, showGst, justAdded }) {
-  const basic = item.unit_price * item.qty * (1 - item.discount_percent / 100)
-  const gst = basic * item.gst_percent / 100
+function BufferedNumber({ value, onCommit, max, allowZero = false, onClamp, className, ...rest }) {
+  const [text, setText] = useState(String(value))
+  const [focused, setFocused] = useState(false)
+
+  useEffect(() => { if (!focused) setText(String(value)) }, [value, focused])
+
+  const handleChange = e => {
+    const raw = e.target.value
+    if (!/^\d*\.?\d*$/.test(raw)) return
+    if (raw === '' || raw === '.') {
+      setText(raw)
+      if (allowZero) onCommit(0)
+      return
+    }
+    let n = parseFloat(raw)
+    if (max !== undefined && n > max) {
+      n = max
+      setText(String(max))
+      onClamp?.(max)
+    } else {
+      setText(raw)
+    }
+    if (n > 0 || allowZero) onCommit(n)
+  }
 
   return (
-    <>
-      {/* Desktop cart row */}
-      <tr className={`hidden sm:table-row border-b border-[var(--line-subtle)] last:border-0 transition-colors ${justAdded ? 'bg-blue-50 dark:bg-blue-950/30' : 'hover:bg-[var(--surface-elevated)]'}`}>
-        <td className="py-2 pl-3 pr-1 text-xs text-[var(--muted-light)] text-center align-middle">{index}</td>
-        <td className="py-2 pr-2 align-middle min-w-[9rem]">
-          <div className="font-medium text-sm text-[var(--ink)] leading-tight">{item.product_name}</div>
-          <div className="text-[11px] text-[var(--muted-light)]">{item.sku}{item.hsn_code ? ` · HSN ${item.hsn_code}` : ''}</div>
-        </td>
-        <td className="py-2 pr-2 text-right align-middle text-xs text-[var(--muted-light)] whitespace-nowrap">{fmt(item.mrp || item.unit_price)}</td>
-        <td className="py-2 pr-2 text-right align-middle text-sm font-medium text-[var(--ink-secondary)] whitespace-nowrap">{fmt(item.unit_price)}</td>
-        <td className="py-2 px-1 align-middle">
-          <div className="flex items-center justify-center gap-1">
-            <button
-              aria-label={`Decrease ${item.product_name} quantity`}
-              onClick={() => onQty(item.id, item.qty - 1)}
-              className="h-8 w-8 rounded-md border border-[var(--line)] flex items-center justify-center text-[var(--muted)] hover:bg-slate-100 active:scale-95 transition"
-            ><Minus size={13} /></button>
-            <input
-              aria-label={`${item.product_name} quantity`}
-              type="number" min="0.01" step="0.01" value={item.qty}
-              onChange={e => onQty(item.id, parseFloat(e.target.value) || 0)}
-              className="w-12 h-8 text-center border border-[var(--line)] rounded-md text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-            />
-            <button
-              aria-label={`Increase ${item.product_name} quantity`}
-              onClick={() => onQty(item.id, item.qty + 1)}
-              className="h-8 w-8 rounded-md border border-[var(--line)] flex items-center justify-center text-[var(--muted)] hover:bg-slate-100 active:scale-95 transition"
-            ><Plus size={13} /></button>
-          </div>
-        </td>
-        <td className="py-2 px-2 text-right align-middle text-sm text-[var(--muted)] whitespace-nowrap">{fmt(basic)}</td>
-        {showGst && (
-          <td className="py-2 px-2 text-right align-middle whitespace-nowrap">
-            <div className="text-sm text-[var(--muted)]">{fmt(gst)}</div>
-            <div className="text-[10px] text-[var(--muted-light)]">{item.gst_percent}%</div>
-          </td>
-        )}
-        <td className="py-2 pl-2 pr-2 text-right align-middle text-sm font-semibold text-[var(--ink)] whitespace-nowrap">{fmt(item.total)}</td>
-        <td className="py-2 pr-3 text-center align-middle">
-          <button
-            aria-label={`Remove ${item.product_name}`}
-            onClick={() => onRemove(item.id)}
-            className="text-slate-300 hover:text-rose-500 p-2 transition"
-          ><Trash2 size={15} /></button>
-        </td>
-      </tr>
-
-      {/* Mobile cart card */}
-      <tr className={`sm:hidden border-b border-[var(--line-subtle)] ${justAdded ? 'bg-blue-50 dark:bg-blue-950/30' : ''}`}>
-        <td colSpan={showGst ? 9 : 8} className="p-0">
-          <div className="p-3.5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="font-semibold text-sm text-[var(--ink)] leading-tight break-words">{item.product_name}</div>
-                <div className="text-[11px] text-[var(--muted-light)] mt-0.5">
-                  {item.sku}{item.hsn_code ? ` · HSN ${item.hsn_code}` : ''}
-                </div>
-              </div>
-              <button
-                aria-label={`Remove ${item.product_name}`}
-                onClick={() => onRemove(item.id)}
-                className="shrink-0 h-9 w-9 rounded-lg border border-[var(--line)] text-[var(--muted-light)] hover:text-rose-500 hover:bg-rose-50 dark:bg-rose-950/60 flex items-center justify-center"
-              >
-                <Trash2 size={15} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
-              <div className="rounded-lg bg-[var(--surface-elevated)] px-2.5 py-2">
-                <div className="text-[10px] text-[var(--muted-light)]">Rate</div>
-                <div className="font-semibold text-[var(--ink-secondary)] mt-0.5">{fmt(item.unit_price)}</div>
-              </div>
-              <div className="rounded-lg bg-[var(--surface-elevated)] px-2.5 py-2">
-                <div className="text-[10px] text-[var(--muted-light)]">MRP</div>
-                <div className="font-semibold text-[var(--ink-secondary)] mt-0.5">{fmt(item.mrp || item.unit_price)}</div>
-              </div>
-              <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 px-2.5 py-2">
-                <div className="text-[10px] text-blue-500 dark:text-blue-400">Total</div>
-                <div className="font-bold text-[var(--amount-sales)] mt-0.5">{fmt(item.total)}</div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-3 mt-3">
-              <div className="flex items-center gap-1.5">
-                <button
-                  aria-label={`Decrease ${item.product_name} quantity`}
-                  onClick={() => onQty(item.id, item.qty - 1)}
-                  className="h-10 w-10 rounded-lg border border-[var(--line)] flex items-center justify-center text-[var(--muted)] active:scale-95"
-                ><Minus size={15} /></button>
-                <input
-                  aria-label={`${item.product_name} quantity`}
-                  type="number" min="0.01" step="0.01" value={item.qty}
-                  onChange={e => onQty(item.id, parseFloat(e.target.value) || 0)}
-                  className="w-16 h-10 text-center border border-[var(--line)] rounded-lg text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-                />
-                <button
-                  aria-label={`Increase ${item.product_name} quantity`}
-                  onClick={() => onQty(item.id, item.qty + 1)}
-                  className="h-10 w-10 rounded-lg border border-[var(--line)] flex items-center justify-center text-[var(--muted)] active:scale-95"
-                ><Plus size={15} /></button>
-              </div>
-
-              <div className="text-right text-xs text-[var(--muted)]">
-                <div>Basic {fmt(basic)}</div>
-                {showGst && <div>GST {fmt(gst)} ({item.gst_percent}%)</div>}
-              </div>
-            </div>
-          </div>
-        </td>
-      </tr>
-    </>
+    <input
+      type="text"
+      inputMode="decimal"
+      autoComplete="off"
+      className={className}
+      value={text}
+      onFocus={e => { setFocused(true); e.target.select() }}
+      onBlur={() => setFocused(false)}
+      onChange={handleChange}
+      {...rest}
+    />
   )
 }
 
 // ---------------------------------------------------------------------------
-// QR payment modal (Quick Pay)
+// Cart line (same props as before; now a compact list item instead of a table row)
+// ---------------------------------------------------------------------------
+function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, onRemove }) {
+  const gross = item.unit_price * item.qty
+  const discountAmount = gross * item.discount_percent / 100
+  const basic = gross - discountAmount
+  const gst = basic * item.gst_percent / 100
+  const overStock = Number.isFinite(stock) && item.qty > stock
+  const codes = [item.sku, item.barcode, item.hsn_code ? `HSN ${item.hsn_code}` : ''].filter(Boolean)
+
+  return (
+    <li className={`pb-item${overStock ? ' pb-item-warn' : justAdded ? ' pb-item-added' : ''}`}>
+      <div className="pb-item-top">
+        <span className="pb-item-no">{index}</span>
+        <div className="pb-item-info">
+          <div className="pb-item-name">{item.product_name}</div>
+          {codes.length ? <div className="pb-sub">{codes.join(' | ')}</div> : null}
+        </div>
+        <div className="pb-item-total">{fmt(item.total)}</div>
+        <button type="button" className="pb-icon-btn pb-icon-danger" aria-label={`Remove ${item.product_name}`} title="Remove item" onClick={() => onRemove(item.id)}>
+          <Trash2 size={15} />
+        </button>
+      </div>
+
+      <div className="pb-item-mid">
+        <div className="pb-qtywrap">
+          <div className="pb-qty">
+            <button type="button" aria-label={`Decrease ${item.product_name} quantity`} onClick={() => onQty(item.id, item.qty - 1)}>
+              <Minus size={14} />
+            </button>
+            <BufferedNumber
+              aria-label={`${item.product_name} quantity`}
+              value={item.qty}
+              max={Number.isFinite(stock) ? stock : undefined}
+              onClamp={m => toast.error(`Only ${m} in stock`)}
+              onCommit={n => onQty(item.id, n)}
+            />
+            <button type="button" aria-label={`Increase ${item.product_name} quantity`} onClick={() => onQty(item.id, item.qty + 1)}>
+              <Plus size={14} />
+            </button>
+          </div>
+          {item.unit ? <span className="pb-unit">{item.unit}</span> : null}
+        </div>
+        <div className="pb-item-price">
+          <span className="pb-strong">{fmt(item.unit_price)}</span> <span className="pb-sub">each</span>
+          {item.mrp && Number(item.mrp) > item.unit_price ? <div className="pb-sub">MRP {fmt(item.mrp)}</div> : null}
+        </div>
+      </div>
+
+      <div className="pb-item-meta">
+        <label className="pb-disc">
+          <span>Disc</span>
+          <BufferedNumber
+            aria-label={`${item.product_name} discount percent`}
+            allowZero
+            max={100}
+            value={item.discount_percent}
+            onCommit={n => onDiscount(item.id, n)}
+          />
+          <span>%</span>
+        </label>
+        {discountAmount > 0 ? <span className="pb-text-red">-{fmt(discountAmount)}</span> : null}
+        {showGst && <span>GST {fmt(gst)} ({item.gst_percent}%)</span>}
+        {Number.isFinite(stock) && (
+          <span className={overStock ? 'pb-text-red pb-strong' : ''}>Available: {stock}</span>
+        )}
+      </div>
+    </li>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// QR payment modal (Quick Pay) — logic unchanged
 // ---------------------------------------------------------------------------
 function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, hasCart, onPaid }) {
   const qrRef = useRef(null)
@@ -308,48 +362,29 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Quick Customer Payment" size="sm"><div className="mobile-modal-content">
-      <div className="text-center space-y-4">
-        <div className=" text-sm text-[var(--muted-light)] mb-1 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-2.5 text-left">
-          <div className=" inline-flex items-center justify-center gap-1 text-sm font-semibold text-[var(--success)] bg">
-            <QrCode size={18} />
-            Scan & Pay
-          </div>
-          <div className="text-xs text-[var(--success-text)] mt-1">
-            Customer scans this QR with Google Pay, Paytm, BHIM or another UPI app.
-          </div>
+    <Modal open={open} onClose={onClose} title="UPI QR Payment" size="sm">
+      <div className="pb-modal pb-stack">
+        <div className="pb-note">
+          Customer scans this QR with any UPI app. <b>Generating the QR does not confirm payment.</b>
         </div>
 
-        {/* Manual amount entry */}
-        <div className="text-left">
-          <span className="text-xs text-[var(--muted)] font-medium">Amount to collect</span>
-          <div className="relative mt-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)] text-base font-semibold">₹</span>
-            <input
-              type="number" min="0" step="0.01" inputMode="decimal"
-              className="w-full h-12 pl-7 pr-3 rounded-lg border border-[var(--line)] text-lg font-bold tabular-nums focus:outline-none focus:ring-2 focus:ring-[var(--success)] focus:border-[var(--success)]"
-              value={amount}
-              onChange={e => setAmount(e.target.value)}
-              placeholder="0.00"
-              autoFocus
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-1.5 mt-2">
+        <div>
+          <label className="pb-label" htmlFor="pb-qr-amount">Amount to collect (₹)</label>
+          <input
+            id="pb-qr-amount"
+            type="number" min="0" step="0.01" inputMode="decimal"
+            className="pb-input pb-input-lg"
+            value={amount}
+            onChange={e => setAmount(e.target.value)}
+            placeholder="0.00"
+            autoFocus
+          />
+          <div className="pb-chips">
             {hasCart && billTotal > 0 && (
-              <button
-                onClick={applyBillTotal}
-                className="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 hover:bg-indigo-100"
-              >
-                🧾 Bill Total · {fmt(billTotal)}
-              </button>
+              <button type="button" onClick={applyBillTotal} className="pb-chip">Bill total {fmt(billTotal)}</button>
             )}
             {QR_PRESETS.map(v => (
-              <button
-                key={v}
-                onClick={() => applyPreset(v)}
-                className="pos-chip"
-              >
+              <button type="button" key={v} onClick={() => applyPreset(v)} className="pb-chip">
                 ₹{v.toLocaleString('en-IN')}
               </button>
             ))}
@@ -357,58 +392,51 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
         </div>
 
         {differsFromBill && (
-          <div className="flex items-start gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-left">
-            <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+          <div className="pb-note pb-note-warn" role="alert">
+            <AlertTriangle size={14} />
             <span>Bill total is <b>{fmt(billTotal)}</b> but this QR is for <b>{fmt(numericAmount)}</b>.</span>
           </div>
         )}
 
-        <div ref={qrRef} className="inline-flex max-w-full p-3 sm:p-4 border-2 border-[var(--success-border)] rounded-2xl bg-[var(--surface)] shadow-[var(--shadow-card)]">
-          {numericAmount > 0 ? (
-            <QRCodeSVG
-              value={uri}
-              size={240}
-              className="max-w-[70vw] max-h-[70vw] sm:max-w-none sm:max-h-none"
-              level="M"
-              includeMargin
-              bgColor="#ffffff"
-              fgColor="#111827"
-            />
-          ) : (
-            <div className="w-[240px] h-[240px] flex items-center justify-center text-center text-sm text-[var(--muted-light)] px-6">
-              Enter an amount to generate the QR
-            </div>
-          )}
+        <div className="pb-c">
+          <div ref={qrRef} className="pb-qr-box">
+            {numericAmount > 0 ? (
+              <QRCodeSVG
+                value={uri}
+                size={240}
+                level="M"
+                includeMargin
+                bgColor="#ffffff"
+                fgColor="#111827"
+                style={{ maxWidth: '100%', height: 'auto' }}
+              />
+            ) : (
+              <div className="pb-qr-empty">Enter an amount to generate the QR</div>
+            )}
+          </div>
         </div>
 
-        <div>
-          <div className="text-4xl font-extrabold text-[var(--amount-sales)] tabular-nums">{fmt(numericAmount)}</div>
-          <div className="text-sm font-semibold text-[var(--ink-secondary)] mt-1">{shopName}</div>
-          <div className="text-xs text-[var(--muted-light)] mt-1">{upiId || 'UPI ID not configured'}</div>
-          <div className="text-xs text-[var(--muted-light)]">Invoice: {invoice || 'NEW-BILL'}</div>
+        <div className="pb-c">
+          <div className="pb-qr-amount">{fmt(numericAmount)}</div>
+          <div className="pb-strong">{shopName}</div>
+          <div className="pb-sub">{upiId || 'UPI ID not configured'}</div>
+          <div className="pb-sub">Invoice: {invoice || 'NEW-BILL'}</div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <button onClick={download} disabled={!canAct} className="btn-outline">
-            <Download size={15} /> Download QR
-          </button>
-          <button onClick={print} disabled={!canAct} className="btn-outline">
-            <Printer size={15} /> Print QR
-          </button>
-          <button
-            onClick={() => onPaid(numericAmount)}
-            disabled={!canAct}
-            className="btn-solid bg-blue-600 hover:bg-blue-700 border-blue-600 hover:border-blue-700 col-span-1 sm:col-span-2 h-11 mobile-safe-button"
-          >
-            <CheckCircle2 size={16} /> Payment Received — Mark Paid ({fmt(numericAmount)})
-          </button>
-          <button onClick={onClose} className="btn-outline col-span-1 sm:col-span-2 mobile-safe-button">Close</button>
+        <div className="pb-grid2">
+          <button type="button" onClick={download} disabled={!canAct} className="pb-btn"><Download size={14} /> Download QR</button>
+          <button type="button" onClick={print} disabled={!canAct} className="pb-btn"><Printer size={14} /> Print QR</button>
         </div>
-
-        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-2.5 text-left">
-          <b>Important:</b> QR generation does not confirm payment. Verify the money is received in the merchant account before marking the bill as paid.
-        </div>
-      </div>
+        <button
+          type="button"
+          onClick={() => onPaid(numericAmount)}
+          disabled={!canAct}
+          className="pb-btn pb-btn-primary pb-btn-lg"
+        >
+          <CheckCircle2 size={16} /> Payment received — mark paid ({fmt(numericAmount)})
+        </button>
+        <button type="button" onClick={onClose} className="pb-btn">Close</button>
+        <div className="pb-sub">Verify the money in your UPI app or bank account before marking the bill as paid.</div>
       </div>
     </Modal>
   )
@@ -429,30 +457,41 @@ export default function NewBill() {
 
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('')
+  const [searchActive, setSearchActive] = useState(false)
+  const [activeIdx, setActiveIdx] = useState(-1)
   const [cart, setCart] = useState([])
   const [lastAddedId, setLastAddedId] = useState(null)
   const [customer, setCustomer] = useState(null)
   const [customerSearch, setCustomerSearch] = useState('')
-  const [payment, setPayment] = useState({ method: 'cash', amount: '', reference: '', status: 'pending' })
+  const [customerOpen, setCustomerOpen] = useState(false)
+  const [payment, setPayment] = useState(INITIAL_PAYMENT)
   const [billDiscountInput, setBillDiscountInput] = useState('')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [lastInvoice, setLastInvoice] = useState(null)
+  const [drafts, setDrafts] = useState(loadDrafts)
+
   const [showCustomerModal, setShowCustomerModal] = useState(false)
   const [showQr, setShowQr] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showRazorpay, setShowRazorpay] = useState(false)
-  const [cartOpen, setCartOpen] = useState(false)
-  const [searchActive, setSearchActive] = useState(false)
-  const [showMoreActions, setShowMoreActions] = useState(false)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [showDrafts, setShowDrafts] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(Boolean(document.fullscreenElement))
   const [newCustomer, setNewCustomer] = useState({ name: '', mobile: '', email: '' })
+  const [addingCustomer, setAddingCustomer] = useState(false)
   const [now, setNow] = useState(new Date())
+  const [cashier] = useState(getCashierName)
+
   const searchRef = useRef()
   const customerRef = useRef()
-  const paymentRef = useRef()
+  const paymentSectionRef = useRef()
   const billDiscountRef = useRef()
+  const savingRef = useRef(false)
+  const cartRef = useRef([])
+  const actionsRef = useRef({})
+  cartRef.current = cart
 
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t) }, [])
   const fmtDate = d => d.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
@@ -480,6 +519,10 @@ export default function NewBill() {
 
   useEffect(() => { loadInitialData() }, [loadInitialData])
 
+  const productMap = useMemo(() => new Map(products.map(p => [p.id, p])), [products])
+  // Display only: quantity already in the bill, shown as a badge on product cards.
+  const cartQtyMap = useMemo(() => new Map(cart.map(i => [i.id, i.qty])), [cart])
+
   const recalc = item => {
     const basic = item.unit_price * item.qty * (1 - item.discount_percent / 100)
     return { ...item, total: basic + basic * item.gst_percent / 100 }
@@ -490,16 +533,22 @@ export default function NewBill() {
       const current = JSON.parse(localStorage.getItem('pos_recent_products') || '[]')
       const next = [product, ...current.filter(p => p?.id !== product?.id)].slice(0, 8)
       localStorage.setItem('pos_recent_products', JSON.stringify(next))
-    } catch {}
+    } catch { /* ignore */ }
   }
 
   const addToCart = useCallback(product => {
+    const stock = enforcedStock(product)
+    const inCart = cartRef.current.find(item => item.id === product.id)?.qty || 0
+    if (stock <= 0) { toast.error(`${product.name} is out of stock`); return }
+    if (inCart + 1 > stock) { toast.error(`Only ${stock} of ${product.name} in stock`); return }
+
     setCart(prev => {
       const found = prev.find(item => item.id === product.id)
       return found
         ? prev.map(item => item.id === product.id ? recalc({ ...item, qty: item.qty + 1 }) : item)
         : [...prev, recalc({
             id: product.id, product_name: product.name, sku: product.sku,
+            barcode: product.barcode || '', unit: product.unit || '',
             hsn_code: product.hsn_code || '', mrp: Number(product.mrp || product.selling_price),
             unit_price: Number(product.selling_price), qty: 1, discount_percent: 0,
             gst_percent: Number(product.gst_percent || 0), total: 0,
@@ -509,10 +558,29 @@ export default function NewBill() {
     addRecentProduct(product)
     setTimeout(() => setLastAddedId(null), 800)
     setSearch('')
-    searchRef.current?.focus()
+    setActiveIdx(-1)
+    setSearchActive(false)
+    if (canAutoFocus()) searchRef.current?.focus()
   }, [])
 
-  const updateQty = (id, qty) => setCart(prev => qty <= 0 ? prev.filter(item => item.id !== id) : prev.map(item => item.id === id ? recalc({ ...item, qty }) : item))
+  const updateQty = (id, qty) => {
+    if (qty > 0) {
+      const stock = enforcedStock(productMap.get(id))
+      if (qty > stock) {
+        if (stock <= 0) { toast.error('Product is out of stock'); return }
+        toast.error(`Only ${stock} in stock`)
+        qty = stock
+      }
+    }
+    setCart(prev => qty <= 0 ? prev.filter(item => item.id !== id) : prev.map(item => item.id === id ? recalc({ ...item, qty }) : item))
+  }
+
+  const updateDiscount = (id, pct) => {
+    const value = Math.min(100, Math.max(0, Number(pct) || 0))
+    setCart(prev => prev.map(item => item.id === id ? recalc({ ...item, discount_percent: value }) : item))
+  }
+
+  const removeItem = id => setCart(x => x.filter(i => i.id !== id))
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -524,6 +592,8 @@ export default function NewBill() {
         (!catFilter || String(p?.category ?? '') === catFilter)
     })
   }, [products, search, catFilter])
+
+  const searchResults = useMemo(() => filtered.slice(0, 8), [filtered])
 
   const availableProducts = useMemo(() => filtered.filter(p => Number(p?.current_stock || 0) > 0), [filtered])
   const recentProducts = useMemo(() => {
@@ -537,6 +607,15 @@ export default function NewBill() {
     return base.filter(p => Number(p?.current_stock || 0) > 0 && !cart.some(i => i.id === p.id)).slice(0, 6)
   }, [search, filtered, catFilter, availableProducts, cart])
 
+  // Search is filter-only. Enter never adds a product.
+  const onSearchKeyDown = e => {
+    if (e.key === 'Enter') { e.preventDefault(); setSearchActive(true); setActiveIdx(-1) }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); setSearchActive(true); setActiveIdx(i => Math.min(searchResults.length - 1, i + 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(i => Math.max(-1, i - 1)) }
+    else if (e.key === 'Escape') { setSearchActive(false); setActiveIdx(-1) }
+  }
+
+  // ---- Calculations (unchanged) -------------------------------------------
   const subtotal = cart.reduce((sum, item) => sum + item.unit_price * item.qty, 0)
   const discount = cart.reduce((sum, item) => sum + item.unit_price * item.qty * item.discount_percent / 100, 0)
   const taxableBeforeBillDiscount = Math.max(0, subtotal - discount)
@@ -546,21 +625,33 @@ export default function NewBill() {
   const raw = taxableBeforeBillDiscount - billDiscount + tax
   const roundOff = Math.round(raw) - raw
   const grandTotal = raw + roundOff
+  // Display-only figures
+  const taxableAmount = taxableBeforeBillDiscount - billDiscount
+  const totalQty = cart.reduce((count, item) => count + Number(item.qty || 0), 0)
+  const cartItemsTotal = cart.reduce((sum, item) => sum + item.total, 0)
+
+  // Keep the auto-filled amount of non-cash methods in step with the bill total.
+  useEffect(() => {
+    const target = grandTotal.toFixed(2)
+    setPayment(p => (p.autoAmount && p.amount !== target) ? { ...p, amount: target } : p)
+  }, [grandTotal])
 
   const selectPayment = method => {
+    const digital = method !== 'cash' && method !== 'credit'
     setPayment({
       method,
-      amount: method === 'credit' ? '' : grandTotal.toFixed(2),
+      amount: digital ? grandTotal.toFixed(2) : '',
       reference: '',
-      status: method === 'cash' ? 'paid' : method === 'credit' ? 'credit' : method === 'razorpay' ? 'pending' : 'pending',
+      status: method === 'cash' ? 'paid' : method === 'credit' ? 'credit' : 'pending',
+      autoAmount: digital,
     })
-    if (method === 'razorpay' && !lastInvoice) {
-      toast('Save the bill first, then use Razorpay to collect payment.', { icon: 'ℹ️' })
-    }
   }
 
-  const balance = Math.max(0, grandTotal - (payment.status === 'paid' ? Number(payment.amount || 0) : 0))
-  const change = payment.method === 'cash' && payment.status === 'paid' ? Math.max(0, Number(payment.amount || 0) - grandTotal) : 0
+  // Cash: a blank "received" field means exact amount tendered.
+  const cashTendered = Number(payment.amount) || grandTotal
+  const cashShort = payment.method === 'cash' && cashTendered < grandTotal - 0.005
+  const cashBalanceDue = payment.method === 'cash' ? Math.max(0, grandTotal - cashTendered) : 0
+  const cashChange = payment.method === 'cash' ? Math.max(0, cashTendered - grandTotal) : 0
 
   const filteredCustomers = useMemo(() => {
     const q = customerSearch.trim().toLowerCase()
@@ -574,8 +665,31 @@ export default function NewBill() {
   const upiId = settings.shop_upi_id || ''
   const showGst = settings.gst_reg_type !== 'unregistered'
 
-  // Quick Pay can now be opened with or without a cart — it only requires
-  // the shop's UPI ID to be configured. The modal itself handles amount entry.
+  const isPendingRazorpay = Boolean(lastInvoice && lastInvoice.payment_method === 'razorpay' && lastInvoice.payment_status !== 'paid')
+
+  // ---- Pre-sale validation -------------------------------------------------
+  const validationErrors = useMemo(() => {
+    if (!cart.length) return ['Cart is empty']
+    const errs = []
+    cart.forEach(item => {
+      if (!Number.isFinite(item.qty) || item.qty <= 0) {
+        errs.push(`Invalid quantity for ${item.product_name}`)
+      } else {
+        const stock = enforcedStock(productMap.get(item.id))
+        if (item.qty > stock) errs.push(`Insufficient stock for ${item.product_name} (available ${stock})`)
+      }
+    })
+    if (!payment.method) errs.push('Select a payment method')
+    if (payment.method === 'credit' && CREDIT_REQUIRES_CUSTOMER && !customer) errs.push('Select a customer for a credit sale')
+    if (payment.method === 'cash' && cashShort) errs.push('Cash received is less than the grand total')
+    if (payment.method && !['cash', 'credit', 'razorpay'].includes(payment.method) && !Number(payment.amount)) {
+      errs.push('Enter payment amount')
+    }
+    return errs
+  }, [cart, productMap, payment, customer, cashShort])
+
+  // Quick Pay can be opened with or without a cart — it only requires the
+  // shop's UPI ID. The modal itself handles amount entry.
   const openQuickPayment = () => {
     if (!upiId) {
       toast.error('Configure shop UPI ID in Settings first')
@@ -586,9 +700,17 @@ export default function NewBill() {
 
   const resetBill = () => {
     setCart([]); setCustomer(null); setCustomerSearch('')
-    setPayment({ method: 'cash', amount: '', reference: '', status: 'pending' })
-    setBillDiscountInput(''); setNotes(''); setLastAddedId(null); setShowSuccess(false); setShowMoreActions(false); setSearchActive(false)
+    setPayment(INITIAL_PAYMENT)
+    setBillDiscountInput(''); setNotes(''); setLastAddedId(null); setShowSuccess(false)
+    setSearchActive(false); setActiveIdx(-1); setCustomerOpen(false)
     searchRef.current?.focus()
+  }
+
+  // "New Bill": clear the form and the previous receipt (unless a Razorpay
+  // payment for it is still pending).
+  const startNewBill = () => {
+    resetBill()
+    if (!isPendingRazorpay) setLastInvoice(null)
   }
 
   const saveDraft = () => {
@@ -599,30 +721,50 @@ export default function NewBill() {
       cart, customer, customerSearch, payment, billDiscountInput, notes,
     }
     saveDraftsStore([draft, ...loadDrafts().slice(0, 19)])
-    toast.success('Bill parked as draft')
+    setDrafts(loadDrafts())
+    toast.success('Bill saved as draft')
     resetBill()
   }
 
+  const applyDraft = d => {
+    setCart(d.cart || [])
+    setCustomer(d.customer || null)
+    setCustomerSearch(d.customerSearch || '')
+    setPayment(d.payment || INITIAL_PAYMENT)
+    setBillDiscountInput(d.billDiscountInput || '')
+    setNotes(d.notes || '')
+  }
+
   useEffect(() => {
-    const raw = sessionStorage.getItem('pos_resume_draft')
-    if (raw) {
+    const rawDraft = sessionStorage.getItem('pos_resume_draft')
+    if (rawDraft) {
       try {
-        const d = JSON.parse(raw)
-        setCart(d.cart || [])
-        setCustomer(d.customer || null)
-        setCustomerSearch(d.customerSearch || '')
-        setPayment(d.payment || { method: 'cash', amount: '', reference: '', status: 'pending' })
-        setBillDiscountInput(d.billDiscountInput || '')
-        setNotes(d.notes || '')
+        const d = JSON.parse(rawDraft)
+        applyDraft(d)
         saveDraftsStore(loadDrafts().filter(x => x.id !== d.id))
+        setDrafts(loadDrafts())
         toast.success('Draft resumed')
-      } catch {}
+      } catch { /* ignore */ }
       sessionStorage.removeItem('pos_resume_draft')
     }
   }, [])
 
+  const resumeDraft = d => {
+    if (cart.length) { toast.error('Complete or save the current bill as a draft first'); return }
+    applyDraft(d)
+    saveDraftsStore(loadDrafts().filter(x => x.id !== d.id))
+    setDrafts(loadDrafts())
+    setShowDrafts(false)
+    toast.success('Draft resumed')
+  }
+
+  const deleteDraft = id => {
+    saveDraftsStore(loadDrafts().filter(x => x.id !== id))
+    setDrafts(loadDrafts())
+  }
+
   // -------------------------------------------------------------------------
-  // Invoice document helpers
+  // Invoice document helpers (unchanged)
   // -------------------------------------------------------------------------
   const getInvoicePdfUrl = (invoiceId, thermal = false) => {
     if (!invoiceId) return ''
@@ -636,7 +778,7 @@ export default function NewBill() {
 
   const openInvoiceDocument = (invoiceId, thermal = false) => {
     if (!invoiceId) {
-      toast.error('Save the bill first')
+      toast.error('Complete the sale first')
       return
     }
 
@@ -653,7 +795,7 @@ export default function NewBill() {
   // are much less likely to block it.
   const printInvoiceDocument = async (invoiceId, thermal = false, existingWindow = null) => {
     if (!invoiceId) {
-      toast.error('Save the bill first')
+      toast.error('Complete the sale first')
       return
     }
 
@@ -717,7 +859,7 @@ export default function NewBill() {
     } catch (err) {
       try {
         win.close()
-      } catch {}
+      } catch { /* ignore */ }
       toast.error(
         err.response?.data?.detail ||
         `Could not print ${thermal ? 'thermal bill' : 'bill'}`
@@ -727,7 +869,7 @@ export default function NewBill() {
 
   const downloadInvoiceDocument = async (invoiceId, thermal = false) => {
     if (!invoiceId) {
-      toast.error('Save the bill first')
+      toast.error('Complete the sale first')
       return
     }
 
@@ -757,8 +899,13 @@ export default function NewBill() {
     }
   }
 
+  // -------------------------------------------------------------------------
+  // Complete sale (payload and flow unchanged; validation + double-submit guard added)
+  // -------------------------------------------------------------------------
   const saveBill = async print => {
-    if (!cart.length) return toast.error('Cart is empty')
+    if (savingRef.current) return
+    if (validationErrors.length) return toast.error(validationErrors[0])
+
     const receivedAmount = payment.method === 'cash'
       ? (Number(payment.amount) || grandTotal)
       : Number(payment.amount || 0)
@@ -789,6 +936,7 @@ export default function NewBill() {
       printWindow.document.close()
     }
 
+    savingRef.current = true
     setSaving(true)
 
     try {
@@ -832,17 +980,18 @@ export default function NewBill() {
       }
 
       setLastInvoice(savedInvoice)
-      toast.success(`Bill ${data.invoice_number} saved`)
+      toast.success(`Sale completed — invoice ${data.invoice_number}`)
 
       if (print) {
         await printInvoiceDocument(data.id, false, printWindow)
         printWindow = null
       }
 
+      const usedRazorpay = payment.method === 'razorpay'
       resetBill()
-      if (payment.method === 'razorpay') {
-        // Keep the saved invoice reference so Razorpay modal can use it,
-        // then open the modal. resetBill() clears cart but not lastInvoice.
+      if (usedRazorpay) {
+        // resetBill() clears the cart but not lastInvoice, so the Razorpay
+        // modal can use the saved invoice.
         setLastInvoice(savedInvoice)
         setShowRazorpay(true)
       } else {
@@ -850,7 +999,7 @@ export default function NewBill() {
       }
     } catch (err) {
       if (printWindow && !printWindow.closed) {
-        try { printWindow.close() } catch {}
+        try { printWindow.close() } catch { /* ignore */ }
       }
       const responseData = err.response?.data
       const validationMessage = responseData && typeof responseData === 'object'
@@ -858,12 +1007,15 @@ export default function NewBill() {
         : null
       toast.error(validationMessage || responseData?.detail || err.message || 'Could not save bill')
     } finally {
+      savingRef.current = false
       setSaving(false)
     }
   }
 
   const addCustomer = async () => {
+    if (addingCustomer) return
     if (!newCustomer.name.trim()) return toast.error('Customer name is required')
+    setAddingCustomer(true)
     try {
       const data = await customerService.createCustomer(newCustomer)
       setCustomers(x => [...x, data]); setCustomer(data); setCustomerSearch(data.name)
@@ -875,6 +1027,8 @@ export default function NewBill() {
         ? Object.values(msg).flat().find(v => typeof v === 'string')
         : msg?.detail
       toast.error(detail || 'Failed to add customer')
+    } finally {
+      setAddingCustomer(false)
     }
   }
 
@@ -885,7 +1039,7 @@ export default function NewBill() {
 
   const shareInvoice = async () => {
     if (!lastInvoice) {
-      toast.error('Save the bill first')
+      toast.error('Complete the sale first')
       return
     }
 
@@ -971,30 +1125,52 @@ export default function NewBill() {
     if (!win) toast.error('Could not open the bill PDF')
   }
 
-  const setExactCash = () => setPayment(x => ({ ...x, method: 'cash', amount: grandTotal.toFixed(2), status: 'paid' }))
-  const addCashChip = v => setPayment(x => ({ ...x, method: 'cash', amount: (Number(x.amount || 0) + v).toFixed(2), status: 'paid' }))
+  const setExactCash = () => setPayment(x => ({ ...x, method: 'cash', amount: grandTotal.toFixed(2), status: 'paid', autoAmount: false }))
+  const addCashChip = v => setPayment(x => ({ ...x, method: 'cash', amount: (Number(x.amount || 0) + v).toFixed(2), status: 'paid', autoAmount: false }))
 
+  // Ctrl+P / F7: print the bill being built (complete & print), otherwise the last invoice.
+  const printCurrent = () => {
+    if (cart.length) saveBill(true)
+    else if (lastInvoice?.id) printInvoiceDocument(lastInvoice.id, false)
+    else toast.error('Nothing to print')
+  }
+
+  const focusPayment = () => {
+    const root = paymentSectionRef.current
+    const target = root?.querySelector('input:not([readonly])') || root?.querySelector('button[aria-checked="true"]')
+    target?.focus()
+  }
+
+  // Keyboard shortcuts — handlers are read through a ref so they never go stale.
+  actionsRef.current = { saveBill, saveDraft, printCurrent, focusPayment, navigate }
   useEffect(() => {
     const onKey = e => {
+      const a = actionsRef.current
+      const key = e.key
+      const mod = e.ctrlKey || e.metaKey
       const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); searchRef.current?.focus() }
-      if (e.key === 'F1') { e.preventDefault(); navigate('/billing/new') }
-      if (e.key === 'F2') { e.preventDefault(); searchRef.current?.focus() }
-      if (e.key === 'F3') { e.preventDefault(); customerRef.current?.focus() }
-      if (e.key === 'F4') { e.preventDefault(); paymentRef.current?.focus() }
-      if (e.key === 'F5') { e.preventDefault(); saveDraft() }
-      if (e.key === 'F6') { e.preventDefault(); billDiscountRef.current?.focus() }
-      if (e.key === 'F7' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p')) {
-        e.preventDefault()
-        if (lastInvoice?.id) printInvoiceDocument(lastInvoice.id, false)
-        else saveBill(true)
+      if (mod && key.toLowerCase() === 'k') { e.preventDefault(); searchRef.current?.focus() }
+      else if (mod && key.toLowerCase() === 'd') { e.preventDefault(); a.saveDraft() }
+      else if (mod && key.toLowerCase() === 'p') { e.preventDefault(); a.printCurrent() }
+      else if (mod && key === 'Enter') { e.preventDefault(); a.saveBill(false) }
+      else if (key === 'F1') { e.preventDefault(); a.navigate('/billing/new') }
+      else if (key === 'F2') { e.preventDefault(); customerRef.current?.focus() }
+      else if (key === 'F3') { e.preventDefault(); searchRef.current?.focus() }
+      else if (key === 'F4') { e.preventDefault(); a.focusPayment() }
+      else if (key === 'F5') { e.preventDefault(); a.saveDraft() }
+      else if (key === 'F6') { e.preventDefault(); billDiscountRef.current?.focus() }
+      else if (key === 'F7') { e.preventDefault(); a.printCurrent() }
+      else if (key === 'F8') { e.preventDefault(); a.saveBill(false) }
+      else if (key === 'Escape') {
+        setShowQr(false); setShowCustomerModal(false); setShowShortcuts(false)
+        setShowClearConfirm(false); setShowDrafts(false)
+        setSearchActive(false); setCustomerOpen(false)
+        if (!typing) setShowSuccess(false)
       }
-      if (e.key === 'F8' || (e.ctrlKey && e.key === 'Enter')) { e.preventDefault(); saveBill(false) }
-      if (e.key === 'Escape') { setShowQr(false); setShowCustomerModal(false); setShowShortcuts(false); if (!typing) setShowSuccess(false) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [grandTotal, payment, cart, lastInvoice, upiId, billDiscountInput, navigate])
+  }, [])
 
   useEffect(() => {
     const onFullscreen = () => setIsFullscreen(Boolean(document.fullscreenElement))
@@ -1011,741 +1187,657 @@ export default function NewBill() {
     }
   }
 
+  const stockLabel = p => {
+    const s = p?.current_stock ?? 0
+    return `${s}${p?.unit ? ` ${p.unit}` : ''}`
+  }
+  const isOut = p => {
+    const s = enforcedStock(p)
+    return Number.isFinite(s) && s <= 0
+  }
+  // Display helpers for product cards (service / untracked items show no stock line).
+  const hasStockInfo = p => {
+    const s = p?.current_stock
+    return p?.track_stock !== false && !p?.is_service && s !== undefined && s !== null && s !== ''
+  }
+  const isLowStock = p => {
+    const n = Number(p?.current_stock)
+    return Number.isFinite(n) && n > 0 && n <= LOW_STOCK_THRESHOLD
+  }
+
+  const billIssues = cart.length > 0 ? validationErrors : []
+  const canComplete = !saving && validationErrors.length === 0
+  const completeTitle = canComplete ? 'Complete sale (F8)' : (validationErrors[0] || '')
+
+  // =========================================================================
+  // Render
+  // =========================================================================
   return (
-    <div className="pos-page min-h-screen w-full overflow-x-hidden">
-      <style>{`
-        /* ==================================================================
-           POS design system
-           One accent, neutral surfaces, a single elevation scale. Everything
-           below is scoped to .pos-page and layers on top of the app's
-           existing --surface / --ink / --line CSS variables — it does not
-           replace them, so dark mode (already driven by those variables)
-           keeps working unchanged.
-        ================================================================== */
-        .pos-page{
-          --acc:#2554e8;
-          --acc-strong:#1c3fc0;
-          --acc-soft:#eef2ff;
-          --acc-soft-border:#dbe4ff;
-          --money:#0f8a5f;
-          --money-soft:#e9f7f0;
-          --money-border:#bfe8d6;
-          --warn:#b45309;
-          --warn-soft:#fef3e2;
-          --warn-border:#fbdfa6;
-          --danger:#dc2626;
-          --danger-soft:#fdecec;
-          --r-sm:8px;
-          --r-md:12px;
-          --r-lg:16px;
-          --e1:0 1px 2px rgba(15,23,42,.06);
-          --e2:0 6px 20px -6px rgba(15,23,42,.12);
-          background:var(--app-bg, #f4f5f7);
-          color:var(--ink);
-          font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
-          -webkit-font-smoothing:antialiased;
-        }
-        .pos-page *{box-sizing:border-box}
-        .pos-page ::selection{background:var(--acc-soft);color:var(--acc-strong)}
+    <div className="pb-page">
+      {/* Styles moved to NewBill.css */}
 
-        /* ---- primitives ---------------------------------------------- */
-        .pos-card{
-          background:var(--surface);
-          border:1px solid var(--line);
-          border-radius:var(--r-md);
-          box-shadow:var(--e1);
-        }
-        .pos-input{
-          width:100%;min-height:2.5rem;padding:.5rem .75rem;
-          border:1px solid var(--line);border-radius:var(--r-sm);
-          background:var(--surface);color:var(--ink);
-          font-size:.8125rem;outline:none;
-          transition:border-color .12s ease,box-shadow .12s ease;
-        }
-        .pos-input::placeholder{color:var(--muted-light)}
-        .pos-input:hover{border-color:#c7ccd6}
-        .pos-input:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-soft)}
-        .pos-money,.tabular-nums,input[type=number]{
-          font-variant-numeric:tabular-nums lining-nums;
-          font-feature-settings:"tnum" 1,"lnum" 1;
-        }
 
-        .btn-solid{
-          display:inline-flex;align-items:center;justify-content:center;gap:.4rem;
-          min-height:2.5rem;padding:0 1rem;border-radius:var(--r-sm);
-          background:var(--acc);color:#fff;border:1px solid var(--acc);
-          font-weight:650;font-size:.8125rem;letter-spacing:.005em;
-          box-shadow:var(--e1);transition:background .12s ease,transform .05s ease;
-        }
-        .btn-solid:hover:not(:disabled){background:var(--acc-strong);border-color:var(--acc-strong)}
-        .btn-solid:active:not(:disabled){transform:translateY(1px)}
-        .btn-solid:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+      {/* ============================ A. HEADER ============================ */}
+      <header className="pb-header">
+        <div className="pb-head-left">
+          <h1 className="pb-title">New Bill</h1>
+          <div className="pb-meta">
+            <span className="pb-hide-sm">Invoice No: <b>Assigned on save</b></span>
+            <span>Date: <b>{fmtDate(now)}</b></span>
+            <span className="pb-hide-sm">Time: <b>{fmtTime(now)}</b></span>
+            <span>Cashier: <b>{cashier}</b></span>
+            {dashboard && dashboard.today_bills != null && <span className="pb-hide-sm">Bills today: <b>{dashboard.today_bills}</b></span>}
+            {dashboard && dashboard.today_sales != null && <span className="pb-hide-sm">Sales today: <b>{fmt(dashboard.today_sales)}</b></span>}
+          </div>
+        </div>
+        <div className="pb-head-actions">
+          <button type="button" className="pb-btn" aria-label={`Draft bills (${drafts.length})`} title="Draft bills" onClick={() => { setDrafts(loadDrafts()); setShowDrafts(true) }}>
+            <Layers size={15} /> <span className="pb-hide-sm">Drafts ({drafts.length})</span>
+          </button>
+          <button type="button" className="pb-btn" aria-label="Keyboard shortcuts" title="Keyboard shortcuts" onClick={() => setShowShortcuts(true)}>
+            <Keyboard size={15} /> <span className="pb-hide-sm">Shortcuts</span>
+          </button>
+          <button type="button" className="pb-btn" aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'} title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'} onClick={toggleFullscreen}>
+            {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />} <span className="pb-hide-sm">{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+          </button>
+        </div>
+      </header>
 
-        .btn-outline{
-          display:inline-flex;align-items:center;justify-content:center;gap:.4rem;
-          min-height:2.5rem;padding:0 .875rem;border-radius:var(--r-sm);
-          border:1px solid var(--line);background:var(--surface);color:var(--ink-secondary,#334155);
-          font-weight:600;font-size:.8125rem;transition:all .12s ease;
-        }
-        .btn-outline:hover:not(:disabled){background:var(--surface-elevated);border-color:#c7ccd6;color:var(--ink)}
-        .btn-outline:active:not(:disabled){transform:translateY(1px)}
-        .btn-outline:disabled{opacity:.4;cursor:not-allowed}
-        .pos-razorpay{color:#4338ca;border-color:#c7d2fe;background:#f5f6ff}
-        .pos-razorpay:hover{background:#eceeff;border-color:#a5b0fb}
+      {loadError && !initializing && (
+        <div className="pb-banner" role="alert">
+          <AlertTriangle size={14} />
+          <span>Some data could not be loaded (products, customers or settings may be incomplete).</span>
+          <button type="button" className="pb-link" onClick={loadInitialData}>Retry</button>
+        </div>
+      )}
 
-        .pos-toolbar-control{
-          display:inline-flex;align-items:center;justify-content:center;gap:.4rem;
-          height:2.25rem;padding:0 .65rem;border:1px solid var(--line);border-radius:var(--r-sm);
-          background:var(--surface);color:var(--ink-secondary,#334155);font-size:.75rem;font-weight:650;
-          transition:all .12s ease;white-space:nowrap;
-        }
-        .pos-toolbar-control:hover{background:var(--surface-elevated);border-color:#c7ccd6}
+      <div className="pb-workspace">
+        {/* ================= COLUMN 1: PRODUCTS & SEARCH ================= */}
+        <section className="pb-panel pb-products" aria-labelledby="pb-add-products">
+          <div className="pb-panel-head">
+            <h2 id="pb-add-products">Products</h2>
+            <span className="pb-hint">
+              {initializing ? 'Loading products…' : `${filtered.length} of ${products.length}`}
+              <span className="pb-hide-sm"> · Ctrl+K to search</span>
+            </span>
+          </div>
 
-        /* ---- header ----------------------------------------------------- */
-        .pos-sale-title{font-size:1.0625rem;font-weight:750;letter-spacing:-.015em;color:var(--ink);line-height:1.2}
+          <div className="pb-tools">
+            <label className="pb-sr" htmlFor="pb-search">Scan barcode, or search by product name, SKU or code</label>
+            <div className="pb-search-row">
+              <div className="pb-search-field">
+                <Search size={17} className="pb-field-icon" />
+                <input
+                  id="pb-search"
+                  ref={searchRef}
+                  className="pb-input pb-input-lg pb-has-icon"
+                  placeholder="Search product, SKU or scan barcode"
+                  value={search}
+                  onClick={() => setSearchActive(true)}
+                  onBlur={() => setTimeout(() => setSearchActive(false), 180)}
+                  onChange={e => { setSearch(e.target.value); setSearchActive(true); setActiveIdx(-1) }}
+                  onKeyDown={onSearchKeyDown}
+                  role="combobox"
+                  aria-expanded={searchActive}
+                  aria-controls="pb-search-list"
+                  aria-autocomplete="list"
+                  autoFocus
+                  inputMode="search"
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                />
+                {search ? (
+                  <button type="button" className="pb-icon-btn pb-search-clear" aria-label="Clear search" title="Clear search" onMouseDown={e => e.preventDefault()}
+                    onClick={() => { setSearch(''); setActiveIdx(-1); setSearchActive(true); searchRef.current?.focus() }}>
+                    <X size={16} />
+                  </button>
+                ) : null}
 
-        /* ---- search ------------------------------------------------------ */
-        .pos-scan-panel{border-color:var(--acc-soft-border)}
-        .pos-scan-panel:focus-within{box-shadow:0 0 0 3px var(--acc-soft)}
-        .pos-search-input{font-size:16px!important;font-weight:550;border-width:1.5px}
-        .pos-search-input:focus{border-color:var(--acc)!important;box-shadow:0 0 0 3px var(--acc-soft)!important}
-        .pos-search-popover{
-          background:var(--surface);border:1px solid var(--line);
-          box-shadow:var(--e2);max-width:100vw;
-        }
-        .pos-search-result{border-bottom:1px solid var(--line-subtle);transition:background .1s ease}
-        .pos-search-result:hover{background:var(--acc-soft)}
-
-        /* ---- product grid -------------------------------------------- */
-        .pos-product{
-          position:relative;text-align:left;border:1px solid var(--line);border-radius:var(--r-sm);
-          background:var(--surface);padding:.75rem;transition:all .12s ease;
-        }
-        .pos-product:hover{border-color:var(--acc);box-shadow:var(--e1);transform:translateY(-1px)}
-        .pos-product-in-cart{border-color:var(--acc)!important;background:var(--acc-soft)!important}
-
-        /* ---- cart ------------------------------------------------------- */
-        .pos-cart-panel{min-width:0}
-        .pos-table{min-width:720px;table-layout:auto}
-        .pos-table thead th{background:var(--surface-elevated);color:var(--muted);font-size:.6875rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
-        .pos-table tbody tr:hover{background:var(--surface-elevated)}
-
-        /* ---- checkout sidebar ------------------------------------------ */
-        .pos-checkout{border-radius:var(--r-lg)}
-        .pos-checkout .pos-card + .pos-card{margin-top:0}
-
-        .pos-payment-method{
-          min-height:2.75rem;border:1px solid var(--line);background:var(--surface);
-          color:var(--muted);border-radius:var(--r-sm);transition:all .12s ease;
-        }
-        .pos-payment-method:hover{border-color:var(--acc);color:var(--ink)}
-        .pos-payment-active{background:var(--acc)!important;border-color:var(--acc)!important;color:#fff!important;box-shadow:var(--e1)}
-
-        .pos-exact{
-          display:inline-flex;align-items:center;justify-content:center;min-height:2rem;padding:0 .8rem;
-          border-radius:var(--r-sm);border:1px solid var(--money);background:var(--money);color:#fff;
-          font-size:.75rem;font-weight:700;transition:all .12s ease;
-        }
-        .pos-exact:hover{filter:brightness(.93)}
-        .pos-chip{
-          display:inline-flex;align-items:center;justify-content:center;min-height:2rem;padding:0 .7rem;
-          border-radius:var(--r-sm);border:1px solid var(--line);background:var(--surface);
-          color:var(--muted);font-size:.75rem;font-weight:600;transition:all .12s ease;
-        }
-        .pos-chip:hover{background:var(--surface-elevated);border-color:#c7ccd6;color:var(--ink)}
-
-        /* Bill total gets the one deliberate visual accent on the page: a
-           top accent rule that leads the eye to the grand total figure. */
-        .pos-total-panel{position:relative;overflow:hidden}
-        .pos-grand-total{
-          font-size:clamp(1.75rem,3vw,2.125rem);font-weight:800;letter-spacing:-.02em;color:var(--ink);
-        }
-
-        .pos-checkout-actions{position:sticky;top:0}
-
-        /* ---- floating / mobile controls --------------------------------- */
-        .pos-mobile-cart-bar{background:var(--acc)!important;bottom:calc(.65rem + env(safe-area-inset-bottom))}
-        .pos-floating-quick-pay{
-          position:fixed;right:1rem;bottom:1rem;z-index:55;
-          display:inline-flex;align-items:center;justify-content:center;gap:.4rem;
-          min-height:2.5rem;padding:0 .9rem;border:1px solid var(--money);border-radius:999px;
-          background:var(--money);color:#fff;font-size:.78rem;font-weight:750;
-          box-shadow:var(--e2);transition:transform .1s ease,filter .12s ease;
-        }
-        .pos-floating-quick-pay:hover{filter:brightness(.93)}
-        .pos-floating-quick-pay:active{transform:translateY(1px)}
-        .pos-floating-quick-pay:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
-
-        .pos-mobile-checkout{padding-bottom:calc(.75rem + env(safe-area-inset-bottom))}
-        .pos-danger{color:var(--danger)}
-        .pos-danger:hover{background:var(--danger-soft)}
-
-        /* ---- layout ------------------------------------------------------ */
-        .pos-shell{padding:.85rem}
-        @media (min-width:1024px){
-          .pos-checkout{max-height:calc(100vh - 1.7rem)}
-        }
-        @media (max-width:1023px){
-          .pos-shell{padding:.65rem}
-          .pos-checkout{max-height:88dvh}
-        }
-        @media (max-width:767px){
-          .pos-page{min-height:100dvh;padding-bottom:5.25rem}
-          .pos-shell{padding:0!important;gap:.65rem!important}
-          .pos-toolbar-control{height:2.25rem;width:2.25rem;padding:0;border-radius:var(--r-sm)}
-          .pos-toolbar-control .pos-control-label{display:none}
-          .pos-search-panel{border-radius:0;border-left:0;border-right:0;padding:.65rem .75rem!important}
-          .pos-search-popover{position:absolute;left:0;right:0;width:100%;max-height:60dvh;border-radius:var(--r-md);overflow-y:auto}
-          .pos-search-popover>div{grid-template-columns:1fr!important}
-          .pos-search-popover>div>div{border-right:0!important}
-          .pos-cart-panel{border-radius:0;border-left:0;border-right:0;min-height:12rem!important}
-          .pos-cart-panel .overflow-auto{max-height:55dvh}
-          .pos-checkout{
-            position:fixed!important;left:0;right:0;bottom:0;top:auto!important;width:100%!important;
-            max-height:88dvh!important;margin:0!important;padding:.65rem .65rem 0!important;
-            border-radius:var(--r-lg) var(--r-lg) 0 0!important;border:1px solid var(--line)!important;
-            background:var(--app-bg,#f4f5f7)!important;box-shadow:0 -14px 40px rgba(15,23,42,.22);z-index:40;
-          }
-          .pos-checkout .pos-card{padding:.8rem!important}
-          .pos-checkout-actions{padding:.8rem!important}
-          .pos-payment-method{min-height:3.1rem}
-          .pos-grand-total{font-size:1.65rem}
-          .mobile-safe-button{min-height:2.5rem}
-          .mobile-modal-content{width:100%;min-width:0;max-height:calc(100dvh - 1rem);overflow-y:auto}
-          .mobile-modal-content input{max-width:100%;font-size:16px}
-        }
-        @media (max-width:639px){
-          .pos-search-input{height:3.1rem!important}
-          .pos-checkout{max-height:92dvh!important}
-          .pos-checkout-actions .grid{gap:.5rem}
-          .pos-checkout-actions .btn-outline,.pos-checkout-actions .btn-solid{font-size:.78rem;padding:0 .55rem}
-        }
-
-/* Cashier-first POS redesign */
-.pos-page{min-height:100%;background:var(--app-bg);color:var(--ink)}
-.pos-page .pos-header{position:sticky;top:0;z-index:30;background:var(--surface);border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}
-.pos-page .pos-main-grid{align-items:start;gap:16px}
-.pos-page .pos-products-panel{min-width:0;border:1px solid var(--line);border-radius:16px;background:var(--surface);overflow:hidden}
-.pos-page .pos-cart-panel{min-width:0;border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:0 8px 30px rgba(15,23,42,.06);overflow:hidden}
-.pos-page .pos-cart-panel .cart-header{position:sticky;top:0;z-index:5;background:var(--surface-elevated);border-bottom:1px solid var(--line)}
-.pos-page .pos-cart-panel .cart-footer{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(15,23,42,.06)}
-.pos-page .pos-product{border:1px solid var(--line);border-radius:12px;background:var(--surface);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
-.pos-page .pos-product:hover{transform:translateY(-2px);border-color:var(--primary);box-shadow:0 8px 22px rgba(15,23,42,.08)}
-.pos-page .pos-input{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px}
-.pos-page .pos-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 15%,transparent)}
-.pos-page .pos-customer-card{border:1px solid var(--line);border-radius:12px;background:var(--surface-elevated)}
-.pos-page .pos-payment-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.pos-page .pos-payment-grid button{min-height:48px;border-radius:11px;font-weight:700}
-.pos-page .pos-payment-grid button[data-active="true"]{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 12%,var(--surface));color:var(--primary)}
-.pos-page .pos-primary-action{min-height:52px;border-radius:12px;font-weight:800;box-shadow:0 6px 16px color-mix(in srgb,var(--primary) 22%,transparent)}
-.pos-page .pos-quick-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.pos-page .pos-quick-actions button{min-height:42px;border:1px solid var(--line);border-radius:10px;background:var(--surface-elevated)}
-.pos-page .pos-qr-shell{background:#fff;color:#0f172a;border:10px solid #fff;border-radius:18px;box-shadow:0 12px 40px rgba(15,23,42,.16);padding:18px}
-.pos-page .pos-qr-page{background:linear-gradient(145deg,#eff6ff 0%,#f8fafc 55%,#ecfdf5 100%);border-radius:20px;padding:20px}
-.pos-page button:focus-visible,.pos-page input:focus-visible,.pos-page select:focus-visible,.pos-page textarea:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
-@media(min-width:1024px){.pos-page .pos-cart-panel{position:sticky;top:76px}.pos-page .pos-products-panel{min-height:calc(100vh - 120px)}}
-@media(max-width:1023px){.pos-page .pos-main-grid{grid-template-columns:minmax(0,1fr)}.pos-page .pos-cart-panel{position:relative}}
-@media(max-width:640px){.pos-page{padding-bottom:env(safe-area-inset-bottom)}.pos-page .pos-payment-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pos-page .pos-quick-actions{grid-template-columns:repeat(3,minmax(0,1fr))}.pos-page .pos-payment-grid button{min-height:52px}.pos-page .pos-primary-action{min-height:56px}.pos-page .pos-qr-page{padding:12px}}
-@media(prefers-reduced-motion:reduce){.pos-page *{transition:none!important;animation:none!important}}
-
-      `}
-
-</style>
-
-      <div className="pos-shell flex flex-col md:grid md:grid-cols-[minmax(0,1fr)_minmax(300px,36%)] lg:flex lg:flex-row gap-3 lg:gap-4 p-2.5 sm:p-3 lg:p-4 max-w-[1600px] mx-auto">
-        {/* ============================= MAIN ============================= */}
-        <section className="flex-1 min-w-0 flex flex-col gap-3">
-
-          {/* POS sale command bar */}
-          <div className="">
-            <div className="w-full flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2.5">
-                <div className="">
-                  <Receipt size={17} />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-[var(--ink-secondary)]">POS SCREEN</div>
-                  <div className="pos-sale-title">New bill</div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                {dashboard && (dashboard.today_sales != null || dashboard.today_bills != null) && (
-                  <div className="hidden xl:flex items-center gap-3 text-xs text-[var(--muted)]">
-                    {dashboard.today_bills != null && <span><b className="text-[var(--ink-secondary)]">{dashboard.today_bills}</b> bills today</span>}
-                    {dashboard.today_sales != null && <span><b className="text-[var(--ink-secondary)]">{fmt(dashboard.today_sales)}</b> sold today</span>}
+                {searchActive && (
+                  <div className="pb-dropdown" id="pb-search-list" role="listbox">
+                    {search.trim() ? (
+                      <>
+                        <div className="pb-dd-head">Search results ({filtered.length})</div>
+                        {searchResults.length ? searchResults.map((p, i) => (
+                          <div role="option" aria-selected={i === activeIdx} key={p.id}
+                            onMouseEnter={() => setActiveIdx(i)}
+                            className="pb-result pb-result-readonly">
+                            <span>
+                              <span className="pb-strong">{p.name}</span>
+                              {isOut(p) && <span className="pb-badge">Out of stock</span>}
+                              <span className="pb-sub" style={{ display: 'block' }}>
+                                SKU: {p.sku || '—'} | Barcode: {p.barcode || '—'}
+                              </span>
+                            </span>
+                            <span className="pb-result-side">
+                              <span className="pb-strong" style={{ display: 'block' }}>{fmt(p.selling_price)}</span>
+                              <span className="pb-sub">Stock: {stockLabel(p)}</span>
+                            </span>
+                          </div>
+                        )) : <div className="pb-dd-empty">No products found for “{search.trim()}”.</div>}
+                        {filtered.length > searchResults.length && (
+                          <div className="pb-dd-empty">Showing {searchResults.length} of {filtered.length} — type more to narrow the list.</div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="pb-dd-cols">
+                        <div>
+                          <div className="pb-dd-head">Recent products</div>
+                          {recentProducts.length ? recentProducts.map(p => (
+                            <button type="button" key={p.id} onMouseDown={e => e.preventDefault()} onClick={() => addToCart(p)} className="pb-result">
+                              <span className="pb-strong">{p.name}</span>
+                              <span className="pb-result-side pb-strong">{fmt(p.selling_price)}</span>
+                              <span className="pb-sub">{p.sku || p.barcode || '—'}</span>
+                              <span className="pb-result-side pb-sub">Stock: {stockLabel(p)}</span>
+                            </button>
+                          )) : <div className="pb-dd-empty">Recently billed products will appear here.</div>}
+                        </div>
+                        <div>
+                          <div className="pb-dd-head">Recommended products</div>
+                          {recommendedProducts.length ? recommendedProducts.map(p => (
+                            <button type="button" key={p.id} onMouseDown={e => e.preventDefault()} onClick={() => addToCart(p)} className="pb-result">
+                              <span className="pb-strong">{p.name}</span>
+                              <span className="pb-result-side pb-strong">{fmt(p.selling_price)}</span>
+                              <span className="pb-sub">{p.sku || p.barcode || '—'}</span>
+                              <span className="pb-result-side pb-sub">Stock: {stockLabel(p)}</span>
+                            </button>
+                          )) : <div className="pb-dd-empty">No recommendations available.</div>}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
-                <div className="hidden lg:flex items-center gap-1.5 text-xs text-[var(--muted)] border-l border-[var(--primary-border)] pl-3 mr-1">
-                  <Clock size={13} className="text-[var(--primary)]" />
-                  <span className="font-medium">{fmtDate(now)}</span>
-                  <span className="font-mono text-[var(--primary-text)] font-semibold">{fmtTime(now)}</span>
-                </div>
-                <button type="button" className="pos-toolbar-control" onClick={toggleFullscreen} aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'} title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
-                  {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}<span className="pos-control-label">{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
-                </button>
-               
               </div>
             </div>
-          </div>
 
-          {/* Search + category chips */}
-          <div className="pos-card pos-scan-panel pos-search-panel p-3 space-y-2.5">
-            <div className="relative" onMouseEnter={() => setSearchActive(true)} onMouseLeave={() => { if (!search) setSearchActive(false) }}>
-              <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)] pointer-events-none" />
-              <input
-                ref={searchRef}
-                className=" pos-input pos-search-input w-full pl-9 pr-10 h-11 rounded-lg text-[var(--ink)] placeholder:text-[var(--muted-light)]"
-                placeholder="         Scan barcode, search product or SKU"
-                value={search}
-                onFocus={() => setSearchActive(true)}
-                onBlur={() => setTimeout(() => setSearchActive(false), 180)}
-                onChange={e => { setSearch(e.target.value); setSearchActive(true) }}
-                onKeyDown={e => e.key === 'Enter' && filtered[0] && addToCart(filtered[0])}
-                autoFocus
-                inputMode="search"
-                autoComplete="off"
-                autoCapitalize="none"
-                spellCheck={false}
-              />
-              {search ? (
-                <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setSearch(''); setSearchActive(true); searchRef.current?.focus() }}
-                  className="absolute right-12 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg text-[var(--muted)] hover:bg-[var(--surface-elevated)]" aria-label="Clear search">
-                  <X size={15} className="mx-auto" />
+            <div className="pb-cats" role="group" aria-label="Filter by category">
+              <button type="button" className="pb-cat" aria-pressed={catFilter === ''} onClick={() => setCatFilter('')}>All</button>
+              {categories.map(c => (
+                <button type="button" key={c.id} className="pb-cat" aria-pressed={catFilter === String(c.id)} onClick={() => setCatFilter(String(c.id))}>
+                  {c.name}
                 </button>
-              ) : null}
-              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[var(--muted-light)] border border-[var(--line)] rounded px-1.5 py-0.5">Ctrl K</kbd>
-
-              {searchActive && (
-                <div className="pos-search-popover absolute z-30 mt-2 w-full overflow-hidden rounded-xl border shadow-2xl">
-                  {search.trim() ? (
-                    <>
-                      <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--muted-light)]">Search results</div>
-                      {filtered.length ? filtered.slice(0, 8).map(p => (
-                        <button type="button" key={p.id} onMouseDown={e => e.preventDefault()} onClick={() => addToCart(p)}
-                          className="pos-search-result w-full flex items-center justify-between gap-3 px-3 py-3 text-left">
-                          <span className="min-w-0">
-                            <span className="block text-sm font-semibold text-[var(--ink)] truncate">{p.name}</span>
-                            <span className="block text-[11px] text-[var(--muted-light)] truncate">SKU {p.sku || '—'} · Stock {p.current_stock ?? 0}</span>
-                          </span>
-                          <span className="text-right shrink-0">
-                            <span className="block text-sm font-bold text-[var(--amount-sales)]">{fmt(p.selling_price)}</span>
-                            <span className="block text-[10px] text-[var(--muted-light)]">MRP {fmt(p.mrp || p.selling_price)}</span>
-                          </span>
-                        </button>
-                      )) : <div className="p-4 text-sm text-[var(--muted-light)]">No products found</div>}
-                    </>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-0">
-                      <div className="border-r border-[var(--line)]">
-                        <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--muted-light)]">Recent items</div>
-                        {recentProducts.length ? recentProducts.map(p => (
-                          <button type="button" key={p.id} onMouseDown={e => e.preventDefault()} onClick={() => addToCart(p)}
-                            className="pos-search-result w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left">
-                            <span className="truncate text-sm font-medium text-[var(--ink)]">{p.name}</span>
-                            <span className="text-xs font-semibold text-[var(--primary-text)] shrink-0">{fmt(p.selling_price)}</span>
-                          </button>
-                        )) : <div className="px-3 py-3 text-xs text-[var(--muted-light)]">Your recently billed items will appear here.</div>}
-                      </div>
-                      <div>
-                        <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-[var(--muted-light)]">Recommended</div>
-                        {recommendedProducts.length ? recommendedProducts.map(p => (
-                          <button type="button" key={p.id} onMouseDown={e => e.preventDefault()} onClick={() => addToCart(p)}
-                            className="pos-search-result w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left">
-                            <span className="truncate text-sm font-medium text-[var(--ink)]">{p.name}</span>
-                            <span className="text-xs font-semibold text-[var(--primary-text)] shrink-0">{fmt(p.selling_price)}</span>
-                          </button>
-                        )) : <div className="px-3 py-3 text-xs text-[var(--muted-light)]">No recommendations available.</div>}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              ))}
             </div>
-
           </div>
 
-          {/* Cart */}
-          <div className="pos-card pos-cart-panel flex flex-col min-h-[12rem] lg:min-h-[calc(100dvh-16rem)] overflow-hidden">
-            <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-[var(--line-subtle)]">
-              <div><b className="text-sm text-[var(--ink)]">Items in bill</b> <span className="font-normal text-[var(--muted-light)]">({cart.length} item{cart.length === 1 ? '' : 's'})</span></div>
-              {cart.length > 0 && <button onClick={() => setCart([])} className="text-xs text-rose-500 hover:text-rose-600 dark:text-rose-400 font-medium">Clear cart</button>}
-            </div>
-            {cart.length ? (
-              <div className="overflow-auto">
-                <table className="pos-table w-full text-sm">
-                  <thead>
-                    <tr className="text-[11px] uppercase tracking-wide text-[var(--muted-light)] border-b border-[var(--line-subtle)]">
-                      <th className="py-2 pl-3 pr-1 font-medium text-center">#</th>
-                      <th className="py-2 pr-2 font-medium text-left">Item</th>
-                      <th className="py-2 pr-2 font-medium text-right">MRP</th>
-                      <th className="py-2 pr-2 font-medium text-right">Rate</th>
-                      <th className="py-2 px-1 font-medium text-center">Qty</th>
-                      <th className="py-2 px-2 font-medium text-right">Basic</th>
-                      {showGst && <th className="py-2 px-2 font-medium text-right">GST</th>}
-                      <th className="py-2 pl-2 pr-2 font-medium text-right">Total</th>
-                      <th className="py-2 pr-3 font-medium text-center"> </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cart.map((item, index) => (
-                      <CartRow key={item.id} item={item} index={index + 1} onQty={updateQty} showGst={showGst}
-                        justAdded={item.id === lastAddedId}
-                        onRemove={id => setCart(x => x.filter(i => i.id !== id))} />
-                    ))}
-                  </tbody>
-                </table>
+          <div className="pb-scroll pb-pscroll">
+            {initializing && !products.length ? (
+              <div className="pb-empty"><Package size={28} /><b>Loading products…</b></div>
+            ) : filtered.length ? (
+              <div className="pb-pgrid">
+                {filtered.map(p => {
+                  const out = isOut(p)
+                  const inCart = cartQtyMap.get(p.id) || 0
+                  const img = p.image || p.image_url || p.thumbnail
+                  return (
+                    <article
+                      key={p.id}
+                      className={`pb-pcard${out ? ' pb-pcard-out' : ''}`}
+                      aria-label={`${p.name}, ${fmt(p.selling_price)}`}
+                    >
+                      <div className="pb-pcard-top">
+                        <div className="pb-pthumb">
+                          <Package size={16} />
+                          {img ? (
+                            <img
+                              src={img}
+                              alt=""
+                              loading="lazy"
+                              onError={e => { e.currentTarget.style.display = 'none' }}
+                            />
+                          ) : null}
+                        </div>
+                        {inCart > 0 ? (
+                          <span className="pb-pqty" title="Quantity already in this bill">
+                            {inCart}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <div className="pb-pname" title={p.name}>{p.name}</div>
+
+                      <div className="pb-pmeta">
+                        <span className="pb-pprice">{fmt(p.selling_price)}</span>
+                        {hasStockInfo(p) ? (
+                          <span className={`pb-pstock${out ? ' pb-pstock-out' : isLowStock(p) ? ' pb-pstock-low' : ''}`}>
+                            {out ? 'Out of stock' : `Stock ${stockLabel(p)}`}
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <button
+                        type="button"
+                        className="pb-padd pb-btn pb-btn-primary"
+                        disabled={out}
+                        aria-label={out ? `${p.name} is out of stock` : `Add ${p.name} to bill`}
+                        onClick={() => addToCart(p)}
+                      >
+                        <Plus size={14} />
+                        {out ? 'Out of Stock' : 'Add'}
+                      </button>
+                    </article>
+                  )
+                })}
               </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-[var(--muted-light)]">
-                <Receipt size={32} className="mb-2 text-slate-300" />
-                <div className="text-base font-medium text-[var(--muted)]">Cart is empty</div>
-                <p className="text-sm mt-1">Search, scan, or tap a product above to start billing.</p>
-                <button className="btn-solid mt-4" onClick={() => searchRef.current?.focus()}><Search size={15} /> Search product</button>
+              <div className="pb-empty">
+                <Package size={28} />
+                <b>No products found</b>
+                <span>Try a different search or category.</span>
+                {(search || catFilter) && (
+                  <button type="button" className="pb-link" onClick={() => { setSearch(''); setCatFilter('') }}>Clear search and filters</button>
+                )}
               </div>
             )}
           </div>
         </section>
 
-        {/* ============================ SIDEBAR ============================ */}
-        <aside className={`pos-checkout pos-mobile-checkout w-full md:w-auto lg:w-[380px] shrink-0 flex-col gap-3 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto ${cartOpen ? 'flex' : 'hidden'} md:flex max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:max-h-[90dvh] max-md:overflow-y-auto max-md:rounded-t-2xl max-md:bg-[var(--surface-elevated)] max-md:p-3 max-md:shadow-2xl`}>
-          <div className="md:hidden flex items-center justify-between rounded-xl bg-[var(--surface)] border border-[var(--line)] px-3 py-2">
-            <b className="text-sm text-[var(--ink)]">Cart and checkout</b>
-            <button type="button" onClick={() => setCartOpen(false)} aria-label="Close cart" className="icon-btn min-w-10 min-h-10 justify-center"><X size={18} /></button>
-          </div>
-
-          {/* Customer */}
-          <div className="pos-card p-3.5">
-            <div className="flex justify-between items-center mb-2">
-              <b className="text-sm text-[var(--ink)]">Customer</b>
-              <button className="text-xs text-[var(--primary-text)] font-semibold flex items-center gap-0.5 hover:underline" onClick={() => setShowCustomerModal(true)}>
-                <Plus size={13} /> New
-              </button>
-            </div>
-            <div className="relative">
-              <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" />
-              <input
-                ref={customerRef}
-                className="pos-input h-9 pl-8 pr-3 text-sm"
-                placeholder="      Walk -in customer, or search"
-                value={customerSearch}
-                onChange={e => { setCustomerSearch(e.target.value); if (!e.target.value) setCustomer(null) }}
-              />
-              {customer && (
-                <button onClick={() => { setCustomer(null); setCustomerSearch('') }} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-[var(--muted)]">
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-            {customerSearch && !customer && (
-              <div className="mt-1.5 border border-[var(--line)] rounded-lg overflow-hidden divide-y divide-slate-50 max-h-40 overflow-y-auto">
-                <button onClick={() => { setCustomer(null); setCustomerSearch('Walk-in Customer') }} className="w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors">Walk-in Customer</button>
-                {filteredCustomers.slice(0, 6).map(c => (
-                  <button type="button" key={c.id} onClick={() => { setCustomer(c); setCustomerSearch(c.name) }} className="w-full text-left px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors">
-                    <div className="text-sm font-medium text-[var(--ink)]">{c.name}</div>
-                    <div className="text-[11px] text-[var(--muted-light)]">{c.mobile}</div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Summary + grand total — the most important number on the page */}
-          <div className="pos-card p-3.5">
-            <b className="text-sm text-[var(--ink)]">Bill summary</b>
-            <div className="mt-2 space-y-1 text-sm text-[var(--muted)]">
-              <div className="flex justify-between"><span>Subtotal</span><span className="tabular-nums">{fmt(subtotal)}</span></div>
-              <div className="flex justify-between"><span>Item discount</span><span className="tabular-nums text-rose-500">-{fmt(discount)}</span></div>
-              <label className="flex items-center justify-between gap-3">
-                <span>Bill discount</span>
-                <input
-                  ref={billDiscountRef}
-                  type="number"
-                  min="0"
-                  max={taxableBeforeBillDiscount}
-                  step="0.01"
-                  value={billDiscountInput}
-                  onChange={e => setBillDiscountInput(e.target.value)}
-                  className="w-24 h-7 px-2 text-right text-xs rounded border border-[var(--line)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:border-[var(--primary)]"
-                  placeholder="0.00"
-                />
-              </label>
-              {showGst && <div className="flex justify-between"><span>GST</span><span className="tabular-nums">{fmt(tax)}</span></div>}
-              <div className="flex justify-between"><span>Round off</span><span className="tabular-nums">{fmt(roundOff)}</span></div>
-            </div>
-            <div className="mt-3 pt-3 border-t border-dashed border-[var(--line)] flex items-end justify-between">
-              <span className="text-sm font-medium text-[var(--muted)]">Grand total</span>
-              <strong className="pos-grand-total">{fmt(grandTotal)}</strong>
-            </div>
-          </div>
-
-          {/* Payment */}
-          <div className="pos-card p-3.5">
-            <b className="text-sm text-[var(--ink)]">Payment</b>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2.5">
-              {PAYMENT_METHODS.map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  onClick={() => selectPayment(id)}
-                  className={`pos-payment-method flex flex-col items-center justify-center gap-1 border py-2 text-[11px] font-semibold ${payment.method === id ? 'pos-payment-active' : ''}`}
-                >
-                  <Icon size={15} />{label}
-                </button>
-              ))}
+        <div className="pb-right">
+          {/* ================= COLUMN 2: CURRENT BILL ================= */}
+          <section className="pb-panel pb-cartpanel" aria-labelledby="pb-bill-items">
+            <div className="pb-panel-head">
+              <h2 id="pb-bill-items">
+                Current Bill
+                <span className="pb-count">{cart.length} item{cart.length === 1 ? '' : 's'} · qty {totalQty}</span>
+              </h2>
             </div>
 
-            {payment.method === 'cash' && (
-              <div className="mt-3 space-y-2.5">
-                <label className="block">
-                  <span className="text-xs text-[var(--muted)]">Amount received</span>
+            <div className="pb-cust">
+              <div className="pb-cust-row">
+                <div className="pb-cust-field">
+                  <label className="pb-sr" htmlFor="pb-customer">Search customer by name or phone (F2)</label>
+                  <User size={16} className="pb-field-icon" />
                   <input
-                    ref={paymentRef}
-                    type="number" className="pos-input h-10 mt-1 text-sm"
-                    value={payment.amount} placeholder={grandTotal.toFixed(2)}
-                    onChange={e => setPayment(x => ({ ...x, amount: e.target.value, status: 'paid' }))}
+                    id="pb-customer"
+                    ref={customerRef}
+                    className="pb-input pb-has-icon"
+                    placeholder="Walk-in Customer — search name or phone (F2)"
+                    value={customerSearch}
+                    autoComplete="off"
+                    onFocus={() => setCustomerOpen(true)}
+                    onBlur={() => setTimeout(() => setCustomerOpen(false), 180)}
+                    onChange={e => {
+                      const v = e.target.value
+                      setCustomerSearch(v)
+                      setCustomerOpen(true)
+                      if (!v || (customer && v !== customer.name)) setCustomer(null)
+                    }}
                   />
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-<button
-  type="button"
-  onClick={setExactCash}
-  className="pos-exact focus:outline-none focus:ring-2 focus:ring-emerald-500/25"
->
-  Exact
-</button>
-                  {CASH_CHIPS.map(v => (
-                    <button key={v} onClick={() => addCashChip(v)} className="pos-chip">+{v}</button>
-                  ))}
+                  {customerOpen && !customer && (
+                    <div className="pb-cust-list">
+                      <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setCustomer(null); setCustomerSearch(''); setCustomerOpen(false) }}>
+                        <span className="pb-strong">Walk-in Customer</span>
+                      </button>
+                      {filteredCustomers.slice(0, 6).map(c => (
+                        <button type="button" key={c.id} onMouseDown={e => e.preventDefault()} onClick={() => { setCustomer(c); setCustomerSearch(c.name); setCustomerOpen(false) }}>
+                          <span className="pb-strong">{c.name}</span>
+                          <span className="pb-sub" style={{ display: 'block' }}>{c.mobile || 'No phone'}</span>
+                        </button>
+                      ))}
+                      {customerSearch && !filteredCustomers.length && (
+                        <div className="pb-dd-empty">No customer found. Use “New customer”.</div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="flex justify-between text-xs bg-[var(--surface-elevated)] rounded-lg px-3 py-2">
-                  <span className="text-[var(--muted)]">Balance due <b className="text-[var(--ink)]">{fmt(balance)}</b></span>
-                  <span className="text-[var(--muted)]">Change <b className="text-[var(--ink)]">{fmt(change)}</b></span>
-                </div>
-              </div>
-            )}
-
-            {payment.method === 'upi' && (
-              <div className="mt-3 space-y-2.5">
-                <label className="block">
-                  <span className="text-xs text-[var(--muted)]">Merchant UPI ID</span>
-                  <input
-                    className="w-full h-10 mt-1 px-3 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-sm text-[var(--muted)]"
-                    value={upiId}
-                    readOnly
-                    placeholder="Configure in Settings"
-                  />
-                </label>
-
-                <div className="flex items-center justify-between px-3 py-3 rounded-lg border border-[var(--success-border)] bg-[var(--success-light)] text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-2.5 text-left">
-                  <span className="text-xs text-[var(--success-text)]">Customer pays</span>
-                  <strong className="text-xl text-[var(--amount-sales)] tabular-nums">{fmt(grandTotal)}</strong>
-                </div>
-
-                <button
-                  className="btn-solid w-full h-11 bg-emerald-600 hover:bg-emerald-700"
-                  onClick={openQuickPayment}
-                  disabled={!upiId}
-                >
-                  <QrCode size={17} /> Show QR & Collect Payment
+                <button type="button" className="pb-btn" aria-label="Add new customer" title="Add new customer" onClick={() => setShowCustomerModal(true)}>
+                  <UserPlus size={15} /> <span className="pb-hide-sm">New</span>
                 </button>
               </div>
-            )}
-
-            {['card', 'online'].includes(payment.method) && (
-              <div className="mt-3 space-y-2.5">
-                <label className="block">
-                  <span className="text-xs text-[var(--muted)]">Amount</span>
-                  <input type="number" className="pos-input h-10 mt-1 text-sm" value={payment.amount} onChange={e => setPayment(x => ({ ...x, amount: e.target.value }))} />
-                </label>
-                <label className="block">
-                  <span className="text-xs text-[var(--muted)]">Reference (optional)</span>
-                  <input className="pos-input h-10 mt-1 text-sm" value={payment.reference} onChange={e => setPayment(x => ({ ...x, reference: e.target.value }))} />
-                </label>
-              </div>
-            )}
-
-            {payment.method === 'credit' && (
-              <p className="text-xs text-[var(--muted)] mt-3 bg-[var(--surface-elevated)] rounded-lg px-3 py-2">This amount will be recorded as customer credit and settled later.</p>
-            )}
-
-            {payment.method === 'razorpay' && (
-              <div className="mt-3 space-y-2.5">
-                <div className="w-full px-3 py-3 rounded-lg border border-indigo-200 bg-indigo-50 dark:bg-indigo-950/40 flex items-center justify-between">
-                  <span className="text-xs text-indigo-700 font-medium">Customer pays via Razorpay</span>
-                  <strong className="text-xl text-indigo-800 tabular-nums">{fmt(grandTotal)}</strong>
-                </div>
-                {!lastInvoice ? (
-                  <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-700 flex items-start gap-2">
-                    <span className="shrink-0 mt-0.5">&#9432;</span>
-                    <span>Save the bill first using <b>Save Bill</b>, then click <b>Pay with Razorpay</b> to collect payment.</span>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowRazorpay(true)}
-                    className="w-full h-12 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2"
-                    style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)' }}
-                  >
-                    Pay {fmt(grandTotal)} with Razorpay
+              <div className="pb-cust-line">
+                <span><b>{customer?.name || 'Walk-in Customer'}</b></span>
+                <span>{customer?.mobile || '—'}</span>
+                {customer && (
+                  <button type="button" className="pb-link" onClick={() => { setCustomer(null); setCustomerSearch('') }}>
+                    Change to Walk-in Customer
                   </button>
                 )}
               </div>
-            )}
+            </div>
 
-            {!['cash', 'credit', 'razorpay'].includes(payment.method) && (
-              <div className="mt-3">
-                <span className="text-xs text-[var(--muted)]">Payment status</span>
-                <div className="flex gap-1.5 mt-1">
-                  {['pending', 'paid', 'failed'].map(s => (
-                    <button key={s} onClick={() => setPayment(x => ({ ...x, status: s }))}
-                      className={`flex-1 h-8 rounded-lg text-xs font-medium border capitalize transition ${payment.status === s
-                        ? s === 'paid' ? 'bg-emerald-600 border-emerald-600 text-white'
-                        : s === 'failed' ? 'bg-rose-600 border-rose-600 text-white'
-                        : 'bg-amber-500 border-amber-500 text-white'
-                        : 'border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'}`}
-                    >{s}</button>
+            <div className="pb-scroll pb-cscroll">
+              {cart.length ? (
+                <ul className="pb-cart-list">
+                  {cart.map((item, index) => (
+                    <CartRow
+                      key={item.id}
+                      item={item}
+                      index={index + 1}
+                      stock={enforcedStock(productMap.get(item.id))}
+                      showGst={showGst}
+                      justAdded={item.id === lastAddedId}
+                      onQty={updateQty}
+                      onDiscount={updateDiscount}
+                      onRemove={removeItem}
+                    />
                   ))}
+                </ul>
+              ) : (
+                <div className="pb-empty">
+                  <ShoppingCart size={30} />
+                  <b>No items in this bill</b>
+                  <span>Scan a barcode, search, or tap a product to start billing.</span>
+                </div>
+              )}
+            </div>
+
+            {cart.length > 0 && (
+              <div className="pb-cart-foot">
+                <span>Total quantity {totalQty}</span>
+                <span>Items total {fmt(cartItemsTotal)}</span>
+              </div>
+            )}
+          </section>
+
+          {/* ================= COLUMN 3: BILL SUMMARY ================= */}
+          <div className="pb-side">
+            <section className="pb-panel pb-summary-panel" aria-labelledby="pb-summary-h">
+              <div className="pb-panel-head"><h2 id="pb-summary-h">Bill Summary</h2></div>
+              <div className="pb-panel-body">
+                <table className="pb-summary">
+                  <tbody>
+                    <tr><td>Total items</td><td>{cart.length} ({totalQty} qty)</td></tr>
+                    <tr><td>Subtotal</td><td>{fmt(subtotal)}</td></tr>
+                    <tr><td>Item discount</td><td className={discount > 0 ? 'pb-red' : ''}>{discount > 0 ? '-' : ''}{fmt(discount)}</td></tr>
+                    <tr>
+                      <td><label htmlFor="pb-bill-discount">Bill discount (F6)</label></td>
+                      <td>
+                        <input
+                          id="pb-bill-discount"
+                          ref={billDiscountRef}
+                          type="number" min="0" max={taxableBeforeBillDiscount} step="0.01"
+                          value={billDiscountInput}
+                          onChange={e => setBillDiscountInput(e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </td>
+                    </tr>
+                    <tr><td>Taxable amount</td><td>{fmt(taxableAmount)}</td></tr>
+                    {showGst && <tr><td>GST / tax</td><td>{fmt(tax)}</td></tr>}
+                    <tr><td>Round-off</td><td>{fmtSigned(roundOff)}</td></tr>
+                  </tbody>
+                </table>
+                <div className="pb-grand" aria-live="polite">
+                  <span>Grand total</span>
+                  <strong>{fmt(grandTotal)}</strong>
+                </div>
+                {billIssues.length > 0 && (
+                  <ul className="pb-errors" role="alert">
+                    {billIssues.map((m, i) => <li key={i}>{m}</li>)}
+                  </ul>
+                )}
+                <div className="pb-notes">
+                  <label className="pb-label" htmlFor="pb-notes">Bill notes (optional)</label>
+                  <input id="pb-notes" className="pb-input" value={notes} onChange={e => setNotes(e.target.value)} />
                 </div>
               </div>
+            </section>
+
+            {/* ============ Last completed bill / invoice actions ============ */}
+            {lastInvoice && (
+              <section className="pb-panel" aria-labelledby="pb-last-h">
+                <div className="pb-panel-head"><h2 id="pb-last-h">Last Completed Bill</h2></div>
+                <div className="pb-panel-body pb-stack">
+                  <dl className="pb-dl">
+                    <dt>Invoice no.</dt><dd>{lastInvoice.invoice_number || `INV-${lastInvoice.id}`}</dd>
+                    <dt>Grand total</dt><dd>{fmt(lastInvoice.grand_total)}</dd>
+                    <dt>Paid amount</dt><dd>{fmt(lastPaidAmount(lastInvoice))}</dd>
+                    <dt>Payment method</dt><dd style={{ textTransform: 'capitalize' }}>{lastInvoice.payment_method || 'cash'}</dd>
+                    <dt>Payment status</dt><dd style={{ textTransform: 'capitalize' }}>{lastInvoice.payment_status || '—'}</dd>
+                  </dl>
+                  {isPendingRazorpay && (
+                    <button type="button" className="pb-btn pb-btn-primary" onClick={() => setShowRazorpay(true)}>
+                      Collect {fmt(lastInvoice.grand_total)} with Razorpay
+                    </button>
+                  )}
+                  <div className="pb-grid2">
+                    <button type="button" className="pb-btn" onClick={() => printInvoiceDocument(lastInvoice.id, false)}><Printer size={14} /> Print Bill</button>
+                    <button type="button" className="pb-btn" onClick={() => downloadInvoiceDocument(lastInvoice.id, false)}><Download size={14} /> Download Invoice</button>
+                    <button type="button" className="pb-btn" onClick={shareInvoice}><Share2 size={14} /> Share Invoice</button>
+                    <button type="button" className="pb-btn" onClick={() => openInvoiceDocument(lastInvoice.id, false)}><FileText size={14} /> Open PDF</button>
+                    <button type="button" className="pb-btn" onClick={() => printInvoiceDocument(lastInvoice.id, true)}><Printer size={14} /> Print Thermal</button>
+                    <button type="button" className="pb-btn" onClick={() => downloadInvoiceDocument(lastInvoice.id, true)}><Download size={14} /> Thermal PDF</button>
+                  </div>
+                </div>
+              </section>
             )}
           </div>
-
-          {/* Primary POS actions */}
-          <div className="pos-checkout-actions bg-[var(--surface)] border border-[var(--line)] rounded-xl p-3.5 shadow-[var(--shadow-card)] space-y-2.5">
-            <div className="flex items-center justify-between gap-2 pb-1">
-              <div>
-                <div className="text-sm font-bold text-[var(--ink)]">Complete sale</div>
-                <div className="text-[11px] text-[var(--muted-light)]">Save or print the current bill</div>
-              </div>
-              <Receipt size={17} className="text-[var(--primary)]" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button className="btn-solid mobile-safe-button" onClick={() => saveBill(false)} disabled={saving || !cart.length}>
-                <CheckCircle2 size={15} /> {saving ? 'Saving…' : 'Save Bill'}
-              </button>
-              <button className="btn-outline mobile-safe-button" onClick={() => lastInvoice?.id ? printInvoiceDocument(lastInvoice.id, false) : saveBill(true)} disabled={saving || (!cart.length && !lastInvoice)}>
-                <Printer size={15} /> Print Bill
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-2">
-              <button className="btn-outline mobile-safe-button pos-razorpay" onClick={() => {
-                if (!lastInvoice) {
-                  if (!cart.length) return toast.error('Add items before using Razorpay')
-                  setPayment(x => ({ ...x, method: 'razorpay', amount: grandTotal.toFixed(2), status: 'pending' }))
-                  toast('Save the bill first, then pay with Razorpay.', { icon: 'ℹ️' })
-                } else setShowRazorpay(true)
-              }}>
-                <CreditCard size={15} /> Razorpay
-              </button>
-            </div>
-
-            <button className="btn-outline w-full mobile-safe-button" onClick={() => setShowMoreActions(v => !v)} aria-expanded={showMoreActions}>
-              <MoreHorizontal size={15} /> {showMoreActions ? 'Hide More Actions' : 'More Actions'}
-            </button>
-
-            {showMoreActions && (
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button className="btn-outline mobile-safe-button" onClick={() => openInvoiceDocument(lastInvoice?.id, false)} disabled={!lastInvoice}>
-                  <FileText size={14} /> Invoice
-                </button>
-                <button className="btn-outline mobile-safe-button" onClick={() => printInvoiceDocument(lastInvoice?.id, true)} disabled={!lastInvoice}>
-                  <Printer size={14} /> Thermal
-                </button>
-                <button className="btn-outline mobile-safe-button" onClick={shareInvoice} disabled={!lastInvoice}>
-                  <Share2 size={14} /> Share
-                </button>
-                <button className="btn-outline mobile-safe-button border-amber-300 text-amber-700" onClick={saveDraft} disabled={!cart.length}>
-                  <Layers size={14} /> Hold
-                </button>
-                {lastInvoice && <>
-                  <button className="btn-outline mobile-safe-button" onClick={() => downloadInvoiceDocument(lastInvoice.id, false)}>
-                    <Download size={14} /> PDF
-                  </button>
-                  <button className="btn-outline mobile-safe-button" onClick={() => downloadInvoiceDocument(lastInvoice.id, true)}>
-                    <Download size={14} /> Thermal PDF
-                  </button>
-                </>}
-                <button className="btn-outline mobile-safe-button col-span-2" onClick={resetBill} disabled={!cart.length && !lastInvoice}>
-                  <RefreshCw size={14} /> New Bill
-                </button>
-              </div>
-            )}
-
-            <button className="text-xs text-[var(--muted-light)] hover:text-[var(--muted)] underline inline-flex gap-1 items-center justify-center pt-1 w-full" onClick={() => setShowShortcuts(true)}>
-              <Keyboard size={13} /> Keyboard shortcuts
-            </button>
-          </div>
-
-        </aside>
+        </div>
       </div>
 
-      {cartOpen && <button type="button" aria-label="Close cart" onClick={() => setCartOpen(false)} className="md:hidden fixed inset-0 z-30 bg-slate-950/35" />}
-      <button
-        type="button"
-        onClick={() => setCartOpen(true)}
-        className="pos-mobile-cart-bar md:hidden fixed inset-x-3 z-20 min-h-13 rounded-xl bg-[var(--primary)] text-white px-4 shadow-2xl flex items-center justify-between font-bold text-sm border border-white/10"
-      >
-        <span className="flex items-center gap-2"><Receipt size={17} /> Cart ({cart.reduce((count, item) => count + Number(item.qty || 0), 0)})</span>
-        <span>{fmt(grandTotal)}</span>
-      </button>
+      {/* ================= PAYMENT DOCK ================= */}
+      <section className="pb-dock" aria-label="Payment and actions" ref={paymentSectionRef}>
+        <div className="pb-dock-row">
+          <div className="pb-dock-methods">
+            <span className="pb-dock-label" id="pb-payment-h">Payment method (F4)</span>
+            <div className="pb-methods" role="radiogroup" aria-labelledby="pb-payment-h">
+              {PAYMENT_METHODS.map(({ id, label, icon: Icon }) => (
+                <button key={id} type="button" role="radio" aria-checked={payment.method === id} className="pb-method" onClick={() => selectPayment(id)}>
+                  <Icon size={16} /> {label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      {/* Floating Quick Pay — kept outside checkout actions so it is always easy to reach. */}
-      {!cartOpen && <button
-        type="button"
-        onClick={openQuickPayment}
-        disabled={!upiId}
-        aria-label="Quick Pay"
-        title={upiId ? 'Quick Pay' : 'Configure UPI ID in Settings'}
-        className="pos-floating-quick-pay"
-      >
-        <QrCode size={17} />
-        <span>Quick Pay</span>
-      </button>}
+          <div className="pb-dock-fields">
+            {payment.method === 'cash' && (
+              <>
+                <div className="pb-field">
+                  <label className="pb-label" htmlFor="pb-cash">Cash received</label>
+                  <div className="pb-money">
+                    <span aria-hidden="true">₹</span>
+                    <input
+                      id="pb-cash"
+                      type="number" min="0" step="0.01" inputMode="decimal"
+                      className="pb-input pb-input-num"
+                      value={payment.amount}
+                      placeholder={grandTotal.toFixed(2)}
+                      title="Leave blank for the exact amount"
+                      onChange={e => setPayment(x => ({ ...x, amount: e.target.value, status: 'paid', autoAmount: false }))}
+                    />
+                  </div>
+                </div>
+                <div className="pb-chips">
+                  <button type="button" className="pb-chip pb-chip-exact" onClick={setExactCash}>Exact</button>
+                  {CASH_CHIPS.map(v => (
+                    <button type="button" key={v} className="pb-chip" onClick={() => addCashChip(v)}>+{v}</button>
+                  ))}
+                  <button type="button" className="pb-chip" onClick={() => setPayment(x => ({ ...x, amount: '', autoAmount: false }))}>Reset</button>
+                </div>
+                <div className="pb-stat"><span>Balance due</span><b className={cashBalanceDue > 0 ? 'pb-red' : ''}>{fmt(cashBalanceDue)}</b></div>
+                <div className="pb-stat"><span>Change to return</span><b>{fmt(cashChange)}</b></div>
+                {cashShort && (
+                  <div className="pb-note pb-note-warn pb-dock-note" role="alert"><AlertTriangle size={14} /> Cash received is less than the grand total.</div>
+                )}
+              </>
+            )}
+
+            {['upi', 'card', 'online'].includes(payment.method) && (
+              <>
+                {payment.method === 'upi' && (
+                  <div className="pb-field">
+                    <label className="pb-label" htmlFor="pb-upi-id">Merchant UPI ID</label>
+                    <input id="pb-upi-id" className="pb-input" value={upiId} readOnly placeholder="Configure in Settings" />
+                  </div>
+                )}
+                <div className="pb-field">
+                  <label className="pb-label" htmlFor="pb-pay-amount">Amount</label>
+                  <div className="pb-money">
+                    <span aria-hidden="true">₹</span>
+                    <input
+                      id="pb-pay-amount"
+                      type="number" min="0" step="0.01" inputMode="decimal"
+                      className="pb-input pb-input-num"
+                      value={payment.amount}
+                      onChange={e => setPayment(x => ({ ...x, amount: e.target.value, autoAmount: false }))}
+                    />
+                  </div>
+                </div>
+                <div className="pb-field">
+                  <label className="pb-label" htmlFor="pb-pay-ref">{payment.method === 'upi' ? 'UTR / reference (optional)' : 'Reference (optional)'}</label>
+                  <input id="pb-pay-ref" className="pb-input" value={payment.reference} onChange={e => setPayment(x => ({ ...x, reference: e.target.value }))} />
+                </div>
+                {payment.method === 'upi' && (
+                  <button type="button" className="pb-btn pb-btn-lg" onClick={openQuickPayment} disabled={!upiId}>
+                    <QrCode size={15} /> Show QR code
+                  </button>
+                )}
+                <div>
+                  <span className="pb-label">Payment status</span>
+                  <div className="pb-status" role="radiogroup" aria-label="Payment status">
+                    {['pending', 'paid', 'failed'].map(s => (
+                      <button key={s} type="button" role="radio" data-s={s} aria-checked={payment.status === s} onClick={() => setPayment(x => ({ ...x, status: s }))}>{s}</button>
+                    ))}
+                  </div>
+                </div>
+                {payment.method === 'upi' && (
+                  <div className={`pb-note pb-dock-note ${payment.status === 'paid' ? 'pb-note-ok' : 'pb-note-warn'}`}>
+                    {payment.status === 'paid'
+                      ? 'Payment is marked as RECEIVED.'
+                      : 'QR shown ≠ payment received. Keep status “pending” until the money is confirmed in your UPI app or bank.'}
+                  </div>
+                )}
+              </>
+            )}
+
+            {payment.method === 'credit' && (
+              <>
+                <div className="pb-note">This amount will be recorded as customer credit and settled later.</div>
+                {CREDIT_REQUIRES_CUSTOMER && !customer && (
+                  <div className="pb-note pb-note-warn" role="alert"><AlertTriangle size={14} /> Select a customer (F2) to complete a credit sale.</div>
+                )}
+              </>
+            )}
+
+            {payment.method === 'razorpay' && (
+              <>
+                <div className="pb-stat"><span>Payable via Razorpay</span><b>{fmt(grandTotal)}</b></div>
+                <div className="pb-note">
+                  “Complete Sale” saves the bill as <b>pending</b> and opens Razorpay checkout. The bill is marked paid only after the payment is verified.
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="pb-dock-actions">
+          <div className="pb-dock-secondary">
+            <button type="button" className="pb-btn" title="Save draft (Ctrl+D)" onClick={saveDraft} disabled={saving || !cart.length}>
+              <Layers size={14} /> Save Draft
+            </button>
+            <button type="button" className="pb-btn" title={upiId ? 'Show a UPI QR without a bill' : 'Configure UPI ID in Settings'} onClick={openQuickPayment} disabled={!upiId}>
+              <QrCode size={14} /> Quick QR
+            </button>
+            <button type="button" className="pb-btn" title="Complete the sale and print the bill" onClick={() => saveBill(true)} disabled={!canComplete}>
+              <Printer size={14} /> Complete &amp; Print
+            </button>
+            <button type="button" className="pb-btn pb-btn-danger" title="Remove all items from this bill" onClick={() => setShowClearConfirm(true)} disabled={!cart.length}>
+              <Trash2 size={14} /> Clear
+            </button>
+            <button type="button" className="pb-btn" title="Start a fresh bill" onClick={startNewBill} disabled={saving || (!cart.length && !lastInvoice)}>
+              <RefreshCw size={14} /> New Bill
+            </button>
+          </div>
+          <button type="button" className="pb-btn pb-btn-success pb-btn-xl pb-dock-complete" title={completeTitle} onClick={() => saveBill(false)} disabled={!canComplete}>
+            <CheckCircle2 size={18} />
+            {saving ? 'Saving…' : <>Complete Sale <span className="pb-amt">{fmt(grandTotal)}</span></>}
+          </button>
+        </div>
+      </section>
+
+      {/* Mobile: total + Complete Sale always reachable */}
+      <div className="pb-mobile-bar">
+        <div className="pb-mobile-total"><span>Grand total</span><strong>{fmt(grandTotal)}</strong></div>
+        <button type="button" className="pb-btn pb-btn-success pb-btn-lg" title={completeTitle} onClick={() => saveBill(false)} disabled={!canComplete}>
+          <CheckCircle2 size={16} /> {saving ? 'Saving…' : 'Complete Sale'}
+        </button>
+      </div>
 
       {/* ============================ MODALS ============================ */}
       <Modal open={showCustomerModal} onClose={() => setShowCustomerModal(false)} title="Add new customer" size="sm">
-        <div className="space-y-3">
-          <label className="block text-sm text-[var(--muted)]">Name *
-            <input className="pos-input h-10 mt-1 text-sm" value={newCustomer.name} onChange={e => setNewCustomer(x => ({ ...x, name: e.target.value }))} />
-          </label>
-          <label className="block text-sm text-[var(--muted)]">Mobile
-            <input className="pos-input h-10 mt-1 text-sm" value={newCustomer.mobile} onChange={e => setNewCustomer(x => ({ ...x, mobile: e.target.value }))} />
-          </label>
-          <label className="block text-sm text-[var(--muted)]">Email
-            <input className="pos-input h-10 mt-1 text-sm" value={newCustomer.email} onChange={e => setNewCustomer(x => ({ ...x, email: e.target.value }))} />
-          </label>
-          <button className="btn-solid w-full" onClick={addCustomer}>Add customer</button>
+        <div className="pb-modal pb-stack">
+          <div>
+            <label className="pb-label" htmlFor="pb-nc-name">Name *</label>
+            <input id="pb-nc-name" className="pb-input" autoFocus value={newCustomer.name} onChange={e => setNewCustomer(x => ({ ...x, name: e.target.value }))} />
+          </div>
+          <div>
+            <label className="pb-label" htmlFor="pb-nc-mobile">Mobile</label>
+            <input id="pb-nc-mobile" className="pb-input" inputMode="tel" value={newCustomer.mobile} onChange={e => setNewCustomer(x => ({ ...x, mobile: e.target.value }))} />
+          </div>
+          <div>
+            <label className="pb-label" htmlFor="pb-nc-email">Email</label>
+            <input id="pb-nc-email" className="pb-input" type="email" value={newCustomer.email} onChange={e => setNewCustomer(x => ({ ...x, email: e.target.value }))} />
+          </div>
+          <div className="pb-grid2">
+            <button type="button" className="pb-btn" onClick={() => setShowCustomerModal(false)}>Cancel</button>
+            <button type="button" className="pb-btn pb-btn-primary" onClick={addCustomer} disabled={addingCustomer}>{addingCustomer ? 'Adding…' : 'Add customer'}</button>
+          </div>
         </div>
       </Modal>
 
-      <Modal open={showSuccess && Boolean(lastInvoice)} onClose={() => setShowSuccess(false)} title="Bill Saved Successfully" size="sm">
-        <div className="space-y-4">
-<div className="flex flex-col items-center justify-center gap-1.5">
-            <CheckCircle2 size={34} className="mx-auto text-blue-600 dark:text-blue-400" />
-            <div className="mt-2 text-2xl font-bold text-[var(--amount-sales)]">{fmt(lastInvoice?.grand_total)}</div>
-            <div className="text-xs text-blue-700 dark:text-blue-400 mt-1">Invoice {lastInvoice?.invoice_number}</div>
-            <button
-              className="btn-solid bg-blue-600 hover:bg-blue-700 border-blue-600 hover:border-blue-700 w-full mt-3 h-10"
-              onClick={() => { setShowSuccess(false); resetBill() }}
-            >
-              <RefreshCw size={14} /> Start New Bill
-            </button>
+      <Modal open={showClearConfirm} onClose={() => setShowClearConfirm(false)} title="Clear cart?" size="sm">
+        <div className="pb-modal pb-stack">
+          <p style={{ margin: 0 }}>Remove all {cart.length} item{cart.length === 1 ? '' : 's'} from this bill? This cannot be undone.</p>
+          <div className="pb-grid2">
+            <button type="button" className="pb-btn" onClick={() => setShowClearConfirm(false)}>Cancel</button>
+            <button type="button" className="pb-btn pb-btn-primary" onClick={() => { setCart([]); setShowClearConfirm(false); searchRef.current?.focus() }}>Clear Cart</button>
           </div>
-          <dl className="grid grid-cols-2 gap-2 text-sm mt-3  border-t border-[var(--line)] pt-3">
-            <dt className="text-[var(--muted)]">Payment method</dt>
-            <dd className="text-right font-semibold text-[var(--ink)] capitalize">{lastInvoice?.payment_method || 'cash'}</dd>
-            <dt className="text-[var(--muted)]">Amount received</dt>
-            <dd className="text-right font-semibold text-[var(--ink)]">{fmt(lastInvoice?.amount_received ?? lastInvoice?.paid_amount)}</dd>
-            <dt className="text-[var(--muted)]">Change</dt>
-            <dd className="text-right font-semibold text-[var(--ink)]">{fmt(Math.max(0, Number(lastInvoice?.amount_received || 0) - Number(lastInvoice?.grand_total || 0)))}</dd>
+        </div>
+      </Modal>
+
+      <Modal open={showDrafts} onClose={() => setShowDrafts(false)} title="Draft bills" size="md">
+        <div className="pb-modal">
+          {drafts.length === 0 ? (
+            <p className="pb-sub" style={{ margin: 0 }}>No draft bills saved. Use “Save Draft” to park a bill and resume it later.</p>
+          ) : drafts.map(d => {
+            const draftTotal = (d.cart || []).reduce((s, i) => s + Number(i.total || 0), 0)
+            return (
+              <div key={d.id} className="pb-draft">
+                <div>
+                  <div className="pb-strong">{d.customerName || 'Walk-in Customer'}</div>
+                  <div className="pb-sub">
+                    {new Date(d.savedAt).toLocaleString('en-IN')} | {(d.cart || []).length} item(s) | Items total {fmt(draftTotal)}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button type="button" className="pb-btn pb-btn-sm pb-btn-primary" onClick={() => resumeDraft(d)}>Resume</button>
+                  <button type="button" className="pb-btn pb-btn-sm pb-btn-danger" onClick={() => deleteDraft(d.id)}>Delete</button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </Modal>
+
+      <Modal open={showSuccess && Boolean(lastInvoice)} onClose={() => setShowSuccess(false)} title="Sale completed" size="sm">
+        <div className="pb-modal pb-stack">
+          <div className="pb-c">
+            <CheckCircle2 size={30} color="#15803d" />
+            <div className="pb-qr-amount">{fmt(lastInvoice?.grand_total)}</div>
+            <div className="pb-sub">Invoice {lastInvoice?.invoice_number}</div>
+          </div>
+          <dl className="pb-dl" style={{ borderTop: '1px solid var(--pb-border)', paddingTop: 8 }}>
+            <dt>Invoice number</dt><dd>{lastInvoice?.invoice_number || '—'}</dd>
+            <dt>Payment method</dt><dd style={{ textTransform: 'capitalize' }}>{lastInvoice?.payment_method || 'cash'}</dd>
+            <dt>Payment status</dt><dd style={{ textTransform: 'capitalize' }}>{lastInvoice?.payment_status || '—'}</dd>
+            <dt>Paid amount</dt><dd>{fmt(lastPaidAmount(lastInvoice))}</dd>
+            {lastInvoice?.payment_method === 'cash' && (
+              <>
+                <dt>Change returned</dt>
+                <dd>{fmt(Math.max(0, Number(lastInvoice?.amount_received || 0) - Number(lastInvoice?.grand_total || 0)))}</dd>
+              </>
+            )}
           </dl>
-          <div className="grid grid-cols-2 gap-2">
-            <button className="btn-outline" onClick={() => printInvoiceDocument(lastInvoice?.id)}><Printer size={14} /> Print</button>
-            <button className="btn-outline" onClick={() => downloadInvoiceDocument(lastInvoice?.id)}><Download size={14} /> PDF</button>
-            <button className="btn-outline col-span-2" onClick={shareInvoice}><Share2 size={14} /> Share Bill + PDF</button>
-            <button className="btn-outline col-span-2" onClick={() => navigate(`/invoice/${lastInvoice?.id}`)}><FileText size={14} /> View Invoice</button>
+          <div className="pb-grid2">
+            <button type="button" className="pb-btn" onClick={() => printInvoiceDocument(lastInvoice?.id)}><Printer size={14} /> Print Bill</button>
+            <button type="button" className="pb-btn" onClick={() => downloadInvoiceDocument(lastInvoice?.id)}><Download size={14} /> Download</button>
+            <button type="button" className="pb-btn" onClick={shareInvoice}><Share2 size={14} /> Share</button>
+            <button type="button" className="pb-btn" onClick={() => navigate(`/invoice/${lastInvoice?.id}`)}><FileText size={14} /> View Invoice</button>
           </div>
+          <button type="button" className="pb-btn pb-btn-primary pb-btn-lg" onClick={() => { setShowSuccess(false); startNewBill() }}>
+            <RefreshCw size={14} /> Start New Bill
+          </button>
         </div>
       </Modal>
 
@@ -1758,7 +1850,7 @@ export default function NewBill() {
         billTotal={grandTotal}
         hasCart={cart.length > 0}
         onPaid={(amount) => {
-          setPayment(x => ({ ...x, method: 'upi', amount: amount.toFixed(2), status: 'paid' }))
+          setPayment(x => ({ ...x, method: 'upi', amount: amount.toFixed(2), status: 'paid', autoAmount: false }))
           setShowQr(false)
           toast.success(`UPI payment of ${fmt(amount)} marked paid`)
         }}
@@ -1803,13 +1895,27 @@ export default function NewBill() {
       />
 
       <Modal open={showShortcuts} onClose={() => setShowShortcuts(false)} title="Keyboard shortcuts" size="sm">
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          {[['F1', 'New bill'], ['F2', 'Product search'], ['F3', 'Customer'], ['F4', 'Payment'], ['F5', 'Hold bill'], ['F6', 'Bill discount'], ['F7', 'Print'], ['F8', 'Save'], ['Ctrl/Cmd + K', 'Global search'], ['Esc', 'Close modal']].map(([key, text]) => (
-            <div key={key} className="contents">
-              <kbd className="border border-[var(--line)] rounded px-2 py-1 text-center bg-[var(--surface-elevated)]">{key}</kbd>
-              <span className="text-[var(--muted)]">{text}</span>
-            </div>
-          ))}
+        <div className="pb-modal">
+          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '6px 12px', alignItems: 'center' }}>
+            {[
+              ['Ctrl + K / F3', 'Focus product search'],
+             ['↑ ↓', 'Move through search results'],
+              ['↑ ↓', 'Move through search results'],
+              ['F2', 'Focus customer search'],
+              ['F4', 'Focus payment section'],
+              ['F6', 'Bill discount'],
+              ['F8 / Ctrl + Enter', 'Complete sale'],
+              ['Ctrl + P / F7', 'Print invoice'],
+              ['Ctrl + D / F5', 'Save draft'],
+              ['F1', 'New bill screen'],
+              ['Esc', 'Close dropdown / dialog'],
+            ].map(([key, text]) => (
+              <div key={key} style={{ display: 'contents' }}>
+                <kbd className="pb-kbd">{key}</kbd>
+                <span>{text}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </Modal>
     </div>

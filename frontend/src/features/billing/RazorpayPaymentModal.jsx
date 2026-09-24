@@ -124,15 +124,25 @@ export default function RazorpayPaymentModal({ open, onClose, invoice, onSuccess
       <div className="space-y-4">
 
         {/* Amount banner */}
-        <div className="rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 p-4 text-center">
-          <div className="text-xs text-indigo-600 font-medium mb-1">
-            Invoice {invoice?.invoice_number}
-          </div>
-          <div className="text-3xl font-extrabold text-indigo-800 dark:text-indigo-200 tabular-nums">
-            {fmt(invoice?.grand_total)}
-          </div>
-          <div className="text-xs text-indigo-500 mt-1">Amount to pay via Razorpay</div>
-        </div>
+   <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 shadow-sm">
+  <div className="flex items-center justify-between gap-3">
+    <div className="min-w-0 text-left">
+      <div className="mb-1 text-xs font-semibold text-green-700">
+        Invoice {invoice?.invoice_number}
+      </div>
+
+      <div className="text-xs text-slate-600">
+        Amount to pay via Razorpay
+      </div>
+    </div>
+
+    <div className="shrink-0 rounded-lg border border-amber-200 bg-white px-4 py-2 text-right shadow-sm">
+      <div className="text-xl font-extrabold text-amber-700">
+        {fmt(invoice?.grand_total)}
+      </div>
+    </div>
+  </div>
+</div>
 
         {/* IDLE */}
         {phase === 'idle' && (
