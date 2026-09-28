@@ -82,22 +82,6 @@ const PAGE_META = NAV_GROUPS.reduce((acc, group) => {
   return acc
 }, {})
 
-// Support is visible to all roles even though it's in the admin group
-const SUPPORT_ITEM = { to: '/support', icon: HelpCircle, label: 'Support' }
-
-const GROUP_ACCENT = {
-  Overview: 'text-blue-300', Sales: 'text-blue-300', Inventory: 'text-blue-300',
-  Contacts: 'text-blue-300', Business: 'text-blue-300', Administration: 'text-blue-300'
-}
-const ACTIVE_BG = {
-  Overview: 'bg-blue-600', Sales: 'bg-blue-600', Inventory: 'bg-blue-600',
-  Contacts: 'bg-blue-600', Business: 'bg-blue-600', Administration: 'bg-blue-600'
-}
-const ACCENT_HEX = {
-  Overview: '#2563eb', Sales: '#2563eb', Inventory: '#2563eb',
-  Contacts: '#2563eb', Business: '#2563eb', Administration: '#2563eb'
-}
-
 function NavGroup({ group, collapsed, user, onNav }) {
   const location = useLocation()
   const [open, setOpen] = useState(true)
@@ -108,38 +92,57 @@ function NavGroup({ group, collapsed, user, onNav }) {
     return !item.adminOnly || user?.role === 'admin'
   })
   if (!visibleItems.length) return null
+
   if (group.adminOnly && user?.role !== 'admin') {
     const supportOnly = visibleItems.filter(i => i.to === '/support')
     if (!supportOnly.length) return null
-    return <NavGroupItems items={supportOnly} collapsed={collapsed} activeBg={ACTIVE_BG[group.label]} accent={GROUP_ACCENT[group.label]} groupLabel={group.label} open={open} setOpen={setOpen} onNav={onNav} location={location} isGroupActive={supportOnly.some(i => location.pathname.startsWith(i.to))} />
+    return (
+      <NavGroupItems
+        items={supportOnly}
+        collapsed={collapsed}
+        groupLabel={group.label}
+        open={open}
+        setOpen={setOpen}
+        onNav={onNav}
+      />
+    )
   }
 
-  const isGroupActive = visibleItems.some(item =>
-    item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to)
+  return (
+    <NavGroupItems
+      items={visibleItems}
+      collapsed={collapsed}
+      groupLabel={group.label}
+      open={open}
+      setOpen={setOpen}
+      onNav={onNav}
+    />
   )
-  const activeBg = ACTIVE_BG[group.label] || 'bg-indigo-600'
-  const accent = GROUP_ACCENT[group.label] || 'text-slate-400'
-
-  return <NavGroupItems items={visibleItems} collapsed={collapsed} activeBg={activeBg} accent={accent} groupLabel={group.label} open={open} setOpen={setOpen} onNav={onNav} location={location} isGroupActive={isGroupActive} />
 }
 
-function NavGroupItems({ items, collapsed, activeBg, accent, groupLabel, open, setOpen, onNav, location, isGroupActive }) {
+function NavGroupItems({ items, collapsed, groupLabel, open, setOpen, onNav }) {
   if (collapsed) {
     return (
       <div className="px-2 mb-2">
         {items.map(({ to, icon: Icon, label }) => (
-          <NavLink key={to} to={to} end={to === '/'} onClick={onNav} title={label}
+          <NavLink
+            key={to}
+            to={to}
+            end={to === '/'}
+            onClick={onNav}
+            title={label}
             className={({ isActive }) =>
               `relative flex items-center justify-center w-10 h-10 rounded-xl mb-1 transition-all duration-150 group ${
-                isActive ? `${activeBg} text-white shadow-lg` : 'text-blue-200 hover:bg-white/[0.12] hover:text-white'
+                isActive
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-semibold'
+                  : 'text-slate-400 hover:bg-white/[0.08] hover:text-white'
               }`
             }
           >
             {({ isActive }) => (
               <>
-                {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r bg-white/70" />}
-                <Icon size={16} />
-                <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-slate-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-[100] shadow-xl border border-blue-800/60">
+                <Icon size={17} />
+                <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-slate-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-[100] shadow-xl border border-slate-700">
                   {label}
                 </span>
               </>
@@ -151,30 +154,38 @@ function NavGroupItems({ items, collapsed, activeBg, accent, groupLabel, open, s
   }
 
   return (
-    <div className="mb-1">
+    <div className="mb-2">
+      {/* Group header: strictly neutral, never highlighted when active */}
       <button
+        type="button"
         onClick={() => setOpen(v => !v)}
-        className={`w-full flex items-center justify-between px-3 py-1.5 mb-0.5 rounded-md transition-colors ${
-          isGroupActive ? accent : 'text-blue-200 hover:text-blue-100'
-        }`}
+        className="w-full flex items-center justify-between px-3 py-1.5 mb-1 rounded-md text-slate-400 hover:text-slate-200 transition-colors"
       >
-        <span className="text-[9.5px] font-bold uppercase tracking-[0.12em]">{groupLabel}</span>
-        {open ? <ChevronUp size={9} className="opacity-40" /> : <ChevronRight size={9} className="opacity-40" />}
+        <span className="text-[10px] font-bold uppercase tracking-[0.14em]">
+          {groupLabel}
+        </span>
+        {open ? <ChevronUp size={11} className="opacity-50" /> : <ChevronRight size={11} className="opacity-50" />}
       </button>
+
       {open && (
         <div className="space-y-0.5 px-2">
           {items.map(({ to, icon: Icon, label }) => (
-            <NavLink key={to} to={to} end={to === '/'} onClick={onNav}
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              onClick={onNav}
               className={({ isActive }) =>
-                `relative flex items-center gap-2.5 px-2.5 py-[7px] rounded-xl text-[13px] font-medium transition-all duration-150 ${
-                  isActive ? `${activeBg} text-white shadow-sm` : 'text-blue-200 hover:bg-white/[0.12] hover:text-white'
+                `relative flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-150 ${
+                  isActive
+                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/25 font-semibold'
+                    : 'text-slate-300 hover:bg-white/[0.08] hover:text-white'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] rounded-r-full bg-white/60" />}
-                  <Icon size={15} className="flex-shrink-0" />
+                  <Icon size={16} className={`flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                   <span className="truncate">{label}</span>
                 </>
               )}
@@ -191,17 +202,18 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
 
   return (
     <div
-      className={`flex flex-col h-full transition-all duration-300 ease-in-out ${
+      className={`flex flex-col h-full transition-all duration-300 ease-in-out select-none ${
         mobile ? 'w-64' : collapsed ? 'w-[62px]' : 'w-[220px]'
       }`}
-      style={{ background: 'linear-gradient(180deg, #0f172a 0%, #111827 55%, #0b1220 100%)' }}
+      style={{ background: '#0f172a' }}
     >
+      {/* Brand Header */}
       <div
         onMouseEnter={() => setHeaderHovered(true)}
         onMouseLeave={() => setHeaderHovered(false)}
         onClick={collapsed && !mobile ? onToggle : undefined}
-        className={`flex items-center flex-shrink-0 border-b border-white/[0.06] transition-all duration-300 cursor-pointer ${
-          collapsed && !mobile ? 'justify-center px-2 py-4' : 'gap-3 px-4 py-4'
+        className={`flex items-center flex-shrink-0 border-b border-white/[0.08] transition-all duration-300 cursor-pointer ${
+          collapsed && !mobile ? 'justify-center px-2 py-4' : 'gap-3 px-4 py-3.5'
         }`}
       >
         {collapsed && !mobile ? (
@@ -211,60 +223,78 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
             </div>
             <div
               title="Expand sidebar"
-              className={`absolute inset-0 w-8 h-8 rounded-xl flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/[0.08] transition-all duration-200 ${headerHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
+              className={`absolute inset-0 w-8 h-8 rounded-xl flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/[0.1] transition-all duration-200 ${headerHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
             >
               <MenuIcon size={18} />
             </div>
           </div>
         ) : (
           <>
-            <img src={logoSrc} alt={shopName} className="w-8 h-8 object-contain rounded-md flex-shrink-0" />
+            <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/[0.1] flex items-center justify-center flex-shrink-0 p-1">
+              <img src={logoSrc} alt={shopName} className="w-full h-full object-contain rounded" />
+            </div>
             <div className="min-w-0 flex-1">
-              <div className="font-bold text-[13px] text-white truncate leading-tight">{shopName}</div>
-              <div className="text-[9px] text-slate-400 uppercase tracking-[0.15em] font-medium mt-0.5">ERP System</div>
+              <div className="font-bold text-[13.5px] text-white truncate leading-tight tracking-tight">{shopName}</div>
+              <div className="text-[10px] text-slate-400 uppercase tracking-[0.14em] font-semibold mt-0.5">ERP System</div>
             </div>
             {!mobile && (
-              <button onClick={onToggle} title="Collapse sidebar" aria-label="Collapse sidebar"
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-blue-200 hover:text-white hover:bg-white/[0.12] transition-all duration-200 flex-shrink-0">
-                <MenuIcon size={20} />
+              <button
+                onClick={onToggle}
+                title="Collapse sidebar"
+                aria-label="Collapse sidebar"
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.1] transition-all duration-150 flex-shrink-0"
+              >
+                <MenuIcon size={18} />
               </button>
             )}
             {mobile && (
-              <button onClick={onClose} title="Close menu" aria-label="Close menu"
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-blue-200 hover:text-white hover:bg-white/[0.12] transition-all flex-shrink-0">
-                <X size={18} />
+              <button
+                onClick={onClose}
+                title="Close menu"
+                aria-label="Close menu"
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/[0.1] transition-all flex-shrink-0"
+              >
+                <X size={17} />
               </button>
             )}
           </>
         )}
       </div>
 
-      <nav className="flex-1 py-2 space-y-0.5" style={{ overflowY: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      {/* Nav List */}
+      <nav className="flex-1 py-3 space-y-1 overflow-y-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {NAV_GROUPS.map(group => (
           <NavGroup key={group.label} group={group} collapsed={collapsed && !mobile} user={user} onNav={onNav} />
         ))}
       </nav>
 
-      <div className={`border-t border-white/[0.06] flex-shrink-0 ${collapsed && !mobile ? 'px-2 py-3' : 'px-3 py-3'}`}>
+      {/* User / Sign Out Footer */}
+      <div className={`border-t border-white/[0.08] flex-shrink-0 ${collapsed && !mobile ? 'px-2 py-3' : 'px-3 py-3'}`}>
         {collapsed && !mobile ? (
-          <button onClick={onLogout} title="Sign Out"
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-blue-200 hover:text-white hover:bg-white/[0.12] transition-all mx-auto">
+          <button
+            onClick={onLogout}
+            title="Sign Out"
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-white/[0.08] transition-all mx-auto"
+          >
             <LogOut size={16} />
           </button>
         ) : (
           <div className="flex items-center gap-2.5 px-1">
-            <div className="w-8 h-8 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 shadow-sm">
               {((user?.first_name?.[0] || '') + (user?.last_name?.[0] || '')) || user?.username?.[0]?.toUpperCase() || 'U'}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-[12px] font-semibold text-blue-100 truncate leading-tight">
+              <div className="text-[12px] font-semibold text-slate-200 truncate leading-tight">
                 {[user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username}
               </div>
-              <div className="text-[10px] text-blue-300 capitalize font-medium">{user?.role}</div>
+              <div className="text-[10px] text-slate-400 capitalize font-medium">{user?.role || 'Staff'}</div>
             </div>
-            <button onClick={onLogout} title="Sign Out"
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-blue-200 hover:text-white hover:bg-white/[0.12] transition-all flex-shrink-0">
-              <LogOut size={14} />
+            <button
+              onClick={onLogout}
+              title="Sign Out"
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-white/[0.08] transition-all flex-shrink-0"
+            >
+              <LogOut size={15} />
             </button>
           </div>
         )}
@@ -323,12 +353,12 @@ function GlobalSearch() {
 
   return (
     <div ref={ref} className="relative">
-      <div className={`flex items-center gap-2 rounded-xl px-3.5 py-2 w-full max-w-md transition-all duration-200 border ${
+      <div className={`flex items-center gap-2 rounded-xl px-3 py-1.5 w-full max-w-sm transition-all duration-150 border ${
         open || q
-          ? 'bg-[var(--surface)] border-[var(--primary-border)] shadow-sm ring-2 ring-[var(--primary-light)]'
-          : 'bg-[var(--surface-elevated)] border-[var(--line)] hover:border-[var(--primary-border)]'
+          ? 'bg-[var(--surface)] border-[var(--primary)] shadow-xs ring-1 ring-[var(--primary)]'
+          : 'bg-[var(--surface-elevated)] border-[var(--line)] hover:border-[var(--line-strong)]'
       }`}>
-        <Search size={16} className="text-[var(--muted)] flex-shrink-0" />
+        <Search size={15} className="text-[var(--muted)] flex-shrink-0" />
         <input
           value={q}
           onChange={e => { setQ(e.target.value); setOpen(e.target.value.length > 0) }}
@@ -337,11 +367,11 @@ function GlobalSearch() {
           onKeyDown={handleKeyDown}
           placeholder="Search products… (Ctrl+K)"
           aria-label="Search products"
-          className="bg-transparent text-sm outline-none w-full text-[var(--ink)] placeholder:text-[var(--muted-light)]"
+          className="bg-transparent text-xs outline-none w-full text-[var(--ink)] placeholder:text-[var(--placeholder)]"
         />
         {q ? (
           <button onClick={() => { setQ(''); setOpen(false) }} aria-label="Clear search" className="text-[var(--muted)] hover:text-[var(--ink)]">
-            <X size={14} />
+            <X size={13} />
           </button>
         ) : (
           <kbd className="hidden sm:inline-flex px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted-light)] bg-[var(--surface)] border border-[var(--line)] rounded">⌘K</kbd>
@@ -357,7 +387,11 @@ function GlobalSearch() {
             </div>
           ) : results.length ? (
             results.map(result => (
-              <button key={`${result.type}-${result.id}`} onClick={() => { navigate(result.route); setQ(''); setOpen(false) }} className="w-full px-4 py-2.5 text-left hover:bg-[var(--surface-hover)] border-b border-[var(--line-subtle)] last:border-0 transition-colors">
+              <button
+                key={`${result.type}-${result.id}`}
+                onClick={() => { navigate(result.route); setQ(''); setOpen(false) }}
+                className="w-full px-4 py-2.5 text-left hover:bg-[var(--surface-hover)] border-b border-[var(--line-subtle)] last:border-0 transition-colors"
+              >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm font-semibold text-[var(--ink)] truncate">{result.label}</span>
                   <span className="text-[10px] uppercase text-[var(--muted)] shrink-0 bg-[var(--surface-elevated)] px-1.5 py-0.5 rounded border border-[var(--line)]">{result.type}</span>
@@ -391,7 +425,12 @@ function NotificationBell() {
   useEffect(() => {
     api.get('/dashboard/').then(({ data }) => {
       const iconMap = { stock: Activity, credit: CreditCard, purchases: ShoppingBag, invoices: FileText }
-      const colorMap = { stock: 'text-blue-600 bg-blue-50', credit: 'text-blue-600 bg-blue-50', purchases: 'text-blue-600 bg-blue-50', invoices: 'text-blue-600 bg-blue-50' }
+      const colorMap = {
+        stock: 'text-teal-600 bg-teal-50 dark:bg-teal-950/60 dark:text-teal-300',
+        credit: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 dark:text-indigo-300',
+        purchases: 'text-teal-600 bg-teal-50 dark:bg-teal-950/60 dark:text-teal-300',
+        invoices: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 dark:text-indigo-300'
+      }
       setNotifications((data.action_required || []).filter(item => Number(item.count || 0) > 0).map(item => ({
         ...item,
         icon: iconMap[item.key] || Bell,
@@ -406,11 +445,14 @@ function NotificationBell() {
 
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(v => !v)} aria-label={`Notifications${hasNotifications ? `, ${notifications.length} items` : ''}`}
-        className="relative flex items-center justify-center w-9 h-9 rounded-xl text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-all">
+      <button
+        onClick={() => setOpen(v => !v)}
+        aria-label={`Notifications${hasNotifications ? `, ${notifications.length} items` : ''}`}
+        className="relative flex items-center justify-center w-9 h-9 rounded-xl text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-all"
+      >
         <Bell size={17} />
         {hasNotifications && (
-          <span aria-hidden="true" className="absolute top-1.5 right-1.5 w-2 h-2 bg-[var(--primary)] rounded-full ring-2 ring-[var(--surface)]" />
+          <span aria-hidden="true" className="absolute top-2 right-2 w-2 h-2 bg-teal-500 rounded-full ring-2 ring-[var(--surface)]" />
         )}
       </button>
 
@@ -461,44 +503,54 @@ function ProfileMenu({ user, onLogout }) {
 
   return (
     <div ref={ref} className="relative">
-      <button onClick={() => setOpen(v => !v)} className="flex items-center gap-2 hover:bg-[var(--surface-hover)] rounded-xl px-2 py-1.5 transition-all">
-        <div className="w-8 h-8 rounded-full bg-[var(--primary-light)] text-[var(--primary-text)] text-xs font-bold flex items-center justify-center flex-shrink-0">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-2 hover:bg-[var(--surface-hover)] rounded-xl px-2 py-1.5 transition-all border border-transparent hover:border-[var(--line)]"
+      >
+        <div className="w-8 h-8 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 shadow-xs">
           {initials}
         </div>
-        <div className="text-left hidden sm:block">
-          <div className="text-[13px] font-semibold text-[var(--ink)] leading-tight">{fullName}</div>
-          <div className="text-[10px] text-[var(--muted)] capitalize font-medium">{user?.role}</div>
+        <div className="text-left hidden md:block">
+          <div className="text-xs font-semibold text-[var(--ink)] leading-tight">{fullName}</div>
+          <div className="text-[10px] text-[var(--muted)] capitalize">{user?.role || 'Staff'}</div>
         </div>
-        <ChevronDown size={13} className={`text-[var(--muted)] hidden sm:block transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={13} className={`text-[var(--muted)] hidden md:block transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
         <div className="absolute right-0 top-full mt-2 w-56 bg-[var(--surface)] rounded-2xl shadow-[var(--shadow-lg)] border border-[var(--line)] z-50 overflow-hidden">
           <div className="px-4 py-3 bg-[var(--surface-elevated)] border-b border-[var(--line)]">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[var(--primary-light)] text-[var(--primary-text)] text-sm font-bold flex items-center justify-center">
+              <div className="w-9 h-9 rounded-full bg-indigo-600 text-white text-sm font-bold flex items-center justify-center">
                 {initials}
               </div>
               <div className="min-w-0">
                 <div className="font-semibold text-[var(--ink)] text-sm truncate">{fullName}</div>
-                <div className="text-[11px] text-[var(--muted)] capitalize">{user?.role}</div>
+                <div className="text-[11px] text-[var(--muted)] capitalize">{user?.role || 'Staff'}</div>
               </div>
             </div>
           </div>
           <div className="py-1.5">
-            <NavLink to="/settings" onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-4 py-2 text-sm text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-colors">
+            <NavLink
+              to="/settings"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-colors"
+            >
               <Settings size={14} className="text-[var(--muted)]" />
               Settings
             </NavLink>
-            <button onClick={() => { toggleTheme(); setOpen(false) }}
-              className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] transition-colors">
+            <button
+              onClick={() => { toggleTheme(); setOpen(false) }}
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] transition-colors"
+            >
               {theme === 'dark' ? <Sun size={14} className="text-[var(--muted)]" /> : <Moon size={14} className="text-[var(--muted)]" />}
               {theme === 'dark' ? 'Light mode' : 'Dark mode'}
             </button>
             <div className="h-px bg-[var(--line)] my-1 mx-3" />
-            <button onClick={() => { setOpen(false); onLogout() }}
-              className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] transition-colors">
+            <button
+              onClick={() => { setOpen(false); onLogout() }}
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+            >
               <LogOut size={14} />
               Sign Out
             </button>
@@ -512,26 +564,24 @@ function ProfileMenu({ user, onLogout }) {
 function PageHeading({ shopName, pathname }) {
   const meta = PAGE_META[pathname]
   const Icon = meta?.icon || LayoutDashboard
-  const title = meta?.label || 'ShopEase'
-  const accentHex = ACCENT_HEX[meta?.group] || '#6366f1'
+  const title = meta?.label || 'Dashboard'
 
   return (
-    <div className="flex items-center gap-2.5 min-w-0 flex-shrink">
-      <div className="hidden sm:flex w-8 h-8 rounded-lg items-center justify-center flex-shrink-0 bg-[var(--primary-light)] text-[var(--primary-text)]">
+    <div className="flex items-center gap-3 min-w-0">
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-[var(--surface-elevated)] border border-[var(--line)] text-[var(--ink)] shadow-xs">
         <Icon size={16} />
       </div>
       <div className="min-w-0 flex flex-col justify-center leading-tight">
-        <div className="text-[10px] text-[var(--muted)] font-semibold uppercase tracking-[0.1em] truncate hidden sm:block">
-          {shopName || 'ShopEase'}
-        </div>
-        <h1 className="font-bold text-[var(--ink)] text-[15px] sm:text-[17px] tracking-tight truncate max-w-[130px] sm:max-w-[240px] lg:max-w-[340px]">
+        <h1 className="font-bold text-[var(--ink)] text-[15px] sm:text-[16px] tracking-tight truncate">
           {title}
         </h1>
+        <div className="text-[10px] text-[var(--muted)] font-medium truncate hidden sm:block">
+          {meta?.group ? `${shopName} · ${meta.group}` : shopName}
+        </div>
       </div>
     </div>
   )
 }
-
 
 function LiveDateTime() {
   const [now, setNow] = useState(new Date())
@@ -555,12 +605,11 @@ function LiveDateTime() {
   })
 
   return (
-    <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--surface-elevated)] border border-[var(--line)]">
-      <Clock size={15} className="text-[var(--muted)] flex-shrink-0" />
-      <div className="leading-tight text-right">
-        <div className="text-[11px] font-semibold text-[var(--ink)] whitespace-nowrap">{date}</div>
-        <div className="text-[10px] text-[var(--muted)] whitespace-nowrap">{time}</div>
-      </div>
+    <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--surface-elevated)] border border-[var(--line)] text-xs text-[var(--muted)]">
+      <Clock size={13} className="text-[var(--muted)] flex-shrink-0" />
+      <span className="font-semibold text-[var(--ink)] tabular-nums">{date}</span>
+      <span className="text-[var(--line-strong)]">·</span>
+      <span className="font-medium tabular-nums">{time}</span>
     </div>
   )
 }
@@ -602,58 +651,87 @@ export default function Layout({ children }) {
     <ShopContext.Provider value={{ logoSrc, shopName }}>
       <div className="flex h-screen overflow-hidden" style={{ background: 'var(--app-bg)' }}>
 
-        <div className={`hidden md:flex flex-shrink-0 shadow-[2px_0_12px_rgba(0,0,0,0.15)] transition-all duration-300 ease-in-out ${collapsed ? 'w-[62px]' : 'w-[220px]'}`}>
+        {/* Sidebar Desktop */}
+        <div className={`hidden md:flex flex-shrink-0 shadow-[1px_0_8px_rgba(0,0,0,0.12)] transition-all duration-300 ease-in-out ${collapsed ? 'w-[62px]' : 'w-[220px]'}`}>
           <Sidebar
-            collapsed={collapsed} mobile={false} user={user} shopName={shopName} logoSrc={logoSrc}
-            onLogout={handleLogout} onNav={() => {}} onToggle={() => setCollapsed(v => !v)} onClose={() => {}}
+            collapsed={collapsed}
+            mobile={false}
+            user={user}
+            shopName={shopName}
+            logoSrc={logoSrc}
+            onLogout={handleLogout}
+            onNav={() => {}}
+            onToggle={() => setCollapsed(v => !v)}
+            onClose={() => {}}
           />
         </div>
 
+        {/* Sidebar Mobile Overlay */}
         {mobileOpen && (
           <div className="fixed inset-0 z-50 flex md:hidden">
             <Sidebar
-              collapsed={false} mobile={true} user={user} shopName={shopName} logoSrc={logoSrc}
-              onLogout={handleLogout} onNav={() => setMobileOpen(false)} onToggle={() => {}} onClose={() => setMobileOpen(false)}
+              collapsed={false}
+              mobile={true}
+              user={user}
+              shopName={shopName}
+              logoSrc={logoSrc}
+              onLogout={handleLogout}
+              onNav={() => setMobileOpen(false)}
+              onToggle={() => {}}
+              onClose={() => setMobileOpen(false)}
             />
-            <div className="flex-1 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+            <div className="flex-1 bg-black/60 backdrop-blur-xs" onClick={() => setMobileOpen(false)} />
           </div>
         )}
 
+        {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          <header className="flex-shrink-0 z-10 bg-[var(--surface)] border-b border-[var(--line)] shadow-[0_1px_0_rgba(15,23,42,0.05)]">
+
+          {/* Top Menu Bar / Header */}
+          <header className="flex-shrink-0 z-10 bg-[var(--surface)] border-b border-[var(--line)] shadow-xs">
             <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 h-14">
-              <button onClick={() => setMobileOpen(true)} title="Open menu" aria-label="Open menu"
-                className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-all duration-200">
+              <button
+                onClick={() => setMobileOpen(true)}
+                title="Open menu"
+                aria-label="Open menu"
+                className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-all duration-150"
+              >
                 <MenuIcon size={20} />
               </button>
 
+              {/* Page Title & Breadcrumb */}
               <PageHeading shopName={shopName} pathname={location.pathname} />
 
               <div className="flex-1 min-w-2" />
 
+              {/* Global Search */}
               <div className="hidden lg:block">
                 <GlobalSearch />
               </div>
 
               <div className="hidden lg:block w-px h-5 bg-[var(--line)]" />
 
+              {/* Notifications */}
               <NotificationBell />
 
-              <div className="w-px h-5 bg-[var(--line)]" />
+              <div className="hidden xl:block w-px h-5 bg-[var(--line)]" />
 
+              {/* Live Clock */}
               <LiveDateTime />
 
               <div className="w-px h-5 bg-[var(--line)]" />
 
+              {/* Profile Menu */}
               <ProfileMenu user={user} onLogout={handleLogout} />
             </div>
           </header>
 
-          <main ref={mainRef} className="flex-1 overflow-y-auto bg-[var(--app-bg)]">
-            <div className="p-3 sm:p-4 md:p-6 max-w-[1600px] mx-auto page-enter">
+          {/* Page Body */}
+          <main ref={mainRef} className={`flex-1 ${location.pathname.startsWith('/billing/new') ? 'overflow-hidden flex flex-col' : 'overflow-y-auto'} bg-[var(--app-bg)]`}>
+            <div className={location.pathname.startsWith('/billing/new') ? 'flex-1 flex flex-col p-2 sm:p-3 w-full max-w-none min-h-0' : 'p-3 sm:p-4 md:p-6 max-w-[1600px] mx-auto page-enter'}>
               {children}
             </div>
-            <AppFooter shopName={shopName} />
+            {!location.pathname.startsWith('/billing/new') && <AppFooter shopName={shopName} />}
           </main>
         </div>
       </div>

@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.db import transaction
 from django.db.models import Sum
+from django.utils import timezone
 
 from ..calculations import calculate_invoice
 from ..models import (
@@ -97,10 +98,12 @@ class InvoiceService:
                             f'required: {balance_due:.2f}'
                         )
 
+            now = timezone.now()
             invoice = Invoice.objects.create(
                 invoice_number=get_next_invoice_number(business),
                 business=business,
                 created_by=created_by,
+                posted_at=now,
                 **attributes,
             )
 
@@ -193,29 +196,31 @@ class InvoiceService:
         return invoice
 
     @staticmethod
-    def cancel_invoice(*, invoice_id, business, performed_by, request=None):
+    def cancel_invoice(*, invoice_id, business, performed_by, reason='', request=None):
         return InvoiceService._reverse_invoice(
             invoice_id=invoice_id,
             business=business,
             performed_by=performed_by,
+            reason=reason,
             request=request,
             status='cancelled',
             reference_prefix='CANCEL',
         )
 
     @staticmethod
-    def refund_invoice(*, invoice_id, business, performed_by, request=None):
+    def refund_invoice(*, invoice_id, business, performed_by, reason='', request=None):
         return InvoiceService._reverse_invoice(
             invoice_id=invoice_id,
             business=business,
             performed_by=performed_by,
+            reason=reason,
             request=request,
             status='refunded',
             reference_prefix='REFUND',
         )
 
     @staticmethod
-    def _reverse_invoice(*, invoice_id, business, performed_by, status, reference_prefix, request=None):
+    def _reverse_invoice(*, invoice_id, business, performed_by, status, reference_prefix, reason='', request=None):
         with transaction.atomic():
             try:
                 invoice = Invoice.objects.select_for_update().get(
@@ -224,7 +229,7 @@ class InvoiceService:
                 )
             except Invoice.DoesNotExist as exc:
                 raise LookupError('Not found') from exc
-            if invoice.status not in ('completed', 'partially_refunded'):
+            if invoice.status not in ('completed', 'posted', 'partially_refunded'):
                 raise ValueError('Invoice already cancelled/refunded')
 
             for item in InvoiceItem.objects.filter(invoice=invoice).select_related('product'):
@@ -248,9 +253,17 @@ class InvoiceService:
                     reference_id=invoice.pk,
                 )
 
+            now = timezone.now()
             invoice.status = status
-            invoice.payment_status = 'refunded' if status == 'refunded' else invoice.payment_status
-            invoice.save(update_fields=['status', 'payment_status'])
+            update_fields = ['status', 'payment_status']
+            if status == 'cancelled':
+                invoice.cancelled_by = performed_by
+                invoice.cancelled_at = now
+                invoice.cancel_reason = reason or 'Customer requested cancellation'
+                update_fields.extend(['cancelled_by', 'cancelled_at', 'cancel_reason'])
+            elif status == 'refunded':
+                invoice.payment_status = 'refunded'
+            invoice.save(update_fields=update_fields)
 
             if invoice.customer_id and invoice.balance_due > 0 and invoice.grand_total > 0:
                 returned_total = SalesReturnItem.objects.filter(
@@ -278,7 +291,13 @@ class InvoiceService:
                     'INVOICE_CANCELLED' if status == 'cancelled' else 'INVOICE_REFUNDED',
                     'Invoice',
                     invoice.id,
-                    after={'status': invoice.status, 'payment_status': invoice.payment_status},
+                    after={
+                        'status': invoice.status,
+                        'payment_status': invoice.payment_status,
+                        'cancelled_by': invoice.cancelled_by_id,
+                        'cancelled_at': invoice.cancelled_at.isoformat() if invoice.cancelled_at else None,
+                        'cancel_reason': invoice.cancel_reason,
+                    },
                 )
 
         return invoice

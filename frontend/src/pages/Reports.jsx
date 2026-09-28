@@ -235,8 +235,8 @@ export default function Reports() {
               whitespace-nowrap
               ${
                 tab === t.key
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20 ring-1 ring-blue-500/20'
-                  : 'bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] hover:border-blue-300 dark:hover:border-blue-700'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25 ring-1 ring-indigo-500/20'
+                  : 'bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] hover:border-indigo-300 dark:hover:border-indigo-700'
               }
             `}
           >
@@ -269,7 +269,7 @@ export default function Reports() {
         ].map(([label, from, to]) => (
           <button
             key={label}
-            className="btn-secondary text-sm flex-shrink-0 min-h-[42px] px-3 col-span-1  bg [var(--surface)] border border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] hover:border-blue-300 dark:hover:border-blue-700" 
+            className="btn-secondary text-sm flex-shrink-0 min-h-[42px] px-3 col-span-1 bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] hover:border-indigo-300 dark:hover:border-indigo-700" 
             onClick={() => {
               setStart(from)
               setEnd(to)

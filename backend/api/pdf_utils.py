@@ -519,28 +519,22 @@ def _logo_for_a4(s):
 
 
 def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
-    """A4 header matching the reference invoice image.
-
-    Left:
-        logo (when enabled/configured), business name, address, contacts,
-        registration identifiers.
-    Right:
-        TAX INVOICE, invoice number/date/payment mode/place of supply.
+    """Clean, professional A4 header for SRI BALAJI STORE / business profile.
+    Left: Brand name, address, contact (mobile, email), registrations (GSTIN, PAN).
+    Right: TAX INVOICE heading, Invoice No, Date, Payment Mode, Place of Supply.
     """
-    brand = _fmt_value(s.shop_name, "Business Name Not Configured")
+    brand = _fmt_value(s.shop_name, "SRI BALAJI STORE")
 
     identity_rows = []
-
-    # Logo is intentionally above the business name, matching the reference.
     if logo_flowable is not None:
         identity_rows.append([logo_flowable])
 
-    identity_rows.append([para(brand.upper(), size=13.5, bold=True)])
+    identity_rows.append([para(brand.upper(), size=14.5, bold=True, color=colors.HexColor("#0F172A"))])
 
     if has_val(s.shop_address):
         for line in str(s.shop_address).splitlines():
             if line.strip():
-                identity_rows.append([para(line.strip(), size=7.0)])
+                identity_rows.append([para(line.strip(), size=7.2, color=colors.HexColor("#334155"))])
 
     contact = []
     if has_val(s.shop_phone):
@@ -548,83 +542,96 @@ def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
     if has_val(s.shop_email):
         contact.append(f"Email: {s.shop_email}")
     if contact:
-        identity_rows.append([para(" | ".join(contact), size=6.6)])
+        identity_rows.append([para("  |  ".join(contact), size=7.0, color=colors.HexColor("#475569"))])
 
     registrations = []
     if has_val(s.shop_gstin):
-        registrations.append(f"GSTIN: {s.shop_gstin}")
+        registrations.append(f"<b>GSTIN:</b> {s.shop_gstin}")
     if has_val(s.shop_pan):
-        registrations.append(f"PAN: {s.shop_pan}")
+        registrations.append(f"<b>PAN:</b> {s.shop_pan}")
     if has_val(s.fssai_licence) and s.flag("show_fssai_on_invoice", False):
-        registrations.append(f"FSSAI: {s.fssai_licence}")
-    if has_val(s.cin) and s.flag("show_cin_on_invoice", False):
-        registrations.append(f"CIN: {s.cin}")
+        registrations.append(f"<b>FSSAI:</b> {s.fssai_licence}")
     if registrations:
-        identity_rows.append([para(" | ".join(registrations), size=6.4)])
+        identity_rows.append([para("  |  ".join(registrations), size=7.0, color=colors.HexColor("#334155"))])
 
     identity = _tbl(identity_rows, [None], [
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
         ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 0.2),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 0.2),
+        ("TOPPADDING", (0, 0), (-1, -1), 0.4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0.4),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ])
 
     inv_date = _date_text(getattr(invoice, "created_at", None))
-    payment_mode = getattr(invoice, "payment_method", None) or s.get("default_payment_method")
+    payment_mode = getattr(invoice, "payment_method", None) or s.get("default_payment_method") or "CASH"
 
-    control = [[para("TAX INVOICE", size=15, bold=True, align=TA_RIGHT)]]
-    control.append([
-        para(
-            f"Invoice No: {_fmt_value(invoice.invoice_number)}",
-            size=7.3, align=TA_RIGHT, bold=True
-        )
-    ])
+    is_cancelled = getattr(invoice, "status", None) == "cancelled"
+    doc_heading = "CANCELLED INVOICE" if is_cancelled else "TAX INVOICE"
+    doc_color = colors.HexColor("#DC2626") if is_cancelled else colors.HexColor("#0F172A")
+
+    control = [
+        [para(doc_heading, size=15.0, bold=True, align=TA_RIGHT, color=doc_color)],
+        [Spacer(1, 1.2 * mm)],
+        [para(f"<b>Invoice No:</b> {_fmt_value(invoice.invoice_number)}", size=8.0, align=TA_RIGHT, color=colors.HexColor("#0F172A"))],
+    ]
     if inv_date:
-        control.append([para(f"Invoice Date: {inv_date}", size=7.0, align=TA_RIGHT)])
+        control.append([para(f"<b>Invoice Date:</b> {inv_date}", size=7.5, align=TA_RIGHT, color=colors.HexColor("#334155"))])
     if has_val(payment_mode):
-        control.append([
-            para(f"Payment Mode: {str(payment_mode).upper()}", size=7.0, align=TA_RIGHT)
-        ])
+        control.append([para(f"<b>Payment Mode:</b> {str(payment_mode).upper()}", size=7.5, align=TA_RIGHT, color=colors.HexColor("#334155"))])
+
+    place = getattr(invoice, "place_of_supply", None) or s.get("place_of_supply")
+    if has_val(place):
+        control.append([para(f"<b>Place of Supply:</b> {place}", size=7.2, align=TA_RIGHT, color=colors.HexColor("#475569"))])
+
+    if is_cancelled:
+        c_by = invoice.cancelled_by.get_full_name() or invoice.cancelled_by.username if getattr(invoice, "cancelled_by", None) else "User"
+        c_at = _date_text(getattr(invoice, "cancelled_at", None))
+        c_reason = getattr(invoice, "cancel_reason", "") or "Customer requested cancellation"
+        control.append([Spacer(1, 1.0 * mm)])
+        control.append([para("<font color='#DC2626'><b>STATUS: CANCELLED</b></font>", size=7.5, align=TA_RIGHT)])
+        control.append([para(f"Cancelled By: {c_by}", size=6.8, align=TA_RIGHT)])
+        if c_at:
+            control.append([para(f"Cancelled At: {c_at}", size=6.8, align=TA_RIGHT)])
+        control.append([para(f"Reason: {c_reason}", size=6.8, align=TA_RIGHT)])
 
     right = _tbl(control, [None], [
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
         ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 0.3),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 0.3),
+        ("TOPPADDING", (0, 0), (-1, -1), 0.4),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0.4),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ])
 
     return [
-        _tbl([[identity, right]], [BODY_W * 0.61, BODY_W * 0.39], [
+        _tbl([[identity, right]], [BODY_W * 0.60, BODY_W * 0.40], [
             ("LEFTPADDING", (0, 0), (-1, -1), 0),
             ("RIGHTPADDING", (0, 0), (-1, -1), 0),
             ("TOPPADDING", (0, 0), (-1, -1), 0),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ]),
-        *_rule(0.8, 1.5 * mm, 2.0 * mm),
+        *_rule(0.65, 2.0 * mm, 2.2 * mm),
     ]
 
 
 def build_bill_to_and_details(s, invoice):
-    """A clean two-column customer/payment-identification block."""
+    """Clean BILL TO customer section with proper spacing and optional UPI QR."""
     cust = getattr(invoice, "customer", None)
     cust_name = (getattr(cust, "name", None) if cust else getattr(invoice, "customer_name", None)) or "Walk-in Customer"
     cust_addr = getattr(cust, "address", "") if cust else ""
     cust_phone = (getattr(cust, "mobile", None) if cust else getattr(invoice, "customer_phone", None)) or ""
     cust_gstin = getattr(cust, "gstin", "") if cust else ""
-    place = getattr(invoice, "place_of_supply", None) or getattr(cust, "state", None) or s.get("place_of_supply")
 
-    left_rows = [[para("BILL TO", size=7.8, bold=True)], [para(cust_name, size=9.2, bold=True)]]
+    left_rows = [
+        [para("BILL TO", size=7.2, bold=True, color=colors.HexColor("#475569"))],
+        [para(cust_name, size=9.6, bold=True, color=colors.HexColor("#0F172A"))],
+    ]
     if has_val(cust_addr):
-        left_rows.append([para(str(cust_addr).replace("\n", ", "), size=7.0)])
+        left_rows.append([para(str(cust_addr).replace("\n", ", "), size=7.2, color=colors.HexColor("#334155"))])
     if has_val(cust_phone):
-        left_rows.append([para(f"Mobile: {cust_phone}", size=7.0)])
+        left_rows.append([para(f"<b>Mobile:</b> {cust_phone}", size=7.2, color=colors.HexColor("#334155"))])
     if has_val(cust_gstin):
-        left_rows.append([para(f"GSTIN: {cust_gstin}", size=7.0)])
-    if has_val(place):
-        left_rows.append([para(f"Place of Supply: {place}", size=7.0)])
+        left_rows.append([para(f"<b>GSTIN:</b> {cust_gstin}", size=7.2, color=colors.HexColor("#334155"))])
 
     left = _tbl(left_rows, [None], [
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
@@ -636,14 +643,14 @@ def build_bill_to_and_details(s, invoice):
 
     qr = None
     if s.flag("show_upi_qr_on_invoice", True) and has_val(s.get("shop_upi_id")):
-        qr = make_upi_qr(s.get("shop_upi_id"), s.get("shop_name"), dec(invoice.grand_total),
+        qr = make_upi_qr(s.get("shop_upi_id"), s.get("shop_name", "Sri Balaji Store"), dec(invoice.grand_total),
                          size_mm=_qr_size_a4(s), invoice_number=_fmt_value(invoice.invoice_number))
 
     if qr:
         right = _tbl([
-            [para("UPI PAYMENT", size=7.0, bold=True, align=TA_CENTER)],
+            [para("UPI PAYMENT", size=6.8, bold=True, align=TA_CENTER, color=colors.HexColor("#475569"))],
             [qr],
-            [para("SCAN TO PAY", size=6.2, bold=True, align=TA_CENTER)],
+            [para("SCAN TO PAY", size=6.2, bold=True, align=TA_CENTER, color=colors.HexColor("#64748B"))],
         ], [None], [
             ("ALIGN", (0, 0), (-1, -1), "CENTER"),
             ("LEFTPADDING", (0, 0), (-1, -1), 0),
@@ -655,19 +662,20 @@ def build_bill_to_and_details(s, invoice):
         right = para("", size=1)
 
     return [
-        _tbl([[left, right]], [BODY_W*0.70, BODY_W*0.30], [
+        _tbl([[left, right]], [BODY_W * 0.72, BODY_W * 0.28], [
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("LEFTPADDING", (0, 0), (-1, -1), 0),
             ("RIGHTPADDING", (0, 0), (-1, -1), 0),
             ("TOPPADDING", (0, 0), (-1, -1), 0),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
         ]),
-        *_rule(0.5, 1.4*mm, 1.8*mm),
+        *_rule(0.45, 1.8 * mm, 2.2 * mm),
     ]
 
 
 def build_items_table(s, invoice, show_tax, interstate):
-    """Professional A4 item table with optional columns and minimal rules."""
+    """Redesigned item table with subtle horizontal lines, right-aligned monetary values,
+    center-aligned Qty and S.No, wider Item Description column, and clean borders."""
     items = list(invoice.items.all())
     show_discount = s.flag("show_discount_col", True) and any(dec(getattr(i, "discount_percent", 0)) != 0 for i in items)
     show_hsn = s.flag("show_hsn_col", True) and any_item_has(invoice, "hsn_code")
@@ -679,7 +687,7 @@ def build_items_table(s, invoice, show_tax, interstate):
     show_gst_cols = show_tax and any_item_gst(invoice)
 
     def cell(value, size=7.0, align=TA_RIGHT, bold=False):
-        return para(value, size=size, align=align, bold=bold, leading=size+1.8)
+        return para(value, size=size, align=align, bold=bold, leading=size + 2.0, color=colors.HexColor("#0F172A"))
 
     def qty_text(item):
         q = dec(item.quantity)
@@ -696,49 +704,50 @@ def build_items_table(s, invoice, show_tax, interstate):
     def tax_cell(item, kind):
         sgst, cgst, igst = item_tax_breakup(item, interstate)
         amount = igst if kind == "igst" else (sgst if kind == "sgst" else cgst)
-        return cell(currency(amount), size=6.7)
+        return cell(currency(amount), size=6.8, align=TA_RIGHT)
 
-    columns = [("sl", "S.No", 7, TA_CENTER, lambda i, idx: cell(str(idx), 6.8, TA_CENTER))]
-    columns.append(("item", "Item Description", 44, TA_LEFT, lambda i, idx: cell(_fmt_value(i.product_name), 7.0, TA_LEFT)))
+    columns = [("sl", "S.No", 8, TA_CENTER, lambda i, idx: cell(str(idx), 6.8, TA_CENTER))]
+    columns.append(("item", "Item Description", 52, TA_LEFT, lambda i, idx: cell(_fmt_value(i.product_name), 7.2, TA_LEFT)))
     if show_hsn:
-        columns.append(("hsn", "HSN/SAC", 11, TA_CENTER, lambda i, idx: cell(_fmt_value(i.hsn_code), 6.3, TA_CENTER)))
+        columns.append(("hsn", "HSN/SAC", 12, TA_CENTER, lambda i, idx: cell(_fmt_value(i.hsn_code), 6.5, TA_CENTER)))
     if show_batch:
         columns.append(("batch", "Batch", 10, TA_CENTER, lambda i, idx: cell(_fmt_value(getattr(i, "batch_no", "")), 6.2, TA_CENTER)))
     if show_mfg:
         columns.append(("mfg", "MFG", 9, TA_CENTER, lambda i, idx: cell(short_date(getattr(i, "mfg_date", None)), 6.1, TA_CENTER)))
     if show_exp:
         columns.append(("exp", "EXP", 9, TA_CENTER, lambda i, idx: cell(short_date(getattr(i, "exp_date", None)), 6.1, TA_CENTER)))
-    columns.append(("qty", "Qty", 8, TA_CENTER, lambda i, idx: cell(qty_text(i), 6.8, TA_CENTER)))
-    columns.append(("rate", "Rate", 15, TA_RIGHT, lambda i, idx: cell(currency(i.unit_price), 6.7)))
+    columns.append(("qty", "Qty", 10, TA_CENTER, lambda i, idx: cell(qty_text(i), 7.0, TA_CENTER)))
+    columns.append(("rate", "Rate", 16, TA_RIGHT, lambda i, idx: cell(currency(i.unit_price), 6.8, TA_RIGHT)))
     if show_discount:
-        columns.append(("disc", "Disc.", 9, TA_RIGHT, lambda i, idx: cell(f"{dec(getattr(i, 'discount_percent', 0))}%", 6.2)))
+        columns.append(("disc", "Disc.", 10, TA_RIGHT, lambda i, idx: cell(f"{dec(getattr(i, 'discount_percent', 0))}%", 6.5, TA_RIGHT)))
     if show_gst_cols:
         if interstate:
-            columns.append(("igst", "IGST", 13, TA_RIGHT, lambda i, idx: tax_cell(i, "igst")))
+            columns.append(("igst", "IGST", 14, TA_RIGHT, lambda i, idx: tax_cell(i, "igst")))
         else:
-            columns.append(("sgst", "SGST", 11, TA_RIGHT, lambda i, idx: tax_cell(i, "sgst")))
-            columns.append(("cgst", "CGST", 11, TA_RIGHT, lambda i, idx: tax_cell(i, "cgst")))
+            columns.append(("sgst", "SGST", 14, TA_RIGHT, lambda i, idx: tax_cell(i, "sgst")))
+            columns.append(("cgst", "CGST", 14, TA_RIGHT, lambda i, idx: tax_cell(i, "cgst")))
     if show_cess:
-        columns.append(("cess", "CESS", 9, TA_RIGHT, lambda i, idx: cell(currency(getattr(i, "cess_amount", 0)), 6.2)))
-    columns.append(("total", "Amount", 19, TA_RIGHT, lambda i, idx: cell(currency(i.total), 7.0, TA_RIGHT, True)))
+        columns.append(("cess", "CESS", 10, TA_RIGHT, lambda i, idx: cell(currency(getattr(i, "cess_amount", 0)), 6.2, TA_RIGHT)))
+    columns.append(("total", "Amount", 20, TA_RIGHT, lambda i, idx: cell(currency(i.total), 7.2, TA_RIGHT, True)))
 
     ratios = [c[2] for c in columns]
     scale = BODY_W / (sum(ratios) * mm)
     widths = [r * mm * scale for r in ratios]
-    rows = [[para(c[1], size=6.4, bold=True, align=c[3]) for c in columns]]
+    rows = [[para(c[1], size=6.8, bold=True, align=c[3], color=colors.HexColor("#334155")) for c in columns]]
     for idx, item in enumerate(items, start=1):
         rows.append([c[4](item, idx) for c in columns])
 
     return _tbl(rows, widths, [
-        ("LINEABOVE", (0, 0), (-1, 0), 0.8, INK),
-        ("LINEBELOW", (0, 0), (-1, 0), 0.8, INK),
-        ("LINEBELOW", (0, 1), (-1, -1), 0.2, INK),
-        ("TOPPADDING", (0, 0), (-1, 0), 3.0),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 3.0),
-        ("TOPPADDING", (0, 1), (-1, -1), 2.2),
-        ("BOTTOMPADDING", (0, 1), (-1, -1), 2.2),
-        ("LEFTPADDING", (0, 0), (-1, -1), 1.5),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 1.5),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F8FAFC")),
+        ("LINEABOVE", (0, 0), (-1, 0), 0.75, colors.HexColor("#334155")),
+        ("LINEBELOW", (0, 0), (-1, 0), 0.75, colors.HexColor("#334155")),
+        ("LINEBELOW", (0, 1), (-1, -1), 0.25, colors.HexColor("#E2E8F0")),
+        ("TOPPADDING", (0, 0), (-1, 0), 3.5),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 3.5),
+        ("TOPPADDING", (0, 1), (-1, -1), 3.0),
+        ("BOTTOMPADDING", (0, 1), (-1, -1), 3.0),
+        ("LEFTPADDING", (0, 0), (-1, -1), 2.5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 2.5),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
     ], repeat=1)
 
@@ -760,7 +769,7 @@ def build_hsn_summary(invoice, show_tax, interstate):
         return None
 
     def c(text, align=TA_RIGHT, size=6.6, bold=False):
-        return para(text, align=align, size=size, bold=bold)
+        return para(text, align=align, size=size, bold=bold, color=colors.HexColor("#0F172A"))
 
     if interstate:
         rows = [[c("HSN/SAC", TA_LEFT, bold=True), c("Taxable Value", bold=True), c("IGST Rate", bold=True), c("IGST Amount", bold=True)]]
@@ -772,21 +781,24 @@ def build_hsn_summary(invoice, show_tax, interstate):
             rows.append([c(hsn, TA_LEFT), c(currency(b["taxable"])), c(currency(b["sgst"])), c(currency(b["cgst"]))])
 
     return [
-        para("HSN/SAC SUMMARY", size=7.4, bold=True),
-        Spacer(1, 0.8*mm),
-        _tbl(rows, [BODY_W/4]*4, [
-            ("LINEABOVE", (0, 0), (-1, 0), 0.5, INK),
-            ("LINEBELOW", (0, 0), (-1, 0), 0.5, INK),
-            ("LINEBELOW", (0, 1), (-1, -1), 0.18, INK),
-            ("TOPPADDING", (0, 0), (-1, -1), 1.8),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.8),
+        para("HSN/SAC SUMMARY", size=7.4, bold=True, color=colors.HexColor("#475569")),
+        Spacer(1, 0.8 * mm),
+        _tbl(rows, [BODY_W / 4] * 4, [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F8FAFC")),
+            ("LINEABOVE", (0, 0), (-1, 0), 0.5, colors.HexColor("#CBD5E1")),
+            ("LINEBELOW", (0, 0), (-1, 0), 0.5, colors.HexColor("#CBD5E1")),
+            ("LINEBELOW", (0, 1), (-1, -1), 0.2, colors.HexColor("#E2E8F0")),
+            ("TOPPADDING", (0, 0), (-1, -1), 2.0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 2.0),
+            ("LEFTPADDING", (0, 0), (-1, -1), 2.5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 2.5),
         ], repeat=1),
-        *_rule(0.4, 1.2*mm, 1.8*mm),
+        *_rule(0.4, 1.2 * mm, 1.8 * mm),
     ]
 
 
 def build_totals(s, invoice, show_tax, interstate):
-    """Balanced totals block: words left, accounting totals right."""
+    """Balanced totals block: Amount in words on the left, accounting totals and highlighted Grand Total on the right."""
     subtotal = dec(invoice.subtotal)
     discount = dec(invoice.discount_amount)
     sgst, cgst, igst = invoice_tax_breakup(invoice, interstate) if show_tax else (Decimal("0"), Decimal("0"), Decimal("0"))
@@ -795,53 +807,75 @@ def build_totals(s, invoice, show_tax, interstate):
     other_charges = dec(getattr(invoice, "other_charges", 0))
     grand = dec(invoice.grand_total)
 
-    rows = [[para("Sub Total", size=7.5), para(currency(subtotal), size=7.7, align=TA_RIGHT)]]
+    def row(label, amt, bold=False, size=7.5):
+        return [
+            para(label, size=size, bold=bold, color=colors.HexColor("#334155")),
+            para(currency(amt), size=size, bold=bold, align=TA_RIGHT, color=colors.HexColor("#0F172A")),
+        ]
+
+    rows = [row("Sub Total", subtotal)]
     if discount != 0:
-        rows.append([para("Discount", size=7.5), para(currency(discount), size=7.7, align=TA_RIGHT)])
+        rows.append(row("Discount", -discount))
     if show_tax:
         if interstate and igst != 0:
-            rows.append([para("IGST", size=7.5), para(currency(igst), size=7.7, align=TA_RIGHT)])
+            rows.append(row("IGST", igst))
         else:
             if sgst != 0:
-                rows.append([para("SGST", size=7.5), para(currency(sgst), size=7.7, align=TA_RIGHT)])
+                rows.append(row("SGST", sgst))
             if cgst != 0:
-                rows.append([para("CGST", size=7.5), para(currency(cgst), size=7.7, align=TA_RIGHT)])
+                rows.append(row("CGST", cgst))
         if cess_amt != 0:
-            rows.append([para("CESS", size=7.5), para(currency(cess_amt), size=7.7, align=TA_RIGHT)])
+            rows.append(row("CESS", cess_amt))
     if other_charges != 0:
-        rows.append([para("Other Charges", size=7.5), para(currency(other_charges), size=7.7, align=TA_RIGHT)])
+        rows.append(row("Other Charges", other_charges))
     if round_off != 0:
-        rows.append([para("Round Off", size=7.5), para(currency(round_off), size=7.7, align=TA_RIGHT)])
+        rows.append(row("Round Off", round_off))
 
     grand_index = len(rows)
-    rows.append([para("GRAND TOTAL", size=9.6, bold=True), para(currency(grand), size=9.6, bold=True, align=TA_RIGHT)])
-    totals = _tbl(rows, [37*mm, 43*mm], [
-        ("LINEABOVE", (0, grand_index), (-1, grand_index), 0.9, INK),
-        ("TOPPADDING", (0, 0), (-1, -1), 1.7),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 1.7),
-        ("TOPPADDING", (0, grand_index), (-1, grand_index), 3.0),
-        ("BOTTOMPADDING", (0, grand_index), (-1, grand_index), 3.0),
-        ("LEFTPADDING", (0, 0), (-1, -1), 2),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+    rows.append([
+        para("GRAND TOTAL", size=10.0, bold=True, color=colors.HexColor("#0F172A")),
+        para(currency(grand), size=10.5, bold=True, align=TA_RIGHT, color=colors.HexColor("#0F172A")),
     ])
 
-    words = para(f"<b>Amount in Words</b><br/>{amount_in_words(grand)}", size=7.6, leading=9.6)
+    totals_width = 82 * mm
+    totals = _tbl(rows, [totals_width * 0.48, totals_width * 0.52], [
+        ("LINEABOVE", (0, grand_index), (-1, grand_index), 0.8, colors.HexColor("#0F172A")),
+        ("LINEBELOW", (0, grand_index), (-1, grand_index), 0.8, colors.HexColor("#0F172A")),
+        ("BACKGROUND", (0, grand_index), (-1, grand_index), colors.HexColor("#F1F5F9")),
+        ("TOPPADDING", (0, 0), (-1, grand_index - 1), 2.0),
+        ("BOTTOMPADDING", (0, 0), (-1, grand_index - 1), 2.0),
+        ("TOPPADDING", (0, grand_index), (-1, grand_index), 4.5),
+        ("BOTTOMPADDING", (0, grand_index), (-1, grand_index), 4.5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 3),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+    ])
+
+    words_flow = [
+        para("<b>AMOUNT IN WORDS</b>", size=7.2, bold=True, color=colors.HexColor("#475569")),
+        Spacer(1, 1.0 * mm),
+        para(amount_in_words(grand), size=7.8, leading=10.5, color=colors.HexColor("#0F172A")),
+    ]
     if s.get("tax_on_price", "exclusive") == "inclusive" and show_tax:
-        words = _tbl([[words], [para("Prices shown are inclusive of applicable GST.", size=6.4)]], [None], [
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 3*mm),
-            ("TOPPADDING", (0, 0), (-1, -1), 0.7),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0.7),
-        ])
+        words_flow.append(Spacer(1, 1.2 * mm))
+        words_flow.append(para("<i>Prices shown are inclusive of applicable GST.</i>", size=6.5, color=colors.HexColor("#64748B")))
+
+    words = _tbl([[w] for w in words_flow], [None], [
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4 * mm),
+        ("TOPPADDING", (0, 0), (-1, -1), 0.5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0.5),
+    ])
+
     return [
-        _tbl([[words, totals]], [BODY_W-80*mm, 80*mm], [
+        Spacer(1, 2.0 * mm),
+        _tbl([[words, totals]], [BODY_W - totals_width, totals_width], [
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("LEFTPADDING", (0, 0), (-1, -1), 0),
             ("RIGHTPADDING", (0, 0), (-1, -1), 0),
             ("TOPPADDING", (0, 0), (-1, -1), 0),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
         ]),
-        *_rule(0.6, 2.3*mm, 1.8*mm),
+        *_rule(0.5, 2.5 * mm, 2.0 * mm),
     ]
 
 
@@ -856,29 +890,47 @@ def _format_bank_details(value):
 def _clean_footer(value):
     text = str(value or "").strip()
     if not text:
-        return "THANK YOU FOR YOUR BUSINESS"
+        return "THANK YOU FOR SHOPPING WITH US!"
     for phrase in ("visit again", "visit again.", "computer generated invoice"):
         text = text.replace(phrase, "").replace(phrase.capitalize(), "").replace(phrase.upper(), "")
     text = " ".join(text.split()).strip(" .")
-    return text or "THANK YOU FOR YOUR BUSINESS"
+    return text or "THANK YOU FOR SHOPPING WITH US!"
 
 
 def build_payment_and_bank(s, invoice):
-    """Compact settlement block followed by bank details when configured."""
+    """Clean Payment Summary section containing Payment Status, Amount Paid, Balance Due and Mode."""
     grand = dec(invoice.grand_total)
     paid = dec(invoice.paid_amount)
-    balance = max(Decimal("0.00"), grand-paid)
-    status = _fmt_value(getattr(invoice, "payment_status", None), "PAID").upper()
+    balance = max(Decimal("0.00"), grand - paid)
+    status = "CANCELLED" if getattr(invoice, "status", None) == "cancelled" else _fmt_value(getattr(invoice, "payment_status", None), "PAID").upper()
     mode = (getattr(invoice, "payment_method", None) or s.get("default_payment_method", "cash")).upper()
 
+    def col_header(text):
+        return para(text, size=6.8, bold=True, color=colors.HexColor("#475569"), align=TA_CENTER)
+
+    def col_val(text, bold=True, color=None):
+        return para(text, size=8.0, bold=bold, align=TA_CENTER, color=color or colors.HexColor("#0F172A"))
+
+    status_color = colors.HexColor("#DC2626") if status in ("CANCELLED", "FAILED") else (colors.HexColor("#16A34A") if status == "PAID" else colors.HexColor("#D97706"))
+
     rows = [
-        [para("PAYMENT STATUS", size=6.6, bold=True), para("AMOUNT PAID", size=6.6, bold=True, align=TA_CENTER), para("BALANCE DUE", size=6.6, bold=True, align=TA_CENTER), para("MODE", size=6.6, bold=True, align=TA_CENTER)],
-        [para(status, size=7.8, bold=True), para(currency(paid), size=7.8, align=TA_CENTER), para(currency(balance), size=7.8, align=TA_CENTER), para(mode, size=7.8, align=TA_CENTER)],
+        [
+            para("PAYMENT STATUS", size=6.8, bold=True, color=colors.HexColor("#475569")),
+            col_header("AMOUNT PAID"),
+            col_header("BALANCE DUE"),
+            col_header("MODE"),
+        ],
+        [
+            para(status, size=8.2, bold=True, color=status_color),
+            col_val(currency(paid)),
+            col_val(currency(balance), color=colors.HexColor("#DC2626") if balance > 0 else None),
+            col_val(mode),
+        ],
     ]
 
     bank_raw = str(s.shop_bank_details or "").strip()
     if has_val(bank_raw):
-        bank_text = " ".join(bank_raw.replace("\\n", " ").split())
+        bank_text = " ".join(bank_raw.replace("\n", " ").split())
         bank_name, account_no, ifsc = bank_text, "", ""
         m = re.search(r"(?i)(?:A/C|A\\/C|ACCOUNT)\s*[:\-]?\s*([A-Za-z0-9]+)", bank_text)
         if m:
@@ -888,18 +940,35 @@ def build_payment_and_bank(s, invoice):
         if m_ifsc:
             ifsc = m_ifsc.group(1)
         bank_name = re.sub(r"(?i)^Bank\s*[:\-]?\s*", "", bank_name).strip(" :-|,")
-        rows.append([para(f"Bank: {bank_name}" if bank_name else "", size=6.8), para(f"A/C: {account_no}" if account_no else "", size=6.8, align=TA_CENTER), para(f"IFSC: {ifsc}" if ifsc else "", size=6.8, align=TA_CENTER), para("", size=6.8)])
+        bank_parts = []
+        if bank_name:
+            bank_parts.append(f"Bank: {bank_name}")
+        if account_no:
+            bank_parts.append(f"A/C: {account_no}")
+        if ifsc:
+            bank_parts.append(f"IFSC: {ifsc}")
+        if bank_parts:
+            rows.append([
+                para("<b>Bank Details:</b> " + " | ".join(bank_parts), size=6.8, color=colors.HexColor("#475569")),
+                para("", size=1), para("", size=1), para("", size=1),
+            ])
+
+    style_cmds = [
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+        ("LINEABOVE", (0, 0), (-1, 0), 0.5, colors.HexColor("#CBD5E1")),
+        ("LINEBELOW", (0, 1), (-1, 1), 0.5, colors.HexColor("#CBD5E1")),
+        ("TOPPADDING", (0, 0), (-1, -1), 2.5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2.5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 3),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+    ]
+    if len(rows) > 2:
+        style_cmds.append(("SPAN", (0, 2), (-1, 2)))
+        style_cmds.append(("LINEABOVE", (0, 2), (-1, 2), 0.3, colors.HexColor("#E2E8F0")))
 
     return [
-        _tbl(rows, [BODY_W*0.28, BODY_W*0.24, BODY_W*0.24, BODY_W*0.24], [
-            ("LINEABOVE", (0, 0), (-1, 0), 0.4, INK),
-            ("LINEBELOW", (0, 1), (-1, 1), 0.65, INK),
-            ("TOPPADDING", (0, 0), (-1, -1), 2.0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 2.0),
-            ("LEFTPADDING", (0, 0), (-1, -1), 1.2),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 1.2),
-        ]),
-        *_rule(0.45, 1.8*mm, 1.8*mm),
+        _tbl(rows, [BODY_W * 0.28, BODY_W * 0.24, BODY_W * 0.24, BODY_W * 0.24], style_cmds),
+        Spacer(1, 2.0 * mm),
     ]
 
 
@@ -910,12 +979,12 @@ def build_notes_and_terms(s, invoice):
         return None
     flow = []
     if has_val(notes_text):
-        flow.append(para(f"<b>Notes</b><br/>{str(notes_text).replace(chr(10), '<br/>')}", size=6.8, leading=8.5))
+        flow.append(para(f"<b>Notes:</b> {str(notes_text).replace(chr(10), '<br/>')}", size=6.8, leading=8.5, color=colors.HexColor("#475569")))
     if has_val(terms_text):
         if flow:
-            flow.append(Spacer(1, 1.0*mm))
-        flow.append(para(f"{str(terms_text).replace(chr(10), '<br/>')}", size=6.8, leading=8.5))
-    flow.extend(_rule(0.4, 1.4*mm, 1.4*mm))
+            flow.append(Spacer(1, 1.0 * mm))
+        flow.append(para(f"<b>Terms &amp; Conditions:</b><br/>{str(terms_text).replace(chr(10), '<br/>')}", size=6.6, leading=8.3, color=colors.HexColor("#64748B")))
+    flow.extend(_rule(0.4, 1.4 * mm, 1.4 * mm))
     return flow
 
 
@@ -927,11 +996,13 @@ def _bill_reference_token(invoice):
     explicit = getattr(invoice, "reference_id", None) or getattr(invoice, "reference_token", None) or getattr(invoice, "uuid", None) or getattr(invoice, "token", None)
     if has_val(explicit):
         return str(explicit)
+    number = _fmt_value(getattr(invoice, "invoice_number", None))
+    if number:
+        return f"{number}"
     pk = getattr(invoice, "pk", None) or getattr(invoice, "id", None)
     if has_val(pk):
         return f"BILL-{pk}"
-    number = _fmt_value(getattr(invoice, "invoice_number", None))
-    return f"BILL-{number}" if number else "BILL-REF"
+    return "BILL-REF"
 
 
 def _invoice_datetime(invoice):
@@ -955,12 +1026,13 @@ def build_footer(s, invoice=None):
         meta.append(f"Time: {time_text}")
     meta.append(f"Bill Ref: {_bill_reference_token(invoice) if invoice is not None else 'BILL-REF'}")
     align = TA_LEFT if str(s.get("invoice_footer_layout", "text_center")).lower() == "text_left" else TA_CENTER
+    footer_text = _clean_footer(s.get("invoice_footer"))
     return [
-        para(f"<b>{_clean_footer(s.get('invoice_footer'))}</b>", size=7.2, align=align),
-        Spacer(1, 0.8*mm),
-        para(" | ".join(meta), size=6.2, align=align),
+        *_rule(0.45, 1.2 * mm, 2.0 * mm),
+        para(f"<b>{footer_text}</b>", size=7.5, align=align, color=colors.HexColor("#334155")),
+        Spacer(1, 1.0 * mm),
+        para("  ·  ".join(meta), size=6.5, align=align, color=colors.HexColor("#64748B")),
     ]
-
 
 def _page_chrome(canvas, doc):
     canvas.saveState()
@@ -1127,7 +1199,7 @@ def generate_thermal_invoice_pdf(invoice):
     discount_amt = _thermal_discount_total(invoice)
     round_off_amt = dec(getattr(invoice, "round_off", 0)) if s.flag("round_off", True) else Decimal("0.00")
     payment_mode = (getattr(invoice, "payment_method", None) or s.get("default_payment_method", "cash")).upper()
-    status = _fmt_value(getattr(invoice, "payment_status", None), "PAID").upper()
+    status = "CANCELLED" if getattr(invoice, "status", None) == "cancelled" else _fmt_value(getattr(invoice, "payment_status", None), "PAID").upper()
 
     page_height = (
         78
@@ -1174,7 +1246,9 @@ def generate_thermal_invoice_pdf(invoice):
     _tdashed(story, content_w, 1.2 * mm, 1.2 * mm)
 
     # 2. Invoice control
-    story.append(_tpara(document_title, size=T_TITLE + 1, align=TA_CENTER, bold=True))
+    is_cancelled = getattr(invoice, "status", None) == "cancelled"
+    doc_title = "CANCELLED INVOICE" if is_cancelled else document_title
+    story.append(_tpara(doc_title, size=T_TITLE + 1, align=TA_CENTER, bold=True))
     story.append(_tpara(f"Invoice No: {_fmt_value(invoice.invoice_number)}", size=T_META + 0.5, align=TA_CENTER, bold=True))
     if inv_date:
         story.append(_tpara(f"Invoice Date: {inv_date}", size=T_META, align=TA_CENTER))
@@ -1182,6 +1256,15 @@ def generate_thermal_invoice_pdf(invoice):
     place_header = place
     if has_val(place_header):
         story.append(_tpara(f"Place of Supply: {place_header}", size=T_META, align=TA_CENTER))
+    if is_cancelled:
+        c_by = invoice.cancelled_by.get_full_name() or invoice.cancelled_by.username if getattr(invoice, "cancelled_by", None) else "User"
+        c_at = _date_text(getattr(invoice, "cancelled_at", None))
+        c_reason = getattr(invoice, "cancel_reason", "") or "Customer requested cancellation"
+        story.append(_tpara("*** CANCELLED ***", size=T_META + 0.5, align=TA_CENTER, bold=True))
+        story.append(_tpara(f"Cancelled By: {c_by}", size=T_META, align=TA_CENTER))
+        if c_at:
+            story.append(_tpara(f"Cancelled At: {c_at}", size=T_META, align=TA_CENTER))
+        story.append(_tpara(f"Reason: {c_reason}", size=T_META, align=TA_CENTER))
 
     _tdashed(story, content_w)
 

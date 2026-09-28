@@ -56,11 +56,11 @@ const getInitials = name =>
     .join('')
 
 const avatarColors = [
-  'bg-blue-100 text-blue-700',
-  'bg-indigo-100 text-indigo-700',
-  'bg-cyan-100 text-cyan-700',
-  'bg-violet-100 text-violet-700',
-  'bg-emerald-100 text-emerald-700',
+  'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300',
+  'bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300',
+  'bg-cyan-100 text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300',
+  'bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300',
+  'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300',
 ]
 
 const CustomerAvatar = ({ customer, size = 'md' }) => {
@@ -72,10 +72,10 @@ const CustomerAvatar = ({ customer, size = 'md' }) => {
     <img
       src={customer.profile_picture || customer.profile_image || customer.avatar}
       alt={customer?.name || 'Customer'}
-      className={`${dimensions} rounded-full object-cover ring-2 ring-white shadow-sm shrink-0`}
+      className={`${dimensions} rounded-full object-cover ring-2 ring-[var(--surface)] shadow-sm shrink-0`}
     />
   ) : (
-    <div className={`${dimensions} ${color} rounded-full flex items-center justify-center font-bold ring-2 ring-white shadow-sm shrink-0`}>
+    <div className={`${dimensions} ${color} rounded-full flex items-center justify-center font-bold ring-2 ring-[var(--surface)] shadow-sm shrink-0`}>
       {initials || <UserRound size={18} />}
     </div>
   )

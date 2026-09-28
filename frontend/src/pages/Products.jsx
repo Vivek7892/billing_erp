@@ -630,7 +630,7 @@ export default function Products() {
             <input
               type="search"
               className="input h-12 w-full min-w-0 truncate pl-11 pr-11 text-sm font-medium text-[var(--ink)] placeholder:text-[var(--muted-light)] focus:outline-none"
-              placeholder="          Search product name, SKU, barcode or brand..."
+              placeholder="Search product name, SKU, barcode or brand..."
               value={search}
               onChange={event => setSearch(event.target.value)}
               aria-label="Search products"

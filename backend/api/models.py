@@ -244,7 +244,15 @@ class PurchaseItem(models.Model):
 
 
 class Invoice(models.Model):
-    STATUS_CHOICES = [('completed', 'Completed'), ('cancelled', 'Cancelled'), ('refunded', 'Refunded')]
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('confirmed', 'Confirmed'),
+        ('posted', 'Posted'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+        ('partially_refunded', 'Partially Refunded'),
+        ('refunded', 'Refunded'),
+    ]
     PAYMENT_STATUS_CHOICES = [
         ('pending', 'Pending'), ('paid', 'Paid'), ('failed', 'Failed'),
         ('partial', 'Partial'), ('credit', 'Credit'), ('refunded', 'Refunded'),
@@ -267,6 +275,11 @@ class Invoice(models.Model):
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    posted_at = models.DateTimeField(null=True, blank=True)
+    cancelled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='cancelled_invoices')
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancel_reason = models.TextField(blank=True, default='')
 
     class Meta:
         unique_together = [('business', 'invoice_number')]

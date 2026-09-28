@@ -962,8 +962,8 @@ export default function PaymentReconciliation() {
         </div>
 
         {/* TRANSACTION TABLE */}
-        <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-          <div className="flex flex-col justify-between gap-2 border-b border-[var(--line)] px-4 py-4 sm:flex-row sm:items-center sm:px-5">
+        <div className=" rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-sm sm:p-4">
+          <div className=" mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-bold text-[var(--ink)]">
                 Razorpay Transactions

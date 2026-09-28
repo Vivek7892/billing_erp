@@ -145,6 +145,8 @@ class InvoiceSerializer(serializers.ModelSerializer):
     items = InvoiceItemSerializer(many=True, read_only=True)
     payments = PaymentSerializer(many=True, read_only=True)
     customer_name_display = serializers.SerializerMethodField()
+    created_by_name = serializers.SerializerMethodField()
+    cancelled_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Invoice
@@ -153,10 +155,21 @@ class InvoiceSerializer(serializers.ModelSerializer):
             'business', 'invoice_number', 'subtotal', 'discount_amount',
             'tax_amount', 'round_off', 'grand_total', 'paid_amount', 'balance_due',
             'payment_status', 'status', 'created_by', 'created_at',
+            'confirmed_at', 'posted_at', 'cancelled_by', 'cancelled_at', 'cancel_reason',
         ]
 
     def get_customer_name_display(self, obj):
         return obj.customer.name if obj.customer else obj.customer_name
+
+    def get_created_by_name(self, obj):
+        if not obj.created_by:
+            return None
+        return obj.created_by.get_full_name() or obj.created_by.username
+
+    def get_cancelled_by_name(self, obj):
+        if not obj.cancelled_by:
+            return None
+        return obj.cancelled_by.get_full_name() or obj.cancelled_by.username
 
 
 class InvoiceCreateSerializer(serializers.ModelSerializer):

@@ -209,11 +209,35 @@ class BusinessRuleAPITests(TestCase):
         invoice = self.create_invoice()
         self.product.refresh_from_db()
         before_cancel = self.product.current_stock
+
+        # Financial documents must never be hard deleted
+        delete_resp = self.client.delete(f'/api/invoices/{invoice.data["id"]}/')
+        self.assertEqual(delete_resp.status_code, 405)
+
+        delete_po = self.client.delete(f'/api/purchases/{purchase.data["id"]}/')
+        self.assertEqual(delete_po.status_code, 405)
+
+        # Cancel with default reason
         cancelled = self.client.post(f'/api/invoices/{invoice.data["id"]}/cancel/')
         self.assertEqual(cancelled.status_code, 200, cancelled.data)
         self.product.refresh_from_db()
         self.assertEqual(self.product.current_stock, before_cancel + Decimal('2.00'))
-        self.assertEqual(Invoice.objects.get(pk=invoice.data['id']).status, 'cancelled')
+        inv_obj = Invoice.objects.get(pk=invoice.data['id'])
+        self.assertEqual(inv_obj.status, 'cancelled')
+        self.assertIsNotNone(inv_obj.cancelled_at)
+        self.assertEqual(inv_obj.cancelled_by, self.user)
+        self.assertEqual(inv_obj.cancel_reason, 'Customer requested cancellation')
+
+        # Cancel with custom reason
+        invoice2 = self.create_invoice()
+        cancelled2 = self.client.post(
+            f'/api/invoices/{invoice2.data["id"]}/cancel/',
+            {'reason': 'Duplicate order placed by customer'},
+            format='json'
+        )
+        self.assertEqual(cancelled2.status_code, 200)
+        inv2_obj = Invoice.objects.get(pk=invoice2.data['id'])
+        self.assertEqual(inv2_obj.cancel_reason, 'Duplicate order placed by customer')
 
     def test_customer_and_supplier_payment_paths(self):
         customer_payment = self.client.post('/api/customer-payments/', {

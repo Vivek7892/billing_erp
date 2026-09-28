@@ -46,32 +46,40 @@ export function StatCard({
 
   const colorStyles = {
     blue: {
-      icon: 'bg-blue-50 text-blue-600 border-blue-100',
-      accent: 'border-l-blue-500',
+      icon: 'bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-400 dark:border-indigo-800/60',
+      accent: 'border-l-indigo-500',
+    },
+    indigo: {
+      icon: 'bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-400 dark:border-indigo-800/60',
+      accent: 'border-l-indigo-500',
+    },
+    teal: {
+      icon: 'bg-teal-50 text-teal-600 border-teal-100 dark:bg-teal-950/50 dark:text-teal-400 dark:border-teal-800/60',
+      accent: 'border-l-teal-500',
     },
     green: {
-      icon: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-      accent: 'border-l-emerald-500',
+      icon: 'bg-teal-50 text-teal-600 border-teal-100 dark:bg-teal-950/50 dark:text-teal-400 dark:border-teal-800/60',
+      accent: 'border-l-teal-500',
     },
     orange: {
-      icon: 'bg-orange-50 text-orange-600 border-orange-100',
-      accent: 'border-l-orange-500',
+      icon: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800/60',
+      accent: 'border-l-amber-500',
     },
     red: {
-      icon: 'bg-rose-50 text-rose-600 border-rose-100',
+      icon: 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800/60',
       accent: 'border-l-rose-500',
     },
     purple: {
-      icon: 'bg-violet-50 text-violet-600 border-violet-100',
+      icon: 'bg-violet-50 text-violet-600 border-violet-100 dark:bg-violet-950/50 dark:text-violet-400 dark:border-violet-800/60',
       accent: 'border-l-violet-500',
     },
     gray: {
-      icon: 'bg-slate-100 text-slate-600 border-slate-200',
+      icon: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
       accent: 'border-l-slate-400',
     },
   }
 
-  const selectedColor = colorStyles[color] || colorStyles.blue
+  const selectedColor = colorStyles[color] || colorStyles.indigo || colorStyles.blue
 
   return (
     <Tag
@@ -135,9 +143,9 @@ export function StatCard({
             className={[
               'font-semibold',
               trend > 0
-                ? 'text-emerald-600'
+                ? 'text-teal-600 dark:text-teal-400'
                 : trend < 0
-                  ? 'text-rose-600'
+                  ? 'text-rose-600 dark:text-rose-400'
                   : 'text-[var(--muted)]',
             ].join(' ')}
           >
@@ -178,15 +186,15 @@ export function Badge({ status, label: customLabel }) {
 
   const styles = {
     success:
-      'bg-emerald-50 text-emerald-700 border-emerald-200',
+      'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800/60',
     warning:
-      'bg-amber-50 text-amber-700 border-amber-200',
+      'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60',
     danger:
-      'bg-rose-50 text-rose-700 border-rose-200',
+      'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60',
     info:
-      'bg-blue-50 text-blue-700 border-blue-200',
+      'bg-indigo-50 text-indigo-800 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800/60',
     neutral:
-      'bg-slate-50 text-slate-600 border-slate-200',
+      'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
   }
 
   const type = statusMap[status] || 'neutral'
@@ -209,13 +217,13 @@ export function Badge({ status, label: customLabel }) {
         className={[
           'h-1.5 w-1.5 rounded-full',
           type === 'success'
-            ? 'bg-emerald-500'
+            ? 'bg-teal-500'
             : type === 'warning'
               ? 'bg-amber-500'
               : type === 'danger'
                 ? 'bg-rose-500'
                 : type === 'info'
-                  ? 'bg-blue-500'
+                  ? 'bg-indigo-500'
                   : 'bg-slate-400',
         ].join(' ')}
       />
@@ -414,6 +422,7 @@ export function ConfirmDialog({
   danger = false,
   confirmLabel,
   loading = false,
+  children,
 }) {
   if (!open) return null
 
@@ -424,8 +433,8 @@ export function ConfirmDialog({
           className={[
             'mb-4 flex h-11 w-11 items-center justify-center rounded-xl border',
             danger
-              ? 'border-rose-200 bg-rose-50 text-rose-600'
-              : 'border-blue-200 bg-blue-50 text-blue-600',
+              ? 'border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-800/60 dark:bg-rose-950/40 dark:text-rose-400'
+              : 'border-indigo-200 bg-indigo-50 text-indigo-600 dark:border-indigo-800/60 dark:bg-indigo-950/40 dark:text-indigo-400',
           ].join(' ')}
         >
           {danger ? (
@@ -468,6 +477,8 @@ export function ConfirmDialog({
         <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
           {message}
         </p>
+
+        {children}
 
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row">
           <button
@@ -953,24 +964,24 @@ export function AlertBanner({
 }) {
   const styles = {
     info: {
-      wrapper: 'border-blue-200 bg-blue-50',
-      icon: 'text-blue-700',
-      text: 'text-blue-900',
+      wrapper: 'border-indigo-200 bg-indigo-50 dark:border-indigo-800/60 dark:bg-indigo-950/30',
+      icon: 'text-indigo-700 dark:text-indigo-400',
+      text: 'text-indigo-950 dark:text-indigo-200',
     },
     success: {
-      wrapper: 'border-emerald-200 bg-emerald-50',
-      icon: 'text-emerald-700',
-      text: 'text-emerald-900',
+      wrapper: 'border-teal-200 bg-teal-50 dark:border-teal-800/60 dark:bg-teal-950/30',
+      icon: 'text-teal-700 dark:text-teal-400',
+      text: 'text-teal-950 dark:text-teal-200',
     },
     warning: {
-      wrapper: 'border-amber-200 bg-amber-50',
-      icon: 'text-amber-700',
-      text: 'text-amber-900',
+      wrapper: 'border-amber-200 bg-amber-50 dark:border-amber-800/60 dark:bg-amber-950/30',
+      icon: 'text-amber-700 dark:text-amber-400',
+      text: 'text-amber-950 dark:text-amber-200',
     },
     danger: {
-      wrapper: 'border-rose-200 bg-rose-50',
-      icon: 'text-rose-700',
-      text: 'text-rose-900',
+      wrapper: 'border-rose-200 bg-rose-50 dark:border-rose-800/60 dark:bg-rose-950/30',
+      icon: 'text-rose-700 dark:text-rose-400',
+      text: 'text-rose-950 dark:text-rose-200',
     },
   }
 

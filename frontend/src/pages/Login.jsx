@@ -104,7 +104,7 @@ export default function Login() {
   }
 
   return (
-    <main className="min-h-screen bg-white text-slate-900">
+    <main className="min-h-screen bg-[var(--app-bg)] text-[var(--ink)]">
 
       <div className="grid min-h-screen lg:grid-cols-[1.1fr_0.9fr]">
 
@@ -112,7 +112,7 @@ export default function Login() {
             LEFT INFORMATION PANEL
         ====================================================== */}
 
-        <section className="hidden bg-slate-50 lg:flex">
+        <section className="hidden bg-[var(--surface-elevated)] border-r border-[var(--line)] lg:flex">
 
           <div className="flex min-h-screen w-full flex-col px-12 py-10 xl:px-20">
 
@@ -135,14 +135,14 @@ export default function Login() {
 
                 <div className="mb-5 flex items-center gap-3">
 
-                  <span className="h-px w-8 bg-blue-600" />
+                  <span className="h-0.5 w-8 rounded-full bg-indigo-600 dark:bg-indigo-400" />
 
                   <span className="
                     text-xs
                     font-semibold
                     uppercase
                     tracking-[0.16em]
-                    text-slate-500
+                    text-indigo-600 dark:text-indigo-400
                   ">
                     ERP Billing & Business Management
                   </span>
@@ -158,11 +158,11 @@ export default function Login() {
                   font-bold
                   leading-[1.12]
                   tracking-[-0.035em]
-                  text-slate-950
+                  text-[var(--ink)]
                   xl:text-5xl
                 ">
                   Manage your business
-                  <span className="block text-slate-700">
+                  <span className="block text-[var(--muted)]">
                     from one place.
                   </span>
                 </h1>
@@ -175,7 +175,7 @@ export default function Login() {
                   max-w-xl
                   text-[15px]
                   leading-7
-                  text-slate-600
+                  text-[var(--muted)]
                 ">
                   A centralized ERP billing system designed to simplify
                   daily business operations. Manage invoices, inventory,
@@ -236,15 +236,15 @@ export default function Login() {
               items-center
               justify-between
               border-t
-              border-slate-200
+              border-[var(--line)]
               pt-5
             ">
 
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-[var(--muted)]">
                 © {new Date().getFullYear()} DreamWithTech
               </span>
 
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-[var(--muted-light)]">
                 ERP · Billing · Business Management
               </span>
 
@@ -264,7 +264,7 @@ export default function Login() {
           min-h-screen
           items-center
           justify-center
-          bg-white
+          bg-[var(--surface)]
           px-5
           py-10
           sm:px-8
@@ -296,11 +296,11 @@ export default function Login() {
                 w-11
                 items-center
                 justify-center
-                rounded-md
+                rounded-xl
                 border
-                border-slate-200
-                bg-slate-50
-                text-slate-700
+                border-[var(--line)]
+                bg-[var(--surface-elevated)]
+                text-indigo-600 dark:text-indigo-400
               ">
                 <LockIcon />
               </div>
@@ -310,7 +310,7 @@ export default function Login() {
                 text-3xl
                 font-bold
                 tracking-[-0.03em]
-                text-slate-950
+                text-[var(--ink)]
               ">
                 Welcome back
               </h2>
@@ -320,7 +320,7 @@ export default function Login() {
                 mt-2
                 text-sm
                 leading-6
-                text-slate-500
+                text-[var(--muted)]
               ">
                 Sign in to access your ERP workspace.
               </p>
@@ -401,7 +401,7 @@ export default function Login() {
                     block
                     text-sm
                     font-medium
-                    text-slate-700
+                    text-[var(--ink-secondary)]
                   "
                 >
                   Password
@@ -436,31 +436,31 @@ export default function Login() {
                     className={`
                       h-12
                       w-full
-                      rounded-md
+                      rounded-xl
                       border
-                      bg-white
+                      bg-[var(--surface)]
                       px-4
                       pr-12
                       text-sm
-                      text-slate-900
+                      text-[var(--ink)]
                       outline-none
                       transition
-                      placeholder:text-slate-400
+                      placeholder:text-[var(--placeholder)]
                       disabled:cursor-not-allowed
-                      disabled:bg-slate-50
-                      focus:ring-2
+                      disabled:bg-[var(--surface-elevated)]
+                      focus:ring-4
 
                       ${
                         errors.password
                           ? `
-                            border-red-400
-                            focus:border-red-500
-                            focus:ring-red-100
+                            border-rose-400
+                            focus:border-rose-500
+                            focus:ring-rose-500/15
                           `
                           : `
-                            border-slate-300
-                            focus:border-slate-700
-                            focus:ring-slate-100
+                            border-[var(--line)]
+                            focus:border-indigo-600
+                            focus:ring-indigo-500/15
                           `
                       }
                     `}
@@ -491,9 +491,9 @@ export default function Login() {
                       w-12
                       items-center
                       justify-center
-                      text-slate-400
+                      text-[var(--muted)]
                       transition
-                      hover:text-slate-700
+                      hover:text-[var(--ink)]
                       focus:outline-none
                     "
                   >
@@ -519,7 +519,7 @@ export default function Login() {
                       mt-1.5
                       text-xs
                       font-medium
-                      text-red-600
+                      text-rose-600
                     "
                   >
                     {errors.password}
@@ -547,7 +547,7 @@ export default function Login() {
                   items-center
                   gap-2
                   text-sm
-                  text-slate-600
+                  text-[var(--muted)]
                 ">
 
                   <input
@@ -556,9 +556,9 @@ export default function Login() {
                       h-4
                       w-4
                       rounded
-                      border-slate-300
-                      text-slate-900
-                      focus:ring-slate-300
+                      border-[var(--line)]
+                      text-indigo-600
+                      focus:ring-indigo-500/20
                     "
                   />
 
@@ -577,9 +577,9 @@ export default function Login() {
                   className="
                     text-sm
                     font-medium
-                    text-slate-600
+                    text-[var(--muted)]
                     transition
-                    hover:text-slate-950
+                    hover:text-indigo-600 dark:hover:text-indigo-400
                   "
                 >
                   Forgot password?
@@ -601,17 +601,19 @@ export default function Login() {
                   w-full
                   items-center
                   justify-center
-                  rounded-md
-                  bg-slate-900
+                  rounded-xl
+                  bg-indigo-600
                   text-sm
-                  font-semibold
+                  font-bold
                   text-white
-                  transition
-                  hover:bg-slate-800
+                  shadow-md
+                  shadow-indigo-600/25
+                  transition-all
+                  hover:bg-indigo-700
                   focus:outline-none
-                  focus:ring-2
-                  focus:ring-slate-300
-                  active:bg-slate-950
+                  focus:ring-4
+                  focus:ring-indigo-500/20
+                  active:scale-[0.99]
                   disabled:cursor-not-allowed
                   disabled:opacity-60
                 "
@@ -733,7 +735,7 @@ function Brand() {
           text-[15px]
           font-bold
           tracking-tight
-          text-slate-950
+          text-[var(--ink)]
         ">
           DreamWithTech
         </p>
@@ -743,7 +745,7 @@ function Brand() {
           text-[9px]
           font-semibold
           tracking-[0.18em]
-          text-slate-400
+          text-[var(--muted)]
         ">
           SMART BUSINESS
         </p>
@@ -778,9 +780,9 @@ function SystemFeature({
         justify-center
         rounded-md
         border
-        border-slate-300
-        bg-white
-        text-blue-600
+        border-teal-200 dark:border-teal-800
+        bg-teal-50 dark:bg-teal-950/40
+        text-teal-600 dark:text-teal-400
       ">
         <CheckIcon />
       </div>
@@ -791,7 +793,7 @@ function SystemFeature({
         <p className="
           text-sm
           font-semibold
-          text-slate-900
+          text-[var(--ink)]
         ">
           {title}
         </p>
@@ -800,7 +802,7 @@ function SystemFeature({
           mt-1
           text-xs
           leading-5
-          text-slate-500
+          text-[var(--muted)]
         ">
           {description}
         </p>
@@ -840,7 +842,7 @@ function Field({
           block
           text-sm
           font-medium
-          text-slate-700
+          text-[var(--ink-secondary)]
         "
       >
         {label}
@@ -865,30 +867,30 @@ function Field({
         className={`
           h-12
           w-full
-          rounded-md
+          rounded-xl
           border
-          bg-white
+          bg-[var(--surface)]
           px-4
           text-sm
-          text-slate-900
+          text-[var(--ink)]
           outline-none
           transition
-          placeholder:text-slate-400
+          placeholder:text-[var(--placeholder)]
           disabled:cursor-not-allowed
-          disabled:bg-slate-50
-          focus:ring-2
+          disabled:bg-[var(--surface-elevated)]
+          focus:ring-4
 
           ${
             error
               ? `
-                border-red-400
-                focus:border-red-500
-                focus:ring-red-100
+                border-rose-400
+                focus:border-rose-500
+                focus:ring-rose-500/15
               `
               : `
-                border-slate-300
-                focus:border-slate-700
-                focus:ring-slate-100
+                border-[var(--line)]
+                focus:border-indigo-600
+                focus:ring-indigo-500/15
               `
           }
         `}
@@ -903,7 +905,7 @@ function Field({
             mt-1.5
             text-xs
             font-medium
-            text-red-600
+            text-rose-600
           "
         >
           {error}

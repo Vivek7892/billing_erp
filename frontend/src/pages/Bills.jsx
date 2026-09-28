@@ -292,11 +292,11 @@ function StatCard({
   tone = 'blue',
 }) {
   const tones = {
-    blue:   { icon: 'bg-white border border-blue-100 text-[#4338CA]',    accent: 'text-[#4338CA]' },
-    green:  { icon: 'bg-white border border-emerald-100 text-emerald-600', accent: 'text-emerald-600' },
-    violet: { icon: 'bg-white border border-violet-100 text-violet-600', accent: 'text-violet-600' },
-    amber:  { icon: 'bg-white border border-amber-100 text-amber-600',   accent: 'text-amber-600' },
-    rose:   { icon: 'bg-white border border-rose-100 text-rose-600',     accent: 'text-rose-600' },
+    blue:   { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-indigo-600 dark:text-indigo-400', accent: 'text-indigo-600 dark:text-indigo-400' },
+    green:  { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-teal-600 dark:text-teal-400',     accent: 'text-teal-600 dark:text-teal-400' },
+    violet: { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-violet-600 dark:text-violet-400', accent: 'text-violet-600 dark:text-violet-400' },
+    amber:  { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-amber-600 dark:text-amber-400',   accent: 'text-amber-600 dark:text-amber-400' },
+    rose:   { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-rose-600 dark:text-rose-400',     accent: 'text-rose-600 dark:text-rose-400' },
   }
 
   const style = tones[tone] || tones.blue
@@ -631,6 +631,41 @@ function InvoiceModal({
 
         {/* Modal body */}
         <div className="overflow-y-auto bg-[var(--surface-elevated)] p-3 sm:p-6">
+          {/* Cancellation Notice */}
+          {selected.status === 'cancelled' && (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50/80 p-4 dark:border-red-900/50 dark:bg-red-950/30">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400">
+                  <Ban size={18} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-700 dark:bg-red-900/60 dark:text-red-300">
+                      Status: CANCELLED
+                    </span>
+                    <span className="text-[11px] font-medium text-red-600/80 dark:text-red-400/80">
+                      Original document preserved in ledger
+                    </span>
+                  </div>
+                  <div className="mt-2.5 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2 lg:grid-cols-3">
+                    <div>
+                      <span className="font-semibold text-red-900 dark:text-red-300">Cancelled by: </span>
+                      <span className="text-red-800 dark:text-red-200">{selected.cancelled_by_name || selected.cancelled_by || 'User'}</span>
+                    </div>
+                    <div>
+                      <span className="font-semibold text-red-900 dark:text-red-300">Cancelled at: </span>
+                      <span className="text-red-800 dark:text-red-200">{formatDate(selected.cancelled_at)} {formatTime(selected.cancelled_at)}</span>
+                    </div>
+                    <div className="sm:col-span-2 lg:col-span-3">
+                      <span className="font-semibold text-red-900 dark:text-red-300">Reason: </span>
+                      <span className="text-red-800 dark:text-red-200">{selected.cancel_reason || 'Customer requested cancellation'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Information cards */}
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
             <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
@@ -970,6 +1005,7 @@ export default function Bills() {
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState(null)
   const [confirm, setConfirm] = useState(null)
+  const [cancelReason, setCancelReason] = useState('Customer requested cancellation')
 
   const [page, setPage] = useState(1)
   const [count, setCount] = useState(0)
@@ -1046,12 +1082,13 @@ export default function Bills() {
      CANCEL
   ------------------------------------------------------- */
 
-  const cancel = async id => {
+  const cancel = async (id, reason) => {
     try {
-      await invoiceService.cancelInvoice(id)
+      await invoiceService.cancelInvoice(id, reason || cancelReason || 'Customer requested cancellation')
 
-      toast.success('Invoice cancelled')
+      toast.success('Invoice cancelled and preserved in records')
       setConfirm(null)
+      setCancelReason('Customer requested cancellation')
 
       load(page)
     } catch (e) {
@@ -1381,6 +1418,7 @@ export default function Bills() {
                       setConfirm({
                         type,
                         id,
+                        invoice_number: bill.invoice_number,
                       })
                     }
                   />
@@ -1529,6 +1567,7 @@ export default function Bills() {
                             setConfirm({
                               type,
                               id,
+                              invoice_number: bill.invoice_number,
                             })
                           }
                         />
@@ -1611,20 +1650,64 @@ export default function Bills() {
 
       <ConfirmDialog
         open={!!confirm}
-        onClose={() => setConfirm(null)}
+        onClose={() => {
+          setConfirm(null)
+          setCancelReason('Customer requested cancellation')
+        }}
         onConfirm={() =>
           confirm?.type === 'cancel'
-            ? cancel(confirm.id)
+            ? cancel(confirm.id, cancelReason)
             : refund(confirm.id)
         }
         title={
           confirm?.type === 'cancel'
-            ? 'Cancel Invoice'
+            ? `Cancel Invoice ${confirm.invoice_number ? `(${confirm.invoice_number})` : ''}`
             : 'Refund Invoice'
         }
-        message="Are you sure? Stock will be restored."
+        message={
+          confirm?.type === 'cancel'
+            ? 'Financial documents are never deleted. This invoice will transition to CANCELLED status, inventory and ledger adjustments will be reversed, and the original document will be retained.'
+            : 'Are you sure? Stock will be restored.'
+        }
+        confirmLabel={confirm?.type === 'cancel' ? 'Cancel Invoice' : 'Refund'}
         danger
-      />
+      >
+        {confirm?.type === 'cancel' && (
+          <div className="mt-4">
+            <label className="mb-1.5 block text-xs font-semibold text-[var(--ink-secondary)]">
+              Cancellation Reason
+            </label>
+            <input
+              type="text"
+              value={cancelReason}
+              onChange={e => setCancelReason(e.target.value)}
+              placeholder="e.g. Customer requested cancellation"
+              className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-3 py-2 text-xs text-[var(--ink)] focus:border-red-500 focus:outline-none"
+            />
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {[
+                'Customer requested cancellation',
+                'Billing error / duplicate invoice',
+                'Customer changed mind',
+                'Item out of stock / damaged',
+              ].map(preset => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setCancelReason(preset)}
+                  className={`rounded border px-2 py-0.5 text-[10px] font-medium transition ${
+                    cancelReason === preset
+                      ? 'border-red-500 bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300'
+                      : 'border-[var(--line)] text-[var(--muted)] hover:border-[var(--line-strong)]'
+                  }`}
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </ConfirmDialog>
     </div>
   )
 }

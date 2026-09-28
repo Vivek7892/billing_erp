@@ -65,25 +65,25 @@ const statCards = [
     key: 'all',
     label: 'Total Products',
     icon: Boxes,
-    iconClass: 'bg white-[var(--primary)] border-[var(--line)] dark:bg-[var(--surface-muted)] dark:text-[var(--primary)] dark:border-[var(--line)]',
+    iconClass: 'bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800/50',
   },
   {
     key: 'in_stock',
     label: 'In Stock',
     icon: CheckCircle,
-    iconClass: 'bg white-[var(--primary)] border-[var(--line)] dark:bg-[var(--surface-muted)] dark:text-[var(--primary)] dark:border-[var(--line)]',
+    iconClass: 'bg-teal-50 text-teal-600 border-teal-100 dark:bg-teal-950/40 dark:text-teal-400 dark:border-teal-800/50',
   },
   {
     key: 'low_stock',
     label: 'Low Stock',
     icon: AlertTriangle,
-    iconClass: 'bg white-[var(--primary)] border-[var(--line)] dark:bg-[var(--surface-muted)] dark:text-[var(--primary)] dark:border-[var(--line)]',
+    iconClass: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/50',
   },
   {
     key: 'out_of_stock',
     label: 'Out of Stock',
     icon: XCircle,
-    iconClass: 'bg white-[var(--primary)] border-[var(--line)] dark:bg-[var(--surface-muted)] dark:text-[var(--primary)] dark:border-[var(--line)]',
+    iconClass: 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/50',
   },
 ]
 

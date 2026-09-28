@@ -1017,7 +1017,10 @@ class PurchaseViewSet(viewsets.ModelViewSet):
         return Response({'detail': 'Purchases are immutable after creation.'}, status=405)
 
     def destroy(self, request, *args, **kwargs):
-        return Response({'detail': 'Use a purchase return for reversal.'}, status=405)
+        return Response({
+            'detail': 'Financial transactions cannot be permanently deleted. Use a purchase return for reversal.',
+            'error': 'financial_document_deletion_forbidden',
+        }, status=405)
 
 
 class InvoiceViewSet(viewsets.ModelViewSet):
@@ -1052,7 +1055,10 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         return Response({'detail': 'Invoices are immutable after creation.'}, status=405)
 
     def destroy(self, request, *args, **kwargs):
-        return Response({'detail': 'Use cancel or refund for invoice reversal.'}, status=405)
+        return Response({
+            'detail': 'Financial transactions cannot be permanently deleted. Use cancel or refund for invoice reversal.',
+            'error': 'financial_document_deletion_forbidden',
+        }, status=405)
 
     def get_queryset(self):
         qs = Invoice.objects.select_related('customer', 'created_by').prefetch_related(
@@ -1642,6 +1648,15 @@ class SupplierPaymentViewSet(viewsets.ModelViewSet):
         serializer.instance = payment
         audit_event(self.request, 'PAYMENT_RECEIVED', 'SupplierPayment', payment.id, after={'amount': payment.amount})
 
+    def update(self, request, *args, **kwargs):
+        return Response({'detail': 'Payment records are immutable after creation.'}, status=405)
+
+    def destroy(self, request, *args, **kwargs):
+        return Response({
+            'detail': 'Financial transactions cannot be permanently deleted.',
+            'error': 'financial_document_deletion_forbidden',
+        }, status=405)
+
 
 class ExpenseReportView(APIView):
     permission_classes = [IsFinanceStaff]
@@ -1662,6 +1677,15 @@ class SalesReturnViewSet(viewsets.ModelViewSet):
         return SalesReturn.objects.select_related('invoice', 'created_by').prefetch_related('items').filter(
             business=self.request.user.business
         )
+
+    def update(self, request, *args, **kwargs):
+        return Response({'detail': 'Sales returns are immutable after creation.'}, status=405)
+
+    def destroy(self, request, *args, **kwargs):
+        return Response({
+            'detail': 'Financial transactions cannot be permanently deleted.',
+            'error': 'financial_document_deletion_forbidden',
+        }, status=405)
 
     def create(self, request, *args, **kwargs):
         from .services.sales_return_service import SalesReturnService
@@ -1811,18 +1835,26 @@ class CancelInvoiceView(APIView):
 
     def post(self, request, pk):
         from .services.invoice_service import InvoiceService
+        reason = request.data.get('reason', '').strip() or 'Customer requested cancellation'
         try:
             invoice = InvoiceService.cancel_invoice(
                 invoice_id=pk,
                 business=request.user.business,
                 performed_by=request.user,
+                reason=reason,
                 request=request,
             )
         except LookupError as exc:
             return Response({'error': str(exc)}, status=404)
         except ValueError as exc:
             return Response({'error': str(exc)}, status=400)
-        return Response({'status': 'cancelled'})
+        return Response({
+            'status': 'cancelled',
+            'invoice_number': invoice.invoice_number,
+            'cancelled_by': request.user.get_full_name() or request.user.username,
+            'cancelled_at': invoice.cancelled_at,
+            'cancel_reason': invoice.cancel_reason,
+        })
 
 
 class RefundInvoiceView(APIView):
@@ -1830,11 +1862,13 @@ class RefundInvoiceView(APIView):
 
     def post(self, request, pk):
         from .services.invoice_service import InvoiceService
+        reason = request.data.get('reason', '').strip()
         try:
             invoice = InvoiceService.refund_invoice(
                 invoice_id=pk,
                 business=request.user.business,
                 performed_by=request.user,
+                reason=reason,
                 request=request,
             )
         except LookupError as exc:
@@ -2024,6 +2058,15 @@ class CustomerPaymentViewSet(viewsets.ModelViewSet):
         serializer.instance = payment
         audit_event(self.request, 'PAYMENT_RECEIVED', 'CustomerPayment', payment.id, after={'amount': payment.amount})
 
+    def update(self, request, *args, **kwargs):
+        return Response({'detail': 'Payment records are immutable after creation.'}, status=405)
+
+    def destroy(self, request, *args, **kwargs):
+        return Response({
+            'detail': 'Financial transactions cannot be permanently deleted.',
+            'error': 'financial_document_deletion_forbidden',
+        }, status=405)
+
 
 class PurchaseReturnViewSet(viewsets.ModelViewSet):
     serializer_class = PurchaseReturnSerializer
@@ -2037,6 +2080,15 @@ class PurchaseReturnViewSet(viewsets.ModelViewSet):
         return PurchaseReturn.objects.select_related('purchase').prefetch_related('items').filter(
             business=self.request.user.business
         )
+
+    def update(self, request, *args, **kwargs):
+        return Response({'detail': 'Purchase returns are immutable after creation.'}, status=405)
+
+    def destroy(self, request, *args, **kwargs):
+        return Response({
+            'detail': 'Financial transactions cannot be permanently deleted.',
+            'error': 'financial_document_deletion_forbidden',
+        }, status=405)
 
     def create(self, request, *args, **kwargs):
         from .services.purchase_return_service import PurchaseReturnService

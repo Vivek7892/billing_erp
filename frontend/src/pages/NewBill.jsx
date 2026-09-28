@@ -33,7 +33,7 @@ import settingsService from '../features/settings/api/settingsService'
 import toast from 'react-hot-toast'
 import './NewBill.css'
 import {
-  Search, Plus, Minus, Trash2, Printer, Download, RefreshCw, QrCode,
+  Search, Plus, Minus, Trash2, Printer, Download, RefreshCw, QrCode, Clock,
   Keyboard, CheckCircle2, Share2, X, AlertTriangle, FileText,
   Maximize2, Minimize2, Layers,
   Package, Banknote, Smartphone, CreditCard, BookOpen, Wallet,
@@ -104,7 +104,7 @@ const PAYMENT_METHODS = [
 ]
 const CASH_CHIPS = [50, 100, 200, 500, 1000, 2000]
 const QR_PRESETS = [100, 200, 500, 1000, 2000]
-const INITIAL_PAYMENT = { method: 'cash', amount: '', reference: '', status: 'pending', autoAmount: false }
+const INITIAL_PAYMENT = { method: 'cash', amount: '', reference: '', status: 'paid', autoAmount: true }
 
 // Amount actually received for an invoice, without overstating pending Razorpay.
 const lastPaidAmount = inv => {
@@ -159,6 +159,7 @@ function BufferedNumber({ value, onCommit, max, allowZero = false, onClamp, clas
 
 // ---------------------------------------------------------------------------
 // Cart line (same props as before; now a compact list item instead of a table row)
+// Cart line (table row in current bill table)
 // ---------------------------------------------------------------------------
 function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, onRemove }) {
   const gross = item.unit_price * item.qty
@@ -169,63 +170,84 @@ function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, on
   const codes = [item.sku, item.barcode, item.hsn_code ? `HSN ${item.hsn_code}` : ''].filter(Boolean)
 
   return (
-    <li className={`pb-item${overStock ? ' pb-item-warn' : justAdded ? ' pb-item-added' : ''}`}>
-      <div className="pb-item-top">
-        <span className="pb-item-no">{index}</span>
-        <div className="pb-item-info">
-          <div className="pb-item-name">{item.product_name}</div>
-          {codes.length ? <div className="pb-sub">{codes.join(' | ')}</div> : null}
+    <tr className={`pb-bill-tr${overStock ? ' pb-tr-warn' : ''}${justAdded ? ' pb-tr-added' : ''}`}>
+      <td className="pb-td-bitem">
+        <div className="pb-item-name">
+          <span className="pb-item-index">{index}. </span>
+          {item.product_name}
         </div>
-        <div className="pb-item-total">{fmt(item.total)}</div>
-        <button type="button" className="pb-icon-btn pb-icon-danger" aria-label={`Remove ${item.product_name}`} title="Remove item" onClick={() => onRemove(item.id)}>
-          <Trash2 size={15} />
-        </button>
-      </div>
-
-      <div className="pb-item-mid">
-        <div className="pb-qtywrap">
-          <div className="pb-qty">
-            <button type="button" aria-label={`Decrease ${item.product_name} quantity`} onClick={() => onQty(item.id, item.qty - 1)}>
-              <Minus size={14} />
-            </button>
-            <BufferedNumber
-              aria-label={`${item.product_name} quantity`}
-              value={item.qty}
-              max={Number.isFinite(stock) ? stock : undefined}
-              onClamp={m => toast.error(`Only ${m} in stock`)}
-              onCommit={n => onQty(item.id, n)}
-            />
-            <button type="button" aria-label={`Increase ${item.product_name} quantity`} onClick={() => onQty(item.id, item.qty + 1)}>
-              <Plus size={14} />
-            </button>
-          </div>
-          {item.unit ? <span className="pb-unit">{item.unit}</span> : null}
+        {codes.length > 0 && <div className="pb-item-sub">{codes.join(' · ')}</div>}
+        {overStock && <div className="pb-item-sub pb-text-red">Available stock: {stock}</div>}
+      </td>
+      <td className="pb-td-qty">
+        <div className="pb-qty-group">
+          <button
+            type="button"
+            className="pb-qty-btn"
+            aria-label={`Decrease ${item.product_name} quantity`}
+            onClick={() => onQty(item.id, item.qty - 1)}
+          >
+            <Minus size={12} />
+          </button>
+          <BufferedNumber
+            aria-label={`${item.product_name} quantity`}
+            className="pb-qty-input"
+            value={item.qty}
+            max={Number.isFinite(stock) ? stock : undefined}
+            onClamp={m => toast.error(`Only ${m} in stock`)}
+            onCommit={n => onQty(item.id, n)}
+          />
+          <button
+            type="button"
+            className="pb-qty-btn"
+            aria-label={`Increase ${item.product_name} quantity`}
+            onClick={() => onQty(item.id, item.qty + 1)}
+          >
+            <Plus size={12} />
+          </button>
         </div>
-        <div className="pb-item-price">
-          <span className="pb-strong">{fmt(item.unit_price)}</span> <span className="pb-sub">each</span>
-          {item.mrp && Number(item.mrp) > item.unit_price ? <div className="pb-sub">MRP {fmt(item.mrp)}</div> : null}
-        </div>
-      </div>
-
-      <div className="pb-item-meta">
-        <label className="pb-disc">
-          <span>Disc</span>
+        {item.unit ? <div className="pb-item-sub">{item.unit}</div> : null}
+      </td>
+      <td className="pb-td-rate">
+        <div className="pb-price-val">{fmt(item.unit_price)}</div>
+        {item.mrp && Number(item.mrp) > item.unit_price ? (
+          <div className="pb-mrp-val">{fmt(item.mrp)}</div>
+        ) : null}
+      </td>
+      <td className="pb-td-disc">
+        <div className="pb-disc-box">
           <BufferedNumber
             aria-label={`${item.product_name} discount percent`}
+            className="pb-disc-input"
             allowZero
             max={100}
             value={item.discount_percent}
             onCommit={n => onDiscount(item.id, n)}
           />
-          <span>%</span>
-        </label>
-        {discountAmount > 0 ? <span className="pb-text-red">-{fmt(discountAmount)}</span> : null}
-        {showGst && <span>GST {fmt(gst)} ({item.gst_percent}%)</span>}
-        {Number.isFinite(stock) && (
-          <span className={overStock ? 'pb-text-red pb-strong' : ''}>Available: {stock}</span>
+          <span className="pb-disc-unit">%</span>
+        </div>
+        {discountAmount > 0 && (
+          <div className="pb-item-sub pb-text-red">-{fmt(discountAmount)}</div>
         )}
-      </div>
-    </li>
+      </td>
+      <td className="pb-td-total">
+        <div className="pb-price-val">{fmt(item.total)}</div>
+        {showGst && item.gst_percent > 0 && (
+          <div className="pb-item-sub">GST {item.gst_percent}%</div>
+        )}
+      </td>
+      <td className="pb-td-act">
+        <button
+          type="button"
+          className="pb-icon-danger"
+          aria-label={`Remove ${item.product_name}`}
+          title="Remove item"
+          onClick={() => onRemove(item.id)}
+        >
+          <Trash2 size={14} />
+        </button>
+      </td>
+    </tr>
   )
 }
 
@@ -630,20 +652,28 @@ export default function NewBill() {
   const totalQty = cart.reduce((count, item) => count + Number(item.qty || 0), 0)
   const cartItemsTotal = cart.reduce((sum, item) => sum + item.total, 0)
 
-  // Keep the auto-filled amount of non-cash methods in step with the bill total.
+  // Keep the payment amount in step with the bill grand total
   useEffect(() => {
-    const target = grandTotal.toFixed(2)
-    setPayment(p => (p.autoAmount && p.amount !== target) ? { ...p, amount: target } : p)
+    const target = grandTotal > 0 ? grandTotal.toFixed(2) : ''
+    setPayment(p => {
+      if (p.method !== 'credit' && (p.autoAmount || p.method !== 'cash' || !p.amount)) {
+        if (p.amount !== target) {
+          return { ...p, amount: target }
+        }
+      }
+      return p
+    })
   }, [grandTotal])
 
   const selectPayment = method => {
-    const digital = method !== 'cash' && method !== 'credit'
+    const isCredit = method === 'credit'
+    const target = grandTotal > 0 ? grandTotal.toFixed(2) : ''
     setPayment({
       method,
-      amount: digital ? grandTotal.toFixed(2) : '',
+      amount: isCredit ? '' : target,
       reference: '',
-      status: method === 'cash' ? 'paid' : method === 'credit' ? 'credit' : 'pending',
-      autoAmount: digital,
+      status: (method === 'cash' || method === 'upi' || method === 'card' || method === 'online') ? 'paid' : isCredit ? 'credit' : 'pending',
+      autoAmount: !isCredit,
     })
   }
 
@@ -670,6 +700,7 @@ export default function NewBill() {
   // ---- Pre-sale validation -------------------------------------------------
   const validationErrors = useMemo(() => {
     if (!cart.length) return ['Cart is empty']
+    if (grandTotal <= 0) return ['Total must be greater than ₹0']
     const errs = []
     cart.forEach(item => {
       if (!Number.isFinite(item.qty) || item.qty <= 0) {
@@ -1125,8 +1156,23 @@ export default function NewBill() {
     if (!win) toast.error('Could not open the bill PDF')
   }
 
-  const setExactCash = () => setPayment(x => ({ ...x, method: 'cash', amount: grandTotal.toFixed(2), status: 'paid', autoAmount: false }))
-  const addCashChip = v => setPayment(x => ({ ...x, method: 'cash', amount: (Number(x.amount || 0) + v).toFixed(2), status: 'paid', autoAmount: false }))
+  const setExactCash = () => setPayment(x => ({
+    ...x,
+    method: 'cash',
+    amount: grandTotal > 0 ? grandTotal.toFixed(2) : '',
+    status: 'paid',
+    autoAmount: true,
+  }))
+  const addCashChip = v => setPayment(x => {
+    const current = Number(x.amount || grandTotal || 0)
+    return {
+      ...x,
+      method: 'cash',
+      amount: (current + v).toFixed(2),
+      status: 'paid',
+      autoAmount: false,
+    }
+  })
 
   // Ctrl+P / F7: print the bill being built (complete & print), otherwise the last invoice.
   const printCurrent = () => {
@@ -1206,39 +1252,69 @@ export default function NewBill() {
   }
 
   const billIssues = cart.length > 0 ? validationErrors : []
-  const canComplete = !saving && validationErrors.length === 0
-  const completeTitle = canComplete ? 'Complete sale (F8)' : (validationErrors[0] || '')
+  const canComplete = !saving && validationErrors.length === 0 && grandTotal > 0 && cart.length > 0
+  const completeTitle = !cart.length
+    ? 'Add products to current bill to complete sale'
+    : grandTotal <= 0
+    ? 'Bill total must be greater than ₹0'
+    : canComplete
+    ? 'Complete sale (F8)'
+    : (validationErrors[0] || '')
 
   // =========================================================================
-  // Render
+  // Render: High-Efficiency 45/55 Table-Based POS Workspace
   // =========================================================================
   return (
     <div className="pb-page">
-      {/* Styles moved to NewBill.css */}
-
-
-      {/* ============================ A. HEADER ============================ */}
+      {/* ============================ 1. TOP HEADER ============================ */}
       <header className="pb-header">
         <div className="pb-head-left">
-          <h1 className="pb-title">New Bill</h1>
+          <div className="pb-title">
+            <ShoppingCart size={17} className="text-blue-600" />
+            <span>New Sale</span>
+          </div>
           <div className="pb-meta">
-            <span className="pb-hide-sm">Invoice No: <b>Assigned on save</b></span>
-            <span>Date: <b>{fmtDate(now)}</b></span>
-            <span className="pb-hide-sm">Time: <b>{fmtTime(now)}</b></span>
+            <span>Invoice: <span className="pb-badge-pill">Assigned on save</span></span>
+            <span>Date: <b>{fmtDate(now)} {fmtTime(now)}</b></span>
             <span>Cashier: <b>{cashier}</b></span>
-            {dashboard && dashboard.today_bills != null && <span className="pb-hide-sm">Bills today: <b>{dashboard.today_bills}</b></span>}
-            {dashboard && dashboard.today_sales != null && <span className="pb-hide-sm">Sales today: <b>{fmt(dashboard.today_sales)}</b></span>}
+            {dashboard && dashboard.today_bills != null && (
+              <span className="pb-hide-sm">Bills today: <b>{dashboard.today_bills}</b></span>
+            )}
+            {dashboard && dashboard.today_sales != null && (
+              <span className="pb-hide-sm">Sales today: <b>{fmt(dashboard.today_sales)}</b></span>
+            )}
           </div>
         </div>
         <div className="pb-head-actions">
-          <button type="button" className="pb-btn" aria-label={`Draft bills (${drafts.length})`} title="Draft bills" onClick={() => { setDrafts(loadDrafts()); setShowDrafts(true) }}>
-            <Layers size={15} /> <span className="pb-hide-sm">Drafts ({drafts.length})</span>
+          <button
+            type="button"
+            className="pb-btn pb-btn-sm"
+            aria-label={`Draft bills (${drafts.length})`}
+            title="Draft bills (Ctrl+D to save)"
+            onClick={() => { setDrafts(loadDrafts()); setShowDrafts(true) }}
+          >
+            <Layers size={14} />
+            <span>Drafts ({drafts.length})</span>
           </button>
-          <button type="button" className="pb-btn" aria-label="Keyboard shortcuts" title="Keyboard shortcuts" onClick={() => setShowShortcuts(true)}>
-            <Keyboard size={15} /> <span className="pb-hide-sm">Shortcuts</span>
+          <button
+            type="button"
+            className="pb-btn pb-btn-sm"
+            aria-label="Keyboard shortcuts"
+            title="Keyboard shortcuts (F1-F10)"
+            onClick={() => setShowShortcuts(true)}
+          >
+            <Keyboard size={14} />
+            <span className="pb-hide-sm">Shortcuts</span>
           </button>
-          <button type="button" className="pb-btn" aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'} title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'} onClick={toggleFullscreen}>
-            {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />} <span className="pb-hide-sm">{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+          <button
+            type="button"
+            className="pb-btn pb-btn-sm"
+            aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            onClick={toggleFullscreen}
+          >
+            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            <span className="pb-hide-sm">{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
           </button>
         </div>
       </header>
@@ -1251,212 +1327,271 @@ export default function NewBill() {
         </div>
       )}
 
-      <div className="pb-workspace">
-        {/* ================= COLUMN 1: PRODUCTS & SEARCH ================= */}
-        <section className="pb-panel pb-products" aria-labelledby="pb-add-products">
-          <div className="pb-panel-head">
-            <h2 id="pb-add-products">Products</h2>
-            <span className="pb-hint">
-              {initializing ? 'Loading products…' : `${filtered.length} of ${products.length}`}
-              <span className="pb-hide-sm"> · Ctrl+K to search</span>
-            </span>
-          </div>
-
-          <div className="pb-tools">
-            <label className="pb-sr" htmlFor="pb-search">Scan barcode, or search by product name, SKU or code</label>
-            <div className="pb-search-row">
-              <div className="pb-search-field">
-                <Search size={17} className="pb-field-icon" />
-                <input
-                  id="pb-search"
-                  ref={searchRef}
-                  className="pb-input pb-input-lg pb-has-icon"
-                  placeholder="Search product, SKU or scan barcode"
-                  value={search}
-                  onClick={() => setSearchActive(true)}
-                  onBlur={() => setTimeout(() => setSearchActive(false), 180)}
-                  onChange={e => { setSearch(e.target.value); setSearchActive(true); setActiveIdx(-1) }}
-                  onKeyDown={onSearchKeyDown}
-                  role="combobox"
-                  aria-expanded={searchActive}
-                  aria-controls="pb-search-list"
-                  aria-autocomplete="list"
-                  autoFocus
-                  inputMode="search"
-                  autoComplete="off"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                />
-                {search ? (
-                  <button type="button" className="pb-icon-btn pb-search-clear" aria-label="Clear search" title="Clear search" onMouseDown={e => e.preventDefault()}
-                    onClick={() => { setSearch(''); setActiveIdx(-1); setSearchActive(true); searchRef.current?.focus() }}>
-                    <X size={16} />
-                  </button>
-                ) : null}
-
-                {searchActive && (
-                  <div className="pb-dropdown" id="pb-search-list" role="listbox">
-                    {search.trim() ? (
-                      <>
-                        <div className="pb-dd-head">Search results ({filtered.length})</div>
-                        {searchResults.length ? searchResults.map((p, i) => (
-                          <div role="option" aria-selected={i === activeIdx} key={p.id}
-                            onMouseEnter={() => setActiveIdx(i)}
-                            className="pb-result pb-result-readonly">
-                            <span>
-                              <span className="pb-strong">{p.name}</span>
-                              {isOut(p) && <span className="pb-badge">Out of stock</span>}
-                              <span className="pb-sub" style={{ display: 'block' }}>
-                                SKU: {p.sku || '—'} | Barcode: {p.barcode || '—'}
-                              </span>
-                            </span>
-                            <span className="pb-result-side">
-                              <span className="pb-strong" style={{ display: 'block' }}>{fmt(p.selling_price)}</span>
-                              <span className="pb-sub">Stock: {stockLabel(p)}</span>
-                            </span>
-                          </div>
-                        )) : <div className="pb-dd-empty">No products found for “{search.trim()}”.</div>}
-                        {filtered.length > searchResults.length && (
-                          <div className="pb-dd-empty">Showing {searchResults.length} of {filtered.length} — type more to narrow the list.</div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="pb-dd-cols">
-                        <div>
-                          <div className="pb-dd-head">Recent products</div>
-                          {recentProducts.length ? recentProducts.map(p => (
-                            <button type="button" key={p.id} onMouseDown={e => e.preventDefault()} onClick={() => addToCart(p)} className="pb-result">
-                              <span className="pb-strong">{p.name}</span>
-                              <span className="pb-result-side pb-strong">{fmt(p.selling_price)}</span>
-                              <span className="pb-sub">{p.sku || p.barcode || '—'}</span>
-                              <span className="pb-result-side pb-sub">Stock: {stockLabel(p)}</span>
-                            </button>
-                          )) : <div className="pb-dd-empty">Recently billed products will appear here.</div>}
-                        </div>
-                        <div>
-                          <div className="pb-dd-head">Recommended products</div>
-                          {recommendedProducts.length ? recommendedProducts.map(p => (
-                            <button type="button" key={p.id} onMouseDown={e => e.preventDefault()} onClick={() => addToCart(p)} className="pb-result">
-                              <span className="pb-strong">{p.name}</span>
-                              <span className="pb-result-side pb-strong">{fmt(p.selling_price)}</span>
-                              <span className="pb-sub">{p.sku || p.barcode || '—'}</span>
-                              <span className="pb-result-side pb-sub">Stock: {stockLabel(p)}</span>
-                            </button>
-                          )) : <div className="pb-dd-empty">No recommendations available.</div>}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="pb-cats" role="group" aria-label="Filter by category">
-              <button type="button" className="pb-cat" aria-pressed={catFilter === ''} onClick={() => setCatFilter('')}>All</button>
-              {categories.map(c => (
-                <button type="button" key={c.id} className="pb-cat" aria-pressed={catFilter === String(c.id)} onClick={() => setCatFilter(String(c.id))}>
-                  {c.name}
+      {/* ============================ 2. MAIN WORKSPACE (45% / 55% SPLIT) ============================ */}
+      <main className="pb-workspace">
+        {/* ================= PRODUCT SECTION (45% WIDTH) ================= */}
+        <section className="pb-panel pb-products-col" aria-label="Products Catalog">
+          {/* Prominent Search and Scan Area */}
+          <div className="pb-search-area">
+            <div className="pb-search-field">
+              <Search size={18} className="pb-field-icon" />
+              <input
+                id="pb-search"
+                ref={searchRef}
+                className="pb-search-input"
+                placeholder="Search product name, SKU or scan barcode (Ctrl+K)"
+                value={search}
+                onClick={() => setSearchActive(true)}
+                onBlur={() => setTimeout(() => setSearchActive(false), 180)}
+                onChange={e => { setSearch(e.target.value); setSearchActive(true); setActiveIdx(-1) }}
+                onKeyDown={onSearchKeyDown}
+                role="combobox"
+                aria-expanded={searchActive}
+                aria-controls="pb-search-list"
+                aria-autocomplete="list"
+                autoFocus
+                inputMode="search"
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+              />
+              {search ? (
+                <button
+                  type="button"
+                  className="pb-search-clear"
+                  aria-label="Clear search"
+                  title="Clear search"
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={() => { setSearch(''); setActiveIdx(-1); setSearchActive(true); searchRef.current?.focus() }}
+                >
+                  <X size={16} />
                 </button>
-              ))}
+              ) : null}
+              <span className="pb-kbd-hint">Ctrl+K</span>
+
+              {/* Autocomplete Dropdown */}
+              {searchActive && (
+                <div className="pb-dropdown" id="pb-search-list" role="listbox">
+                  {search.trim() ? (
+                    <>
+                      <div className="pb-dd-head">Search results ({filtered.length})</div>
+                      {searchResults.length ? searchResults.map((p, i) => (
+                        <div
+                          role="option"
+                          aria-selected={i === activeIdx}
+                          key={p.id}
+                          onMouseEnter={() => setActiveIdx(i)}
+                          onClick={() => { addToCart(p); setSearchActive(false) }}
+                          className="pb-result cursor-pointer"
+                        >
+                          <span>
+                            <span className="pb-strong">{p.name}</span>
+                            {isOut(p) && <span className="pb-badge">Out of stock</span>}
+                            <span className="pb-sub" style={{ display: 'block' }}>
+                              SKU: {p.sku || '—'} | Barcode: {p.barcode || '—'}
+                            </span>
+                          </span>
+                          <span className="pb-result-side">
+                            <span className="pb-strong" style={{ display: 'block' }}>{fmt(p.selling_price)}</span>
+                            <span className="pb-sub">Stock: {stockLabel(p)}</span>
+                          </span>
+                        </div>
+                      )) : <div className="pb-dd-empty">No products found for “{search.trim()}”.</div>}
+                      {filtered.length > searchResults.length && (
+                        <div className="pb-dd-empty">Showing {searchResults.length} of {filtered.length} — type more to narrow the list.</div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="pb-dd-cols">
+                      <div>
+                        <div className="pb-dd-head">Recent products</div>
+                        {recentProducts.length ? recentProducts.map(p => (
+                          <button type="button" key={p.id} onMouseDown={e => e.preventDefault()} onClick={() => addToCart(p)} className="pb-result">
+                            <span className="pb-strong">{p.name}</span>
+                            <span className="pb-result-side pb-strong">{fmt(p.selling_price)}</span>
+                            <span className="pb-sub">{p.sku || p.barcode || '—'}</span>
+                            <span className="pb-result-side pb-sub">Stock: {stockLabel(p)}</span>
+                          </button>
+                        )) : <div className="pb-dd-empty">Recently billed products will appear here.</div>}
+                      </div>
+                      <div>
+                        <div className="pb-dd-head">Recommended products</div>
+                        {recommendedProducts.length ? recommendedProducts.map(p => (
+                          <button type="button" key={p.id} onMouseDown={e => e.preventDefault()} onClick={() => addToCart(p)} className="pb-result">
+                            <span className="pb-strong">{p.name}</span>
+                            <span className="pb-result-side pb-strong">{fmt(p.selling_price)}</span>
+                            <span className="pb-sub">{p.sku || p.barcode || '—'}</span>
+                            <span className="pb-result-side pb-sub">Stock: {stockLabel(p)}</span>
+                          </button>
+                        )) : <div className="pb-dd-empty">No recommendations available.</div>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Category Navigation Bar with smooth horizontal scrolling */}
+            <div className="pb-cats-container">
+              <div className="pb-cats" role="group" aria-label="Filter by category">
+                <button
+                  type="button"
+                  className="pb-cat"
+                  aria-pressed={catFilter === ''}
+                  onClick={() => setCatFilter('')}
+                >
+                  All Items
+                </button>
+                {categories.map(c => (
+                  <button
+                    type="button"
+                    key={c.id}
+                    className="pb-cat"
+                    aria-pressed={catFilter === String(c.id)}
+                    onClick={() => setCatFilter(String(c.id))}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="pb-scroll pb-pscroll">
-            {initializing && !products.length ? (
-              <div className="pb-empty"><Package size={28} /><b>Loading products…</b></div>
-            ) : filtered.length ? (
-              <div className="pb-pgrid">
-                {filtered.map(p => {
-                  const out = isOut(p)
-                  const inCart = cartQtyMap.get(p.id) || 0
-                  const img = p.image || p.image_url || p.thumbnail
-                  return (
-                    <article
-                      key={p.id}
-                      className={`pb-pcard${out ? ' pb-pcard-out' : ''}`}
-                      aria-label={`${p.name}, ${fmt(p.selling_price)}`}
-                    >
-                      <div className="pb-pcard-top">
-                        <div className="pb-pthumb">
-                          <Package size={16} />
-                          {img ? (
-                            <img
-                              src={img}
-                              alt=""
-                              loading="lazy"
-                              onError={e => { e.currentTarget.style.display = 'none' }}
-                            />
-                          ) : null}
-                        </div>
-                        {inCart > 0 ? (
-                          <span className="pb-pqty" title="Quantity already in this bill">
-                            {inCart}
-                          </span>
-                        ) : null}
+          {/* High-Density Products Table */}
+          <div className="pb-table-wrap">
+            <table className="pb-prod-table">
+              <thead>
+                <tr>
+                  <th className="pb-th-pname">Product</th>
+                  <th className="pb-th-sku">SKU</th>
+                  <th className="pb-th-price">Price</th>
+                  <th className="pb-th-stock">Stock</th>
+                  <th className="pb-th-action">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {initializing && !products.length ? (
+                  <tr>
+                    <td colSpan="5" className="pb-bill-empty-td">
+                      <div className="pb-bill-empty-content">
+                        <Package size={28} className="pb-text-muted" />
+                        <div className="pb-strong">Loading products…</div>
                       </div>
-
-                      <div className="pb-pname" title={p.name}>{p.name}</div>
-
-                      <div className="pb-pmeta">
-                        <span className="pb-pprice">{fmt(p.selling_price)}</span>
-                        {hasStockInfo(p) ? (
-                          <span className={`pb-pstock${out ? ' pb-pstock-out' : isLowStock(p) ? ' pb-pstock-low' : ''}`}>
-                            {out ? 'Out of stock' : `Stock ${stockLabel(p)}`}
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <button
-                        type="button"
-                        className="pb-padd pb-btn pb-btn-primary"
-                        disabled={out}
-                        aria-label={out ? `${p.name} is out of stock` : `Add ${p.name} to bill`}
-                        onClick={() => addToCart(p)}
+                    </td>
+                  </tr>
+                ) : filtered.length ? (
+                  filtered.map(p => {
+                    const out = isOut(p)
+                    const inCart = cartQtyMap.get(p.id) || 0
+                    const low = isLowStock(p)
+                    return (
+                      <tr
+                        key={p.id}
+                        className={`pb-prod-tr${inCart > 0 ? ' pb-row-incart' : ''}${out ? ' pb-row-out' : ''}`}
+                        onClick={() => !out && addToCart(p)}
+                        title={out ? 'Out of stock' : 'Click row to add to bill'}
                       >
-                        <Plus size={14} />
-                        {out ? 'Out of Stock' : 'Add'}
-                      </button>
-                    </article>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="pb-empty">
-                <Package size={28} />
-                <b>No products found</b>
-                <span>Try a different search or category.</span>
-                {(search || catFilter) && (
-                  <button type="button" className="pb-link" onClick={() => { setSearch(''); setCatFilter('') }}>Clear search and filters</button>
+                        <td>
+                          <div className="pb-prod-name">{p.name}</div>
+                          <div className="pb-prod-sub">
+                            {[p.category_name, p.unit, p.barcode ? `Bar: ${p.barcode}` : ''].filter(Boolean).join(' · ')}
+                          </div>
+                        </td>
+                        <td>
+                          {p.sku ? <span className="pb-sku-tag">{p.sku}</span> : <span className="pb-muted">—</span>}
+                        </td>
+                        <td className="pb-td-price">
+                          <div className="pb-price-val">{fmt(p.selling_price)}</div>
+                          {p.mrp && Number(p.mrp) > p.selling_price ? (
+                            <div className="pb-mrp-val">MRP {fmt(p.mrp)}</div>
+                          ) : null}
+                        </td>
+                        <td className="pb-td-stock">
+                          <span className={`pb-stock-badge ${out ? 'pb-stock-out' : low ? 'pb-stock-low' : 'pb-stock-normal'}`}>
+                            <span className="pb-stock-dot" />
+                            {out ? 'Out' : stockLabel(p)}
+                          </span>
+                        </td>
+                        <td className="pb-td-action" onClick={e => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            className={`pb-btn-add${inCart > 0 ? ' is-incart' : ''}${out ? ' is-out' : ''}`}
+                            disabled={out}
+                            aria-label={out ? `${p.name} is out of stock` : `Add ${p.name}`}
+                            onClick={e => {
+                              e.stopPropagation()
+                              addToCart(p)
+                            }}
+                          >
+                            <Plus size={13} />
+                            {out ? 'Out' : inCart > 0 ? `Add (${inCart})` : 'Add'}
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="pb-bill-empty-td">
+                      <div className="pb-bill-empty-content">
+                        <Package size={28} className="pb-text-muted" />
+                        <div className="pb-strong">No products found</div>
+                        <div className="pb-sub">Try a different search query or category filter.</div>
+                        {(search || catFilter) && (
+                          <button
+                            type="button"
+                            className="pb-link mt-2"
+                            onClick={() => { setSearch(''); setCatFilter('') }}
+                          >
+                            Clear search &amp; filter
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
                 )}
-              </div>
-            )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="pb-table-footer">
+            <span>Showing {filtered.length} products</span>
+            <span className="pb-hide-sm">Press Ctrl+K or scan barcode to search</span>
           </div>
         </section>
 
-        <div className="pb-right">
-          {/* ================= COLUMN 2: CURRENT BILL ================= */}
-          <section className="pb-panel pb-cartpanel" aria-labelledby="pb-bill-items">
-            <div className="pb-panel-head">
-              <h2 id="pb-bill-items">
-                Current Bill
-                <span className="pb-count">{cart.length} item{cart.length === 1 ? '' : 's'} · qty {totalQty}</span>
-              </h2>
-            </div>
-
-            <div className="pb-cust">
-              <div className="pb-cust-row">
-                <div className="pb-cust-field">
-                  <label className="pb-sr" htmlFor="pb-customer">Search customer by name or phone (F2)</label>
-                  <User size={16} className="pb-field-icon" />
+        {/* ================= CART/BILL SECTION (55% WIDTH) ================= */}
+        <section className="pb-panel pb-bill-col" aria-label="Current Bill and Summary">
+          {/* Improved Customer Selection Row */}
+          <div className="pb-cust-bar">
+            <span className="pb-cust-label">Customer:</span>
+            <div className="pb-cust-select-wrap">
+              {customer ? (
+                <div className="pb-cust-selected-badge">
+                  <User size={14} className="text-blue-600" />
+                  <span className="pb-cust-selected-name">{customer.name}</span>
+                  {customer.mobile && <span className="pb-cust-selected-phone">({customer.mobile})</span>}
+                  <button
+                    type="button"
+                    className="pb-cust-remove-btn"
+                    title="Change to Walk-in Customer"
+                    onClick={() => { setCustomer(null); setCustomerSearch('') }}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <div className="pb-cust-box">
+                  <User size={14} className="pb-field-icon" />
                   <input
                     id="pb-customer"
                     ref={customerRef}
-                    className="pb-input pb-has-icon"
+                    className="pb-cust-input"
                     placeholder="Walk-in Customer — search name or phone (F2)"
                     value={customerSearch}
                     autoComplete="off"
                     onFocus={() => setCustomerOpen(true)}
-                    onBlur={() => setTimeout(() => setCustomerOpen(false), 180)}
+                    onBlur={() => setTimeout(() => setCustomerOpen(false), 200)}
                     onChange={e => {
                       const v = e.target.value
                       setCustomerSearch(v)
@@ -1464,42 +1599,85 @@ export default function NewBill() {
                       if (!v || (customer && v !== customer.name)) setCustomer(null)
                     }}
                   />
-                  {customerOpen && !customer && (
-                    <div className="pb-cust-list">
-                      <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => { setCustomer(null); setCustomerSearch(''); setCustomerOpen(false) }}>
-                        <span className="pb-strong">Walk-in Customer</span>
-                      </button>
-                      {filteredCustomers.slice(0, 6).map(c => (
-                        <button type="button" key={c.id} onMouseDown={e => e.preventDefault()} onClick={() => { setCustomer(c); setCustomerSearch(c.name); setCustomerOpen(false) }}>
-                          <span className="pb-strong">{c.name}</span>
-                          <span className="pb-sub" style={{ display: 'block' }}>{c.mobile || 'No phone'}</span>
-                        </button>
-                      ))}
-                      {customerSearch && !filteredCustomers.length && (
-                        <div className="pb-dd-empty">No customer found. Use “New customer”.</div>
-                      )}
-                    </div>
+                  {customerSearch && (
+                    <button
+                      type="button"
+                      className="pb-cust-clear"
+                      aria-label="Clear customer"
+                      title="Clear customer"
+                      onClick={() => { setCustomer(null); setCustomerSearch('') }}
+                    >
+                      <X size={13} />
+                    </button>
                   )}
                 </div>
-                <button type="button" className="pb-btn" aria-label="Add new customer" title="Add new customer" onClick={() => setShowCustomerModal(true)}>
-                  <UserPlus size={15} /> <span className="pb-hide-sm">New</span>
-                </button>
-              </div>
-              <div className="pb-cust-line">
-                <span><b>{customer?.name || 'Walk-in Customer'}</b></span>
-                <span>{customer?.mobile || '—'}</span>
-                {customer && (
-                  <button type="button" className="pb-link" onClick={() => { setCustomer(null); setCustomerSearch('') }}>
-                    Change to Walk-in Customer
-                  </button>
-                )}
-              </div>
-            </div>
+              )}
 
-            <div className="pb-scroll pb-cscroll">
-              {cart.length ? (
-                <ul className="pb-cart-list">
-                  {cart.map((item, index) => (
+              {customerOpen && !customer && (
+                <div className="pb-cust-popover">
+                  <button
+                    type="button"
+                    className="pb-cust-opt"
+                    onMouseDown={e => {
+                      e.preventDefault()
+                      setCustomer(null)
+                      setCustomerSearch('')
+                      setCustomerOpen(false)
+                    }}
+                  >
+                    <span className="pb-strong">Walk-in Customer</span>
+                    <span className="pb-sub">Default</span>
+                  </button>
+                  {filteredCustomers.slice(0, 6).map(c => (
+                    <button
+                      type="button"
+                      key={c.id}
+                      className="pb-cust-opt"
+                      onMouseDown={e => {
+                        e.preventDefault()
+                        setCustomer(c)
+                        setCustomerSearch(c.name)
+                        setCustomerOpen(false)
+                      }}
+                    >
+                      <span className="pb-strong">{c.name}</span>
+                      <span className="pb-sub">{c.mobile || 'No phone'}</span>
+                    </button>
+                  ))}
+                  {customerSearch && !filteredCustomers.length && (
+                    <div className="p-2 text-xs text-slate-500">No customer found. Use “+ Customer” to add.</div>
+                  )}
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              className="pb-btn pb-btn-sm"
+              aria-label="Add new customer"
+              title="Add new customer"
+              onClick={() => setShowCustomerModal(true)}
+            >
+              <UserPlus size={14} />
+              <span className="pb-hide-sm">+ Customer</span>
+            </button>
+          </div>
+
+          {/* Current Bill Items Table */}
+          <div className="pb-table-wrap">
+            <table className="pb-bill-table">
+              <thead>
+                <tr>
+                  <th className="pb-th-bitem">Item</th>
+                  <th className="pb-th-bqty">Qty</th>
+                  <th className="pb-th-brate">Rate</th>
+                  <th className="pb-th-bdisc">Disc</th>
+                  <th className="pb-th-btotal">Total</th>
+                  <th className="pb-th-bact"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {cart.length > 0 ? (
+                  cart.map((item, index) => (
                     <CartRow
                       key={item.id}
                       item={item}
@@ -1511,249 +1689,415 @@ export default function NewBill() {
                       onDiscount={updateDiscount}
                       onRemove={removeItem}
                     />
-                  ))}
-                </ul>
-              ) : (
-                <div className="pb-empty">
-                  <ShoppingCart size={30} />
-                  <b>No items in this bill</b>
-                  <span>Scan a barcode, search, or tap a product to start billing.</span>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="pb-bill-empty-td">
+                      <div className="pb-bill-empty-content">
+                        <ShoppingCart size={32} className="pb-muted" />
+                        <div className="pb-strong">No items added</div>
+                        <div className="pb-sub">Search or scan a product to start the bill.</div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Bill Financial Summary (Single Grand Total Display) */}
+          <div className="pb-summary-section">
+            <div className="pb-sum-grid">
+              <div className="pb-sum-row">
+                <span className="pb-sum-label">Items Count:</span>
+                <span className="pb-sum-val">{cart.length} ({totalQty} qty)</span>
+              </div>
+              <div className="pb-sum-row">
+                <span className="pb-sum-label">Subtotal:</span>
+                <span className="pb-sum-val">{fmt(subtotal)}</span>
+              </div>
+              <div className="pb-sum-row">
+                <span className="pb-sum-label">Item Discount:</span>
+                <span className={`pb-sum-val ${discount > 0 ? 'pb-text-red' : ''}`}>
+                  {discount > 0 ? '-' : ''}{fmt(discount)}
+                </span>
+              </div>
+              <div className="pb-sum-row">
+                <label className="pb-sum-label" htmlFor="pb-bill-discount">Bill Disc (F6):</label>
+                <div className="pb-bill-disc-box">
+                  <span>₹</span>
+                  <input
+                    id="pb-bill-discount"
+                    ref={billDiscountRef}
+                    type="number"
+                    min="0"
+                    max={taxableBeforeBillDiscount}
+                    step="0.01"
+                    value={billDiscountInput}
+                    onChange={e => setBillDiscountInput(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              <div className="pb-sum-row">
+                <span className="pb-sum-label">Taxable Amount:</span>
+                <span className="pb-sum-val">{fmt(taxableAmount)}</span>
+              </div>
+              {showGst && (
+                <div className="pb-sum-row">
+                  <span className="pb-sum-label">GST / Tax:</span>
+                  <span className="pb-sum-val">{fmt(tax)}</span>
                 </div>
               )}
+              <div className="pb-sum-row">
+                <span className="pb-sum-label">Round Off:</span>
+                <span className="pb-sum-val">{fmtSigned(roundOff)}</span>
+              </div>
             </div>
 
-            {cart.length > 0 && (
-              <div className="pb-cart-foot">
-                <span>Total quantity {totalQty}</span>
-                <span>Items total {fmt(cartItemsTotal)}</span>
-              </div>
+            {/* Grand Total Display Block */}
+            <div className="pb-grand-total-block" aria-live="polite">
+              <span className="pb-gt-title">Grand Total</span>
+              <span className="pb-gt-figure">{fmt(grandTotal)}</span>
+            </div>
+
+            {billIssues.length > 0 && (
+              <ul className="pb-errors" role="alert">
+                {billIssues.map((m, i) => <li key={i}>{m}</li>)}
+              </ul>
             )}
-          </section>
 
-          {/* ================= COLUMN 3: BILL SUMMARY ================= */}
-          <div className="pb-side">
-            <section className="pb-panel pb-summary-panel" aria-labelledby="pb-summary-h">
-              <div className="pb-panel-head"><h2 id="pb-summary-h">Bill Summary</h2></div>
-              <div className="pb-panel-body">
-                <table className="pb-summary">
-                  <tbody>
-                    <tr><td>Total items</td><td>{cart.length} ({totalQty} qty)</td></tr>
-                    <tr><td>Subtotal</td><td>{fmt(subtotal)}</td></tr>
-                    <tr><td>Item discount</td><td className={discount > 0 ? 'pb-red' : ''}>{discount > 0 ? '-' : ''}{fmt(discount)}</td></tr>
-                    <tr>
-                      <td><label htmlFor="pb-bill-discount">Bill discount (F6)</label></td>
-                      <td>
-                        <input
-                          id="pb-bill-discount"
-                          ref={billDiscountRef}
-                          type="number" min="0" max={taxableBeforeBillDiscount} step="0.01"
-                          value={billDiscountInput}
-                          onChange={e => setBillDiscountInput(e.target.value)}
-                          placeholder="0.00"
-                        />
-                      </td>
-                    </tr>
-                    <tr><td>Taxable amount</td><td>{fmt(taxableAmount)}</td></tr>
-                    {showGst && <tr><td>GST / tax</td><td>{fmt(tax)}</td></tr>}
-                    <tr><td>Round-off</td><td>{fmtSigned(roundOff)}</td></tr>
-                  </tbody>
-                </table>
-                <div className="pb-grand" aria-live="polite">
-                  <span>Grand total</span>
-                  <strong>{fmt(grandTotal)}</strong>
-                </div>
-                {billIssues.length > 0 && (
-                  <ul className="pb-errors" role="alert">
-                    {billIssues.map((m, i) => <li key={i}>{m}</li>)}
-                  </ul>
-                )}
-                <div className="pb-notes">
-                  <label className="pb-label" htmlFor="pb-notes">Bill notes (optional)</label>
-                  <input id="pb-notes" className="pb-input" value={notes} onChange={e => setNotes(e.target.value)} />
+            {/* Inline Bill Notes */}
+            <div className="pb-note-inline">
+              <input
+                id="pb-notes"
+                className="pb-note-input"
+                placeholder="Bill notes or order comments (optional)..."
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+              />
+            </div>
+
+            {/* Compact strip for last invoice actions if present */}
+            {lastInvoice && (
+              <div className="mt-1 pt-1 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
+                <span className="text-slate-500">
+                  Last: <b>{lastInvoice.invoice_number || `INV-${lastInvoice.id}`}</b> ({fmt(lastInvoice.grand_total)})
+                </span>
+                <div className="flex items-center gap-1">
+                  <button type="button" className="pb-link text-xs" onClick={() => printInvoiceDocument(lastInvoice.id, false)}>
+                    <Printer size={12} className="inline mr-1" />Print
+                  </button>
+                  <span className="text-slate-300">·</span>
+                  <button type="button" className="pb-link text-xs" onClick={() => printInvoiceDocument(lastInvoice.id, true)}>
+                    Thermal
+                  </button>
+                  <span className="text-slate-300">·</span>
+                  <button type="button" className="pb-link text-xs" onClick={shareInvoice}>
+                    Share
+                  </button>
                 </div>
               </div>
-            </section>
-
-            {/* ============ Last completed bill / invoice actions ============ */}
-            {lastInvoice && (
-              <section className="pb-panel" aria-labelledby="pb-last-h">
-                <div className="pb-panel-head"><h2 id="pb-last-h">Last Completed Bill</h2></div>
-                <div className="pb-panel-body pb-stack">
-                  <dl className="pb-dl">
-                    <dt>Invoice no.</dt><dd>{lastInvoice.invoice_number || `INV-${lastInvoice.id}`}</dd>
-                    <dt>Grand total</dt><dd>{fmt(lastInvoice.grand_total)}</dd>
-                    <dt>Paid amount</dt><dd>{fmt(lastPaidAmount(lastInvoice))}</dd>
-                    <dt>Payment method</dt><dd style={{ textTransform: 'capitalize' }}>{lastInvoice.payment_method || 'cash'}</dd>
-                    <dt>Payment status</dt><dd style={{ textTransform: 'capitalize' }}>{lastInvoice.payment_status || '—'}</dd>
-                  </dl>
-                  {isPendingRazorpay && (
-                    <button type="button" className="pb-btn pb-btn-primary" onClick={() => setShowRazorpay(true)}>
-                      Collect {fmt(lastInvoice.grand_total)} with Razorpay
-                    </button>
-                  )}
-                  <div className="pb-grid2">
-                    <button type="button" className="pb-btn" onClick={() => printInvoiceDocument(lastInvoice.id, false)}><Printer size={14} /> Print Bill</button>
-                    <button type="button" className="pb-btn" onClick={() => downloadInvoiceDocument(lastInvoice.id, false)}><Download size={14} /> Download Invoice</button>
-                    <button type="button" className="pb-btn" onClick={shareInvoice}><Share2 size={14} /> Share Invoice</button>
-                    <button type="button" className="pb-btn" onClick={() => openInvoiceDocument(lastInvoice.id, false)}><FileText size={14} /> Open PDF</button>
-                    <button type="button" className="pb-btn" onClick={() => printInvoiceDocument(lastInvoice.id, true)}><Printer size={14} /> Print Thermal</button>
-                    <button type="button" className="pb-btn" onClick={() => downloadInvoiceDocument(lastInvoice.id, true)}><Download size={14} /> Thermal PDF</button>
-                  </div>
-                </div>
-              </section>
             )}
           </div>
-        </div>
-      </div>
+        </section>
+      </main>
 
-      {/* ================= PAYMENT DOCK ================= */}
-      <section className="pb-dock" aria-label="Payment and actions" ref={paymentSectionRef}>
-        <div className="pb-dock-row">
-          <div className="pb-dock-methods">
-            <span className="pb-dock-label" id="pb-payment-h">Payment method (F4)</span>
-            <div className="pb-methods" role="radiogroup" aria-labelledby="pb-payment-h">
+      {/* ============================ 3. STICKY PAYMENT DOCK (SINGLE COMPLETE SALE) ============================ */}
+      <footer className="pb-dock" aria-label="Payment dock and actions" ref={paymentSectionRef}>
+        <div className="pb-dock-main">
+          {/* Top Row: Segmented Payment Method Selector + Contextual Fields */}
+          <div className="pb-dock-top-row">
+            <div className="pb-methods-segmented" role="radiogroup" aria-label="Payment method (F4)">
               {PAYMENT_METHODS.map(({ id, label, icon: Icon }) => (
-                <button key={id} type="button" role="radio" aria-checked={payment.method === id} className="pb-method" onClick={() => selectPayment(id)}>
-                  <Icon size={16} /> {label}
+                <button
+                  key={id}
+                  type="button"
+                  role="radio"
+                  aria-checked={payment.method === id}
+                  className={`pb-seg-btn${payment.method === id ? ' active' : ''}`}
+                  onClick={() => selectPayment(id)}
+                >
+                  <Icon size={14} />
+                  <span>{label}</span>
                 </button>
               ))}
             </div>
-          </div>
 
-          <div className="pb-dock-fields">
-            {payment.method === 'cash' && (
-              <>
-                <div className="pb-field">
-                  <label className="pb-label" htmlFor="pb-cash">Cash received</label>
-                  <div className="pb-money">
-                    <span aria-hidden="true">₹</span>
-                    <input
-                      id="pb-cash"
-                      type="number" min="0" step="0.01" inputMode="decimal"
-                      className="pb-input pb-input-num"
-                      value={payment.amount}
-                      placeholder={grandTotal.toFixed(2)}
-                      title="Leave blank for the exact amount"
-                      onChange={e => setPayment(x => ({ ...x, amount: e.target.value, status: 'paid', autoAmount: false }))}
-                    />
+            {/* Contextual Payment Form Controls */}
+            <div className="pb-dock-context">
+              {payment.method === 'cash' && (
+                <div className="pb-cash-controls">
+                  <div className="pb-cash-input-wrap">
+                    <span className="pb-dock-mini-label">Cash Received:</span>
+                    <div className="pb-money-box">
+                      <span className="pb-curr-sym">₹</span>
+                      <input
+                        id="pb-cash"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        inputMode="decimal"
+                        disabled={grandTotal <= 0 || !cart.length}
+                        className="pb-cash-input"
+                        value={payment.amount}
+                        placeholder={grandTotal > 0 ? grandTotal.toFixed(2) : '0.00'}
+                        title={grandTotal <= 0 ? 'Add items to the bill' : 'Enter amount tendered'}
+                        onChange={e => setPayment(x => ({ ...x, amount: e.target.value, status: 'paid', autoAmount: false }))}
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="pb-chips">
-                  <button type="button" className="pb-chip pb-chip-exact" onClick={setExactCash}>Exact</button>
-                  {CASH_CHIPS.map(v => (
-                    <button type="button" key={v} className="pb-chip" onClick={() => addCashChip(v)}>+{v}</button>
-                  ))}
-                  <button type="button" className="pb-chip" onClick={() => setPayment(x => ({ ...x, amount: '', autoAmount: false }))}>Reset</button>
-                </div>
-                <div className="pb-stat"><span>Balance due</span><b className={cashBalanceDue > 0 ? 'pb-red' : ''}>{fmt(cashBalanceDue)}</b></div>
-                <div className="pb-stat"><span>Change to return</span><b>{fmt(cashChange)}</b></div>
-                {cashShort && (
-                  <div className="pb-note pb-note-warn pb-dock-note" role="alert"><AlertTriangle size={14} /> Cash received is less than the grand total.</div>
-                )}
-              </>
-            )}
 
-            {['upi', 'card', 'online'].includes(payment.method) && (
-              <>
-                {payment.method === 'upi' && (
-                  <div className="pb-field">
-                    <label className="pb-label" htmlFor="pb-upi-id">Merchant UPI ID</label>
-                    <input id="pb-upi-id" className="pb-input" value={upiId} readOnly placeholder="Configure in Settings" />
-                  </div>
-                )}
-                <div className="pb-field">
-                  <label className="pb-label" htmlFor="pb-pay-amount">Amount</label>
-                  <div className="pb-money">
-                    <span aria-hidden="true">₹</span>
-                    <input
-                      id="pb-pay-amount"
-                      type="number" min="0" step="0.01" inputMode="decimal"
-                      className="pb-input pb-input-num"
-                      value={payment.amount}
-                      onChange={e => setPayment(x => ({ ...x, amount: e.target.value, autoAmount: false }))}
-                    />
-                  </div>
-                </div>
-                <div className="pb-field">
-                  <label className="pb-label" htmlFor="pb-pay-ref">{payment.method === 'upi' ? 'UTR / reference (optional)' : 'Reference (optional)'}</label>
-                  <input id="pb-pay-ref" className="pb-input" value={payment.reference} onChange={e => setPayment(x => ({ ...x, reference: e.target.value }))} />
-                </div>
-                {payment.method === 'upi' && (
-                  <button type="button" className="pb-btn pb-btn-lg" onClick={openQuickPayment} disabled={!upiId}>
-                    <QrCode size={15} /> Show QR code
-                  </button>
-                )}
-                <div>
-                  <span className="pb-label">Payment status</span>
-                  <div className="pb-status" role="radiogroup" aria-label="Payment status">
-                    {['pending', 'paid', 'failed'].map(s => (
-                      <button key={s} type="button" role="radio" data-s={s} aria-checked={payment.status === s} onClick={() => setPayment(x => ({ ...x, status: s }))}>{s}</button>
+                  <div className="pb-chips-strip">
+                    <button
+                      type="button"
+                      className="pb-chip pb-chip-exact"
+                      disabled={grandTotal <= 0 || !cart.length}
+                      onClick={setExactCash}
+                    >
+                      Exact
+                    </button>
+                    {CASH_CHIPS.map(v => (
+                      <button
+                        key={v}
+                        type="button"
+                        className="pb-chip"
+                        disabled={grandTotal <= 0 || !cart.length}
+                        onClick={() => addCashChip(v)}
+                      >
+                        +{v}
+                      </button>
                     ))}
+                    <button
+                      type="button"
+                      className="pb-chip"
+                      disabled={grandTotal <= 0 || !cart.length}
+                      onClick={() => setPayment(x => ({ ...x, amount: grandTotal > 0 ? grandTotal.toFixed(2) : '', autoAmount: true }))}
+                    >
+                      Reset
+                    </button>
+                  </div>
+
+                  <div className="pb-change-stat">
+                    {cashShort ? (
+                      <span className="pb-short-val">Due: {fmt(cashBalanceDue)}</span>
+                    ) : (
+                      <>
+                        <span className="pb-dock-mini-label">Change:</span>
+                        <span className="pb-change-val">{fmt(cashChange)}</span>
+                      </>
+                    )}
                   </div>
                 </div>
-                {payment.method === 'upi' && (
-                  <div className={`pb-note pb-dock-note ${payment.status === 'paid' ? 'pb-note-ok' : 'pb-note-warn'}`}>
-                    {payment.status === 'paid'
-                      ? 'Payment is marked as RECEIVED.'
-                      : 'QR shown ≠ payment received. Keep status “pending” until the money is confirmed in your UPI app or bank.'}
+              )}
+
+              {payment.method === 'upi' && (
+                <div className="pb-upi-controls">
+                  <div className="pb-input-inline">
+                    <span className="pb-dock-mini-label">Amount:</span>
+                    <div className="pb-money-box">
+                      <span className="pb-curr-sym">₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        disabled={grandTotal <= 0 || !cart.length}
+                        className="pb-dock-input pb-amt-input"
+                        value={payment.amount}
+                        onChange={e => setPayment(x => ({ ...x, amount: e.target.value, autoAmount: false }))}
+                      />
+                    </div>
                   </div>
-                )}
-              </>
-            )}
-
-            {payment.method === 'credit' && (
-              <>
-                <div className="pb-note">This amount will be recorded as customer credit and settled later.</div>
-                {CREDIT_REQUIRES_CUSTOMER && !customer && (
-                  <div className="pb-note pb-note-warn" role="alert"><AlertTriangle size={14} /> Select a customer (F2) to complete a credit sale.</div>
-                )}
-              </>
-            )}
-
-            {payment.method === 'razorpay' && (
-              <>
-                <div className="pb-stat"><span>Payable via Razorpay</span><b>{fmt(grandTotal)}</b></div>
-                <div className="pb-note">
-                  “Complete Sale” saves the bill as <b>pending</b> and opens Razorpay checkout. The bill is marked paid only after the payment is verified.
+                  <div className="pb-input-inline">
+                    <span className="pb-dock-mini-label">UTR / Ref:</span>
+                    <input
+                      className="pb-dock-input"
+                      placeholder="Optional reference"
+                      value={payment.reference}
+                      onChange={e => setPayment(x => ({ ...x, reference: e.target.value }))}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="pb-btn pb-btn-sm"
+                    onClick={openQuickPayment}
+                    disabled={!upiId || grandTotal <= 0 || !cart.length}
+                  >
+                    <QrCode size={14} /> Show QR
+                  </button>
+                  <div className="pb-input-inline">
+                    <span className="pb-dock-mini-label">Status:</span>
+                    <div className="pb-status-group" role="radiogroup" aria-label="Payment status">
+                      <button
+                        type="button"
+                        role="radio"
+                        data-s="paid"
+                        aria-checked={payment.status === 'paid'}
+                        className={`pb-status-btn${payment.status === 'paid' ? ' active' : ''}`}
+                        onClick={() => setPayment(x => ({ ...x, status: 'paid' }))}
+                      >
+                        <CheckCircle2 size={12} />
+                        <span>Paid</span>
+                      </button>
+                      <button
+                        type="button"
+                        role="radio"
+                        data-s="pending"
+                        aria-checked={payment.status === 'pending'}
+                        className={`pb-status-btn${payment.status === 'pending' ? ' active' : ''}`}
+                        onClick={() => setPayment(x => ({ ...x, status: 'pending' }))}
+                      >
+                        <Clock size={12} />
+                        <span>Pending</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </>
-            )}
+              )}
+
+              {['card', 'online'].includes(payment.method) && (
+                <div className="pb-card-controls">
+                  <div className="pb-input-inline">
+                    <span className="pb-dock-mini-label">Amount:</span>
+                    <div className="pb-money-box">
+                      <span className="pb-curr-sym">₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        disabled={grandTotal <= 0 || !cart.length}
+                        className="pb-dock-input pb-amt-input"
+                        value={payment.amount}
+                        onChange={e => setPayment(x => ({ ...x, amount: e.target.value, autoAmount: false }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="pb-input-inline">
+                    <span className="pb-dock-mini-label">Approval Code:</span>
+                    <input
+                      className="pb-dock-input"
+                      placeholder="Optional reference"
+                      value={payment.reference}
+                      onChange={e => setPayment(x => ({ ...x, reference: e.target.value }))}
+                    />
+                  </div>
+                  <div className="pb-input-inline">
+                    <span className="pb-dock-mini-label">Status:</span>
+                    <div className="pb-status-group" role="radiogroup" aria-label="Payment status">
+                      <button
+                        type="button"
+                        role="radio"
+                        data-s="paid"
+                        aria-checked={payment.status === 'paid'}
+                        className={`pb-status-btn${payment.status === 'paid' ? ' active' : ''}`}
+                        onClick={() => setPayment(x => ({ ...x, status: 'paid' }))}
+                      >
+                        <CheckCircle2 size={12} />
+                        <span>Paid</span>
+                      </button>
+                      <button
+                        type="button"
+                        role="radio"
+                        data-s="pending"
+                        aria-checked={payment.status === 'pending'}
+                        className={`pb-status-btn${payment.status === 'pending' ? ' active' : ''}`}
+                        onClick={() => setPayment(x => ({ ...x, status: 'pending' }))}
+                      >
+                        <Clock size={12} />
+                        <span>Pending</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {payment.method === 'credit' && (
+                <div className="pb-credit-info">
+                  <span>Credit Sale</span>
+                  {CREDIT_REQUIRES_CUSTOMER && !customer && (
+                    <span className="pb-text-red font-semibold">⚠️ Select a customer (F2) for credit sale</span>
+                  )}
+                </div>
+              )}
+
+              {payment.method === 'razorpay' && (
+                <div className="pb-razorpay-info">
+                  <span>Payable via Razorpay Gateway</span>
+                  <span className="text-slate-400">· Saved as pending until verified</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom Row: Secondary Actions + Single Large Green Complete Sale Action */}
+          <div className="pb-dock-actions-row">
+            <div className="pb-dock-left-actions">
+              <button
+                type="button"
+                className="pb-btn-dock"
+                title="Save as Draft (Ctrl+D / F5)"
+                onClick={saveDraft}
+                disabled={saving || !cart.length}
+              >
+                <Layers size={14} />
+                <span>Save Draft</span>
+              </button>
+              <button
+                type="button"
+                className="pb-btn-dock"
+                title="Quick QR for UPI collection"
+                onClick={openQuickPayment}
+                disabled={!upiId || grandTotal <= 0 || !cart.length}
+              >
+                <QrCode size={14} />
+                <span>Quick QR</span>
+              </button>
+              <button
+                type="button"
+                className="pb-btn-dock"
+                title="Complete Sale &amp; Print Bill (Ctrl+P / F7)"
+                onClick={() => saveBill(true)}
+                disabled={!canComplete}
+              >
+                <Printer size={14} />
+                <span>Complete &amp; Print</span>
+              </button>
+              <button
+                type="button"
+                className="pb-btn-dock pb-btn-danger"
+                title="Clear all cart items"
+                onClick={() => setShowClearConfirm(true)}
+                disabled={!cart.length}
+              >
+                <Trash2 size={14} />
+                <span>Clear</span>
+              </button>
+              <button
+                type="button"
+                className="pb-btn-dock"
+                title="Start a fresh bill (F1)"
+                onClick={startNewBill}
+                disabled={saving || (!cart.length && !lastInvoice)}
+              >
+                <RefreshCw size={14} />
+                <span>New Bill</span>
+              </button>
+            </div>
+
+            {/* Single, Responsive, Touch-Friendly Complete Sale Button */}
+            <button
+              type="button"
+              className="pb-btn-complete-sale"
+              title={completeTitle}
+              onClick={() => saveBill(false)}
+              disabled={!canComplete}
+            >
+              <CheckCircle2 size={18} />
+              <span>{saving ? 'Processing…' : `✓ COMPLETE SALE · ${fmt(grandTotal)}`}</span>
+            </button>
           </div>
         </div>
-
-        <div className="pb-dock-actions">
-          <div className="pb-dock-secondary">
-            <button type="button" className="pb-btn" title="Save draft (Ctrl+D)" onClick={saveDraft} disabled={saving || !cart.length}>
-              <Layers size={14} /> Save Draft
-            </button>
-            <button type="button" className="pb-btn" title={upiId ? 'Show a UPI QR without a bill' : 'Configure UPI ID in Settings'} onClick={openQuickPayment} disabled={!upiId}>
-              <QrCode size={14} /> Quick QR
-            </button>
-            <button type="button" className="pb-btn" title="Complete the sale and print the bill" onClick={() => saveBill(true)} disabled={!canComplete}>
-              <Printer size={14} /> Complete &amp; Print
-            </button>
-            <button type="button" className="pb-btn pb-btn-danger" title="Remove all items from this bill" onClick={() => setShowClearConfirm(true)} disabled={!cart.length}>
-              <Trash2 size={14} /> Clear
-            </button>
-            <button type="button" className="pb-btn" title="Start a fresh bill" onClick={startNewBill} disabled={saving || (!cart.length && !lastInvoice)}>
-              <RefreshCw size={14} /> New Bill
-            </button>
-          </div>
-          <button type="button" className="pb-btn pb-btn-success pb-btn-xl pb-dock-complete" title={completeTitle} onClick={() => saveBill(false)} disabled={!canComplete}>
-            <CheckCircle2 size={18} />
-            {saving ? 'Saving…' : <>Complete Sale <span className="pb-amt">{fmt(grandTotal)}</span></>}
-          </button>
-        </div>
-      </section>
-
-      {/* Mobile: total + Complete Sale always reachable */}
-      <div className="pb-mobile-bar">
-        <div className="pb-mobile-total"><span>Grand total</span><strong>{fmt(grandTotal)}</strong></div>
-        <button type="button" className="pb-btn pb-btn-success pb-btn-lg" title={completeTitle} onClick={() => saveBill(false)} disabled={!canComplete}>
-          <CheckCircle2 size={16} /> {saving ? 'Saving…' : 'Complete Sale'}
-        </button>
-      </div>
-
+      </footer>
       {/* ============================ MODALS ============================ */}
       <Modal open={showCustomerModal} onClose={() => setShowCustomerModal(false)} title="Add new customer" size="sm">
         <div className="pb-modal pb-stack">

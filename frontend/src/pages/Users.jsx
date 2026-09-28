@@ -60,7 +60,7 @@ export default function Users() {
                     <td className="font-medium">{u.first_name} {u.last_name}</td>
                     <td className="font-mono text-sm">{u.username}</td>
                     <td className="text-sm">{u.email}</td>
-                    <td><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>{u.role}</span></td>
+                    <td><span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider ${u.role === 'admin' ? 'bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-800/60' : 'bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800/60'}`}>{u.role}</span></td>
                     <td><Badge status={u.is_active ? 'active' : 'inactive'} /></td>
                     <td>
                       <div className="flex gap-1">

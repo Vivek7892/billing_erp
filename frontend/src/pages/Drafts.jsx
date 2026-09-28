@@ -47,7 +47,7 @@ export default function Drafts() {
 
   const resume = draft => {
     sessionStorage.setItem('pos_resume_draft', JSON.stringify(draft))
-    navigate('/new-bill')
+    navigate('/billing/new')
   }
 
   const clearAll = () => {
@@ -73,7 +73,7 @@ export default function Drafts() {
           </p>
 
           <button
-            onClick={() => navigate('/new-bill')}
+            onClick={() => navigate('/billing/new')}
             className="mt-5 inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-sm font-semibold transition-colors shadow-[var(--shadow-primary)]"
           >
             <ShoppingCart size={15} />

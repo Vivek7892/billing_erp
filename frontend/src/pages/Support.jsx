@@ -23,8 +23,8 @@ const faqs = [
   {
     category: 'Billing & POS',
     icon: ShoppingCart,
-    color: 'text-blue-600 dark:text-blue-400',
-    bg: 'bg-blue-50 dark:bg-blue-950/60',
+    color: 'text-indigo-600 dark:text-indigo-400',
+    bg: 'bg-indigo-50 dark:bg-indigo-950/60',
     items: [
       { q: 'How do I create a new bill?', a: 'Go to New Bill from the sidebar. Search for a product by name, SKU, or barcode. Press Enter or click to add it to the cart. Select a customer or leave it as Walk-in, choose a payment method, enter the amount, and click Save Bill.' },
       { q: 'Can I apply a discount on a product?', a: 'Yes. In the cart table, each item has a discount field. Enter the discount percentage directly in the row. The total recalculates automatically.' },
@@ -36,8 +36,8 @@ const faqs = [
   {
     category: 'Products & Inventory',
     icon: Package,
-    color: 'text-emerald-600 dark:text-emerald-400',
-    bg: 'bg-emerald-50 dark:bg-emerald-950/60',
+    color: 'text-teal-600 dark:text-teal-400',
+    bg: 'bg-teal-50 dark:bg-teal-950/60',
     items: [
       { q: 'How do I add a new product?', a: 'Go to Products → Add Product. Fill in the name, SKU, category, purchase price, selling price, GST%, and opening stock, then click Save.' },
       { q: 'How is stock updated automatically?', a: 'Stock decreases automatically when a bill is saved and is restored when a bill is cancelled or refunded. Stock increases when a purchase is saved.' },
@@ -48,8 +48,8 @@ const faqs = [
   {
     category: 'Bills & Reports',
     icon: FileText,
-    color: 'text-violet-600',
-    bg: 'bg-violet-50',
+    color: 'text-violet-600 dark:text-violet-400',
+    bg: 'bg-violet-50 dark:bg-violet-950/60',
     items: [
       { q: 'How do I cancel or refund a bill?', a: 'Go to Bills, find the invoice, and choose Cancel or Refund. Stock is automatically restored for the items included in the bill.' },
       { q: 'How do I filter bills by date?', a: 'Use the quick date filters such as Today, Yesterday, This Week, and This Month, or select a custom date range.' },
@@ -60,8 +60,8 @@ const faqs = [
   {
     category: 'Settings & Configuration',
     icon: Settings,
-    color: 'text-orange-600 dark:text-orange-400',
-    bg: 'bg-orange-50 dark:bg-orange-950/60',
+    color: 'text-amber-600 dark:text-amber-400',
+    bg: 'bg-amber-50 dark:bg-amber-950/60',
     items: [
       { q: 'How do I update my shop name and logo?', a: 'Go to Settings → Shop Info. Update the shop name, address, GSTIN, and logo. These details are used throughout the application and printed invoices.' },
       { q: 'How do I change the invoice prefix or number?', a: 'Go to Settings → Invoice and configure the invoice prefix and starting number. New invoices will follow the configured format.' },
@@ -97,7 +97,7 @@ function FAQItem({ q, a, searchTerm }) {
   }
 
   return (
-    <div className={`overflow-hidden rounded-xl border transition-all ${open ? 'border-blue-200 shadow-[var(--shadow-card)]' : 'border-[var(--line)]'}`}>
+    <div className={`overflow-hidden rounded-xl border transition-all ${open ? 'border-indigo-300 dark:border-indigo-700 shadow-[var(--shadow-card)]' : 'border-[var(--line)]'}`}>
       <button
         type="button"
         aria-expanded={open}
@@ -107,7 +107,7 @@ function FAQItem({ q, a, searchTerm }) {
         <span className="min-w-0 pr-1 text-sm font-medium leading-5 text-[var(--ink)]">{highlight(q)}</span>
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)]">
           {open
-            ? <ChevronUp size={16} className="text-blue-600 dark:text-blue-400" />
+            ? <ChevronUp size={16} className="text-indigo-600 dark:text-indigo-400" />
             : <ChevronDown size={16} className="text-[var(--muted-light)]" />}
         </span>
       </button>

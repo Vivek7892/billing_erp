@@ -534,11 +534,11 @@ function BillPreviewTab({ s, embedded = false }) {
   const showDisc = s.show_discount_col === 'true' || s.show_discount_col === true
   const showGst  = s.gst_reg_type !== 'unregistered'
   const invoiceNo    = `${s.invoice_prefix || 'INV-'}${s.invoice_start_number || '0001'}`
-  const shopName     = s.shop_name    || 'Your Business Name'
+  const shopName     = s.shop_name    || 'Sri Balaji Store'
   const address      = s.shop_address || '123, Main Street, City - 400001'
   const phone        = s.shop_phone   || '+91 98765 43210'
   const gstin        = s.shop_gstin   || '23AABCS1429B1ZP'
-  const footer       = s.invoice_footer || 'Thank you for your business!'
+  const footer       = s.invoice_footer || 'Thank you for shopping with us!'
   const terms        = s.invoice_terms  || '1. Goods once sold will not be returned.\n2. Payment due within 15 days.'
   const upiId        = s.shop_upi_id
   const showUpiA4    = (s.show_upi_qr_on_invoice === 'true' || s.show_upi_qr_on_invoice === true) && upiId
@@ -631,111 +631,210 @@ function BillPreviewTab({ s, embedded = false }) {
     <div>
       {modePicker}
       <div className="overflow-x-auto">
-        <div className="bg-[var(--surface)] text-black shadow border border-gray-200 mx-auto"
-          style={{ width: 794, minHeight: 500, fontFamily: a4Font, fontSize: 12, padding: '24px 28px' }}>
+        <div className="bg-white text-[#0F172A] shadow-md border border-slate-200 mx-auto rounded-sm"
+          style={{ width: 794, minHeight: 520, fontFamily: a4Font, fontSize: 12, padding: '24px 28px' }}>
+          
+          {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
             <div style={{ flex: 1 }}>
               {headerLayout !== 'name_only' && s.shop_logo && (
-                <img src={s.shop_logo} alt="logo" style={{ height: 48, marginBottom: 6, objectFit: 'contain' }} />
+                <img src={s.shop_logo} alt="logo" style={{ height: 46, marginBottom: 6, objectFit: 'contain' }} />
               )}
-              <div style={{ fontWeight: 'bold', fontSize: 16, textTransform: 'uppercase' }}>{shopName}</div>
-              {address.split('\n').map((l, i) => <div key={i} style={{ fontSize: 10, color: '#444' }}>{l}</div>)}
-              <div style={{ fontSize: 10, color: '#444' }}>Mobile: {phone}{s.shop_email ? ` | Email: ${s.shop_email}` : ''}</div>
-              {gstin && <div style={{ fontSize: 10, color: '#444' }}>GSTIN: {gstin}{s.shop_pan ? ` | PAN: ${s.shop_pan}` : ''}{showFssai ? ` | FSSAI: ${s.fssai_licence}` : ''}{showCin ? ` | CIN: ${s.cin}` : ''}</div>}
+              <div style={{ fontWeight: 'bold', fontSize: 18, textTransform: 'uppercase', color: '#0F172A', letterSpacing: '0.02em' }}>
+                {shopName}
+              </div>
+              {address.split('\n').map((l, i) => (
+                <div key={i} style={{ fontSize: 10, color: '#334155', marginTop: 1 }}>{l}</div>
+              ))}
+              <div style={{ fontSize: 10, color: '#475569', marginTop: 2 }}>
+                Mobile: {phone}{s.shop_email ? ` | Email: ${s.shop_email}` : ''}
+              </div>
+              {gstin && (
+                <div style={{ fontSize: 10, color: '#334155', marginTop: 2 }}>
+                  <b>GSTIN:</b> {gstin}{s.shop_pan ? ` | <b>PAN:</b> ${s.shop_pan}` : ''}{showFssai ? ` | <b>FSSAI:</b> ${s.fssai_licence}` : ''}{showCin ? ` | <b>CIN:</b> ${s.cin}` : ''}
+                </div>
+              )}
             </div>
-            <div style={{ textAlign: 'right', minWidth: 200 }}>
-              <div style={{ fontWeight: 'bold', fontSize: 18 }}>TAX INVOICE</div>
-              <div style={{ fontSize: 11, fontWeight: 'bold', marginTop: 4 }}>Invoice No: {invoiceNo}</div>
-              <div style={{ fontSize: 10, color: '#444' }}>Invoice Date: {today}</div>
-              <div style={{ fontSize: 10, color: '#444' }}>Payment Mode: CASH</div>
+            
+            <div style={{ textAlign: 'right', minWidth: 220 }}>
+              <div style={{ fontWeight: '800', fontSize: 19, letterSpacing: '0.03em', color: '#0F172A' }}>
+                TAX INVOICE
+              </div>
+              <div style={{ fontSize: 11, fontWeight: '700', marginTop: 6, color: '#0F172A' }}>
+                Invoice No: {invoiceNo}
+              </div>
+              <div style={{ fontSize: 10, color: '#334155', marginTop: 2 }}>
+                Invoice Date: {today}
+              </div>
+              <div style={{ fontSize: 10, color: '#334155', marginTop: 2 }}>
+                Payment Mode: CASH
+              </div>
+              {s.place_of_supply && (
+                <div style={{ fontSize: 10, color: '#475569', marginTop: 2 }}>
+                  Place of Supply: {s.place_of_supply}
+                </div>
+              )}
             </div>
           </div>
-          <div style={{ borderTop: '1.5px solid #000', marginBottom: 10 }} />
+          
+          <div style={{ borderTop: '1px solid #CBD5E1', marginBottom: 10 }} />
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+          {/* Bill To Customer Section */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
             <div>
-              <div style={{ fontSize: 10, fontWeight: 'bold', marginBottom: 2 }}>BILL TO</div>
-              <div style={{ fontWeight: 'bold', fontSize: 13 }}>Walk-in Customer</div>
-              <div style={{ fontSize: 10, color: '#444' }}>Mobile: +91 99999 00000</div>
+              <div style={{ fontSize: 9.5, fontWeight: '700', textTransform: 'uppercase', color: '#475569', marginBottom: 2 }}>
+                BILL TO
+              </div>
+              <div style={{ fontWeight: 'bold', fontSize: 13, color: '#0F172A' }}>Walk-in Customer</div>
+              <div style={{ fontSize: 10, color: '#334155', marginTop: 1 }}>Mobile: +91 99999 00000</div>
             </div>
             {showUpiA4 && (
-              <div style={{ textAlign: 'center', fontSize: 10 }}>
+              <div style={{ textAlign: 'center', fontSize: 9, color: '#475569' }}>
                 <div style={{ fontWeight: 'bold', marginBottom: 2 }}>UPI PAYMENT</div>
                 <QRCodeSVG value={qrValue} size={qrSize} />
-                <div style={{ marginTop: 2 }}>SCAN TO PAY</div>
+                <div style={{ marginTop: 2, fontWeight: '600' }}>SCAN TO PAY</div>
               </div>
             )}
           </div>
-          <div style={{ borderTop: '0.8px solid #000', marginBottom: 8 }} />
+          
+          <div style={{ borderTop: '1px solid #E2E8F0', marginBottom: 8 }} />
 
+          {/* Redesigned Item Table */}
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
             <thead>
-              <tr style={{ borderTop: '1px solid #000', borderBottom: '1px solid #000', background: '#f9f9f9' }}>
-                <th style={{ textAlign: 'left', padding: '5px 4px', fontSize: 10 }}>S.No</th>
-                <th style={{ textAlign: 'left', padding: '5px 4px', fontSize: 10 }}>Item Description</th>
-                {showHsn && <th style={{ textAlign: 'center', padding: '5px 4px', fontSize: 10 }}>HSN/SAC</th>}
-                <th style={{ textAlign: 'center', padding: '5px 4px', fontSize: 10 }}>Qty</th>
-                <th style={{ textAlign: 'right', padding: '5px 4px', fontSize: 10 }}>Rate</th>
-                {showDisc && <th style={{ textAlign: 'right', padding: '5px 4px', fontSize: 10 }}>Disc.</th>}
-                {showGst && <th style={{ textAlign: 'right', padding: '5px 4px', fontSize: 10 }}>SGST</th>}
-                {showGst && <th style={{ textAlign: 'right', padding: '5px 4px', fontSize: 10 }}>CGST</th>}
-                <th style={{ textAlign: 'right', padding: '5px 4px', fontSize: 10 }}>Amount</th>
+              <tr style={{ background: '#F8FAFC', borderTop: '1px solid #334155', borderBottom: '1px solid #334155' }}>
+                <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9.5, fontWeight: '700', color: '#334155', width: 40 }}>S.No</th>
+                <th style={{ textAlign: 'left', padding: '6px 6px', fontSize: 9.5, fontWeight: '700', color: '#334155' }}>Item Description</th>
+                {showHsn && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9.5, fontWeight: '700', color: '#334155', width: 70 }}>HSN/SAC</th>}
+                <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9.5, fontWeight: '700', color: '#334155', width: 45 }}>Qty</th>
+                <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9.5, fontWeight: '700', color: '#334155', width: 75 }}>Rate</th>
+                {showDisc && <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9.5, fontWeight: '700', color: '#334155', width: 55 }}>Disc.</th>}
+                {showGst && <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9.5, fontWeight: '700', color: '#334155', width: 65 }}>SGST</th>}
+                {showGst && <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9.5, fontWeight: '700', color: '#334155', width: 65 }}>CGST</th>}
+                <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9.5, fontWeight: '700', color: '#334155', width: 85 }}>Amount</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item, i) => (
-                <tr key={i} style={{ borderBottom: '0.3px solid #ddd' }}>
-                  <td style={{ padding: '4px', textAlign: 'center', fontSize: 10, color: '#666' }}>{i + 1}</td>
-                  <td style={{ padding: '4px', fontSize: 11 }}>{item.name}</td>
-                  {showHsn && <td style={{ padding: '4px', textAlign: 'center', fontSize: 10, color: '#666' }}>{item.hsn}</td>}
-                  <td style={{ padding: '4px', textAlign: 'center' }}>{item.qty}</td>
-                  <td style={{ padding: '4px', textAlign: 'right' }}>{fmt(item.rate)}</td>
-                  {showDisc && <td style={{ padding: '4px', textAlign: 'right', fontSize: 10, color: '#666' }}>{item.disc}%</td>}
-                  {showGst && <td style={{ padding: '4px', textAlign: 'right', fontSize: 10, color: '#666' }}>{fmt(item.gst / 2)}</td>}
-                  {showGst && <td style={{ padding: '4px', textAlign: 'right', fontSize: 10, color: '#666' }}>{fmt(item.gst / 2)}</td>}
-                  <td style={{ padding: '4px', textAlign: 'right', fontWeight: 'bold' }}>{fmt(item.total)}</td>
+                <tr key={i} style={{ borderBottom: '1px solid #E2E8F0' }}>
+                  <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 10, color: '#64748B' }}>{i + 1}</td>
+                  <td style={{ padding: '6px 6px', fontSize: 11, color: '#0F172A', fontWeight: '500' }}>{item.name}</td>
+                  {showHsn && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 10, color: '#64748B' }}>{item.hsn}</td>}
+                  <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 11, color: '#0F172A' }}>{item.qty}</td>
+                  <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 11, color: '#0F172A' }}>{fmt(item.rate)}</td>
+                  {showDisc && <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 10, color: '#64748B' }}>{item.disc}%</td>}
+                  {showGst && <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 10.5, color: '#334155' }}>{fmt(item.gst / 2)}</td>}
+                  {showGst && <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 10.5, color: '#334155' }}>{fmt(item.gst / 2)}</td>}
+                  <td style={{ padding: '6px 6px', textAlign: 'right', fontWeight: '700', fontSize: 11, color: '#0F172A' }}>{fmt(item.total)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
-            <div style={{ fontSize: 10, color: '#555', maxWidth: 340 }}>
-              <div style={{ fontWeight: 'bold', marginBottom: 2 }}>Amount in Words</div>
-              <div>Rupees {Math.floor(grand)} Only</div>
-              {terms && <div style={{ marginTop: 8, fontSize: 9, color: '#777' }}>
-                <b>Terms &amp; Conditions</b><br />
-                {terms.split('\n').map((l, i) => <span key={i}>{l}<br /></span>)}
-              </div>}
+          {/* Amount in Words & Totals Section */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 12 }}>
+            <div style={{ fontSize: 10, color: '#334155', maxWidth: 360 }}>
+              <div style={{ fontWeight: '700', textTransform: 'uppercase', color: '#475569', fontSize: 9.5, marginBottom: 2 }}>
+                AMOUNT IN WORDS
+              </div>
+              <div style={{ fontSize: 11, color: '#0F172A' }}>Rupees {Math.floor(grand)} Only</div>
+              {terms && (
+                <div style={{ marginTop: 10, fontSize: 9, color: '#64748B' }}>
+                  <b style={{ color: '#475569' }}>Terms &amp; Conditions</b><br />
+                  {terms.split('\n').map((l, i) => <span key={i}>{l}<br /></span>)}
+                </div>
+              )}
             </div>
-            <div style={{ minWidth: 200 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 11 }}><span>Sub Total</span><span>{fmt(subtotal)}</span></div>
-              {showGst && <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 11 }}><span>SGST</span><span>{fmt(totalGst / 2)}</span></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: 11 }}><span>CGST</span><span>{fmt(totalGst / 2)}</span></div>
-              </>}
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontWeight: 'bold', fontSize: 14, borderTop: '1px solid #000', marginTop: 4 }}>
-                <span>GRAND TOTAL</span><span>{fmt(grand)}</span>
+
+            <div style={{ minWidth: 230 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: 11, color: '#334155' }}>
+                <span>Sub Total</span><span>{fmt(subtotal)}</span>
+              </div>
+              {showGst && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: 11, color: '#334155' }}>
+                    <span>SGST</span><span>{fmt(totalGst / 2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: 11, color: '#334155' }}>
+                    <span>CGST</span><span>{fmt(totalGst / 2)}</span>
+                  </div>
+                </>
+              )}
+              {/* Highlighted Grand Total Block */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                padding: '6px 8px',
+                fontWeight: 'bold',
+                fontSize: 14,
+                borderTop: '1px solid #0F172A',
+                borderBottom: '1px solid #0F172A',
+                background: '#F1F5F9',
+                marginTop: 6,
+                color: '#0F172A',
+              }}>
+                <span>GRAND TOTAL</span>
+                <span>{fmt(grand)}</span>
               </div>
             </div>
           </div>
 
-          <div style={{ borderTop: '0.8px solid #000', marginTop: 10, paddingTop: 6, display: 'flex', gap: 24, fontSize: 10 }}>
-            <div><b>PAYMENT STATUS</b><br />PAID</div>
-            <div><b>AMOUNT PAID</b><br />{fmt(grand)}</div>
-            <div><b>BALANCE DUE</b><br />{fmt(0)}</div>
-            <div><b>MODE</b><br />CASH</div>
+          {/* Clean Payment Summary Section */}
+          <div style={{
+            background: '#F8FAFC',
+            border: '1px solid #CBD5E1',
+            borderRadius: 4,
+            marginTop: 14,
+            padding: '8px 14px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            fontSize: 10,
+          }}>
+            <div>
+              <span style={{ fontSize: 9, color: '#475569', fontWeight: '700' }}>PAYMENT STATUS</span><br />
+              <b style={{ color: '#16A34A', fontSize: 11 }}>PAID</b>
+            </div>
+            <div>
+              <span style={{ fontSize: 9, color: '#475569', fontWeight: '700' }}>AMOUNT PAID</span><br />
+              <b style={{ color: '#0F172A', fontSize: 11 }}>{fmt(grand)}</b>
+            </div>
+            <div>
+              <span style={{ fontSize: 9, color: '#475569', fontWeight: '700' }}>BALANCE DUE</span><br />
+              <b style={{ color: '#0F172A', fontSize: 11 }}>{fmt(0)}</b>
+            </div>
+            <div>
+              <span style={{ fontSize: 9, color: '#475569', fontWeight: '700' }}>MODE</span><br />
+              <b style={{ color: '#0F172A', fontSize: 11 }}>CASH</b>
+            </div>
           </div>
 
+          {/* Footer */}
           {footerLayout !== 'none' && (
-            <div style={{ borderTop: '0.8px solid #000', marginTop: 10, paddingTop: 6, textAlign: footerLayout === 'text_left' ? 'left' : 'center', fontSize: 10, color: '#555' }}>
-              <b>{footer.toUpperCase()}</b>
-              <div style={{ marginTop: 2, fontSize: 9 }}>Date: {today} | Bill Ref: {invoiceNo}</div>
+            <div style={{
+              borderTop: '1px solid #E2E8F0',
+              marginTop: 14,
+              paddingTop: 8,
+              textAlign: footerLayout === 'text_left' ? 'left' : 'center',
+              fontSize: 10,
+              color: '#475569',
+            }}>
+              <b style={{ color: '#334155' }}>{footer.toUpperCase()}</b>
+              <div style={{ marginTop: 2, fontSize: 9, color: '#64748B' }}>
+                Date: {today} | Bill Ref: {invoiceNo}
+              </div>
             </div>
           )}
 
           {showSignature && (
-            <div style={{ borderTop: '0.8px solid #000', marginTop: 14, paddingTop: 18, display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#555' }}>
+            <div style={{
+              borderTop: '1px solid #CBD5E1',
+              marginTop: 18,
+              paddingTop: 22,
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: 10,
+              color: '#475569',
+            }}>
               <span>Prepared by</span>
               <span>Checked by</span>
               <span>Authorised Signatory</span>
@@ -820,7 +919,7 @@ export default function Settings() {
             <button
               onClick={save}
               disabled={saving}
-              className="hidden min-h-11 items-center justify-center gap-2 rounded-xl bg-[var(--ink)] px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--ink-secondary)] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 sm:flex"
+              className="hidden min-h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white shadow-md shadow-indigo-600/25 transition-all hover:bg-indigo-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 sm:flex"
             >
               {saving
                 ? <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />Saving…</>
@@ -840,12 +939,12 @@ export default function Settings() {
                 onClick={() => setTab(id)}
                 className={`group flex min-h-[58px] items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-all sm:px-3 lg:min-h-11 ${
                   tab === id
-                    ? 'bg-[var(--surface-hover)] text-[var(--ink)] ring-1 ring-inset ring-[var(--line)]'
+                    ? 'bg-[var(--surface-hover)] text-[var(--ink)] ring-1 ring-inset ring-indigo-500/30'
                     : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
                 }`}
               >
                 <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-colors ${
-                  tab === id ? 'bg-[var(--ink)] text-white shadow-sm' : 'bg-[var(--surface-hover)] text-[var(--muted)] group-hover:bg-slate-200'
+                  tab === id ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20' : 'bg-[var(--surface-hover)] text-[var(--muted)] group-hover:bg-slate-200 dark:group-hover:bg-slate-700'
                 }`}>
                   <Icon size={16} />
                 </span>
@@ -870,7 +969,7 @@ export default function Settings() {
         <button
           onClick={save}
           disabled={saving}
-          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--ink)] px-4 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[var(--ink-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-md shadow-indigo-600/25 transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saving
             ? <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />Saving changes…</>

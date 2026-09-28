@@ -124,10 +124,13 @@ function KpiCard({
       'bg-[var(--primary-light)] text-[var(--primary)] border-[var(--primary-border)]',
 
     success:
-      'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+      'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
+
+    teal:
+      'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
 
     warning:
-      'bg-amber-500/10 text-amber-600 border-amber-500/20',
+      'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
 
     neutral:
       'bg-[var(--surface-elevated)] text-[var(--ink-secondary)] border-[var(--line)]',
@@ -601,14 +604,14 @@ export default function Dashboard() {
             label="Manage inventory"
             description="Review stock and products"
             icon={Package}
-            onClick={() => navigate('/inventory')}
+            onClick={() => navigate('/inventory/products')}
           />
 
           <QuickAction
             label="Customers"
             description="View customer accounts"
             icon={Users}
-            onClick={() => navigate('/customers')}
+            onClick={() => navigate('/parties/customers')}
           />
 
           <QuickAction
@@ -788,7 +791,7 @@ export default function Dashboard() {
             subtitle={`${data.out_of_stock || 0} out of stock · ${data.low_stock_count || 0} low stock`}
             action={
               <button
-                onClick={() => navigate('inventory/stock')}
+                onClick={() => navigate('/inventory/stock')}
                 className="flex min-h-8 items-center gap-1 text-xs font-bold text-[var(--primary)]"
               >
                 View all
@@ -861,7 +864,7 @@ export default function Dashboard() {
             subtitle={`Latest ${recentBills.length} transactions`}
             action={
               <button
-                onClick={() => navigate('sales/invoices')}
+                onClick={() => navigate('/sales/invoices')}
                 className="flex min-h-8 items-center gap-1 text-xs font-bold text-[var(--primary)]"
               >
                 View all

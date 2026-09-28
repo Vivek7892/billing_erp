@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from datetime import timedelta
 
@@ -471,9 +472,9 @@ SECURE_PROXY_SSL_HEADER = (
 
 SECURE_SSL_REDIRECT = config(
     'SECURE_SSL_REDIRECT',
-    default=not DEBUG,
+    default=not DEBUG and ('test' not in sys.argv),
     cast=bool
-)
+) and ('test' not in sys.argv)
 
 
 SESSION_COOKIE_SECURE = not DEBUG
