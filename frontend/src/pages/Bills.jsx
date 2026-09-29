@@ -5,6 +5,7 @@ import invoiceService from '../features/billing/api/invoiceService'
 import settingsService from '../features/settings/api/settingsService'
 import { Spinner, ConfirmDialog } from '../components/UI'
 import toast from 'react-hot-toast'
+import InvoiceDocument from '../components/InvoiceDocument'
 
 import {
   Eye,
@@ -256,10 +257,10 @@ function ShareMenu({ bill, shopName, onClose }) {
 
   return (
     <div
-      className="absolute right-0 top-11 z-[70] w-52 overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-lg"
+      className=" absolute right-0 top-10 z-50 w-44 overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] shadow-xl"
       onClick={e => e.stopPropagation()}
     >
-      <div className="px-3 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--muted-light)]">
+      <div className="border-b border-[var(--line)] px-3 py-2.5 text-sm font-semibold text-[var(--ink-secondary)]">
         Share invoice
       </div>
 
@@ -361,14 +362,14 @@ function StatusPill({ bill }) {
     refunded: {
       label: 'Refunded',
       icon: RefundIcon,
-      className: 'bg-slate-500 text-white',
+      className: 'bg-purple-50 text-purple-700 border border-purple-200',
     },
   }
 
   const item = config[status] || {
     label: status || 'Unknown',
     icon: AlertCircle,
-    className: 'bg-gray-400 text-white',
+    className: 'bg-white text-slate-700 border border-slate-200',
   }
 
   const Icon = item.icon
@@ -403,7 +404,7 @@ function PaymentBadge({ method }) {
   return (
     <span
       className={`inline-flex items-center rounded-sm px-2 py-1 text-[11px] font-semibold ${
-        styles[value] || 'bg-slate-400 text-white'
+        styles[value] || 'bg-blue-50 text-blue-700 border border-blue-200'
       }`}
     >
       {paymentLabel(method)}
@@ -542,10 +543,13 @@ function InvoiceActions({
 
 function InvoiceModal({
   selected,
+  settings,
   shopName,
   onClose,
 }) {
   const [shareOpen, setShareOpen] = useState(false)
+  const defaultMode = settings?.invoice_template === 'thermal_80' ? 'thermal' : 'a4'
+  const [modalMode, setModalMode] = useState(defaultMode)
 
   if (!selected) return null
 
@@ -555,317 +559,90 @@ function InvoiceModal({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-[var(--surface)] shadow-lg"
+        className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-[var(--surface)] shadow-2xl border border-[var(--line)]"
         onClick={e => e.stopPropagation()}
       >
-        {/* Modal header */}
-        <div className="border-b border-[var(--line-subtle)] bg-[var(--surface)] px-4 py-3.5 sm:px-6 sm:py-4">
+        {/* Modal top action bar */}
+        <div className="border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3 sm:px-6">
           <div className="flex items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-[#4338CA]">
-                <Receipt size={19} />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
+                <Receipt size={18} />
               </div>
 
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted-light)]">
-                  Invoice
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
+                  Invoice Details
                 </p>
-
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-lg font-bold text-[var(--ink)]">
+                  <h2 className="text-base font-bold text-[var(--ink)]">
                     {selected.invoice_number}
                   </h2>
-
                   <StatusPill bill={selected} />
                 </div>
               </div>
             </div>
 
-            <button
-              onClick={onClose}
-              className="icon-btn"
-            >
-              <XCircle size={16} />
-            </button>
-          </div>
-
-          <div className="mt-3 flex flex-wrap gap-2 sm:mt-4">
-            <button
-              onClick={() => openPdf(selected.id, false)}
-              className="inline-flex items-center gap-2 rounded-md border border-[var(--line)] px-3.5 py-2 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
-            >
-              <Download size={14} />
-              Download PDF
-            </button>
-
-            <button
-              onClick={() => openPdf(selected.id, true)}
-              className="inline-flex items-center gap-2 rounded-md border border-[var(--line)] px-3.5 py-2 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
-            >
-              <Printer size={14} />
-              Thermal
-            </button>
-
-            <div className="relative">
+            <div className="flex items-center gap-2">
               <button
-                onClick={e => {
-                  e.stopPropagation()
-                  setShareOpen(v => !v)
-                }}
-                className="inline-flex items-center gap-2 rounded-md border border-[var(--line)] px-3.5 py-2 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
+                onClick={() => openPdf(selected.id, false)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
+                title="Download A4 PDF"
               >
-                <Share2 size={14} />
-                Share
+                <Download size={14} />
+                <span>PDF</span>
               </button>
 
-              {shareOpen && (
-                <ShareMenu
-                  bill={selected}
-                  shopName={shopName}
-                  onClose={() => setShareOpen(false)}
-                />
-              )}
+              <button
+                onClick={() => openPdf(selected.id, true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
+                title="Thermal receipt print"
+              >
+                <Printer size={14} />
+                <span>Thermal</span>
+              </button>
+
+              <div className="relative">
+                <button
+                  onClick={e => {
+                    e.stopPropagation()
+                    setShareOpen(v => !v)
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
+                >
+                  <Share2 size={14} />
+                  <span>Share</span>
+                </button>
+
+                {shareOpen && (
+                  <ShareMenu
+                    bill={selected}
+                    shopName={shopName}
+                    onClose={() => setShareOpen(false)}
+                  />
+                )}
+              </div>
+
+              <button
+                onClick={onClose}
+                className="icon-btn text-[var(--muted)] hover:text-[var(--ink)]"
+                aria-label="Close modal"
+              >
+                <XCircle size={18} />
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Modal body */}
-        <div className="overflow-y-auto bg-[var(--surface-elevated)] p-3 sm:p-6">
-          {/* Cancellation Notice */}
-          {selected.status === 'cancelled' && (
-            <div className="mb-4 rounded-xl border border-red-200 bg-red-50/80 p-4 dark:border-red-900/50 dark:bg-red-950/30">
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400">
-                  <Ban size={18} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-700 dark:bg-red-900/60 dark:text-red-300">
-                      Status: CANCELLED
-                    </span>
-                    <span className="text-[11px] font-medium text-red-600/80 dark:text-red-400/80">
-                      Original document preserved in ledger
-                    </span>
-                  </div>
-                  <div className="mt-2.5 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2 lg:grid-cols-3">
-                    <div>
-                      <span className="font-semibold text-red-900 dark:text-red-300">Cancelled by: </span>
-                      <span className="text-red-800 dark:text-red-200">{selected.cancelled_by_name || selected.cancelled_by || 'User'}</span>
-                    </div>
-                    <div>
-                      <span className="font-semibold text-red-900 dark:text-red-300">Cancelled at: </span>
-                      <span className="text-red-800 dark:text-red-200">{formatDate(selected.cancelled_at)} {formatTime(selected.cancelled_at)}</span>
-                    </div>
-                    <div className="sm:col-span-2 lg:col-span-3">
-                      <span className="font-semibold text-red-900 dark:text-red-300">Reason: </span>
-                      <span className="text-red-800 dark:text-red-200">{selected.cancel_reason || 'Customer requested cancellation'}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Information cards */}
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4">
-            <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
-              <div className="flex items-center gap-2 text-[var(--muted-light)]">
-                <UserRound size={14} />
-                <span className="text-[10px] font-bold uppercase tracking-wider">
-                  Customer
-                </span>
-              </div>
-
-              <p className="mt-2 truncate font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
-                {selected.customer_name || 'Walk-in customer'}
-              </p>
-
-              {selected.customer_phone && (
-                <p className="mt-1 text-xs text-[var(--muted-light)]">
-                  {selected.customer_phone}
-                </p>
-              )}
-            </div>
-
-            <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
-              <div className="flex items-center gap-2 text-[var(--muted-light)]">
-                <CalendarDays size={14} />
-                <span className="text-[10px] font-bold uppercase tracking-wider">
-                  Date
-                </span>
-              </div>
-
-              <p className="mt-2 font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
-                {formatDate(selected.created_at)}
-              </p>
-
-              <p className="mt-1 text-xs text-[var(--muted-light)]">
-                {formatTime(selected.created_at)}
-              </p>
-            </div>
-
-            <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
-              <div className="flex items-center gap-2 text-[var(--muted-light)]">
-                <CreditCard size={14} />
-                <span className="text-[10px] font-bold uppercase tracking-wider">
-                  Payment
-                </span>
-              </div>
-
-              <div className="mt-2">
-                <PaymentBadge method={selected.payment_method} />
-              </div>
-            </div>
-
-            <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
-              <div className="flex items-center gap-2 text-[var(--muted-light)]">
-                <CircleDollarSign size={14} />
-                <span className="text-[10px] font-bold uppercase tracking-wider">
-                  Total
-                </span>
-              </div>
-
-              <p className="mt-2 font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
-                {fmt(selected.grand_total)}
-              </p>
-
-              <p className="mt-1 text-xs text-[var(--muted-light)]">
-                {selected.items?.length || 0} items
-              </p>
-            </div>
-          </div>
-
-          {/* Items */}
-          <div className="mt-4 overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)]">
-            <div className="flex items-center justify-between border-b border-[var(--line-subtle)] px-4 py-3">
-              <div>
-                <h3 className="font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
-                  Invoice items
-                </h3>
-                <p className="mt-0.5 text-[11px] text-[var(--muted-light)]">
-                  Products included in this invoice
-                </p>
-              </div>
-
-              <span className="rounded-sm bg-[var(--surface-elevated)] border border-[var(--line)] px-2.5 py-1 text-[11px] font-semibold text-[var(--muted)]">
-                {selected.items?.length || 0} items
-              </span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[650px] text-sm">
-                <thead className="bg-[var(--surface-elevated)]">
-                  <tr className="text-left text-[10px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
-                    <th className="px-4 py-3">Product</th>
-                    <th className="px-3 py-3 text-center">
-                      Qty
-                    </th>
-                    <th className="px-3 py-3 text-right">
-                      Rate
-                    </th>
-                    <th className="px-3 py-3 text-right">
-                      Discount
-                    </th>
-                    <th className="px-4 py-3 text-right">
-                      Amount
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-[var(--line-subtle)]">
-                  {selected.items?.map((item, i) => (
-                    <tr key={i} className="hover:bg-[var(--surface-elevated)]">
-                      <td className="px-4 py-3">
-                        <p className="font-semibold text-[var(--ink)]">
-                          {item.product_name}
-                        </p>
-
-                        <p className="mt-0.5 text-[10px] text-[var(--muted-light)]">
-                          GST {item.gst_percent || 0}%
-                        </p>
-                      </td>
-
-                      <td className="px-3 py-3 text-center text-[var(--muted)]">
-                        {item.quantity}
-                      </td>
-
-                      <td className="px-3 py-3 text-right text-[var(--muted)]">
-                        {fmt(item.unit_price)}
-                      </td>
-
-                      <td className="px-3 py-3 text-right text-[var(--muted)]">
-                        {item.discount_percent || 0}%
-                      </td>
-
-                      <td className="px-4 py-3 text-right font-bold text-[var(--ink)]">
-                        {fmt(item.total)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Summary */}
-          <div className="mt-4 flex justify-end">
-            <div className="w-full max-w-md rounded-md border border-[var(--line)] bg-[var(--surface)] p-5">
-              <h3 className="mb-4 font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
-                Payment summary
-              </h3>
-
-              <div className="space-y-2.5 text-sm">
-                <div className="flex justify-between text-[var(--muted)]">
-                  <span>Subtotal</span>
-                  <strong className="text-[var(--ink)]">
-                    {fmt(selected.subtotal)}
-                  </strong>
-                </div>
-
-                <div className="flex justify-between text-[var(--muted)]">
-                  <span>Discount</span>
-                  <strong className="text-red-500">
-                    -{fmt(selected.discount_amount)}
-                  </strong>
-                </div>
-
-                <div className="flex justify-between text-[var(--muted)]">
-                  <span>GST</span>
-                  <strong className="text-[var(--ink)]">
-                    {fmt(selected.tax_amount)}
-                  </strong>
-                </div>
-
-                <div className="my-3 border-t border-dashed border-[var(--line)]" />
-
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-[var(--ink-secondary)]">
-                    Grand total
-                  </span>
-
-                  <span className="font-mono text-xl font-semibold tabular-nums text-[#0F172A]">
-                    {fmt(selected.grand_total)}
-                  </span>
-                </div>
-
-                <div className="flex justify-between pt-1 text-[var(--muted)]">
-                  <span>Paid</span>
-                  <strong className="text-emerald-600 dark:text-emerald-400">
-                    {fmt(selected.paid_amount)}
-                  </strong>
-                </div>
-
-                {Number(selected.balance_due || 0) > 0 && (
-                  <div className="flex justify-between text-[var(--muted)]">
-                    <span>Balance due</span>
-                    <strong className="text-red-600 dark:text-red-400">
-                      {fmt(selected.balance_due)}
-                    </strong>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+        {/* Modal body: settings-driven invoice */}
+        <div className="overflow-y-auto bg-[var(--surface-elevated)] p-4 sm:p-6">
+          <InvoiceDocument
+            invoice={selected}
+            settings={settings}
+            mode={modalMode}
+            onModeChange={setModalMode}
+            showModePicker={true}
+          />
         </div>
       </div>
     </div>
@@ -1012,6 +789,7 @@ export default function Bills() {
 
   const [shopName, setShopName] =
     useState('Dreamwithtech')
+  const [shopSettings, setShopSettings] = useState({})
 
   const [filterOpen, setFilterOpen] = useState(false)
 
@@ -1023,8 +801,11 @@ export default function Bills() {
     settingsService
       .getAll()
       .then(settings => {
-        if (settings?.shop_name) {
-          setShopName(settings.shop_name)
+        if (settings) {
+          setShopSettings(settings)
+          if (settings.shop_name) {
+            setShopName(settings.shop_name)
+          }
         }
       })
       .catch(() => {})
@@ -1168,9 +949,9 @@ export default function Bills() {
             HEADER
         ================================================= */}
 
-        <div className="flex flex-col gap-3 rounded-md border border-[var(--line)] bg-[var(--surface)] px-4 py-4 shadow-none sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <div className=" flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
           <div>
-            <div className="mb-1.5 flex items-center gap-2 text-[11px] font-semibold text-[var(--muted-light)]">
+            <div className=" mb-1 flex items-center gap-2 text-[var(--muted-light)]">
               <Receipt size={13} />
               <span>Sales</span>
               <span>/</span>
@@ -1190,7 +971,7 @@ export default function Bills() {
 
           <button
             onClick={() => navigate('/billing/new')}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-sm bg-[#4338CA] px-4 py-2.5 text-sm font-semibold text-white shadow-none transition hover:bg-[#3730A3] active:scale-[0.98] sm:w-auto"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-none transition hover:bg-blue-700 active:scale-[0.98] sm:w-auto"
           >
             <Plus size={17} />
             New Bill
@@ -1198,41 +979,48 @@ export default function Bills() {
         </div>
 
         {/* =================================================
-            KPI CARDS
+            ERP METRICS SUMMARY (Table-Based)
         ================================================= */}
 
-        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <StatCard
-            icon={IndianRupee}
-            label="Total sales"
-            value={fmt(totals.revenue)}
-            helper={`${totals.completed} completed invoices`}
-            tone="blue"
-          />
-
-          <StatCard
-            icon={CreditCard}
-            label="Collected"
-            value={fmt(totals.paid)}
-            helper="Based on loaded invoices"
-            tone="green"
-          />
-
-          <StatCard
-            icon={Receipt}
-            label="GST collected"
-            value={fmt(totals.tax)}
-            helper="Tax across loaded invoices"
-            tone="violet"
-          />
-
-          <StatCard
-            icon={ShoppingBag}
-            label="Average bill"
-            value={fmt(totals.average)}
-            helper="Completed invoices"
-            tone="amber"
-          />
+        <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)]">
+          <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
+            <div className="p-3 sm:p-3.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                Total Sales
+              </span>
+              <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+                {fmt(totals.revenue)}
+              </p>
+              <p className="text-[10px] text-[var(--muted)]">{totals.completed} completed bills</p>
+            </div>
+            <div className="p-3 sm:p-3.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                Collected
+              </span>
+              <p className="mt-1 font-mono text-lg font-bold text-green-600">
+                {fmt(totals.paid)}
+              </p>
+              <p className="text-[10px] text-[var(--muted)]">Loaded invoices</p>
+            </div>
+            <div className="p-3 sm:p-3.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                GST / Tax
+              </span>
+              <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+                {fmt(totals.tax)}
+              </p>
+              <p className="text-[10px] text-[var(--muted)]">Across loaded bills</p>
+            </div>
+            <div className="p-3 sm:p-3.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                Average Bill
+              </span>
+              <p className="mt-1 font-mono text-lg font-bold text-blue-600">
+                {fmt(totals.average)}
+              </p>
+              <p className="text-[10px] text-[var(--muted)]">Average per sale</p>
+            </div>
+          </div>
         </div>
 
         {/* =================================================
@@ -1249,7 +1037,7 @@ export default function Bills() {
                 onClick={() => setDateFilter(f.value)}
                 className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
                   dateFilter === f.value
-                    ? 'bg-[#4338CA] border-blue-600 text-white'
+                    ? 'bg-blue-600 border-blue-600 text-white'
                     : 'border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
                 }`}
               >
@@ -1267,7 +1055,7 @@ export default function Bills() {
               />
 
               <input
-                className="w-full rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] py-2.5 pl-10 pr-3 text-sm outline-none transition placeholder:text-[var(--muted-light)] focus:border-[#818CF8] focus:bg-[var(--surface)] focus:ring-4 focus:ring-indigo-50"
+                className="w-full rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] py-2.5 pl-10 pr-3 text-sm outline-none transition placeholder:text-[var(--muted-light)] focus:border-blue-500 focus:bg-[var(--surface)] focus:ring-4 focus:ring-blue-50 dark:focus:ring-blue-950/40"
                 placeholder="Search invoice, customer or phone..."
                 value={search}
                 onChange={e => {
@@ -1287,7 +1075,7 @@ export default function Bills() {
                 }}
                 className={`inline-flex h-[42px] items-center justify-center gap-1.5 rounded-md border px-3 text-xs font-semibold transition ${
                   statusFilter
-                    ? 'border-indigo-200 bg-indigo-50 text-[#3730A3]'
+                    ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300'
                     : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
                 }`}
                 title="Filter invoices"
@@ -1297,7 +1085,7 @@ export default function Bills() {
                 <span className="hidden sm:inline">Filter</span>
 
                 {statusFilter && (
-                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#4338CA] px-1 text-[9px] text-white">
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] text-white">
                     1
                   </span>
                 )}
@@ -1322,7 +1110,7 @@ export default function Bills() {
                       }}
                       className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-xs font-semibold ${
                         statusFilter === filter.value
-                          ? 'bg-indigo-50 text-[#3730A3]'
+                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
                           : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
                       }`}
                     >
@@ -1468,7 +1256,7 @@ export default function Bills() {
                   {visibleBills.map(bill => (
                     <tr
                       key={bill.id}
-                      className="group transition hover:bg-indigo-50"
+                      className="group transition hover:bg-blue-50/50 dark:hover:bg-slate-800/40"
                     >
                       {/* Invoice */}
                       <td className="px-5 py-3.5">
@@ -1476,7 +1264,7 @@ export default function Bills() {
                           onClick={() =>
                             navigate(`/invoice/${bill.id}`)
                           }
-                          className="font-mono text-xs font-bold text-[#4338CA] hover:text-[#312E81] hover:underline"
+                          className="font-mono text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline"
                         >
                           {bill.invoice_number}
                         </button>
@@ -1640,6 +1428,7 @@ export default function Bills() {
 
       <InvoiceModal
         selected={selected}
+        settings={shopSettings}
         shopName={shopName}
         onClose={() => setSelected(null)}
       />

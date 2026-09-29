@@ -14,7 +14,7 @@ export default function AppFooter({ shopName }) {
 
   return (
     <footer
-      className="border-t border-[var(--line-subtle)] bg-[var(--bg-subtle)] text-[var(--muted-light)]" 
+      className="mt-auto border-t border-[var(--line-subtle)] bg-[var(--surface)] text-[var(--muted-light)]" 
     >
       <div
         className="

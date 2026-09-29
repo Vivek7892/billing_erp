@@ -129,7 +129,7 @@ function Guard({ children, adminOnly = false, roles }) {
     return <Navigate to="/login" replace />
   }
 
-  if (adminOnly && user.role !== 'admin') {
+  if (adminOnly && !['admin', 'owner'].includes(user.role)) {
     return <Navigate to="/" replace />
   }
 

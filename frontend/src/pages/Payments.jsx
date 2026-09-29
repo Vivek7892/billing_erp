@@ -448,54 +448,67 @@ export default function Payments() {
         </button>
       </header>
 
-      <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5">
-        <SummaryCard
-          title="Collected"
-          value={formatCurrency(totalCollected)}
-          description="Non-credit payments"
-          count={bills.filter(bill => bill.payment_method !== 'credit').length}
-          icon={CircleDollarSign}
-          iconClass="bg-[var(--payment-cash-bg)] text-[var(--payment-cash-text)] border-[var(--payment-cash-border)]"
-        />
+      {/* =====================================================
+          ERP SUMMARY (Table-Based)
+      ====================================================== */}
+      <section className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+        <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          Payment & Collection Summary
+        </div>
+        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-5 sm:divide-y-0 sm:divide-x">
+          <div className="p-3 sm:p-3.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Collected
+            </span>
+            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-green-600">
+              {formatCurrency(totalCollected)}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">Non-credit receipts</p>
+          </div>
 
-        <SummaryCard
-          title="Credit due"
-          value={formatCurrency(totalCredit)}
-          description="Outstanding credit sales"
-          count={bills.filter(bill => bill.payment_method === 'credit').length}
-          icon={Wallet}
-          iconClass="bg-[var(--payment-credit-bg)] text-[var(--payment-credit-text)] border-[var(--payment-credit-border)]"
-        />
+          <div className="p-3 sm:p-3.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Credit Due
+            </span>
+            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-red-600">
+              {formatCurrency(totalCredit)}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">Receivable balances</p>
+          </div>
 
-        <SummaryCard
-          title="Transactions"
-          value={totalTransactions.toLocaleString('en-IN')}
-          description="Total recorded bills"
-          icon={Receipt}
-          iconClass="bg-[var(--surface-elevated)] text-[var(--muted)] border-[var(--line)]"
-        />
+          <div className="p-3 sm:p-3.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Transactions
+            </span>
+            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[var(--ink)]">
+              {totalTransactions.toLocaleString('en-IN')}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">Total recorded bills</p>
+          </div>
 
-        {summary.slice(0, 2).map(item => {
-          const Icon = item.icon
-
-          return (
-            <SummaryCard
+          {summary.slice(0, 2).map(item => (
+            <div
               key={item.key}
-              title={item.label}
-              value={formatCurrency(item.total)}
-              description={item.description}
-              count={item.count}
-              icon={Icon}
-              active={filter === item.key}
-              onClick={() =>
-                setFilter(current =>
-                  current === item.key ? 'all' : item.key,
-                )
-              }
-              iconClass={item.iconClass}
-            />
-          )
-        })}
+              onClick={() => setFilter(c => (c === item.key ? 'all' : item.key))}
+              className={`p-3 sm:p-3.5 cursor-pointer transition ${
+                filter === item.key ? 'bg-blue-50/50 dark:bg-blue-950/30' : 'hover:bg-[var(--surface-elevated)]'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                  {item.label}
+                </span>
+                {filter === item.key && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-600"></span>
+                )}
+              </div>
+              <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-blue-600">
+                {formatCurrency(item.total)}
+              </p>
+              <p className="text-[10px] text-[var(--muted)]">{item.count} bills ({item.label})</p>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-card)]">
@@ -678,7 +691,7 @@ export default function Payments() {
                     <th>Customer</th>
                     <th>Date</th>
                     <th>Method</th>
-                    <th>Amount</th>
+                    <th className="num-col">Amount</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -687,7 +700,7 @@ export default function Payments() {
                   {filteredBills.map(bill => (
                     <tr key={bill.id}>
                       <td>
-                        <span className="font-mono text-xs font-bold text-[var(--primary)]">
+                        <span className="font-mono text-xs font-bold text-blue-600">
                           {bill.invoice_number || '—'}
                         </span>
                       </td>
@@ -707,7 +720,7 @@ export default function Payments() {
                       </td>
 
                       <td>
-                        <span className="text-xs text-[var(--muted)]">
+                        <span className="text-xs text-[var(--muted)] font-mono">
                           {formatDate(bill.created_at || bill.date)}
                         </span>
                       </td>
@@ -716,10 +729,8 @@ export default function Payments() {
                         <PaymentBadge method={bill.payment_method} />
                       </td>
 
-                      <td>
-                        <span className="text-sm font-bold text-[var(--ink)]">
-                          {formatCurrency(bill.grand_total)}
-                        </span>
+                      <td className="num-col font-mono text-sm font-bold text-[var(--ink)]">
+                        {formatCurrency(bill.grand_total)}
                       </td>
 
                       <td>

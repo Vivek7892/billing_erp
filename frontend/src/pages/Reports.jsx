@@ -1,14 +1,58 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import api from '../api'
-import { Card, PageHeader, Spinner } from '../components/UI'
-import { Download, AlertCircle, RefreshCw } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts'
+import { Card, PageHeader, Spinner, EmptyState } from '../components/UI'
+import {
+  Download,
+  AlertCircle,
+  RefreshCw,
+  Calendar,
+  TrendingUp,
+  FileSpreadsheet,
+  FileText,
+  DollarSign,
+  Package,
+  Users,
+  CreditCard,
+  Receipt,
+  Percent,
+  CheckCircle,
+} from 'lucide-react'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  CartesianGrid,
+} from 'recharts'
 import toast from 'react-hot-toast'
 
-const fmt = v => `₹${Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+const fmtCurrency = v =>
+  `₹${Number(v || 0).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`
+
+const fmtShort = v =>
+  `₹${Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
 
 const today = new Date().toISOString().slice(0, 10)
-const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
+const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+  .toISOString()
+  .slice(0, 10)
+
+const TABS = [
+  { key: 'sales', label: 'Sales Summary', icon: TrendingUp },
+  { key: 'products', label: 'Product Sales', icon: Package },
+  { key: 'profit', label: 'Profit & Loss', icon: DollarSign },
+  { key: 'gst', label: 'GST Tax Summary', icon: Percent },
+  { key: 'customers', label: 'Customer Receivables', icon: Users },
+  { key: 'payments', label: 'Payment Modes', icon: CreditCard },
+  { key: 'expenses', label: 'Operating Expenses', icon: Receipt },
+]
 
 export default function Reports() {
   const [tab, setTab] = useState('sales')
@@ -30,18 +74,18 @@ export default function Reports() {
   }
 
   const reportNames = {
-    sales: 'sales-report',
+    sales: 'sales-summary-report',
     products: 'product-sales-report',
-    profit: 'profit-report',
-    gst: 'gst-report',
-    customers: 'customer-credit-report',
-    payments: 'payment-report',
-    expenses: 'expenses-report',
+    profit: 'profit-and-loss-report',
+    gst: 'gst-summary-report',
+    customers: 'customer-credit-receivables-report',
+    payments: 'payment-modes-report',
+    expenses: 'operating-expenses-report',
   }
 
   const load = async () => {
     if (tab !== 'customers' && start > end) {
-      setError('The start date must be before the end date.')
+      setError('Start date cannot be after end date.')
       return
     }
 
@@ -50,90 +94,63 @@ export default function Reports() {
     setError('')
 
     try {
-      const params = tab === 'customers'
-        ? ''
-        : `?start_date=${start}&end_date=${end}`
+      const params =
+        tab === 'customers' ? '' : `?start_date=${start}&end_date=${end}`
 
       const response = await api.get(`${endpoints[tab]}${params}`)
       setData(response.data)
     } catch (err) {
-      const message = err.response?.status === 403
-        ? 'Reports are available to administrators only.'
-        : err.response?.data?.detail ||
-          'Could not load this report. Check the server connection and try again.'
-
+      const message =
+        err.response?.status === 403
+          ? 'Reports are restricted to administrator roles.'
+          : err.response?.data?.detail ||
+            'Failed to generate report from server. Please try again.'
       setError(message)
     } finally {
       setLoading(false)
     }
   }
 
-  const downloadReport = async (format) => {
+  const downloadReport = async format => {
     if (tab !== 'customers' && start > end) {
-      return toast.error('The start date must be before the end date')
+      return toast.error('Start date cannot be after end date')
     }
 
     setExporting(format)
-
     try {
       const params = new URLSearchParams()
-
       if (tab !== 'customers') {
         params.set('start_date', start)
         params.set('end_date', end)
       }
-
-      // `format` is reserved by Django REST Framework.
-      // `export` reaches the report view.
       params.set('export', format)
 
       const { data, headers } = await api.get(
         `${endpoints[tab]}?${params.toString()}`,
-        { responseType: 'blob' }
+        { responseType: 'blob' },
       )
 
-      const blob = new Blob(
-        [data],
-        {
-          type:
-            headers['content-type'] ||
-            (
-              format === 'pdf'
-                ? 'application/pdf'
-                : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
-        }
-      )
+      const blob = new Blob([data], {
+        type:
+          headers['content-type'] ||
+          (format === 'pdf'
+            ? 'application/pdf'
+            : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
+      })
 
       const url = window.URL.createObjectURL(blob)
-
       const link = document.createElement('a')
       link.href = url
-      link.download = `${reportNames[tab]}.${format === 'xlsx' ? 'xlsx' : 'pdf'}`
-
+      link.download = `${reportNames[tab]}_${new Date().toISOString().slice(0, 10)}.${format === 'xlsx' ? 'xlsx' : 'pdf'}`
       document.body.appendChild(link)
       link.click()
       link.remove()
-
       window.URL.revokeObjectURL(url)
+      toast.success(
+        `Report exported as ${format === 'pdf' ? 'PDF' : 'Excel spreadsheet'}`,
+      )
     } catch (err) {
-      let message = 'Could not export this report'
-
-      if (err.response?.data instanceof Blob) {
-        try {
-          const body = JSON.parse(await err.response.data.text())
-          message = body.detail || body.error || message
-        } catch {
-          // Keep standard message for non-JSON responses.
-        }
-      } else {
-        message =
-          err.response?.data?.detail ||
-          err.response?.data?.error ||
-          message
-      }
-
-      toast.error(message)
+      toast.error('Failed to export report')
     } finally {
       setExporting('')
     }
@@ -143,1221 +160,844 @@ export default function Reports() {
     load()
   }, [tab, start, end])
 
-  const tabs = [
-    { key: 'sales', label: 'Sales' },
-    { key: 'products', label: 'Products' },
-    { key: 'profit', label: 'Profit' },
-    { key: 'gst', label: 'GST' },
-    { key: 'customers', label: 'Customer Credit' },
-    { key: 'payments', label: 'Payments' },
-    { key: 'expenses', label: 'Expenses' },
-  ]
-
-  const headerAction = (
-    <div className="flex w-full sm:w-auto gap-2">
-      <button
-        onClick={() => downloadReport('pdf')}
-        disabled={Boolean(exporting)}
-        className="
-          btn-secondary
-          text-sm
-          flex-1
-          sm:flex-none
-          justify-center
-          items-center
-          gap-1
-          min-h-[40px]
-          px-3
-        "
-      >
-        <Download size={14} />
-        {exporting === 'pdf' ? 'Preparing...' : 'PDF'}
-      </button>
-
-      <button
-        onClick={() => downloadReport('xlsx')}
-        disabled={Boolean(exporting)}
-        className="
-          btn-secondary
-          text-sm
-          flex-1
-          sm:flex-none
-          justify-center
-          items-center
-          gap-1
-          min-h-[40px]
-          px-3
-        "
-      >
-        <Download size={14} />
-        {exporting === 'xlsx' ? 'Preparing...' : 'Excel'}
-      </button>
-    </div>
-  )
-
   return (
-    <div className="reports-page w-full min-w-0 space-y-6 pb-10">
+    <div className="reports-page w-full min-w-0 space-y-5 pb-12 text-[var(--ink)]">
+      <style>{`
+        .reports-page .erp-report-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
 
-      {/* PAGE HEADER */}
+        .reports-page .erp-report-table th {
+          padding: 11px 14px;
+          text-align: left;
+          white-space: nowrap;
+          background: var(--surface-elevated);
+          border-bottom: 1px solid var(--line);
+          color: var(--muted-light);
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: .05em;
+          text-transform: uppercase;
+        }
+
+        .reports-page .erp-report-table td {
+          padding: 12px 14px;
+          border-bottom: 1px solid var(--line-subtle);
+          vertical-align: middle;
+          font-size: 13px;
+        }
+
+        .reports-page .erp-report-table tbody tr:hover {
+          background: var(--surface-elevated);
+        }
+
+        .reports-page .erp-report-table tfoot td {
+          padding: 13px 14px;
+          border-top: 2px solid var(--line);
+          border-bottom: 2px solid var(--line);
+          background: var(--surface-elevated);
+          font-weight: 700;
+        }
+      `}</style>
+
+      {/* =====================================================
+          PAGE HEADER
+      ====================================================== */}
       <PageHeader
-        title="Reports"
-        subtitle={`Analyze and export the selected ${
-          tabs.find(item => item.key === tab)?.label || ''
-        } report as PDF or Excel`}
-        action={headerAction}
+        title="Business Intelligence & Reports"
+        subtitle="Comprehensive financial, tax, inventory, and customer receivables analysis."
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => downloadReport('pdf')}
+              disabled={Boolean(exporting)}
+              className="btn-secondary btn-base text-xs flex items-center gap-1.5"
+              title="Download formal A4 PDF Report"
+            >
+              <FileText size={14} className="text-rose-600" />
+              {exporting === 'pdf' ? 'Generating...' : 'Export PDF'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => downloadReport('xlsx')}
+              disabled={Boolean(exporting)}
+              className="btn-secondary btn-base text-xs flex items-center gap-1.5"
+              title="Download formatted Excel workbook"
+            >
+              <FileSpreadsheet size={14} className="text-teal-600" />
+              {exporting === 'xlsx' ? 'Generating...' : 'Export Excel'}
+            </button>
+
+            <button
+              type="button"
+              onClick={load}
+              disabled={loading}
+              className="btn-secondary btn-base text-xs flex items-center gap-1.5"
+              title="Reload report data"
+            >
+              <RefreshCw
+                size={14}
+                className={loading ? 'animate-spin text-indigo-600' : ''}
+              />
+              Refresh
+            </button>
+          </div>
+        }
       />
 
-      {/* REPORT TABS */}
-      <div className="
-        flex
-        flex-nowrap
-        gap-2
-        overflow-x-auto
-        reports-tabs
-        pb-1
-        -mx-1
-        px-1
-        scrollbar-thin
-      ">
-        {tabs.map(t => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`
-              px-4
-              py-2
-              rounded-xl
-              text-sm
-              font-semibold
-              min-h-[42px]
-              transition-all duration-200
-              flex-shrink-0
-              whitespace-nowrap
-              ${
-                tab === t.key
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25 ring-1 ring-indigo-500/20'
-                  : 'bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] hover:border-indigo-300 dark:hover:border-indigo-700'
-              }
-            `}
-          >
-            {t.label}
-          </button>
-        ))}
+      {/* =====================================================
+          REPORT MODULE TABS
+      ====================================================== */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+        {TABS.map(t => {
+          const Icon = t.icon
+          const isActive = tab === t.key
+          return (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => setTab(t.key)}
+              className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap transition-all ${
+                isActive
+                  ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-500'
+                  : 'border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
+              }`}
+            >
+              <Icon size={14} />
+              {t.label}
+            </button>
+          )
+        })}
       </div>
 
-      {/* QUICK DATE FILTERS */}
-      <div className="
-        flex
-        flex-nowrap
-        sm:flex-wrap
-        gap-2
-        overflow-x-auto
-        pb-1
-        -mx-1
-        px-1
-      ">
-        {[
-          ['Today', today, today],
-          ['This month', monthStart, today],
-          [
-            'Last 30 days',
-            new Date(Date.now() - 29 * 86400000)
-              .toISOString()
-              .slice(0, 10),
-            today
-          ]
-        ].map(([label, from, to]) => (
-          <button
-            key={label}
-            className="btn-secondary text-sm flex-shrink-0 min-h-[42px] px-3 col-span-1 bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] hover:border-indigo-300 dark:hover:border-indigo-700" 
-            onClick={() => {
-              setStart(from)
-              setEnd(to)
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* DATE / CALENDAR FILTER */}
+      {/* =====================================================
+          DATE CONTROLS & PRESETS WORKBENCH
+      ====================================================== */}
       {tab !== 'customers' && (
-        <Card className=" p-4 sm:p-5 min-w-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-          <div className=" flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center">
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            {/* Quick date presets */}
+            <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+              <Calendar size={13} className="text-[var(--muted)] mr-1 shrink-0" />
+              {[
+                ['Today', today, today],
+                ['This Month', monthStart, today],
+                [
+                  'Last 30 Days',
+                  new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10),
+                  today,
+                ],
+                [
+                  'Last 90 Days',
+                  new Date(Date.now() - 89 * 86400000).toISOString().slice(0, 10),
+                  today,
+                ],
+              ].map(([label, fDate, tDate]) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => {
+                    setStart(fDate)
+                    setEnd(tDate)
+                  }}
+                  className={`rounded-lg px-2.5 py-1 font-medium whitespace-nowrap transition-colors ${
+                    start === fDate && end === tDate
+                      ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 font-semibold'
+                      : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
 
-            <div className="
-              grid
-              grid-cols-1
-              sm:grid-cols-2
-              gap-3
-              flex-1
-              min-w-0
-            ">
-
-              {/* FROM DATE */}
-              <div className="min-w-0">
-                <label className="
-                  
-                ">
-                  From
-                </label>
-
+            {/* From - To date inputs */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 text-xs">
+                <span className="text-[var(--muted)]">From:</span>
                 <input
                   type="date"
-                  aria-label="Start date"
-                  className="
-                    input
-                    text-sm
-                    w-full
-                    min-h-[42px]
-                  "
                   value={start}
                   max={end}
                   onChange={e => setStart(e.target.value)}
+                  className="input h-9 px-2 text-xs font-mono font-medium"
                 />
               </div>
 
-              {/* TO DATE */}
-              <div className="min-w-0">
-                <label className="
-                  block
-                  text-xs
-                  sm:text-sm
-                  text-[var(--muted)]
-                  mb-1.5
-                ">
-                  To
-                </label>
-
+              <div className="flex items-center gap-1 text-xs">
+                <span className="text-[var(--muted)]">To:</span>
                 <input
                   type="date"
-                  aria-label="End date"
-                  className="
-                    input
-                    text-sm
-                    w-full
-                    min-h-[42px]
-                  "
                   value={end}
                   min={start}
                   onChange={e => setEnd(e.target.value)}
+                  className="input h-9 px-2 text-xs font-mono font-medium"
                 />
               </div>
 
+              <button
+                type="button"
+                onClick={load}
+                className="btn-primary h-9 px-3.5 text-xs font-semibold"
+              >
+                Apply
+              </button>
             </div>
-
-            {/* APPLY BUTTON */}
-            <button
-              onClick={load}
-              disabled={start > end}
-              className="
-                btn-primary
-                text-sm
-                w-full
-                sm:w-auto
-                min-h-[42px]
-                px-5
-                disabled:opacity-50
-                disabled:cursor-not-allowed
-              "
-            >
-              Apply
-            </button>
-
           </div>
-        </Card>
+        </div>
       )}
 
-      {/* CONTENT */}
+      {/* =====================================================
+          REPORT CONTENT BODY
+      ====================================================== */}
       {loading ? (
-        <Spinner />
+        <div className="flex min-h-64 items-center justify-center p-8">
+          <Spinner />
+        </div>
       ) : error ? (
-        <Card className="p-5 sm:p-8 text-center">
-
-          <AlertCircle
-            className="mx-auto text-red-500 mb-3"
-            size={28}
-          />
-
-          <p className="font-medium text-[var(--ink)]">
-            Reports could not be displayed
-          </p>
-
-          <p className="text-sm text-[var(--muted)] mt-1">
-            {error}
-          </p>
-
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-8 text-center">
+          <AlertCircle className="mx-auto text-rose-500 mb-2" size={32} />
+          <h3 className="text-sm font-bold text-[var(--ink)]">
+            Report Generation Error
+          </h3>
+          <p className="mt-1 text-xs text-[var(--muted)]">{error}</p>
           <button
-            className="
-              btn-secondary
-              mt-4
-              w-full
-              sm:w-auto
-              justify-center
-            "
+            type="button"
             onClick={load}
+            className="btn-secondary btn-base mt-4"
           >
-            <RefreshCw size={15} />
-            Try again
+            Try Again
           </button>
-
-        </Card>
-      ) : data && (
-        <>
-          {tab === 'sales' && <SalesReport data={data} />}
-          {tab === 'products' && <ProductReport data={data} />}
-          {tab === 'profit' && <ProfitReport data={data} />}
-          {tab === 'gst' && <GSTReport data={data} />}
-          {tab === 'customers' && (
-            <CustomerCreditReport data={data} />
-          )}
-          {tab === 'payments' && <PaymentReport data={data} />}
-          {tab === 'expenses' && <ExpensesReport data={data} />}
-        </>
-      )}
-
+        </div>
+      ) : data ? (
+        <div className="space-y-5">
+          {tab === 'sales' && <SalesReportView data={data} />}
+          {tab === 'products' && <ProductReportView data={data} />}
+          {tab === 'profit' && <ProfitReportView data={data} />}
+          {tab === 'gst' && <GSTReportView data={data} />}
+          {tab === 'customers' && <CustomerReportView data={data} />}
+          {tab === 'payments' && <PaymentReportView data={data} />}
+          {tab === 'expenses' && <ExpenseReportView data={data} />}
+        </div>
+      ) : null}
     </div>
   )
 }
 
-
 /* =========================================================
-   SALES REPORT
+   1. SALES SUMMARY REPORT VIEW
 ========================================================= */
-
-function SalesReport({ data }) {
-  const fmt = v =>
-    `₹${Number(v || 0).toLocaleString('en-IN', {
-      maximumFractionDigits: 0
-    })}`
+function SalesReportView({ data }) {
+  const summary = data.summary || {}
+  const daily = Array.isArray(data.daily) ? data.daily : []
 
   return (
     <div className="space-y-4">
-
-      {/* SUMMARY CARDS */}
-      <div className="
-        grid
-        grid-cols-2
-        md:grid-cols-4
-        gap-2.5
-        sm:gap-4
-      ">
-
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-          <div className="
-            text-lg
-            sm:text-2xl
-            font-bold
-            text-blue-600 dark:text-blue-400
-            break-words
-          ">
-            {fmt(data.summary?.total_sales)}
-          </div>
-
-          <div className="text-sm text-[var(--muted)]">
+      {/* Executive Tiles */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
             Total Sales
-          </div>
-        </Card>
+          </span>
+          <p className="mt-2 font-mono text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+            {fmtCurrency(summary.total_sales)}
+          </p>
+          <span className="text-[11px] text-[var(--muted)]">
+            Gross invoiced value
+          </span>
+        </div>
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-          <div className="
-            text-lg
-            sm:text-2xl
-            font-bold
-            text-green-600 dark:text-green-400
-          ">
-            {data.summary?.count}
-          </div>
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            Net Sales Revenue
+          </span>
+          <p className="mt-2 font-mono text-xl sm:text-2xl font-bold text-teal-600 dark:text-teal-400">
+            {fmtCurrency(summary.net_sales || summary.total_sales)}
+          </p>
+          <span className="text-[11px] text-[var(--muted)]">
+            After discounts &amp; returns
+          </span>
+        </div>
 
-          <div className="text-sm text-[var(--muted)]">
-            Invoices
-          </div>
-        </Card>
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            Total Invoices
+          </span>
+          <p className="mt-2 font-mono text-xl sm:text-2xl font-bold text-[var(--ink)]">
+            {summary.count ?? 0}
+          </p>
+          <span className="text-[11px] text-[var(--muted)]">
+            Avg: {fmtShort((summary.total_sales || 0) / (summary.count || 1))} / bill
+          </span>
+        </div>
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-          <div className="
-            text-lg
-            sm:text-2xl
-            font-bold
-            text-red-500
-            break-words
-          ">
-            {fmt(data.summary?.total_discount)}
-          </div>
-
-          <div className="text-sm text-[var(--muted)]">
-            Discounts
-          </div>
-        </Card>
-
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-          <div className="
-            text-lg
-            sm:text-2xl
-            font-bold
-            text-purple-600
-            break-words
-          ">
-            {fmt(data.summary?.total_tax)}
-          </div>
-
-          <div className="text-sm text-[var(--muted)]">
-            Tax Collected
-          </div>
-        </Card>
-
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-          <div className="text-lg sm:text-2xl font-bold text-indigo-600 break-words">
-            {fmt(data.summary?.net_sales)}
-          </div>
-          <div className="text-sm text-[var(--muted)]">Net Sales</div>
-        </Card>
-
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-          <div className="text-lg sm:text-2xl font-bold text-blue-600 dark:text-blue-400 break-words">
-            {fmt(data.summary?.returns)}
-          </div>
-          <div className="text-sm text-[var(--muted)]">Returns</div>
-        </Card>
-
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-          <div className="text-lg sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 break-words">
-            {fmt(data.summary?.collection)}
-          </div>
-          <div className="text-sm text-[var(--muted)]">Collection</div>
-        </Card>
-
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-          <div className="text-lg sm:text-2xl font-bold text-rose-600 dark:text-rose-400 break-words">
-            {fmt(data.summary?.outstanding)}
-          </div>
-          <div className="text-sm text-[var(--muted)]">Outstanding</div>
-        </Card>
-
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            Total GST Output Tax
+          </span>
+          <p className="mt-2 font-mono text-xl sm:text-2xl font-bold text-[var(--ink)]">
+            {fmtCurrency(summary.total_tax)}
+          </p>
+          <span className="text-[11px] text-[var(--muted)]">
+            Tax collected on bills
+          </span>
+        </div>
       </div>
 
-      {/* DAILY SALES CHART */}
-      <Card className="
-        p-3
-        sm:p-5
-        min-w-0
-        overflow-hidden
-      ">
-        <h3 className="text-base sm:text-lg font-bold mb-4 text-[var(--ink)] tracking-tight border-b border-[var(--line)] pb-3">
-          Daily Sales
-        </h3>
+      {/* Secondary Metrics Strip */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
+          <span className="text-[10px] font-bold uppercase text-[var(--muted)]">
+            Cash / Bank Collection
+          </span>
+          <p className="mt-1 font-mono text-base font-bold text-teal-600 dark:text-teal-400">
+            {fmtCurrency(summary.collection || summary.total_sales)}
+          </p>
+        </div>
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
+          <span className="text-[10px] font-bold uppercase text-[var(--muted)]">
+            Outstanding Credit
+          </span>
+          <p className="mt-1 font-mono text-base font-bold text-rose-600 dark:text-rose-400">
+            {fmtCurrency(summary.outstanding)}
+          </p>
+        </div>
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
+          <span className="text-[10px] font-bold uppercase text-[var(--muted)]">
+            Discounts Granted
+          </span>
+          <p className="mt-1 font-mono text-base font-bold text-amber-600 dark:text-amber-400">
+            {fmtCurrency(summary.total_discount)}
+          </p>
+        </div>
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
+          <span className="text-[10px] font-bold uppercase text-[var(--muted)]">
+            Returns / Refunds
+          </span>
+          <p className="mt-1 font-mono text-base font-bold text-[var(--muted)]">
+            {fmtCurrency(summary.returns)}
+          </p>
+        </div>
+      </div>
 
-        <ResponsiveContainer
-          width="100%"
-          height={220}
-        >
-          <LineChart data={data.daily}>
-
-            <XAxis
-              dataKey="created_at__date"
-              tick={{ fontSize: 11 }}
-            />
-
-            <YAxis
-              tick={{ fontSize: 11 }}
-              tickFormatter={v => `₹${v}`}
-            />
-
-            <Tooltip
-              formatter={v => fmt(v)}
-            />
-
-            <Line
-              type="monotone"
-              dataKey="total"
-              stroke="#2563eb"
-              strokeWidth={2}
-              dot={false}
-            />
-
-          </LineChart>
-        </ResponsiveContainer>
-
-      </Card>
-
+      {/* Daily Sales Chart */}
+      {daily.length > 0 && (
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] mb-4">
+            Daily Sales Revenue Trend
+          </h3>
+          <ResponsiveContainer width="100%" height={240}>
+            <LineChart data={daily}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                vertical={false}
+                stroke="var(--line-subtle)"
+              />
+              <XAxis
+                dataKey="created_at__date"
+                tick={{ fontSize: 11, fill: 'var(--muted)' }}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: 'var(--muted)' }}
+                tickFormatter={v => `₹${v}`}
+              />
+              <Tooltip
+                formatter={v => fmtCurrency(v)}
+                contentStyle={{
+                  backgroundColor: 'var(--surface)',
+                  borderColor: 'var(--line)',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="total"
+                name="Sales"
+                stroke="#4f46e5"
+                strokeWidth={2.5}
+                dot={{ r: 3, fill: '#4f46e5' }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   )
 }
 
-
 /* =========================================================
-   PRODUCT REPORT
+   2. PRODUCT SALES REPORT VIEW
 ========================================================= */
-
-function ProductReport({ data }) {
-  const rows = Array.isArray(data)
-    ? data
-    : (data?.results ?? [])
+function ProductReportView({ data }) {
+  const rows = Array.isArray(data) ? data : data?.results || []
 
   return (
-    <Card className="p-4 sm:p-6 min-w-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-
-      <h3 className="text-base sm:text-lg font-bold mb-4 text-[var(--ink)] tracking-tight border-b border-[var(--line)] pb-3">
-        Product Sales
-      </h3>
+    <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
+      <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5 flex items-center justify-between">
+        <h3 className="text-sm font-bold text-[var(--ink)]">
+          Product Sales Performance
+        </h3>
+        <span className="text-xs font-mono text-[var(--muted)]">
+          {rows.length} product(s) sold
+        </span>
+      </div>
 
       <div className="overflow-x-auto">
-        <table className="table min-w-[680px] report-table">
-
+        <table className="erp-report-table">
           <thead>
             <tr>
-              <th>Product</th>
+              <th>Product Name</th>
               <th>SKU</th>
-              <th>Qty Sold</th>
-              <th>Revenue</th>
+              <th className="text-right">Qty Sold</th>
+              <th className="text-right">Total Revenue</th>
             </tr>
           </thead>
-
-          <tbody className="divide-y divide-[var(--line)]">
-
-            {!rows.length && (
-              <EmptyRows
-                columns={4}
-                message="No product sales in this date range."
-              />
-            )}
-
-            {rows.map((p, i) => (
-              <tr key={i}>
-
-                <td className="font-medium">
-                  {p.product_name}
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="text-center py-10 text-[var(--muted)]">
+                  No product sales in the selected period.
                 </td>
-
-                <td className="font-mono text-sm">
-                  {p.sku}
-                </td>
-
-                <td className="font-semibold">
-                  {p.total_qty}
-                </td>
-
-                <td className="font-semibold text-green-600 dark:text-green-400">
-                  ₹{Number(p.total_revenue).toFixed(2)}
-                </td>
-
               </tr>
-            ))}
-
+            ) : (
+              rows.map((r, i) => (
+                <tr key={i}>
+                  <td className="font-semibold text-[var(--ink)]">
+                    {r.product_name}
+                  </td>
+                  <td className="font-mono text-xs text-[var(--muted)]">
+                    {r.sku || '—'}
+                  </td>
+                  <td className="text-right font-mono font-bold">
+                    {r.total_qty}
+                  </td>
+                  <td className="text-right font-mono font-bold text-teal-600 dark:text-teal-400">
+                    {fmtCurrency(r.total_revenue)}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
-
+          {rows.length > 0 && (
+            <tfoot>
+              <tr>
+                <td colSpan={2}>Grand Total</td>
+                <td className="text-right font-mono">
+                  {rows.reduce((sum, r) => sum + Number(r.total_qty || 0), 0)}
+                </td>
+                <td className="text-right font-mono text-teal-600 dark:text-teal-400">
+                  {fmtCurrency(
+                    rows.reduce(
+                      (sum, r) => sum + Number(r.total_revenue || 0),
+                      0,
+                    ),
+                  )}
+                </td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
-
-    </Card>
+    </div>
   )
 }
 
-
 /* =========================================================
-   PROFIT REPORT
+   3. PROFIT & LOSS REPORT VIEW
 ========================================================= */
-
-function ProfitReport({ data }) {
-  const fmt = v =>
-    `₹${Number(v || 0).toLocaleString('en-IN', {
-      maximumFractionDigits: 0
-    })}`
+function ProfitReportView({ data }) {
+  const items = Array.isArray(data.items) ? data.items : []
+  const margin =
+    Number(data.total_revenue || 0) > 0
+      ? (
+          (Number(data.total_profit || 0) / Number(data.total_revenue || 0)) *
+          100
+        ).toFixed(1)
+      : 0
 
   return (
     <div className="space-y-4">
+      {/* Top 3 Profit Tiles */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            Total Revenue
+          </span>
+          <p className="mt-2 font-mono text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+            {fmtCurrency(data.total_revenue)}
+          </p>
+          <span className="text-[11px] text-[var(--muted)]">Billed sales</span>
+        </div>
 
-      {/* PROFIT SUMMARY */}
-      <div className="
-        grid
-        grid-cols-2
-        sm:grid-cols-3
-        gap-2.5
-        sm:gap-4
-      ">
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            Cost of Goods Sold (COGS)
+          </span>
+          <p className="mt-2 font-mono text-2xl font-bold text-amber-600 dark:text-amber-400">
+            {fmtCurrency(data.total_cost)}
+          </p>
+          <span className="text-[11px] text-[var(--muted)]">Purchase basis</span>
+        </div>
 
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-            {fmt(data.total_revenue)}
-          </div>
-
-          <div className="text-sm text-[var(--muted)]">
-            Revenue
-          </div>
-        </Card>
-
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-          <div className="text-2xl font-bold text-red-500">
-            {fmt(data.total_cost)}
-          </div>
-
-          <div className="text-sm text-[var(--muted)]">
-            Cost
-          </div>
-        </Card>
-
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-            {fmt(data.total_profit)}
-          </div>
-
-          <div className="text-sm text-[var(--muted)]">
-            Profit
-          </div>
-        </Card>
-
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            Gross Margin Profit
+          </span>
+          <p className="mt-2 font-mono text-2xl font-bold text-teal-600 dark:text-teal-400">
+            {fmtCurrency(data.total_profit)}
+          </p>
+          <span className="text-[11px] font-semibold text-teal-600 dark:text-teal-400">
+            {margin}% overall profit margin
+          </span>
+        </div>
       </div>
 
-      {/* PROFIT TABLE */}
-      <Card className="p-4 sm:p-6 min-w-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
+      {/* Product Profit Table */}
+      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
+        <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5">
+          <h3 className="text-sm font-bold text-[var(--ink)]">
+            Item-wise Profitability Breakdown
+          </h3>
+        </div>
 
-        <div className="
-          overflow-x-auto
-          -mx-1
-          px-1
-        ">
-
-          <table className="table min-w-[680px] report-table">
-
+        <div className="overflow-x-auto">
+          <table className="erp-report-table">
             <thead>
               <tr>
                 <th>Product</th>
-                <th>Qty</th>
-                <th>Revenue</th>
-                <th>Cost</th>
-                <th>Profit</th>
+                <th className="text-right">Qty</th>
+                <th className="text-right">Revenue</th>
+                <th className="text-right">Cost</th>
+                <th className="text-right">Gross Profit</th>
               </tr>
             </thead>
-
-            <tbody className="divide-y divide-[var(--line)]">
-
-              {!data.items?.length && (
-                <EmptyRows
-                  columns={5}
-                  message="No profit data in this date range."
-                />
-              )}
-
-              {data.items?.slice(0, 30).map((item, i) => (
-                <tr key={i}>
-
-                  <td>
-                    {item.product}
+            <tbody>
+              {items.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-10 text-[var(--muted)]">
+                    No sales items recorded in this date range.
                   </td>
-
-                  <td>
-                    {item.qty}
-                  </td>
-
-                  <td>
-                    ₹{item.revenue?.toFixed(2)}
-                  </td>
-
-                  <td>
-                    ₹{item.cost?.toFixed(2)}
-                  </td>
-
-                  <td
-                    className={`
-                      font-semibold
-                      ${
-                        item.profit >= 0
-                          ? 'text-green-600 dark:text-green-400'
-                          : 'text-red-600 dark:text-red-400'
-                      }
-                    `}
-                  >
-                    ₹{item.profit?.toFixed(2)}
-                  </td>
-
                 </tr>
-              ))}
-
+              ) : (
+                items.slice(0, 40).map((it, i) => (
+                  <tr key={i}>
+                    <td className="font-semibold text-[var(--ink)]">
+                      {it.product}
+                    </td>
+                    <td className="text-right font-mono">{it.qty}</td>
+                    <td className="text-right font-mono">
+                      {fmtCurrency(it.revenue)}
+                    </td>
+                    <td className="text-right font-mono text-[var(--muted)]">
+                      {fmtCurrency(it.cost)}
+                    </td>
+                    <td className="text-right font-mono font-bold text-teal-600 dark:text-teal-400">
+                      {fmtCurrency(it.profit)}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
-
           </table>
-
         </div>
-
-      </Card>
-
+      </div>
     </div>
   )
 }
 
-
 /* =========================================================
-   GST REPORT
+   4. GST TAX SUMMARY REPORT VIEW
 ========================================================= */
+function GSTReportView({ data }) {
+  const rates = Array.isArray(data.rates) ? data.rates : []
 
-function GSTReport({ data }) {
   return (
     <div className="space-y-4">
-
-      {/* GST TOTAL */}
-      <Card className="
-        p-3
-        sm:p-4
-        text-center
-        w-full
-        sm:max-w-xs
-      ">
-
-        <div className="text-2xl font-bold text-purple-600">
-          ₹{Number(data.total_gst).toFixed(2)}
-        </div>
-
-        <div className="text-sm text-[var(--muted)]">
-          Total GST Collected
-        </div>
-
-      </Card>
-
-      {/* GST TABLE */}
-      <Card className="p-4 sm:p-6 min-w-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-
-        <div className="
-          overflow-x-auto
-          -mx-1
-          px-1
-        ">
-
-          <table className="table min-w-[680px] report-table">
-
-            <thead>
-              <tr>
-                <th>GST Rate</th>
-                <th>Taxable Amount</th>
-                <th>GST Collected</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-[var(--line)]">
-
-              {!data.by_rate?.length && (
-                <EmptyRows
-                  columns={3}
-                  message="No GST collected in this date range."
-                />
-              )}
-
-              {data.by_rate?.map((r, i) => (
-                <tr key={i}>
-
-                  <td className="font-semibold">
-                    {r.gst_percent}%
-                  </td>
-
-                  <td>
-                    ₹{Number(r.taxable_amount).toFixed(2)}
-                  </td>
-
-                  <td className="font-semibold text-purple-600">
-                    ₹{Number(r.gst_collected).toFixed(2)}
-                  </td>
-
-                </tr>
-              ))}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      </Card>
-
-    </div>
-  )
-}
-
-
-/* =========================================================
-   CUSTOMER CREDIT REPORT
-========================================================= */
-
-function CustomerCreditReport({ data }) {
-  return (
-    <div className="space-y-4">
-
-      {/* OUTSTANDING TOTAL */}
-      <Card className="
-        p-3
-        sm:p-4
-        text-center
-        w-full
-        sm:max-w-xs
-      ">
-
-        <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-          ₹{Number(data.total_outstanding).toFixed(2)}
-        </div>
-
-        <div className="text-sm text-[var(--muted)]">
-          Total Outstanding
-        </div>
-
-      </Card>
-
-      {/* CUSTOMER TABLE */}
-      <Card className="p-4 sm:p-6 min-w-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-
-        <div className="
-          overflow-x-auto
-          -mx-1
-          px-1
-        ">
-
-          <table className="table min-w-[680px] report-table">
-
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Mobile</th>
-                <th>Outstanding</th>
-                <th>Credit Limit</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-[var(--line)]">
-
-              {!data.customers?.length && (
-                <EmptyRows
-                  columns={4}
-                  message="No outstanding customer credit."
-                />
-              )}
-
-              {data.customers?.map((c, i) => (
-                <tr key={i}>
-
-                  <td className="font-medium">
-                    {c.name}
-                  </td>
-
-                  <td>
-                    {c.mobile}
-                  </td>
-
-                  <td className="font-semibold text-red-600 dark:text-red-400">
-                    ₹{Number(c.outstanding_amount).toFixed(2)}
-                  </td>
-
-                  <td>
-                    ₹{Number(c.credit_limit).toFixed(2)}
-                  </td>
-
-                </tr>
-              ))}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      </Card>
-
-    </div>
-  )
-}
-
-
-/* =========================================================
-   PAYMENT REPORT
-========================================================= */
-
-function PaymentReport({ data }) {
-  const rows = Array.isArray(data)
-    ? data
-    : (data?.results ?? [])
-
-  const colors = {
-    cash: 'text-green-600 dark:text-green-400',
-    upi: 'text-blue-600 dark:text-blue-400',
-    card: 'text-purple-600',
-    credit: 'text-red-600 dark:text-red-400'
-  }
-
-  return (
-    <Card className="
-      p-3
-      sm:p-5
-      min-w-0
-      overflow-hidden
-    ">
-
-      <h3 className="text-base sm:text-lg font-bold mb-4 text-[var(--ink)] tracking-tight border-b border-[var(--line)] pb-3">
-        Payment Method Breakdown
-      </h3>
-
-      {/* PAYMENT CARDS */}
-      <div className="
-        grid
-        grid-cols-2
-        md:grid-cols-4
-        gap-2.5
-        sm:gap-4
-        mb-4
-        sm:mb-6
-      ">
-
-        {!rows.length && (
-          <p className="
-            text-sm
-            text-[var(--muted)]
-            col-span-full
-          ">
-            No recorded payments in this date range.
+      {/* GST Summary Tiles */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            Total Taxable Turnover
+          </span>
+          <p className="mt-2 font-mono text-xl sm:text-2xl font-bold text-[var(--ink)]">
+            {fmtCurrency(data.total_taxable)}
           </p>
-        )}
+        </div>
 
-        {rows.map((p, i) => (
-          <div
-            key={i}
-            className="
-              bg-[var(--surface-elevated)]
-              rounded-xl
-              p-4
-              text-center
-            "
-          >
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            Total CGST
+          </span>
+          <p className="mt-2 font-mono text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+            {fmtCurrency(data.total_cgst || Number(data.total_tax || 0) / 2)}
+          </p>
+        </div>
 
-            <div
-              className={`
-                text-2xl
-                font-bold
-                capitalize
-                ${colors[p.method] || 'text-[var(--ink-secondary)]'}
-              `}
-            >
-              ₹{Number(p.total).toFixed(0)}
-            </div>
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            Total SGST
+          </span>
+          <p className="mt-2 font-mono text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+            {fmtCurrency(data.total_sgst || Number(data.total_tax || 0) / 2)}
+          </p>
+        </div>
 
-            <div className="
-              text-sm
-              text-[var(--muted)]
-              capitalize
-              mt-1
-            ">
-              {p.method}
-            </div>
-
-            <div className="
-              text-xs
-              text-[var(--muted-light)]
-            ">
-              {p.count} transactions
-            </div>
-
-          </div>
-        ))}
-
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            Total Output GST
+          </span>
+          <p className="mt-2 font-mono text-xl sm:text-2xl font-bold text-teal-600 dark:text-teal-400">
+            {fmtCurrency(data.total_tax)}
+          </p>
+        </div>
       </div>
 
-      {/* PAYMENT CHART */}
-      <ResponsiveContainer
-        width="100%"
-        height={200}
-      >
-        <BarChart data={rows}>
+      {/* Tax Slab Breakdown Table */}
+      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
+        <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5">
+          <h3 className="text-sm font-bold text-[var(--ink)]">
+            GST Slab-wise Tax Liability (GSTR-1 Format)
+          </h3>
+        </div>
 
-          <XAxis
-            dataKey="method"
-            tick={{ fontSize: 12 }}
-          />
-
-          <YAxis
-            tick={{ fontSize: 11 }}
-          />
-
-          <Tooltip
-            formatter={v => `₹${v}`}
-          />
-
-          <Bar
-            dataKey="total"
-            fill="#2563eb"
-            radius={[4, 4, 0, 0]}
-          />
-
-        </BarChart>
-      </ResponsiveContainer>
-
-    </Card>
+        <div className="overflow-x-auto">
+          <table className="erp-report-table">
+            <thead>
+              <tr>
+                <th>GST Rate Slab</th>
+                <th className="text-right">Taxable Turnover</th>
+                <th className="text-right">CGST</th>
+                <th className="text-right">SGST</th>
+                <th className="text-right">Total GST Tax</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rates.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-10 text-[var(--muted)]">
+                    No tax transactions recorded in this period.
+                  </td>
+                </tr>
+              ) : (
+                rates.map((r, i) => (
+                  <tr key={i}>
+                    <td className="font-bold">
+                      <span className="rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-2 py-0.5 text-xs font-mono">
+                        {r.gst_percent ?? 0}% GST
+                      </span>
+                    </td>
+                    <td className="text-right font-mono">
+                      {fmtCurrency(r.taxable)}
+                    </td>
+                    <td className="text-right font-mono text-[var(--muted)]">
+                      {fmtCurrency(r.cgst || Number(r.tax || 0) / 2)}
+                    </td>
+                    <td className="text-right font-mono text-[var(--muted)]">
+                      {fmtCurrency(r.sgst || Number(r.tax || 0) / 2)}
+                    </td>
+                    <td className="text-right font-mono font-bold text-teal-600 dark:text-teal-400">
+                      {fmtCurrency(r.tax)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   )
 }
 
-
 /* =========================================================
-   EMPTY TABLE ROWS
+   5. CUSTOMER RECEIVABLES / CREDIT REPORT VIEW
 ========================================================= */
+function CustomerReportView({ data }) {
+  const rows = Array.isArray(data) ? data : data?.results || []
 
-function EmptyRows({ columns, message }) {
   return (
-    <tr>
-      <td
-        colSpan={columns}
-        className="
-          text-center
-          text-sm
-          text-[var(--muted)]
-          py-10
-        "
-      >
-        {message}
-      </td>
-    </tr>
+    <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
+      <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5 flex items-center justify-between">
+        <h3 className="text-sm font-bold text-[var(--ink)]">
+          Customer Credit &amp; Outstanding Receivables
+        </h3>
+        <span className="text-xs text-[var(--muted)]">
+          Total Receivables:{' '}
+          <strong className="text-rose-600 font-mono">
+            {fmtCurrency(
+              rows.reduce(
+                (sum, c) => sum + Number(c.outstanding_amount || 0),
+                0,
+              ),
+            )}
+          </strong>
+        </span>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="erp-report-table">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Phone</th>
+              <th className="text-right">Credit Limit</th>
+              <th className="text-right">Outstanding Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="text-center py-10 text-[var(--muted)]">
+                  No customers with outstanding credit balance.
+                </td>
+              </tr>
+            ) : (
+              rows.map((c, i) => (
+                <tr key={i}>
+                  <td className="font-semibold text-[var(--ink)]">{c.name}</td>
+                  <td className="font-mono text-xs text-[var(--muted)]">
+                    {c.mobile || '—'}
+                  </td>
+                  <td className="text-right font-mono text-[var(--muted)]">
+                    {fmtCurrency(c.credit_limit)}
+                  </td>
+                  <td className="text-right font-mono font-bold text-rose-600 dark:text-rose-400">
+                    {fmtCurrency(c.outstanding_amount)}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   )
 }
 
-
 /* =========================================================
-   EXPENSE REPORT
+   6. PAYMENT MODES REPORT VIEW
 ========================================================= */
-
-function ExpensesReport({ data }) {
-  const rows = data.expenses || []
-  const summary = data.summary || {}
-  const byCategory = data.by_category || []
+function PaymentReportView({ data }) {
+  const methods = Array.isArray(data.methods) ? data.methods : []
 
   return (
     <div className="space-y-4">
-
-      {/* EXPENSE SUMMARY */}
-      <div className="
-        grid
-        grid-cols-2
-        md:grid-cols-4
-        gap-2.5
-        sm:gap-4
-      ">
-
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-
-          <div className="
-            text-2xl
-            font-bold
-            text-red-600 dark:text-red-400
-          ">
-            {fmt(summary.total_amount)}
-          </div>
-
-          <div className="text-sm text-[var(--muted)]">
-            Total Expenses
-          </div>
-
-        </Card>
-
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-
-          <div className="
-            text-2xl
-            font-bold
-            text-[var(--ink-secondary)]
-          ">
-            {summary.count || 0}
-          </div>
-
-          <div className="text-sm text-[var(--muted)]">
-            Transactions
-          </div>
-
-        </Card>
-
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-
-          <div className="
-            text-2xl
-            font-bold
-            text-orange-500
-          ">
-            {fmt(summary.avg_amount)}
-          </div>
-
-          <div className="text-sm text-[var(--muted)]">
-            Avg per Entry
-          </div>
-
-        </Card>
-
-        <Card className="group p-4 sm:p-5 text-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-
-          <div className="
-            text-2xl
-            font-bold
-            text-purple-600
-          ">
-            {byCategory.length}
-          </div>
-
-          <div className="text-sm text-[var(--muted)]">
-            Categories
-          </div>
-
-        </Card>
-
+      <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          Total Payment Collections
+        </span>
+        <p className="mt-2 font-mono text-2xl font-bold text-teal-600 dark:text-teal-400">
+          {fmtCurrency(data.total_amount)}
+        </p>
       </div>
 
-      {/* CATEGORY BREAKDOWN */}
-      {byCategory.length > 0 && (
-        <Card className="p-4 sm:p-6 min-w-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-
-          <h3 className="
-            font-semibold
-            mb-3
-            text-sm
-            text-[var(--ink)]
-          ">
-            By Category
+      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
+        <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5">
+          <h3 className="text-sm font-bold text-[var(--ink)]">
+            Collections by Payment Channel
           </h3>
-
-          <div className="
-            grid
-            grid-cols-2
-            md:grid-cols-4
-            gap-2.5
-            sm:gap-3
-          ">
-
-            {byCategory.map((c, i) => (
-              <div
-                key={i}
-                className="
-                  bg-[var(--surface-elevated)]
-                  rounded-xl
-                  p-3
-                  text-center
-                "
-              >
-
-                <div className="
-                  text-lg
-                  font-bold
-                  text-[var(--ink)]
-                ">
-                  {fmt(c.total)}
-                </div>
-
-                <div className="
-                  text-xs
-                  text-[var(--muted)]
-                  mt-0.5
-                ">
-                  {c.category || 'Uncategorised'}
-                </div>
-
-                <div className="
-                  text-xs
-                  text-[var(--muted-light)]
-                ">
-                  {c.count} entries
-                </div>
-
-              </div>
-            ))}
-
-          </div>
-
-        </Card>
-      )}
-
-      {/* EXPENSE TRANSACTIONS */}
-      <Card className="
-        p-3
-        sm:p-5
-        min-w-0
-      ">
-
-        <h3 className="
-          font-semibold
-          mb-4
-          text-sm
-          text-[var(--ink)]
-        ">
-          Expense Transactions
-        </h3>
-
-        <div className="
-          overflow-x-auto
-          -mx-1
-          px-1
-        ">
-
-          <table className="table min-w-[680px] report-table">
-
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Description</th>
-                <th>Category</th>
-                <th>Method</th>
-                <th>Amount</th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-[var(--line)]">
-
-              {!rows.length && (
-                <EmptyRows
-                  columns={5}
-                  message="No expenses in this date range."
-                />
-              )}
-
-              {rows.map((e, i) => (
-                <tr key={i}>
-
-                  <td className="
-                    text-[var(--muted)]
-                    text-xs
-                  ">
-                    {e.expense_date}
-                  </td>
-
-                  <td className="font-medium">
-                    {e.description}
-                  </td>
-
-                  <td>
-                    <span className="
-                      text-xs
-                      bg-[var(--surface-elevated)]
-                      border border-[var(--line)]
-                      text-[var(--muted)]
-                      px-2
-                      py-0.5
-                      rounded-full
-                    ">
-                      {e.category || '—'}
-                    </span>
-                  </td>
-
-                  <td className="
-                    capitalize
-                    text-xs
-                  ">
-                    {e.payment_method}
-                  </td>
-
-                  <td className="
-                    font-semibold
-                    text-red-600 dark:text-red-400
-                  ">
-                    {fmt(e.amount)}
-                  </td>
-
-                </tr>
-              ))}
-
-            </tbody>
-
-          </table>
-
         </div>
 
-      </Card>
+        <div className="overflow-x-auto">
+          <table className="erp-report-table">
+            <thead>
+              <tr>
+                <th>Payment Mode</th>
+                <th className="text-right">Number of Transactions</th>
+                <th className="text-right">Total Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {methods.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="text-center py-10 text-[var(--muted)]">
+                    No payments recorded in this date range.
+                  </td>
+                </tr>
+              ) : (
+                methods.map((m, i) => (
+                  <tr key={i}>
+                    <td className="font-semibold capitalize text-[var(--ink)]">
+                      {m.method || m.payment_method}
+                    </td>
+                    <td className="text-right font-mono font-medium">
+                      {m.count}
+                    </td>
+                    <td className="text-right font-mono font-bold text-teal-600 dark:text-teal-400">
+                      {fmtCurrency(m.total)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
 
+/* =========================================================
+   7. OPERATING EXPENSES REPORT VIEW
+========================================================= */
+function ExpenseReportView({ data }) {
+  const categories = Array.isArray(data.categories) ? data.categories : []
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          Total Operating Expenses
+        </span>
+        <p className="mt-2 font-mono text-2xl font-bold text-rose-600 dark:text-rose-400">
+          {fmtCurrency(data.total_expenses)}
+        </p>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
+        <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5">
+          <h3 className="text-sm font-bold text-[var(--ink)]">
+            Expense Breakdown by Category
+          </h3>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="erp-report-table">
+            <thead>
+              <tr>
+                <th>Expense Category</th>
+                <th className="text-right">Transactions</th>
+                <th className="text-right">Total Expense Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {categories.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="text-center py-10 text-[var(--muted)]">
+                    No expenses recorded in this period.
+                  </td>
+                </tr>
+              ) : (
+                categories.map((c, i) => (
+                  <tr key={i}>
+                    <td className="font-semibold text-[var(--ink)]">
+                      {c.category__name || c.name || 'General Expense'}
+                    </td>
+                    <td className="text-right font-mono">{c.count}</td>
+                    <td className="text-right font-mono font-bold text-rose-600 dark:text-rose-400">
+                      {fmtCurrency(c.total)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   )
 }

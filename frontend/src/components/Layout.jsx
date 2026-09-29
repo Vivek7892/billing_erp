@@ -89,11 +89,11 @@ function NavGroup({ group, collapsed, user, onNav }) {
   const visibleItems = group.items.filter(item => {
     if (item.to === '/support') return true
     if (item.roles && !item.roles.includes(user?.role)) return false
-    return !item.adminOnly || user?.role === 'admin'
+    return !item.adminOnly || ['admin', 'owner'].includes(user?.role)
   })
   if (!visibleItems.length) return null
 
-  if (group.adminOnly && user?.role !== 'admin') {
+  if (group.adminOnly && !['admin', 'owner'].includes(user?.role)) {
     const supportOnly = visibleItems.filter(i => i.to === '/support')
     if (!supportOnly.length) return null
     return (
@@ -434,7 +434,7 @@ function NotificationBell() {
       setNotifications((data.action_required || []).filter(item => Number(item.count || 0) > 0).map(item => ({
         ...item,
         icon: iconMap[item.key] || Bell,
-        color: colorMap[item.key] || 'text-slate-400 bg-slate-50',
+        color: colorMap[item.key] || 'text-blue-600 bg-blue-50 dark:bg-blue-950/60 dark:text-blue-300',
         title: 'Action required',
         desc: `${item.count} ${item.label}`,
       })))
@@ -727,8 +727,8 @@ export default function Layout({ children }) {
           </header>
 
           {/* Page Body */}
-          <main ref={mainRef} className={`flex-1 ${location.pathname.startsWith('/billing/new') ? 'overflow-hidden flex flex-col' : 'overflow-y-auto'} bg-[var(--app-bg)]`}>
-            <div className={location.pathname.startsWith('/billing/new') ? 'flex-1 flex flex-col p-2 sm:p-3 w-full max-w-none min-h-0' : 'p-3 sm:p-4 md:p-6 max-w-[1600px] mx-auto page-enter'}>
+          <main ref={mainRef} className={`flex-1 flex flex-col ${location.pathname.startsWith('/billing/new') ? 'overflow-y-auto md:overflow-hidden' : 'overflow-y-auto'} bg-[var(--app-bg)]`}>
+            <div className={location.pathname.startsWith('/billing/new') ? 'flex-1 flex flex-col p-2 sm:p-3 w-full max-w-none min-h-0' : 'flex-1 p-3 sm:p-4 md:p-6 max-w-[1600px] w-full mx-auto page-enter'}>
               {children}
             </div>
             {!location.pathname.startsWith('/billing/new') && <AppFooter shopName={shopName} />}

@@ -135,14 +135,14 @@ export default function Login() {
 
                 <div className="mb-5 flex items-center gap-3">
 
-                  <span className="h-0.5 w-8 rounded-full bg-indigo-600 dark:bg-indigo-400" />
+                  <span className="h-0.5 w-8 rounded-full bg-blue-600 dark:bg-blue-400" />
 
                   <span className="
                     text-xs
                     font-semibold
                     uppercase
                     tracking-[0.16em]
-                    text-indigo-600 dark:text-indigo-400
+                    text-blue-600 dark:text-blue-400
                   ">
                     ERP Billing & Business Management
                   </span>
@@ -300,7 +300,7 @@ export default function Login() {
                 border
                 border-[var(--line)]
                 bg-[var(--surface-elevated)]
-                text-indigo-600 dark:text-indigo-400
+                text-blue-600 dark:text-blue-400
               ">
                 <LockIcon />
               </div>
@@ -557,8 +557,8 @@ export default function Login() {
                       w-4
                       rounded
                       border-[var(--line)]
-                      text-indigo-600
-                      focus:ring-indigo-500/20
+                      text-blue-600
+                      focus:ring-blue-500/20
                     "
                   />
 
@@ -579,7 +579,7 @@ export default function Login() {
                     font-medium
                     text-[var(--muted)]
                     transition
-                    hover:text-indigo-600 dark:hover:text-indigo-400
+                    hover:text-blue-600 dark:hover:text-blue-400
                   "
                 >
                   Forgot password?
@@ -602,17 +602,16 @@ export default function Login() {
                   items-center
                   justify-center
                   rounded-xl
-                  bg-indigo-600
+                  bg-blue-600
                   text-sm
                   font-bold
                   text-white
-                  shadow-md
-                  shadow-indigo-600/25
+                  shadow-sm
                   transition-all
-                  hover:bg-indigo-700
+                  hover:bg-blue-700
                   focus:outline-none
                   focus:ring-4
-                  focus:ring-indigo-500/20
+                  focus:ring-blue-500/20
                   active:scale-[0.99]
                   disabled:cursor-not-allowed
                   disabled:opacity-60

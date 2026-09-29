@@ -216,7 +216,7 @@ export default function Returns() {
   const stats = [
     { label: 'Total Returns', value: returns.length + refundedInvoices.length, icon: RotateCcw, accent: 'text-rose-600 dark:text-rose-400', iconBg: 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400', border: 'border-rose-100 dark:border-rose-900/50' },
     { label: 'Refunded', value: refundedInvoices.length, icon: IndianRupee, accent: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400', border: 'border-amber-100 dark:border-amber-900/50' },
-    { label: 'Cancelled', value: cancelledInvoices.length, icon: FileX, accent: 'text-slate-600 dark:text-slate-400', iconBg: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300', border: 'border-slate-200 dark:border-slate-700' },
+    { label: 'Cancelled', value: cancelledInvoices.length, icon: FileX, accent: 'text-slate-600 dark:text-slate-400', iconBg: 'bg-white dark:bg-slate-900/60 text-slate-600 dark:text-slate-300', border: 'border-slate-200 dark:border-slate-700' },
     { label: 'Value Refunded', value: fmt(totalRefunded), icon: TrendingDown, accent: 'text-rose-600 dark:text-rose-400', iconBg: 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400', border: 'border-rose-100 dark:border-rose-900/50' },
   ]
 
@@ -317,7 +317,7 @@ export default function Returns() {
                         <td className="font-bold text-[var(--ink)] text-sm">{fmt(r.refund_amount)}</td>
                         <td className="text-xs text-[var(--muted-light)] max-w-[120px] truncate">{r.reason || '—'}</td>
                         <td>
-                          <button onClick={() => toggleExpand(r.id)} className="w-9 h-9 inline-flex items-center justify-center text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:text-white hover:bg-slate-800 hover:border-slate-800 transition-all active:scale-95" aria-label="Toggle return details">
+                          <button onClick={() => toggleExpand(r.id)} className="w-9 h-9 inline-flex items-center justify-center text-slate-600 bg-white border border-slate-200 rounded-lg hover:text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all active:scale-95" aria-label="Toggle return details">
                             {expandedReturns[r.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                           </button>
                         </td>
@@ -392,8 +392,8 @@ export default function Returns() {
                 <button key={f.key} onClick={() => setFilter(f.key)}
                   className={`flex-1 sm:flex-none min-h-9 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
                     filter === f.key
-                      ? 'bg-slate-900 text-white shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50/50'
                   }`}>
                   {f.label}
                 </button>
@@ -434,7 +434,7 @@ export default function Returns() {
                               <Eye size={14} />
                             </button>
                             <a href={`${API_BASE_URL}/invoices/${b.id}/pdf/?token=${localStorage.getItem('access_token')}`}
-                              target="_blank" rel="noreferrer" className="w-9 h-9 inline-flex items-center justify-center text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:text-white hover:bg-slate-800 hover:border-slate-800 transition-all active:scale-95" title="Print" aria-label="Print invoice">
+                              target="_blank" rel="noreferrer" className="w-9 h-9 inline-flex items-center justify-center text-slate-600 bg-white border border-slate-200 rounded-lg hover:text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all active:scale-95" title="Print" aria-label="Print invoice">
                               <Printer size={14} />
                             </a>
                           </div>
@@ -520,7 +520,7 @@ export default function Returns() {
                       <td><Badge status={b.payment_status} /></td>
                       <td>
                         <button onClick={() => setReturnModal(b)}
-                          className="min-h-10 text-xs bg-slate-900 text-white hover:bg-rose-600 active:bg-rose-700 border border-slate-900 hover:border-rose-600 px-3.5 py-2 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all active:scale-[0.98] inline-flex items-center justify-center gap-1.5">
+                          className="min-h-9 text-xs bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white active:bg-rose-700 border border-rose-200 hover:border-rose-600 px-3 py-1.5 rounded-lg font-semibold shadow-xs transition-all active:scale-[0.98] inline-flex items-center justify-center gap-1.5">
                           <RotateCcw size={12} /> Return
                         </button>
                       </td>
@@ -550,7 +550,7 @@ export default function Returns() {
                       <div className="text-base font-bold text-[var(--ink)]">{fmt(b.grand_total)}</div>
                     </div>
                     <button onClick={() => setReturnModal(b)}
-                      className="min-h-11 px-4 text-xs bg-slate-900 text-white hover:bg-rose-600 active:bg-rose-700 border border-slate-900 hover:border-rose-600 rounded-lg font-semibold shadow-sm hover:shadow-md transition-all active:scale-[0.98] inline-flex items-center justify-center gap-1.5 shrink-0">
+                      className="min-h-10 px-3.5 text-xs bg-rose-50 text-rose-700 hover:bg-rose-600 hover:text-white active:bg-rose-700 border border-rose-200 hover:border-rose-600 rounded-lg font-semibold shadow-xs transition-all active:scale-[0.98] inline-flex items-center justify-center gap-1.5 shrink-0">
                       <RotateCcw size={13} /> Return
                     </button>
                   </div>

@@ -215,15 +215,15 @@ export default function Inventory() {
         }
       />
 
-      <div className="flex w-full gap-2 rounded-xl bg-gray-100 p-1 sm:w-fit">
+      <div className="flex w-full gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1 sm:w-fit">
         {['stock', 'transactions'].map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-medium capitalize transition sm:flex-none sm:px-4 ${
+            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium capitalize transition sm:flex-none sm:px-4 ${
               tab === t
-                ? 'bg-blue-600 text-white shadow-[var(--shadow-card)]'
-                : 'text-[var(--muted)] hover:bg-[var(--surface)]'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-[var(--muted)] hover:bg-blue-50/50 hover:text-blue-600'
             }`}
           >
             {t === 'stock' ? 'Current Stock' : 'Transactions'}

@@ -36,7 +36,7 @@ const CAT_BADGE = {
   Supplies: 'bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800/60',
   Marketing: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60',
   Maintenance: 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800/60',
-  Other: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+  Other: 'bg-white text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-800',
 }
 
 const CAT_COLOR = CAT_BADGE
@@ -145,46 +145,47 @@ export default function Expenses() {
   return (
     <div className="space-y-3 sm:space-y-5">
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-        <div className="bg-[var(--surface)] rounded-xl border border-rose-100 p-3 sm:p-4 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] sm:text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-wide truncate">Total Expenses</span>
-            <div className="w-9 h-9 rounded-xl bg-white border border-rose-200 shadow-sm flex items-center justify-center">
-              <IndianRupee size={15} className="text-rose-600" />
-            </div>
-          </div>
-          <div className="text-base sm:text-xl font-bold text-[var(--ink)]">{fmt(totalAll)}</div>
-          <div className="text-xs text-[var(--muted-light)]">{expenses.length} records</div>
+      {/* =====================================================
+          ERP SUMMARY (Table-Based)
+      ====================================================== */}
+      <section className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+        <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          Expense Tracking Summary
         </div>
-        <div className="bg-[var(--surface)] rounded-xl border border-orange-100 p-3 sm:p-4 flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] sm:text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-wide truncate">This Month</span>
-            <div className="w-9 h-9 rounded-xl bg-white border border-orange-200 shadow-sm flex items-center justify-center">
-              <TrendingDown size={15} className="text-orange-600" />
-            </div>
+        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
+          <div className="p-3 sm:p-3.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Total Expenses
+            </span>
+            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-red-600">
+              {fmt(totalAll)}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">{expenses.length} recorded entries</p>
           </div>
-          <div className="text-base sm:text-xl font-bold text-[var(--ink)]">{fmt(thisMonth)}</div>
-          <div className="text-xs text-[var(--muted-light)]">Current month spend</div>
-        </div>
-        {catTotals.map(({ cat, total }) => {
-          const Icon = CAT_ICON[cat] || IndianRupee
-          const cls = CAT_COLOR[cat] || 'bg-[var(--surface-elevated)] text-[var(--muted)]'
-          const [bg, tx] = cls.split(' ')
-          return (
-            <div key={cat} className="bg-[var(--surface)] rounded-xl border border-[var(--line)] p-3 sm:p-4 flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[9px] sm:text-[11px] font-semibold text-[var(--muted-light)] uppercase tracking-wide truncate">{cat}</span>
-                <div className={`w-9 h-9 rounded-xl bg-white border shadow-sm flex items-center justify-center ${cls.split(' ').find(c => c.startsWith('border-')) || 'border-gray-200'}`}>
-                  <Icon size={15} className={cls.split(' ').find(c => c.startsWith('text-')) || 'text-gray-500'} />
-                </div>
-              </div>
-              <div className="text-base sm:text-xl font-bold text-[var(--ink)]">{fmt(total)}</div>
-              <div className="text-xs text-[var(--muted-light)]">Top category</div>
+
+          <div className="p-3 sm:p-3.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              This Month
+            </span>
+            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-orange-500">
+              {fmt(thisMonth)}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">Current monthly outflow</p>
+          </div>
+
+          {catTotals.slice(0, 2).map(({ cat, total }) => (
+            <div key={cat} className="p-3 sm:p-3.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                {cat} (Top Spend)
+              </span>
+              <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[var(--ink)]">
+                {fmt(total)}
+              </p>
+              <p className="text-[10px] text-[var(--muted)]">Category expenditure</p>
             </div>
-          )
-        })}
-      </div>
+          ))}
+        </div>
+      </section>
 
       {/* =================================================
           EXPENSES
@@ -361,8 +362,8 @@ export default function Expenses() {
                     <th>Date</th>
                     <th>Method</th>
                     <th>Notes</th>
-                    <th>Amount</th>
-                    <th></th>
+                    <th className="num-col">Amount</th>
+                    <th className="text-right">Actions</th>
                   </tr>
                 </thead>
 
@@ -386,7 +387,7 @@ export default function Expenses() {
                           </span>
                         </td>
 
-                        <td className="text-sm text-[var(--muted)]">
+                        <td className="text-sm text-[var(--muted)] font-mono">
                           {e.expense_date
                             ? new Date(e.expense_date).toLocaleDateString('en-IN')
                             : '—'}
@@ -400,12 +401,12 @@ export default function Expenses() {
                           {e.notes || '—'}
                         </td>
 
-                        <td className="text-sm font-bold text-[var(--ink)]">
+                        <td className="num-col font-mono text-sm font-bold text-red-600">
                           {fmt(e.amount)}
                         </td>
 
-                        <td>
-                          <div className="flex items-center gap-1">
+                        <td className="text-right">
+                          <div className="flex items-center justify-end gap-1">
                             <button
                               type="button"
                               onClick={() => openEdit(e)}

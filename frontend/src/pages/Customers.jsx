@@ -346,113 +346,61 @@ export default function Customers() {
       />
 
       {/* =====================================================
-          SUMMARY
+          ERP SUMMARY (Table-Based)
       ====================================================== */}
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-2 sm:gap-4">
-
-        {/* Total Customers */}
-
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs font-medium text-slate-600 uppercase tracking-wide truncate">
-                Total Customers
-              </p>
-
-              <p className="text-xl sm:text-2xl font-bold text-slate-900 mt-1 sm:mt-2">
-                {stats.total}
-              </p>
-            </div>
-
-            <div className="p-2 rounded-lg sm:rounded-xl bg-blue-50 border border-blue-100 text-blue-600 shadow-sm shrink-0">
-              <Users size={17} />
-            </div>
+      <section className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+        <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          Customer Ledger Summary
+        </div>
+        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
+          <div className="p-3 sm:p-3.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Total Customers
+            </span>
+            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[var(--ink)]">
+              {stats.total}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">{stats.customersWithDue} with pending credit</p>
           </div>
 
-          <p className="text-[10px] sm:text-xs text-slate-600 mt-2 sm:mt-3 truncate">
-            {stats.customersWithDue} with pending credit
-          </p>
-        </Card>
-
-        {/* Outstanding */}
-
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs font-medium text-slate-600 uppercase tracking-wide truncate">
-                Outstanding
-              </p>
-
-              <p className="text-lg sm:text-2xl font-bold text-red-600 dark:text-red-400 mt-1 sm:mt-2 truncate">
-                {currency(stats.totalOutstanding)}
-              </p>
-            </div>
-
-            <div className="p-2 rounded-lg sm:rounded-xl bg-white border border-red-200 text-red-600 shadow-sm shrink-0">
-              <IndianRupee size={17} />
-            </div>
+          <div className="p-3 sm:p-3.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Total Outstanding
+            </span>
+            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-red-600">
+              {currency(stats.totalOutstanding)}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">Pending receivable balance</p>
           </div>
 
-          <p className="text-[10px] sm:text-xs text-slate-600 mt-2 sm:mt-3 truncate">
-            Amount pending
-          </p>
-        </Card>
-
-        {/* Credit Limit */}
-
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs font-medium text-slate-600 uppercase tracking-wide truncate">
-                Credit Limit
-              </p>
-
-              <p className="text-lg sm:text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1 sm:mt-2 truncate">
-                {currency(stats.totalCreditLimit)}
-              </p>
-            </div>
-
-            <div className="p-2 rounded-lg sm:rounded-xl bg-blue-50 border border-blue-100 text-blue-600 shadow-sm shrink-0">
-              <WalletCards size={17} />
-            </div>
+          <div className="p-3 sm:p-3.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Total Credit Limit
+            </span>
+            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-blue-600">
+              {currency(stats.totalCreditLimit)}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">Combined authorized limit</p>
           </div>
 
-          <p className="text-[10px] sm:text-xs text-slate-600 mt-2 sm:mt-3 truncate">
-            Combined limit
-          </p>
-        </Card>
-
-        {/* Total Bills */}
-
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs font-medium text-slate-600 uppercase tracking-wide truncate">
-                Total Bills
-              </p>
-
-              <p className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400 mt-1 sm:mt-2">
-                {stats.totalBills}
-              </p>
-            </div>
-
-            <div className="p-2 rounded-lg sm:rounded-xl bg-white border border-emerald-200 text-emerald-600 shadow-sm shrink-0">
-              <FileText size={17} />
-            </div>
+          <div className="p-3 sm:p-3.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Linked Bills
+            </span>
+            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-green-600">
+              {stats.totalBills}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">Completed customer sales</p>
           </div>
-
-          <p className="text-[10px] sm:text-xs text-slate-600 mt-2 sm:mt-3 truncate">
-            Linked bills
-          </p>
-        </Card>
-      </div>
+        </div>
+      </section>
 
       {/* =====================================================
           FILTERS
       ====================================================== */}
 
-      <Card className="p-2.5 sm:p-4">
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3.5">
         <div className="flex w-full items-center gap-2">
 
           {/* Search */}
@@ -525,13 +473,13 @@ export default function Customers() {
             )}
           </div>
         )}
-      </Card>
+      </div>
 
       {/* =====================================================
           CUSTOMER LIST
       ====================================================== */}
 
-      <Card className="overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
 
         {loading ? (
           <div className="py-14">
@@ -582,9 +530,9 @@ export default function Customers() {
                     <th>Customer</th>
                     <th>Contact</th>
                     <th>GSTIN</th>
-                    <th>Credit Limit</th>
-                    <th>Outstanding</th>
-                    <th>Bills</th>
+                    <th className="num-col">Credit Limit</th>
+                    <th className="num-col">Outstanding</th>
+                    <th className="text-center">Bills</th>
                     <th className="text-right">
                       Actions
                     </th>
@@ -686,47 +634,25 @@ export default function Customers() {
 
                         {/* Credit */}
 
-                        <td className="text-sm">
+                        <td className="num-col font-mono text-xs text-[var(--ink-secondary)]">
                           {currency(creditLimit)}
                         </td>
 
                         {/* Outstanding */}
 
-                        <td>
-
-                          <div className="flex items-center gap-2">
-
-                            {outstanding > 0 ? (
-                              <>
-                                <AlertCircle
-                                  size={14}
-                                  className="text-red-500"
-                                />
-
-                                <span className="font-semibold text-red-600 dark:text-red-400 text-sm">
-                                  {currency(outstanding)}
-                                </span>
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle2
-                                  size={14}
-                                  className="text-green-500"
-                                />
-
-                                <span className="text-sm text-green-600 dark:text-green-400 font-medium">
-                                  Paid
-                                </span>
-                              </>
-                            )}
-
-                          </div>
-
+                        <td className="num-col font-mono">
+                          <span
+                            className={`text-xs font-bold ${
+                              outstanding > 0 ? 'text-red-600' : 'text-green-600'
+                            }`}
+                          >
+                            {currency(outstanding)}
+                          </span>
                         </td>
 
                         {/* Bills */}
 
-                        <td className="text-sm font-medium">
+                        <td className="text-center font-mono text-xs font-semibold text-[var(--ink-secondary)]">
                           {customer.total_bills ?? 0}
                         </td>
 
@@ -955,7 +881,7 @@ export default function Customers() {
           </>
         )}
 
-      </Card>
+      </div>
 
       {/* =====================================================
           PAYMENT REMINDER MODAL

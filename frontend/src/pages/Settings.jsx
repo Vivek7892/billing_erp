@@ -1,27 +1,52 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../api'
-import { Card, PageHeader } from '../components/UI'
+import { Card, PageHeader, Spinner } from '../components/UI'
 import toast from 'react-hot-toast'
-import { Building2, FileText, Percent, CreditCard, Printer, Upload, CheckCircle2, Trash2, ImageIcon, Eye } from 'lucide-react'
-import { QRCodeSVG } from 'qrcode.react'
+import {
+  Building2,
+  FileText,
+  Percent,
+  CreditCard,
+  Printer,
+  Upload,
+  CheckCircle2,
+  Trash2,
+  ImageIcon,
+  Eye,
+  Sliders,
+  Save,
+  Check,
+} from 'lucide-react'
+import InvoiceDocument, { isTrue } from '../components/InvoiceDocument'
 
-function F({ label, children, full, hint }) {
+function FormField({ label, children, full, hint }) {
   return (
     <div className={`${full ? 'sm:col-span-2' : ''} min-w-0`}>
-      <label className="block mb-1.5 text-xs font-semibold tracking-wide text-[var(--muted)]">
+      <label className="block mb-1.5 text-xs font-semibold tracking-wide text-[var(--ink-secondary)]">
         {label}
       </label>
       {children}
-      {hint && <p className="mt-1.5 text-[11px] leading-4 text-[var(--muted-light)]">{hint}</p>}
+      {hint && (
+        <p className="mt-1 text-[11px] leading-4 text-[var(--muted-light)]">
+          {hint}
+        </p>
+      )}
     </div>
   )
 }
 
-function Inp({ value, onChange, mono, maxLength, type = 'text', placeholder }) {
+function Inp({
+  value,
+  onChange,
+  mono,
+  maxLength,
+  type = 'text',
+  placeholder,
+}) {
   return (
     <input
       type={type}
-      className={`w-full min-h-11 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-sm text-[var(--ink)] placeholder:text-[var(--muted-light)] shadow-sm outline-none transition-all focus:border-[var(--ink)] focus:ring-4 focus:ring-[var(--ink)]/10 hover:border-[var(--muted-light)] ${mono ? 'font-mono tracking-tight' : ''}`}
+      className={`input w-full h-11 text-xs sm:text-sm font-medium ${mono ? 'font-mono' : ''}`}
       value={value || ''}
       onChange={e => onChange(e.target.value)}
       maxLength={maxLength}
@@ -33,11 +58,15 @@ function Inp({ value, onChange, mono, maxLength, type = 'text', placeholder }) {
 function Sel({ value, onChange, options }) {
   return (
     <select
-      className="w-full min-h-11 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-sm text-[var(--ink)] shadow-sm outline-none transition-all focus:border-[var(--ink)] focus:ring-4 focus:ring-[var(--ink)]/10 hover:border-[var(--muted-light)]"
+      className="input w-full h-11 text-xs sm:text-sm font-medium"
       value={value || ''}
       onChange={e => onChange(e.target.value)}
     >
-      {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+      {options.map(([v, l]) => (
+        <option key={v} value={v}>
+          {l}
+        </option>
+      ))}
     </select>
   )
 }
@@ -45,7 +74,7 @@ function Sel({ value, onChange, options }) {
 function Txt({ value, onChange, rows = 3, placeholder }) {
   return (
     <textarea
-      className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-sm leading-5 text-[var(--ink)] placeholder:text-[var(--muted-light)] shadow-sm outline-none transition-all focus:border-[var(--ink)] focus:ring-4 focus:ring-[var(--ink)]/10 hover:border-[var(--muted-light)] resize-y"
+      className="input w-full text-xs sm:text-sm leading-5 p-3 resize-y font-medium"
       rows={rows}
       value={value || ''}
       onChange={e => onChange(e.target.value)}
@@ -54,799 +83,59 @@ function Txt({ value, onChange, rows = 3, placeholder }) {
   )
 }
 
-const TABS = [
-  { id: 'business', label: 'Business Profile', Icon: Building2 },
-  { id: 'invoice',  label: 'Invoice Settings', Icon: FileText },
-  { id: 'gst',      label: 'GST Settings',     Icon: Percent },
-  { id: 'payment',  label: 'Payment Settings', Icon: CreditCard },
-  { id: 'printer',  label: 'Printer Settings', Icon: Printer },
-  { id: 'preview',  label: 'Bill Preview',     Icon: Eye },
-]
-
-function Section({ title, description, children }) {
+// Formal clean checkbox row (replaces oversized weird toggle cards)
+function FieldCheckbox({ checked, onChange, label, description }) {
   return (
-    <Card className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-      <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-3.5 sm:px-5">
-        <h3 className="text-sm font-bold text-[var(--ink)]">{title}</h3>
-        {description && <p className="mt-0.5 text-[11px] leading-4 text-[var(--muted)]">{description}</p>}
+    <label className="flex items-start gap-3 p-2.5 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface)] hover:bg-[var(--surface-elevated)] transition-colors cursor-pointer group">
+      <input
+        type="checkbox"
+        checked={Boolean(checked)}
+        onChange={onChange}
+        className="mt-0.5 h-4 w-4 rounded border-[var(--line)] text-indigo-600 focus:ring-indigo-500 accent-indigo-600 cursor-pointer shrink-0"
+      />
+      <div className="min-w-0">
+        <span className="block text-xs font-semibold text-[var(--ink)] group-hover:text-indigo-600 transition-colors">
+          {label}
+        </span>
+        {description && (
+          <span className="block text-[11px] text-[var(--muted-light)] mt-0.5 leading-normal">
+            {description}
+          </span>
+        )}
       </div>
-      <div className="grid gap-4 p-4 sm:grid-cols-2 sm:p-5">{children}</div>
-    </Card>
-  )
-}
-
-function Toggle({ checked, onChange, label, description }) {
-  return (
-    <label className="group flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-3 transition-all hover:border-[var(--muted-light)] hover:bg-[var(--surface-hover)]/40">
-      <span className="relative mt-0.5 flex-shrink-0">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={onChange}
-          className="peer sr-only"
-        />
-        <span className="block h-6 w-11 rounded-full bg-slate-300 transition-colors peer-checked:bg-[var(--ink)] peer-focus-visible:ring-4 peer-focus-visible:ring-indigo-500/20" />
-        <span className="absolute left-1 top-1 h-4 w-4 rounded-full bg-[var(--surface)] shadow-sm transition-transform peer-checked:translate-x-5" />
-      </span>
-      <span className="min-w-0">
-        <span className="block text-sm font-medium text-[var(--ink-secondary)]">{label}</span>
-        {description && <span className="mt-0.5 block text-[11px] leading-4 text-[var(--muted-light)]">{description}</span>}
-      </span>
     </label>
   )
 }
 
-// ── Business Profile ─────────────────────────────────────────────────────────
-function BusinessTab({ s, set, onLogoUpload, onLogoRemove, uploading, removing }) {
-  const fileRef = useRef()
-  const [localPreview, setLocalPreview] = useState(null)
-  const [fileInfo, setFileInfo] = useState(null)
-
-  const previewUrl = localPreview || s.shop_logo || null
-
-  useEffect(() => {
-    if (!uploading && s.shop_logo) { setLocalPreview(null); setFileInfo(null) }
-  }, [uploading, s.shop_logo])
-
-  const handleFileChange = e => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setLocalPreview(URL.createObjectURL(file))
-    setFileInfo({ name: file.name, size: (file.size / 1024).toFixed(1) + ' KB' })
-    onLogoUpload(e)
-  }
-
-  const handleRemove = () => {
-    setLocalPreview(null); setFileInfo(null)
-    if (fileRef.current) fileRef.current.value = ''
-    onLogoRemove()
-  }
-
+function SectionCard({ title, description, children, action }) {
   return (
-    <div className="space-y-4">
-      <Card className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-        <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-4 sm:px-5">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--surface-hover)] text-[var(--ink)]">
-              <ImageIcon size={17} />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-[var(--ink)]">Business Logo</h3>
-              <p className="text-[11px] text-[var(--muted)]">Used on invoices, receipts and reports</p>
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-col gap-5 p-4 sm:flex-row sm:p-5">
-          <div className="flex flex-col items-center gap-2 flex-shrink-0">
-            <div
-              onClick={() => fileRef.current?.click()}
-              className="w-32 h-32 rounded-xl border border-[var(--line)] bg-[var(--surface)] flex flex-col items-center justify-center overflow-hidden cursor-pointer hover:border-[var(--muted-light)] transition-colors group relative"
-            >
-              {previewUrl ? (
-                <img src={previewUrl} alt="Shop logo" className="w-full h-full object-contain p-2" />
-              ) : (
-                <div className="flex flex-col items-center gap-1.5 text-[var(--muted-light)]">
-                  <ImageIcon size={28} />
-                  <span className="text-xs">No logo</span>
-                </div>
-              )}
-              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
-                <Upload size={20} className="text-white" />
-              </div>
-            </div>
-            <span className="text-[11px] font-medium text-[var(--muted-light)]">Tap image to change</span>
-          </div>
-
-          <div className="flex-1 min-w-0 flex flex-col justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-[var(--ink)] mb-0.5">Shop / Brand Logo</p>
-              <p className="text-xs text-[var(--muted)]">PNG · JPG · WEBP · Square recommended · Max 2 MB</p>
-              <p className="text-xs text-[var(--muted-light)] mt-0.5">Keep the logo simple for clear printing.</p>
-            </div>
-
-            {fileInfo && (
-              <div className="flex items-center gap-2 bg-[var(--surface-elevated)] border border-[var(--line)] rounded-lg px-3 py-2">
-                <CheckCircle2 size={14} className="text-[var(--muted)] flex-shrink-0" />
-                <span className="text-xs text-[var(--ink-secondary)] truncate">{fileInfo.name}</span>
-                <span className="text-xs text-[var(--muted)] flex-shrink-0">{fileInfo.size}</span>
-              </div>
-            )}
-
-            {uploading && (
-              <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-                <div className="w-3.5 h-3.5 border-2 border-[var(--line)] border-t-[var(--muted)] rounded-full animate-spin" />
-                Uploading…
-              </div>
-            )}
-
-            <div className="flex items-center gap-2">
-              <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleFileChange} />
-              <button type="button" onClick={() => fileRef.current?.click()} disabled={uploading} className="btn-secondary btn-sm gap-1.5">
-                <Upload size={13} /> {previewUrl ? 'Change logo' : 'Upload logo'}
-              </button>
-              {previewUrl && (
-                <button type="button" onClick={handleRemove} disabled={removing} className="btn-secondary btn-sm gap-1.5">
-                  <Trash2 size={13} /> Remove
-                </button>
-              )}
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-3">
-              <F label="PAN"><Inp value={s.shop_pan} onChange={v => set('shop_pan', v)} maxLength={10} mono placeholder="AABCS1429B" /></F>
-              <F label="FSSAI Licence"><Inp value={s.fssai_licence} onChange={v => set('fssai_licence', v)} placeholder="12345678901234" /></F>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <Section title="Business Details" description="Basic information shown across your billing documents.">
-        <F label="Business Name"><Inp value={s.shop_name} onChange={v => set('shop_name', v)} placeholder="Sri Balaji Store" /></F>
-        <F label="Business Type">
-          <Sel value={s.business_type} onChange={v => set('business_type', v)} options={[
-            ['retail_wholesale', 'Retail & Wholesale'],
-            ['manufacturing', 'Manufacturing'],
-            ['services', 'Services'],
-          ]} />
-        </F>
-        <F label="GSTIN"><Inp value={s.shop_gstin} onChange={v => set('shop_gstin', v)} maxLength={15} mono placeholder="23AABCS1429B1ZP" /></F>
-        <F label="Phone"><Inp value={s.shop_phone} onChange={v => set('shop_phone', v)} placeholder="+91 98765 43210" /></F>
-        <F label="Email"><Inp value={s.shop_email} onChange={v => set('shop_email', v)} type="email" placeholder="billing@store.in" /></F>
-        <F label="State"><Inp value={s.shop_state} onChange={v => set('shop_state', v)} placeholder="Madhya Pradesh" /></F>
-        <F label="Business Address" full><Txt value={s.shop_address} onChange={v => set('shop_address', v)} placeholder="Shop no., Street, City, PIN" /></F>
-      </Section>
-
-      <Section title="Optional Identifiers" description="Additional business details used when required.">
-        <F label="CIN"><Inp value={s.cin} onChange={v => set('cin', v)} mono placeholder="U74999MH2021PTC123456" /></F>
-        <F label="Financial Year Start">
-          <Sel value={s.fy_start} onChange={v => set('fy_start', v)} options={[
-            ['april', 'April (default)'], ['january', 'January'], ['july', 'July'],
-          ]} />
-        </F>
-      </Section>
-    </div>
-  )
-}
-
-// ── Invoice Settings ─────────────────────────────────────────────────────────
-function InvoiceTab({ s, set }) {
-  return (
-    <div className="space-y-4">
-      <Section title="Numbering" description="Control invoice numbering and document defaults.">
-        <F label="Invoice Prefix"><Inp value={s.invoice_prefix} onChange={v => set('invoice_prefix', v)} placeholder="INV-2026-" /></F>
-        <F label="Next Invoice Number">
-          <Inp value={s.invoice_start_number} onChange={v => set('invoice_start_number', v)} mono placeholder="0149" />
-          <p className="mt-1 text-xs text-[var(--muted-light)]">Advances automatically after each saved invoice.</p>
-        </F>
-        <F label="Invoice Template">
-          <Sel value={s.invoice_template} onChange={v => set('invoice_template', v)} options={[
-            ['gst_a4', 'GST Tax Invoice (A4)'],
-            ['thermal_80', 'Thermal Receipt (80mm)'],
-          ]} />
-        </F>
-        <F label="Default Due Days"><Inp value={s.invoice_due_days} onChange={v => set('invoice_due_days', v)} type="number" placeholder="15" /></F>
-      </Section>
-
-      <Section title="Appearance" description="Choose how your printed invoices are structured.">
-        <F label="Invoice Font">
-          <Sel value={s.invoice_font || 'default'} onChange={v => set('invoice_font', v)} options={[
-            ['default', 'Default (Helvetica)'],
-            ['dejavu', 'DejaVu Sans (Unicode)'],
-            ['courier', 'Courier (Monospace)'],
-          ]} />
-          <p className="mt-1 text-xs text-[var(--muted-light)]">DejaVu supports ₹ and regional characters.</p>
-        </F>
-        <F label="Header Layout">
-          <Sel value={s.invoice_header_layout || 'logo_left'} onChange={v => set('invoice_header_layout', v)} options={[
-            ['logo_left', 'Logo left · Business name right'],
-            ['name_only', 'Business name only (no logo)'],
-          ]} />
-        </F>
-        <F label="Footer Layout">
-          <Sel value={s.invoice_footer_layout || 'text_center'} onChange={v => set('invoice_footer_layout', v)} options={[
-            ['text_center', 'Footer text centered'],
-            ['text_left', 'Footer text left-aligned'],
-            ['none', 'No footer'],
-          ]} />
-        </F>
-        <F label="Paper Size">
-          <Sel value={s.invoice_paper_size || 'a4'} onChange={v => set('invoice_paper_size', v)} options={[
-            ['a4', 'A4 (210 × 297 mm)'],
-            ['letter', 'US Letter (216 × 279 mm)'],
-            ['a5', 'A5 (148 × 210 mm)'],
-          ]} />
-        </F>
-      </Section>
-
-      <Section title="Content" description="Add the standard text printed on each invoice.">
-        <F label="Terms & Conditions" full>
-          <Txt value={s.invoice_terms} onChange={v => set('invoice_terms', v)} rows={4}
-            placeholder={`1. Goods once sold will not be returned.\n2. Payment due within 15 days.`} />
-        </F>
-        <F label="Invoice Footer Text" full>
-          <Inp value={s.invoice_footer} onChange={v => set('invoice_footer', v)} placeholder="Thank you for your business!" />
-        </F>
-      </Section>
-
-      <Section title="Show / Hide Columns" description="Keep only the columns your customers need to see.">
-        {[
-          ['show_discount_col', 'Discount column'],
-          ['show_hsn_col', 'HSN / SAC column'],
-          ['show_batch_col', 'Batch number'],
-          ['show_expiry_col', 'Expiry date'],
-        ].map(([key, label]) => (
-          <Toggle
-            key={key}
-            checked={s[key] === 'true' || s[key] === true}
-            onChange={e => set(key, String(e.target.checked))}
-            label={label}
-          />
-        ))}
-      </Section>
-
-      <Section title="Additional Options" description="Extra fields and sections printed on the invoice.">
-        {[
-          ['show_signature_area', 'Signature area (Prepared by / Authorised Signatory)', 'Adds a signature strip at the bottom of A4 invoices.'],
-          ['show_fssai_on_invoice', 'Print FSSAI licence number', 'Shown in the business header when a licence is configured.'],
-          ['show_cin_on_invoice', 'Print CIN number', 'Shown in the business header when a CIN is configured.'],
-        ].map(([key, label, desc]) => (
-          <Toggle key={key} checked={s[key] === 'true' || s[key] === true}
-            onChange={e => set(key, String(e.target.checked))}
-            label={label} description={desc} />
-        ))}
-        <F label="Invoice Notes" full>
-          <Txt value={s.invoice_notes} onChange={v => set('invoice_notes', v)} rows={2}
-            placeholder="e.g. Subject to jurisdiction of local courts only." />
-          <p className="mt-1 text-xs text-[var(--muted-light)]">Printed above Terms &amp; Conditions on every invoice.</p>
-        </F>
-      </Section>
-
-      <Card className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm sm:p-5">
-        <h3 className="text-[11px] font-700 uppercase tracking-widest text-[var(--muted)] mb-4">UPI QR on Invoice</h3>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <F label="UPI ID">
-            <Inp value={s.shop_upi_id} onChange={v => set('shop_upi_id', v)} placeholder="balajitraders@okhdfcbank" />
-            <p className="mt-1 text-xs text-[var(--muted-light)]">Printed as a scannable QR on the invoice.</p>
-          </F>
-          <F label="UPI Merchant Name"><Inp value={s.upi_merchant_name} onChange={v => set('upi_merchant_name', v)} placeholder="Balaji Traders" /></F>
-          <F label="QR Size on A4">
-            <Sel value={s.upi_qr_size_a4 || 'medium'} onChange={v => set('upi_qr_size_a4', v)} options={[
-              ['small', 'Small (18mm)'], ['medium', 'Medium (22mm)'], ['large', 'Large (28mm)'],
-            ]} />
-          </F>
-          <F label="QR Size on Thermal">
-            <Sel value={s.upi_qr_size_thermal || 'medium'} onChange={v => set('upi_qr_size_thermal', v)} options={[
-              ['small', 'Small (20mm)'], ['medium', 'Medium (28mm)'], ['large', 'Large (36mm)'],
-            ]} />
-          </F>
-          <div className="sm:col-span-2 grid gap-3 sm:grid-cols-2">
-            {[
-              ['show_upi_qr_on_invoice', 'Show QR on A4 invoice'],
-              ['show_upi_qr_on_thermal', 'Show QR on thermal receipt'],
-            ].map(([key, label]) => (
-              <Toggle
-                key={key}
-                checked={s[key] === 'true' || s[key] === true}
-                onChange={e => set(key, String(e.target.checked))}
-                label={label}
-              />
-            ))}
-          </div>
-          {s.shop_upi_id && (
-            <div className="sm:col-span-2 flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-3">
-              <div className="w-9 h-9 bg-[var(--surface)] rounded-lg border border-[var(--line)] flex items-center justify-center shrink-0">
-                <span className="text-base">📱</span>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-[var(--ink-secondary)]">UPI configured</p>
-                <p className="text-xs text-[var(--muted)] font-mono">{s.shop_upi_id}</p>
-              </div>
-            </div>
+    <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
+      <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-3 sm:px-5 flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-bold text-[var(--ink)]">{title}</h3>
+          {description && (
+            <p className="mt-0.5 text-[11px] leading-4 text-[var(--muted)]">
+              {description}
+            </p>
           )}
         </div>
-      </Card>
-
-      <Card className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-        <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-4 sm:px-5">
-          <h3 className="text-sm font-bold text-[var(--ink)]">Invoice Preview</h3>
-          <p className="mt-0.5 text-xs text-[var(--muted)]">Live sample — updates as you change settings above.</p>
-        </div>
-        <div className="p-4 sm:p-5">
-        <BillPreviewTab s={s} embedded />
-        </div>
-      </Card>
+        {action && <div>{action}</div>}
+      </div>
+      <div className="grid gap-3.5 p-4 sm:grid-cols-2 sm:p-5">{children}</div>
     </div>
   )
 }
 
-// ── GST Settings ─────────────────────────────────────────────────────────────
-function GstTab({ s, set }) {
-  return (
-    <div className="space-y-4">
-      <Section title="Registration" description="Configure GST registration and tax calculation defaults.">
-        <F label="GST Registration Type">
-          <Sel value={s.gst_reg_type} onChange={v => set('gst_reg_type', v)} options={[
-            ['regular', 'Regular'], ['composition', 'Composition'], ['unregistered', 'Unregistered'],
-          ]} />
-        </F>
-        <F label="Default GST Rate">
-          <Sel value={s.default_gst_rate} onChange={v => set('default_gst_rate', v)} options={[
-            ['0', '0%'], ['5', '5%'], ['12', '12%'], ['18', '18%'], ['28', '28%'],
-          ]} />
-        </F>
-        <F label="Place of Supply"><Inp value={s.place_of_supply} onChange={v => set('place_of_supply', v)} placeholder="Madhya Pradesh (23)" /></F>
-        <F label="Tax on Price">
-          <Sel value={s.tax_on_price} onChange={v => set('tax_on_price', v)} options={[
-            ['exclusive', 'Exclusive of GST'], ['inclusive', 'Inclusive of GST'],
-          ]} />
-          <p className="mt-1 text-xs text-[var(--muted-light)]">
-            {s.tax_on_price === 'inclusive' ? 'Tax is back-calculated from the selling price.' : 'GST is added on top of the selling price.'}
-          </p>
-        </F>
-      </Section>
-
-      <Card className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm sm:p-5">
-        <h3 className="text-[11px] font-700 uppercase tracking-widest text-[var(--muted)] mb-4">Feature Flags</h3>
-        <div className="grid sm:grid-cols-2 gap-3">
-          {[
-            ['einvoice_enabled', 'E-Invoice enabled'],
-            ['hsn_summary_on_invoice', 'HSN summary on invoice'],
-            ['reverse_charge', 'Reverse charge applicable'],
-            ['cess_enabled', 'CESS handling'],
-          ].map(([key, label]) => (
-            <label key={key} className="flex items-center gap-2 text-sm text-[var(--ink-secondary)] cursor-pointer">
-              <input type="checkbox" checked={s[key] === 'true' || s[key] === true}
-                onChange={e => set(key, String(e.target.checked))} className="rounded" />
-              {label}
-            </label>
-          ))}
-        </div>
-      </Card>
-    </div>
-  )
-}
-
-// ── Payment Settings ──────────────────────────────────────────────────────────
-function PaymentTab({ s, set }) {
-  return (
-    <div className="space-y-4">
-      <Section title="Payment Defaults" description="Set the payment information used by default on new bills.">
-        <F label="Default Payment Mode">
-          <Sel value={s.default_payment_method} onChange={v => set('default_payment_method', v)} options={[
-            ['cash', 'Cash'], ['upi', 'UPI'], ['card', 'Card'], ['credit', 'Credit'],
-          ]} />
-        </F>
-        <F label="Round Off Total">
-          <Sel value={s.round_off} onChange={v => set('round_off', v)} options={[
-            ['nearest', 'Nearest rupee'], ['none', 'No round off'],
-          ]} />
-        </F>
-        <F label="Credit Limit Alert"><Inp value={s.credit_limit_alert} onChange={v => set('credit_limit_alert', v)} placeholder="₹50,000" /></F>
-        <F label="UPI ID"><Inp value={s.shop_upi_id} onChange={v => set('shop_upi_id', v)} placeholder="balajitraders@okhdfcbank" /></F>
-        <F label="Bank Account Details" full>
-          <Inp value={s.shop_bank_details} onChange={v => set('shop_bank_details', v)} placeholder="HDFC Bank · A/C 5012 3456 7890 · IFSC HDFC0001234" />
-        </F>
-      </Section>
-      <Section title="Options" description="Enable or disable optional billing behaviour.">
-        {[
-          ['show_upi_qr_on_invoice', 'Show UPI QR on invoice'],
-          ['show_upi_qr_on_thermal', 'Show UPI QR on thermal receipt'],
-          ['advance_payment_enabled', 'Allow advance payment'],
-        ].map(([key, label]) => (
-          <Toggle
-            key={key}
-            checked={s[key] === 'true' || s[key] === true}
-            onChange={e => set(key, String(e.target.checked))}
-            label={label}
-          />
-        ))}
-      </Section>
-    </div>
-  )
-}
-
-// ── Printer Settings ──────────────────────────────────────────────────────────
-function PrinterTab({ s, set }) {
-  return (
-    <div className="space-y-4">
-      <Section title="Printer Configuration" description="Configure your counter printer and automatic printing.">
-        <F label="Printer Type">
-          <Sel value={s.printer_type} onChange={v => set('printer_type', v)} options={[
-            ['thermal_80', 'Thermal 80mm'], ['a4', 'A4 Laser / Inkjet'],
-          ]} />
-        </F>
-        <F label="Default Printer"><Inp value={s.default_printer} onChange={v => set('default_printer', v)} placeholder="EPSON TM-T82 (Counter 1)" /></F>
-        <F label="Copies per Bill"><Inp value={s.copies_per_bill} onChange={v => set('copies_per_bill', v)} type="number" placeholder="2" /></F>
-        <F label="Auto Print After Save">
-          <Sel value={s.auto_print} onChange={v => set('auto_print', v)} options={[['yes', 'Yes'], ['no', 'No']]} />
-        </F>
-        <F label="Receipt Footer Text" full>
-          <Inp value={s.invoice_footer} onChange={v => set('invoice_footer', v)} placeholder="Thank you for shopping with us!" />
-          <p className="mt-1 text-xs text-[var(--muted-light)]">Shared with Invoice Settings — used on both A4 and thermal.</p>
-        </F>
-      </Section>
-      <Section title="Options" description="Enable or disable optional billing behaviour.">
-        {[
-          ['open_cash_drawer', 'Open cash drawer on print'],
-          ['print_duplicate', 'Print duplicate copy automatically'],
-        ].map(([key, label]) => (
-          <Toggle
-            key={key}
-            checked={s[key] === 'true' || s[key] === true}
-            onChange={e => set(key, String(e.target.checked))}
-            label={label}
-          />
-        ))}
-        <div className="sm:col-span-2 pt-1">
-          <button type="button" className="btn-secondary btn-sm"
-            onClick={() => toast('Test print sent to printer', { icon: '🖨️' })}>
-            🖨️ Send Test Print
-          </button>
-        </div>
-      </Section>
-    </div>
-  )
-}
-
-// ── Bill Preview ──────────────────────────────────────────────────────────────
-const DEMO_ITEMS = [
-  { name: 'Basmati Rice 5kg', hsn: '1006', qty: 2, rate: 320, gst: 5, disc: 0 },
-  { name: 'Sunflower Oil 1L',  hsn: '1512', qty: 3, rate: 145, gst: 5, disc: 5 },
-  { name: 'Toor Dal 1kg',      hsn: '0713', qty: 4, rate: 110, gst: 0, disc: 0 },
+const TABS = [
+  { id: 'business', label: 'Business Profile', icon: Building2 },
+  { id: 'invoice', label: 'Invoicing & Print', icon: FileText },
+  { id: 'fields', label: 'Bill Fields & Columns', icon: Sliders },
+  { id: 'gst', label: 'GST & Accounting', icon: Percent },
+  { id: 'payment', label: 'Banking & UPI QR', icon: CreditCard },
+  { id: 'printer', label: 'Printer Setup', icon: Printer },
+  { id: 'preview', label: 'Live Bill Preview', icon: Eye },
 ]
 
-function BillPreviewTab({ s, embedded = false }) {
-  const selectedMode = s.invoice_template === 'thermal_80' ? 'thermal' : 'a4'
-  const [mode, setMode] = useState(selectedMode)
-  useEffect(() => setMode(selectedMode), [selectedMode])
-
-  const items = DEMO_ITEMS.map(i => {
-    const basic = i.rate * i.qty * (1 - i.disc / 100)
-    const gst = basic * i.gst / 100
-    return { ...i, basic, gst, total: basic + gst }
-  })
-  const subtotal  = items.reduce((a, i) => a + i.basic, 0)
-  const totalGst  = items.reduce((a, i) => a + i.gst, 0)
-  const grand     = subtotal + totalGst
-  const fmt       = v => `Rs.${Number(v).toFixed(2)}`
-  const today     = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
-
-  const showHsn  = s.show_hsn_col  === 'true' || s.show_hsn_col  === true
-  const showDisc = s.show_discount_col === 'true' || s.show_discount_col === true
-  const showGst  = s.gst_reg_type !== 'unregistered'
-  const invoiceNo    = `${s.invoice_prefix || 'INV-'}${s.invoice_start_number || '0001'}`
-  const shopName     = s.shop_name    || 'Sri Balaji Store'
-  const address      = s.shop_address || '123, Main Street, City - 400001'
-  const phone        = s.shop_phone   || '+91 98765 43210'
-  const gstin        = s.shop_gstin   || '23AABCS1429B1ZP'
-  const footer       = s.invoice_footer || 'Thank you for shopping with us!'
-  const terms        = s.invoice_terms  || '1. Goods once sold will not be returned.\n2. Payment due within 15 days.'
-  const upiId        = s.shop_upi_id
-  const showUpiA4    = (s.show_upi_qr_on_invoice === 'true' || s.show_upi_qr_on_invoice === true) && upiId
-  const showUpiThermal = (s.show_upi_qr_on_thermal === 'true' || s.show_upi_qr_on_thermal === true) && upiId
-  const showSignature  = s.show_signature_area === 'true' || s.show_signature_area === true
-  const showFssai      = (s.show_fssai_on_invoice === 'true' || s.show_fssai_on_invoice === true) && s.fssai_licence
-  const showCin        = (s.show_cin_on_invoice === 'true' || s.show_cin_on_invoice === true) && s.cin
-  const footerLayout = s.invoice_footer_layout || 'text_center'
-  const headerLayout = s.invoice_header_layout || 'logo_left'
-  const a4Font = s.invoice_font === 'courier' ? 'Courier New, monospace' : 'Helvetica, Arial, sans-serif'
-  const qrSize = mode === 'thermal'
-    ? ({ small: 76, medium: 106, large: 136 }[s.upi_qr_size_thermal] || 106)
-    : ({ small: 68, medium: 83,  large: 106 }[s.upi_qr_size_a4]      || 83)
-  const qrValue = `upi://pay?pa=${encodeURIComponent(upiId || '')}&pn=${encodeURIComponent(shopName)}&am=${grand.toFixed(2)}&cu=INR&tn=${encodeURIComponent(invoiceNo)}`
-
-  const modePicker = (
-    <div className="flex flex-wrap items-center gap-2 mb-4">
-      {['a4', 'thermal'].map(m => (
-        <button key={m} type="button" onClick={() => setMode(m)}
-          className={`min-h-10 rounded-xl border px-3.5 text-xs font-semibold transition-all ${
-            mode === m
-              ? 'border-[var(--ink)] bg-[var(--ink)] text-white shadow-sm'
-              : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:border-[var(--muted-light)] hover:bg-[var(--surface-hover)]/50'
-          }`}>
-          {m === 'a4' ? 'A4 Invoice' : 'Thermal Receipt'}
-        </button>
-      ))}
-      <span className="text-xs text-[var(--muted-light)]">Live preview · sample data</span>
-    </div>
-  )
-
-  if (mode === 'thermal') {
-    return (
-      <div>
-        {modePicker}
-        <div className="flex justify-center">
-          <div className="bg-[var(--surface)] text-black shadow border border-gray-200"
-            style={{ width: 302, fontFamily: 'Courier New, monospace', fontSize: 11, padding: '12px 10px' }}>
-            <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 13, marginBottom: 2 }}>{shopName.toUpperCase()}</div>
-            {address.split('\n').map((l, i) => <div key={i} style={{ textAlign: 'center', fontSize: 10 }}>{l}</div>)}
-            <div style={{ textAlign: 'center', fontSize: 10 }}>Ph: {phone}</div>
-            {gstin && <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 10 }}>GSTIN: {gstin}</div>}
-            <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
-            <div style={{ textAlign: 'center', fontWeight: 'bold' }}>TAX INVOICE</div>
-            <div style={{ textAlign: 'center', fontSize: 10 }}>{invoiceNo}</div>
-            <div style={{ textAlign: 'center', fontSize: 10 }}>Date: {today}</div>
-            <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
-            <div style={{ fontSize: 10, fontWeight: 'bold' }}>CUSTOMER: Walk-in Customer</div>
-            <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
-            <table style={{ width: '100%', fontSize: 10, borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #000' }}>
-                  <th style={{ textAlign: 'left', paddingBottom: 3 }}>ITEM</th>
-                  <th style={{ textAlign: 'right' }}>QTY</th>
-                  <th style={{ textAlign: 'right' }}>RATE</th>
-                  <th style={{ textAlign: 'right' }}>AMT</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, i) => (
-                  <tr key={i} style={{ borderBottom: '1px dotted #ccc' }}>
-                    <td style={{ paddingTop: 2, paddingBottom: 2 }}>{item.name}</td>
-                    <td style={{ textAlign: 'right' }}>{item.qty}</td>
-                    <td style={{ textAlign: 'right' }}>{item.rate}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{fmt(item.total)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}><span>SUBTOTAL</span><span>{fmt(subtotal)}</span></div>
-            {showGst && <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}><span>GST</span><span>{fmt(totalGst)}</span></div>}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: 13, marginTop: 4 }}><span>GRAND TOTAL</span><span>{fmt(grand)}</span></div>
-            <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
-            {showUpiThermal && (
-              <>
-                <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 'bold', marginBottom: 4 }}>SCAN TO PAY</div>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}><QRCodeSVG value={qrValue} size={qrSize} /></div>
-                <div style={{ textAlign: 'center', fontSize: 10, marginBottom: 4 }}>{upiId}</div>
-              </>
-            )}
-            <div style={{ textAlign: 'center', fontSize: 10, marginTop: 4 }}>{footer}</div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div>
-      {modePicker}
-      <div className="overflow-x-auto">
-        <div className="bg-white text-[#0F172A] shadow-md border border-slate-200 mx-auto rounded-sm"
-          style={{ width: 794, minHeight: 520, fontFamily: a4Font, fontSize: 12, padding: '24px 28px' }}>
-          
-          {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-            <div style={{ flex: 1 }}>
-              {headerLayout !== 'name_only' && s.shop_logo && (
-                <img src={s.shop_logo} alt="logo" style={{ height: 46, marginBottom: 6, objectFit: 'contain' }} />
-              )}
-              <div style={{ fontWeight: 'bold', fontSize: 18, textTransform: 'uppercase', color: '#0F172A', letterSpacing: '0.02em' }}>
-                {shopName}
-              </div>
-              {address.split('\n').map((l, i) => (
-                <div key={i} style={{ fontSize: 10, color: '#334155', marginTop: 1 }}>{l}</div>
-              ))}
-              <div style={{ fontSize: 10, color: '#475569', marginTop: 2 }}>
-                Mobile: {phone}{s.shop_email ? ` | Email: ${s.shop_email}` : ''}
-              </div>
-              {gstin && (
-                <div style={{ fontSize: 10, color: '#334155', marginTop: 2 }}>
-                  <b>GSTIN:</b> {gstin}{s.shop_pan ? ` | <b>PAN:</b> ${s.shop_pan}` : ''}{showFssai ? ` | <b>FSSAI:</b> ${s.fssai_licence}` : ''}{showCin ? ` | <b>CIN:</b> ${s.cin}` : ''}
-                </div>
-              )}
-            </div>
-            
-            <div style={{ textAlign: 'right', minWidth: 220 }}>
-              <div style={{ fontWeight: '800', fontSize: 19, letterSpacing: '0.03em', color: '#0F172A' }}>
-                TAX INVOICE
-              </div>
-              <div style={{ fontSize: 11, fontWeight: '700', marginTop: 6, color: '#0F172A' }}>
-                Invoice No: {invoiceNo}
-              </div>
-              <div style={{ fontSize: 10, color: '#334155', marginTop: 2 }}>
-                Invoice Date: {today}
-              </div>
-              <div style={{ fontSize: 10, color: '#334155', marginTop: 2 }}>
-                Payment Mode: CASH
-              </div>
-              {s.place_of_supply && (
-                <div style={{ fontSize: 10, color: '#475569', marginTop: 2 }}>
-                  Place of Supply: {s.place_of_supply}
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div style={{ borderTop: '1px solid #CBD5E1', marginBottom: 10 }} />
-
-          {/* Bill To Customer Section */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-            <div>
-              <div style={{ fontSize: 9.5, fontWeight: '700', textTransform: 'uppercase', color: '#475569', marginBottom: 2 }}>
-                BILL TO
-              </div>
-              <div style={{ fontWeight: 'bold', fontSize: 13, color: '#0F172A' }}>Walk-in Customer</div>
-              <div style={{ fontSize: 10, color: '#334155', marginTop: 1 }}>Mobile: +91 99999 00000</div>
-            </div>
-            {showUpiA4 && (
-              <div style={{ textAlign: 'center', fontSize: 9, color: '#475569' }}>
-                <div style={{ fontWeight: 'bold', marginBottom: 2 }}>UPI PAYMENT</div>
-                <QRCodeSVG value={qrValue} size={qrSize} />
-                <div style={{ marginTop: 2, fontWeight: '600' }}>SCAN TO PAY</div>
-              </div>
-            )}
-          </div>
-          
-          <div style={{ borderTop: '1px solid #E2E8F0', marginBottom: 8 }} />
-
-          {/* Redesigned Item Table */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
-            <thead>
-              <tr style={{ background: '#F8FAFC', borderTop: '1px solid #334155', borderBottom: '1px solid #334155' }}>
-                <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9.5, fontWeight: '700', color: '#334155', width: 40 }}>S.No</th>
-                <th style={{ textAlign: 'left', padding: '6px 6px', fontSize: 9.5, fontWeight: '700', color: '#334155' }}>Item Description</th>
-                {showHsn && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9.5, fontWeight: '700', color: '#334155', width: 70 }}>HSN/SAC</th>}
-                <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9.5, fontWeight: '700', color: '#334155', width: 45 }}>Qty</th>
-                <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9.5, fontWeight: '700', color: '#334155', width: 75 }}>Rate</th>
-                {showDisc && <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9.5, fontWeight: '700', color: '#334155', width: 55 }}>Disc.</th>}
-                {showGst && <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9.5, fontWeight: '700', color: '#334155', width: 65 }}>SGST</th>}
-                {showGst && <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9.5, fontWeight: '700', color: '#334155', width: 65 }}>CGST</th>}
-                <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9.5, fontWeight: '700', color: '#334155', width: 85 }}>Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, i) => (
-                <tr key={i} style={{ borderBottom: '1px solid #E2E8F0' }}>
-                  <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 10, color: '#64748B' }}>{i + 1}</td>
-                  <td style={{ padding: '6px 6px', fontSize: 11, color: '#0F172A', fontWeight: '500' }}>{item.name}</td>
-                  {showHsn && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 10, color: '#64748B' }}>{item.hsn}</td>}
-                  <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 11, color: '#0F172A' }}>{item.qty}</td>
-                  <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 11, color: '#0F172A' }}>{fmt(item.rate)}</td>
-                  {showDisc && <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 10, color: '#64748B' }}>{item.disc}%</td>}
-                  {showGst && <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 10.5, color: '#334155' }}>{fmt(item.gst / 2)}</td>}
-                  {showGst && <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 10.5, color: '#334155' }}>{fmt(item.gst / 2)}</td>}
-                  <td style={{ padding: '6px 6px', textAlign: 'right', fontWeight: '700', fontSize: 11, color: '#0F172A' }}>{fmt(item.total)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {/* Amount in Words & Totals Section */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 12 }}>
-            <div style={{ fontSize: 10, color: '#334155', maxWidth: 360 }}>
-              <div style={{ fontWeight: '700', textTransform: 'uppercase', color: '#475569', fontSize: 9.5, marginBottom: 2 }}>
-                AMOUNT IN WORDS
-              </div>
-              <div style={{ fontSize: 11, color: '#0F172A' }}>Rupees {Math.floor(grand)} Only</div>
-              {terms && (
-                <div style={{ marginTop: 10, fontSize: 9, color: '#64748B' }}>
-                  <b style={{ color: '#475569' }}>Terms &amp; Conditions</b><br />
-                  {terms.split('\n').map((l, i) => <span key={i}>{l}<br /></span>)}
-                </div>
-              )}
-            </div>
-
-            <div style={{ minWidth: 230 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: 11, color: '#334155' }}>
-                <span>Sub Total</span><span>{fmt(subtotal)}</span>
-              </div>
-              {showGst && (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: 11, color: '#334155' }}>
-                    <span>SGST</span><span>{fmt(totalGst / 2)}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: 11, color: '#334155' }}>
-                    <span>CGST</span><span>{fmt(totalGst / 2)}</span>
-                  </div>
-                </>
-              )}
-              {/* Highlighted Grand Total Block */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                padding: '6px 8px',
-                fontWeight: 'bold',
-                fontSize: 14,
-                borderTop: '1px solid #0F172A',
-                borderBottom: '1px solid #0F172A',
-                background: '#F1F5F9',
-                marginTop: 6,
-                color: '#0F172A',
-              }}>
-                <span>GRAND TOTAL</span>
-                <span>{fmt(grand)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Clean Payment Summary Section */}
-          <div style={{
-            background: '#F8FAFC',
-            border: '1px solid #CBD5E1',
-            borderRadius: 4,
-            marginTop: 14,
-            padding: '8px 14px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            fontSize: 10,
-          }}>
-            <div>
-              <span style={{ fontSize: 9, color: '#475569', fontWeight: '700' }}>PAYMENT STATUS</span><br />
-              <b style={{ color: '#16A34A', fontSize: 11 }}>PAID</b>
-            </div>
-            <div>
-              <span style={{ fontSize: 9, color: '#475569', fontWeight: '700' }}>AMOUNT PAID</span><br />
-              <b style={{ color: '#0F172A', fontSize: 11 }}>{fmt(grand)}</b>
-            </div>
-            <div>
-              <span style={{ fontSize: 9, color: '#475569', fontWeight: '700' }}>BALANCE DUE</span><br />
-              <b style={{ color: '#0F172A', fontSize: 11 }}>{fmt(0)}</b>
-            </div>
-            <div>
-              <span style={{ fontSize: 9, color: '#475569', fontWeight: '700' }}>MODE</span><br />
-              <b style={{ color: '#0F172A', fontSize: 11 }}>CASH</b>
-            </div>
-          </div>
-
-          {/* Footer */}
-          {footerLayout !== 'none' && (
-            <div style={{
-              borderTop: '1px solid #E2E8F0',
-              marginTop: 14,
-              paddingTop: 8,
-              textAlign: footerLayout === 'text_left' ? 'left' : 'center',
-              fontSize: 10,
-              color: '#475569',
-            }}>
-              <b style={{ color: '#334155' }}>{footer.toUpperCase()}</b>
-              <div style={{ marginTop: 2, fontSize: 9, color: '#64748B' }}>
-                Date: {today} | Bill Ref: {invoiceNo}
-              </div>
-            </div>
-          )}
-
-          {showSignature && (
-            <div style={{
-              borderTop: '1px solid #CBD5E1',
-              marginTop: 18,
-              paddingTop: 22,
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontSize: 10,
-              color: '#475569',
-            }}>
-              <span>Prepared by</span>
-              <span>Checked by</span>
-              <span>Authorised Signatory</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Root ──────────────────────────────────────────────────────────────────────
 export default function Settings() {
   const [tab, setTab] = useState('business')
   const [s, setS] = useState({})
@@ -856,7 +145,11 @@ export default function Settings() {
   const [removing, setRemoving] = useState(false)
 
   useEffect(() => {
-    api.get('/settings/all/').then(r => setS(r.data)).finally(() => setLoading(false))
+    api
+      .get('/settings/all/')
+      .then(r => setS(r.data || {}))
+      .catch(() => setS({}))
+      .finally(() => setLoading(false))
   }, [])
 
   const set = (key, value) => setS(p => ({ ...p, [key]: value }))
@@ -865,26 +158,43 @@ export default function Settings() {
     setSaving(true)
     try {
       await api.post('/settings/bulk_update/', s)
-      toast.success('Settings saved')
-      window.dispatchEvent(new CustomEvent('shop-settings-updated', { detail: s }))
-    } catch { toast.error('Failed to save') }
-    finally { setSaving(false) }
+      toast.success('Settings saved successfully')
+      window.dispatchEvent(
+        new CustomEvent('shop-settings-updated', { detail: s }),
+      )
+    } catch {
+      toast.error('Failed to save settings')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const uploadLogo = async e => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 2 * 1024 * 1024) { toast.error('Logo must be under 2 MB'); return }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Logo image must be smaller than 2 MB')
+      return
+    }
     setUploading(true)
     try {
       const fd = new FormData()
       fd.append('logo', file)
-      const { data } = await api.post('/settings/upload-logo/', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      const { data } = await api.post('/settings/upload-logo/', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
       setS(p => ({ ...p, shop_logo: data.url }))
-      window.dispatchEvent(new CustomEvent('shop-settings-updated', { detail: { shop_logo: data.url } }))
+      window.dispatchEvent(
+        new CustomEvent('shop-settings-updated', {
+          detail: { shop_logo: data.url },
+        }),
+      )
       toast.success('Logo uploaded')
-    } catch (err) { toast.error(err.response?.data?.detail || 'Upload failed') }
-    finally { setUploading(false) }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Upload failed')
+    } finally {
+      setUploading(false)
+    }
   }
 
   const removeLogo = async () => {
@@ -892,90 +202,792 @@ export default function Settings() {
     try {
       await api.post('/settings/remove-logo/')
       setS(p => ({ ...p, shop_logo: '' }))
-      window.dispatchEvent(new CustomEvent('shop-settings-updated', { detail: { shop_logo: '' } }))
+      window.dispatchEvent(
+        new CustomEvent('shop-settings-updated', {
+          detail: { shop_logo: '' },
+        }),
+      )
       toast.success('Logo removed')
-    } catch (err) { toast.error(err.response?.data?.detail || 'Could not remove logo') }
-    finally { setRemoving(false) }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Could not remove logo')
+    } finally {
+      setRemoving(false)
+    }
   }
 
-  if (loading) return (
-    <div className="flex min-h-[60vh] items-center justify-center bg-[var(--page)]">
-      <div className="flex flex-col items-center gap-3">
-        <div className="h-9 w-9 animate-spin rounded-full border-4 border-[var(--line)] border-t-[var(--ink)]" />
-        <span className="text-xs font-medium text-[var(--muted)]">Loading settings…</span>
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Spinner />
       </div>
-    </div>
-  )
-
-  const tabProps = { s, set }
+    )
+  }
 
   return (
-    <div className="min-h-full bg-[var(--page)] pb-24 lg:pb-8">
-      <div className="mb-4 sm:mb-5">
-        <PageHeader
-          title="Settings"
-          subtitle="Manage your business, invoices, GST, payments and printer"
-          action={
-            <button
-              onClick={save}
-              disabled={saving}
-              className="hidden min-h-11 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 text-sm font-semibold text-white shadow-md shadow-indigo-600/25 transition-all hover:bg-indigo-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 sm:flex"
-            >
-              {saving
-                ? <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />Saving…</>
-                : 'Save Changes'}
-            </button>
-          }
-        />
-      </div>
+    <div className="settings-page w-full min-w-0 space-y-5 pb-16 text-[var(--ink)]">
+      {/* Header with Save Button */}
+      <PageHeader
+        title="Settings & Configuration"
+        subtitle="Manage business identity, formal billing layout, tax calculations, and printer presets."
+        action={
+          <button
+            type="button"
+            onClick={save}
+            disabled={saving}
+            className="btn-primary btn-base flex items-center justify-center gap-2 text-xs font-semibold px-4"
+          >
+            {saving ? (
+              <>
+                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save size={14} />
+                Save Changes
+              </>
+            )}
+          </button>
+        }
+      />
 
-      {/* Mobile: compact 2-column navigation. Desktop: vertical sidebar. */}
-      <div className="grid gap-4 lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-5">
-        <Card className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-sm lg:sticky lg:top-4">
-          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-1">
-            {TABS.map(({ id, label, Icon }) => (
+      {/* Grid: Formal Sidebar + Form Canvas */}
+      <div className="grid gap-5 lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start">
+        {/* Navigation Sidebar */}
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-sm lg:sticky lg:top-4">
+          <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1">
+            {TABS.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
+                type="button"
                 onClick={() => setTab(id)}
-                className={`group flex min-h-[58px] items-center gap-2 rounded-xl px-2.5 py-2 text-left transition-all sm:px-3 lg:min-h-11 ${
+                className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-all ${
                   tab === id
-                    ? 'bg-[var(--surface-hover)] text-[var(--ink)] ring-1 ring-inset ring-indigo-500/30'
-                    : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
                 }`}
               >
-                <span className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition-colors ${
-                  tab === id ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20' : 'bg-[var(--surface-hover)] text-[var(--muted)] group-hover:bg-slate-200 dark:group-hover:bg-slate-700'
-                }`}>
-                  <Icon size={16} />
-                </span>
-                <span className="min-w-0 text-xs font-semibold leading-4 sm:text-sm">{label}</span>
+                <Icon size={16} className="shrink-0" />
+                <span className="truncate">{label}</span>
               </button>
             ))}
           </div>
-        </Card>
+        </div>
 
-        <div className="min-w-0 space-y-4">
-          {tab === 'business' && <BusinessTab {...tabProps} onLogoUpload={uploadLogo} onLogoRemove={removeLogo} uploading={uploading} removing={removing} />}
-          {tab === 'invoice'  && <InvoiceTab  {...tabProps} />}
-          {tab === 'gst'      && <GstTab      {...tabProps} />}
-          {tab === 'payment'  && <PaymentTab  {...tabProps} />}
-          {tab === 'printer'  && <PrinterTab  {...tabProps} />}
-          {tab === 'preview'  && <BillPreviewTab s={s} />}
+        {/* Tab Content Panels */}
+        <div className="min-w-0 space-y-5">
+          {/* =========================================================
+              TAB 1: BUSINESS PROFILE
+          ========================================================= */}
+          {tab === 'business' && (
+            <div className="space-y-4">
+              {/* Logo Card */}
+              <SectionCard
+                title="Business Logo"
+                description="Printed on top of tax invoices, thermal receipts, and formal reports."
+              >
+                <div className="sm:col-span-2 flex flex-col sm:flex-row items-center gap-4">
+                  <div className="w-24 h-24 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] flex items-center justify-center overflow-hidden shrink-0">
+                    {s.shop_logo ? (
+                      <img
+                        src={s.shop_logo}
+                        alt="Logo"
+                        className="w-full h-full object-contain p-2"
+                      />
+                    ) : (
+                      <ImageIcon
+                        size={28}
+                        className="text-[var(--muted-light)]"
+                      />
+                    )}
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    <p className="font-semibold text-[var(--ink)]">
+                      Upload Brand / Store Logo
+                    </p>
+                    <p className="text-[11px] text-[var(--muted)]">
+                      Square or rectangular PNG, JPG, or WEBP (Max 2MB).
+                    </p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <label className="btn-secondary btn-sm flex items-center gap-1.5 cursor-pointer">
+                        <Upload size={12} />
+                        {s.shop_logo ? 'Change Logo' : 'Upload Logo'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={uploadLogo}
+                          disabled={uploading}
+                        />
+                      </label>
+                      {s.shop_logo && (
+                        <button
+                          type="button"
+                          onClick={removeLogo}
+                          disabled={removing}
+                          className="btn-secondary btn-sm text-rose-600 hover:bg-rose-50 flex items-center gap-1"
+                        >
+                          <Trash2 size={12} />
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </SectionCard>
+
+              {/* General Details */}
+              <SectionCard
+                title="Store & Entity Information"
+                description="Core identification details printed on invoices."
+              >
+                <FormField label="Business / Shop Name" required>
+                  <Inp
+                    value={s.shop_name}
+                    onChange={v => set('shop_name', v)}
+                    placeholder="Sri Balaji Store"
+                  />
+                </FormField>
+
+                <FormField label="Business Type">
+                  <Sel
+                    value={s.business_type}
+                    onChange={v => set('business_type', v)}
+                    options={[
+                      ['retail', 'Retail Store / Supermarket'],
+                      ['wholesale', 'Wholesale & Distribution'],
+                      ['services', 'Services & Trading'],
+                    ]}
+                  />
+                </FormField>
+
+                <FormField label="GSTIN (Goods & Services Tax ID)">
+                  <Inp
+                    value={s.shop_gstin}
+                    onChange={v => set('shop_gstin', v)}
+                    maxLength={15}
+                    mono
+                    placeholder="33AABCU9603R1ZX"
+                  />
+                </FormField>
+
+                <FormField label="PAN (Permanent Account Number)">
+                  <Inp
+                    value={s.shop_pan}
+                    onChange={v => set('shop_pan', v)}
+                    maxLength={10}
+                    mono
+                    placeholder="AABCU9603R"
+                  />
+                </FormField>
+
+                <FormField label="Phone / Mobile Number" required>
+                  <Inp
+                    value={s.shop_phone}
+                    onChange={v => set('shop_phone', v)}
+                    placeholder="+91 98765 43210"
+                  />
+                </FormField>
+
+                <FormField label="Official Email Address">
+                  <Inp
+                    value={s.shop_email}
+                    onChange={v => set('shop_email', v)}
+                    type="email"
+                    placeholder="contact@balajistore.com"
+                  />
+                </FormField>
+
+                <FormField label="State / Place of Business">
+                  <Inp
+                    value={s.shop_state}
+                    onChange={v => set('shop_state', v)}
+                    placeholder="Tamil Nadu (33)"
+                  />
+                </FormField>
+
+                <FormField label="FSSAI Licence Number" hint="Optional">
+                  <Inp
+                    value={s.fssai_licence}
+                    onChange={v => set('fssai_licence', v)}
+                    placeholder="12423002000123"
+                  />
+                </FormField>
+
+                <FormField label="Full Store Address" full>
+                  <Txt
+                    value={s.shop_address}
+                    onChange={v => set('shop_address', v)}
+                    placeholder="No. 123 Market Road, T. Nagar, Chennai, Tamil Nadu 600017"
+                  />
+                </FormField>
+              </SectionCard>
+            </div>
+          )}
+
+          {/* =========================================================
+              TAB 2: INVOICING & PRINT
+          ========================================================= */}
+          {tab === 'invoice' && (
+            <div className="space-y-4">
+              <SectionCard
+                title="Numbering & Formatting"
+                description="Configure prefix, automatic serial progression, and paper dimensions."
+              >
+                <FormField label="Invoice Prefix">
+                  <Inp
+                    value={s.invoice_prefix}
+                    onChange={v => set('invoice_prefix', v)}
+                    mono
+                    placeholder="INV-"
+                  />
+                </FormField>
+
+                <FormField
+                  label="Next Sequence Number"
+                  hint="Advances automatically"
+                >
+                  <Inp
+                    value={s.invoice_start_number}
+                    onChange={v => set('invoice_start_number', v)}
+                    mono
+                    placeholder="1001"
+                  />
+                </FormField>
+
+                <FormField label="Default Bill Format">
+                  <Sel
+                    value={s.invoice_template || 'gst_a4'}
+                    onChange={v => set('invoice_template', v)}
+                    options={[
+                      ['gst_a4', 'Standard GST Tax Invoice (A4 Sheet)'],
+                      ['thermal_80', 'Thermal POS Receipt (80mm/3-inch)'],
+                    ]}
+                  />
+                </FormField>
+
+                <FormField label="Paper Size">
+                  <Sel
+                    value={s.invoice_paper_size || 'a4'}
+                    onChange={v => set('invoice_paper_size', v)}
+                    options={[
+                      ['a4', 'A4 (210 × 297 mm)'],
+                      ['letter', 'US Letter (216 × 279 mm)'],
+                      ['a5', 'A5 (148 × 210 mm)'],
+                    ]}
+                  />
+                </FormField>
+
+                <FormField label="Typography / Font Style">
+                  <Sel
+                    value={s.invoice_font || 'default'}
+                    onChange={v => set('invoice_font', v)}
+                    options={[
+                      ['default', 'Inter / Roboto (Formal Clean)'],
+                      ['dejavu', 'DejaVu Sans (Unicode)'],
+                      ['courier', 'Courier (Monospace POS)'],
+                    ]}
+                  />
+                </FormField>
+
+                <FormField label="Credit Due Period (Days)">
+                  <Inp
+                    value={s.invoice_due_days}
+                    onChange={v => set('invoice_due_days', v)}
+                    type="number"
+                    placeholder="15"
+                  />
+                </FormField>
+              </SectionCard>
+
+              <SectionCard
+                title="Invoice Terms & Bottom Footer"
+                description="Custom legal disclaimer and thank you message printed at the bottom of bills."
+              >
+                <FormField label="Terms & Conditions" full>
+                  <Txt
+                    value={s.invoice_terms}
+                    onChange={v => set('invoice_terms', v)}
+                    rows={3}
+                    placeholder="1. Goods once sold will not be accepted back without bill.&#10;2. Warranty as per manufacturer terms."
+                  />
+                </FormField>
+
+                <FormField label="Bottom Footer Greeting" full>
+                  <Inp
+                    value={s.invoice_footer}
+                    onChange={v => set('invoice_footer', v)}
+                    placeholder="Thank you for shopping with us! Visit again."
+                  />
+                </FormField>
+              </SectionCard>
+            </div>
+          )}
+
+          {/* =========================================================
+              TAB 3: BILL FIELDS & COLUMNS (Clean formal checkboxes)
+          ========================================================= */}
+          {tab === 'fields' && (
+            <div className="space-y-4">
+              <SectionCard
+                title="1. Store Details on Bill"
+                description="Select which company information fields should be visible in the bill header."
+              >
+                {[
+                  [
+                    'show_business_logo',
+                    'Store Logo',
+                    'Display company logo graphic in header',
+                  ],
+                  [
+                    'show_business_address',
+                    'Business Address',
+                    'Print registered address and city',
+                  ],
+                  [
+                    'show_business_phone',
+                    'Phone / Mobile Number',
+                    'Print store contact numbers',
+                  ],
+                  [
+                    'show_business_email',
+                    'Official Email Address',
+                    'Print store email in header',
+                  ],
+                  [
+                    'show_business_gstin',
+                    'GSTIN Number',
+                    'Print GST Identification Number',
+                  ],
+                  [
+                    'show_business_pan',
+                    'PAN Number',
+                    'Print Permanent Account Number',
+                  ],
+                ].map(([key, label, desc]) => (
+                  <FieldCheckbox
+                    key={key}
+                    checked={isTrue(s[key], true)}
+                    onChange={e => set(key, String(e.target.checked))}
+                    label={label}
+                    description={desc}
+                  />
+                ))}
+              </SectionCard>
+
+              <SectionCard
+                title="2. Customer (Bill To) Information"
+                description="Select which customer attributes are displayed in the customer section."
+              >
+                {[
+                  [
+                    'show_customer_phone',
+                    'Customer Phone Number',
+                    'Display buyer contact number',
+                  ],
+                  [
+                    'show_customer_address',
+                    'Customer Billing Address',
+                    'Print buyer address details',
+                  ],
+                  [
+                    'show_customer_gstin',
+                    'Customer GSTIN',
+                    'Required for B2B tax invoice input credit',
+                  ],
+                  [
+                    'show_place_of_supply',
+                    'Place of Supply',
+                    'Print delivery state / code',
+                  ],
+                ].map(([key, label, desc]) => (
+                  <FieldCheckbox
+                    key={key}
+                    checked={isTrue(s[key], true)}
+                    onChange={e => set(key, String(e.target.checked))}
+                    label={label}
+                    description={desc}
+                  />
+                ))}
+              </SectionCard>
+
+              <SectionCard
+                title="3. Line Item Table Columns"
+                description="Customize visible columns in the itemized products table."
+              >
+                {[
+                  [
+                    'show_sku_col',
+                    'SKU / Item Code Column',
+                    'Display product SKU code',
+                  ],
+                  [
+                    'show_hsn_col',
+                    'HSN / SAC Column',
+                    'Display tax classification code',
+                  ],
+                  [
+                    'show_unit_col',
+                    'Unit of Measurement',
+                    'Display unit (pcs, kg, L, etc.)',
+                  ],
+                  [
+                    'show_discount_col',
+                    'Item Discount Column',
+                    'Show discount percent given per item',
+                  ],
+                  [
+                    'show_tax_cols',
+                    'Tax Breakdown (SGST / CGST)',
+                    'Show tax percent and amount columns',
+                  ],
+                  [
+                    'hsn_summary_on_invoice',
+                    'HSN Tax Summary Table',
+                    'Print formal HSN summary block at bottom',
+                  ],
+                ].map(([key, label, desc]) => (
+                  <FieldCheckbox
+                    key={key}
+                    checked={isTrue(s[key], true)}
+                    onChange={e => set(key, String(e.target.checked))}
+                    label={label}
+                    description={desc}
+                  />
+                ))}
+              </SectionCard>
+
+              <SectionCard
+                title="4. Summary, Payments & Footer"
+                description="Configure accounting summaries, payment notes, and signature block."
+              >
+                {[
+                  [
+                    'show_amount_in_words',
+                    'Grand Total in Words',
+                    'Print written currency words (e.g. Rupees...)',
+                  ],
+                  [
+                    'show_payment_summary',
+                    'Payment Status Box',
+                    'Display paid amount, mode, and balance',
+                  ],
+                  [
+                    'show_balance_due',
+                    'Highlight Balance Due',
+                    'Distinct indicator for credit sales',
+                  ],
+                  [
+                    'show_bank_details',
+                    'Bank Account Details',
+                    'Print bank account & IFSC on invoice',
+                  ],
+                  [
+                    'show_signature_area',
+                    'Authorized Signatory Block',
+                    'Print signature space for store cashier',
+                  ],
+                ].map(([key, label, desc]) => (
+                  <FieldCheckbox
+                    key={key}
+                    checked={isTrue(s[key], true)}
+                    onChange={e => set(key, String(e.target.checked))}
+                    label={label}
+                    description={desc}
+                  />
+                ))}
+              </SectionCard>
+            </div>
+          )}
+
+          {/* =========================================================
+              TAB 4: GST & ACCOUNTING
+          ========================================================= */}
+          {tab === 'gst' && (
+            <div className="space-y-4">
+              <SectionCard
+                title="Tax Calculation Rules"
+                description="Define how GST and item rates are computed during billing."
+              >
+                <FormField label="Tax Calculation Mode">
+                  <Sel
+                    value={s.tax_on_price || 'exclusive'}
+                    onChange={v => set('tax_on_price', v)}
+                    options={[
+                      ['exclusive', 'Exclusive of GST (Tax added on top)'],
+                      ['inclusive', 'Inclusive of GST (Tax back-calculated)'],
+                    ]}
+                  />
+                </FormField>
+
+                <FormField label="Default GST Rate">
+                  <Sel
+                    value={s.default_gst_rate || '18'}
+                    onChange={v => set('default_gst_rate', v)}
+                    options={[
+                      ['0', '0% (Exempt)'],
+                      ['5', '5% (Essential Goods)'],
+                      ['12', '12% (Standard I)'],
+                      ['18', '18% (Standard II)'],
+                      ['28', '28% (Luxury)'],
+                    ]}
+                  />
+                </FormField>
+
+                <FormField label="Invoice Round-off Rule">
+                  <Sel
+                    value={s.round_off || 'nearest'}
+                    onChange={v => set('round_off', v)}
+                    options={[
+                      ['nearest', 'Round to Nearest Rupee (Recommended)'],
+                      ['none', 'Exact Decimals (No Round-off)'],
+                    ]}
+                  />
+                </FormField>
+
+                <FormField label="Currency Symbol">
+                  <Inp
+                    value={s.currency || 'INR'}
+                    onChange={v => set('currency', v)}
+                    placeholder="INR or ₹"
+                  />
+                </FormField>
+              </SectionCard>
+            </div>
+          )}
+
+          {/* =========================================================
+              TAB 5: BANKING & UPI QR
+          ========================================================= */}
+          {tab === 'payment' && (
+            <div className="space-y-4">
+              <SectionCard
+                title="Bank Account Information"
+                description="Printed on customer invoices for NEFT/RTGS wire transfers."
+              >
+                <FormField label="Bank Name">
+                  <Inp
+                    value={s.shop_bank_name}
+                    onChange={v => set('shop_bank_name', v)}
+                    placeholder="State Bank of India"
+                  />
+                </FormField>
+
+                <FormField label="Account Number">
+                  <Inp
+                    value={s.shop_bank_account}
+                    onChange={v => set('shop_bank_account', v)}
+                    mono
+                    placeholder="384920194829"
+                  />
+                </FormField>
+
+                <FormField label="IFSC Code">
+                  <Inp
+                    value={s.shop_bank_ifsc}
+                    onChange={v => set('shop_bank_ifsc', v)}
+                    mono
+                    placeholder="SBIN0001234"
+                  />
+                </FormField>
+
+                <FormField label="Branch Name">
+                  <Inp
+                    value={s.shop_bank_branch}
+                    onChange={v => set('shop_bank_branch', v)}
+                    placeholder="T. Nagar Branch"
+                  />
+                </FormField>
+              </SectionCard>
+
+              <SectionCard
+                title="Dynamic UPI QR Configuration"
+                description="Generates an automatic scannable UPI QR code on the invoice."
+              >
+                <FormField label="UPI VPA / ID" hint="e.g. storename@sbi">
+                  <Inp
+                    value={s.shop_upi_id}
+                    onChange={v => set('shop_upi_id', v)}
+                    placeholder="balajistore@sbi"
+                  />
+                </FormField>
+
+                <FormField label="UPI Payee / Merchant Name">
+                  <Inp
+                    value={s.upi_merchant_name}
+                    onChange={v => set('upi_merchant_name', v)}
+                    placeholder="Sri Balaji Store"
+                  />
+                </FormField>
+
+                <div className="sm:col-span-2 pt-2">
+                  <FieldCheckbox
+                    checked={isTrue(s.upi_qr_enabled, true)}
+                    onChange={e => set('upi_qr_enabled', String(e.target.checked))}
+                    label="Enable Dynamic UPI QR Code on Invoices"
+                    description="Encodes the exact bill amount and UPI VPA into a scannable QR code on the invoice."
+                  />
+                </div>
+              </SectionCard>
+            </div>
+          )}
+
+          {/* =========================================================
+              TAB 6: PRINTER SETUP
+          ========================================================= */}
+          {tab === 'printer' && (
+            <div className="space-y-4">
+              <SectionCard
+                title="Printer Device & Hardware Presets"
+                description="Configure hardware printing behavior for POS and cashier counters."
+              >
+                <FormField label="Primary Printer Hardware">
+                  <Sel
+                    value={s.printer_type || 'a4'}
+                    onChange={v => set('printer_type', v)}
+                    options={[
+                      ['a4', 'Standard Laser / Inkjet A4 Printer'],
+                      ['thermal_80', 'Thermal Receipt Printer (80mm / 3 inch)'],
+                      ['thermal_58', 'Thermal Receipt Printer (58mm / 2 inch)'],
+                    ]}
+                  />
+                </FormField>
+
+                <FormField label="Copies Printed per Sale">
+                  <Sel
+                    value={s.copies_per_bill || '1'}
+                    onChange={v => set('copies_per_bill', v)}
+                    options={[
+                      ['1', '1 Copy (Customer Bill)'],
+                      ['2', '2 Copies (Customer + Store Copy)'],
+                      ['3', '3 Copies (Customer + Store + Accounts)'],
+                    ]}
+                  />
+                </FormField>
+
+                <div className="sm:col-span-2 pt-2 space-y-2">
+                  <FieldCheckbox
+                    checked={isTrue(s.open_cash_drawer, false)}
+                    onChange={e =>
+                      set('open_cash_drawer', String(e.target.checked))
+                    }
+                    label="Trigger Electronic Cash Drawer Open on Print"
+                    description="Sends ESC/POS pulse signal to cash drawer port after completing transaction."
+                  />
+
+                  <FieldCheckbox
+                    checked={isTrue(s.auto_print, false)}
+                    onChange={e => set('auto_print', String(e.target.checked))}
+                    label="Automatically Print Receipt after Completing Sale"
+                    description="Triggers the browser print dialog immediately when a bill is saved."
+                  />
+                </div>
+              </SectionCard>
+            </div>
+          )}
+
+          {/* =========================================================
+              TAB 7: LIVE BILL PREVIEW
+          ========================================================= */}
+          {tab === 'preview' && (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 text-xs text-[var(--muted)] flex items-center justify-between">
+                <span>
+                  Interactive preview reflecting your current profile,
+                  visibility settings, and layout options.
+                </span>
+                <span className="font-semibold text-indigo-600">
+                  Real-time Simulation
+                </span>
+              </div>
+
+              <InvoiceDocument
+                invoice={{
+                  invoice_number: `${s.invoice_prefix || 'INV-'}${s.invoice_start_number || '1001'}`,
+                  created_at: new Date().toISOString(),
+                  payment_method: s.default_payment_method || 'cash',
+                  payment_status: 'paid',
+                  customer_name: 'Walk-in Retail Customer',
+                  customer_phone: '+91 98765 43210',
+                  customer_address:
+                    'Flat 4A, Green Park Apartments, Chennai 600017',
+                  customer_gstin: '33AABCS1429B1ZP',
+                  place_of_supply: s.place_of_supply || 'Tamil Nadu (33)',
+                  items: [
+                    {
+                      product_name: 'India Gate Basmati Rice 5kg',
+                      sku: 'RICE-001',
+                      hsn_code: '100630',
+                      unit: 'kg',
+                      quantity: 2,
+                      unit_price: 260,
+                      discount_percent: 0,
+                      gst_percent: 5,
+                      total: 546,
+                    },
+                    {
+                      product_name: 'Fortune Sunflower Oil 1L',
+                      sku: 'OIL-001',
+                      hsn_code: '151219',
+                      unit: 'L',
+                      quantity: 3,
+                      unit_price: 145,
+                      discount_percent: 5,
+                      gst_percent: 5,
+                      total: 433.91,
+                    },
+                    {
+                      product_name: 'Amul Pasteurised Butter 500g',
+                      sku: 'DAIRY-001',
+                      hsn_code: '040510',
+                      unit: 'pack',
+                      quantity: 2,
+                      unit_price: 275,
+                      discount_percent: 0,
+                      gst_percent: 12,
+                      total: 616,
+                    },
+                  ],
+                  subtotal: 1475.0,
+                  discount_amount: 21.75,
+                  tax_amount: 119.91,
+                  grand_total: 1573.16,
+                  paid_amount: 1573.16,
+                  balance_due: 0,
+                  notes: s.invoice_notes,
+                  terms: s.invoice_terms,
+                }}
+                settings={s}
+                mode={s.invoice_template === 'thermal_80' ? 'thermal' : 'a4'}
+                showModePicker={true}
+              />
+            </div>
+          )}
+
+          {/* Bottom Save Bar */}
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--line)]">
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              className="btn-primary btn-base flex items-center justify-center gap-2 text-xs font-semibold px-6"
+            >
+              {saving ? (
+                <>
+                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Saving Changes...
+                </>
+              ) : (
+                <>
+                  <Check size={14} />
+                  Save Settings
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
-
-      {/* Always reachable on mobile. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--line)] bg-[var(--surface)]/95 p-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur sm:hidden">
-        <button
-          onClick={save}
-          disabled={saving}
-          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white shadow-md shadow-indigo-600/25 transition-all hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {saving
-            ? <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />Saving changes…</>
-            : 'Save Changes'}
-        </button>
-      </div>
-    </div >
+    </div>
   )
 }

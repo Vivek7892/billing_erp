@@ -38,14 +38,25 @@ import toast from 'react-hot-toast'
 // --------------------------------------------------
 
 const STATUS_COLORS = {
-  created: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-  initiated: 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300',
-  pending: 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300',
-  success: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300',
-  captured: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300',
-  failed: 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300',
-  expired: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-  refunded: 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300',
+  created: 'bg-white text-slate-700 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-800',
+  initiated: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800',
+  pending: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
+  success: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
+  captured: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
+  failed: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800',
+  expired: 'bg-white text-slate-600 border-slate-200 dark:bg-slate-900/40 dark:text-slate-400 dark:border-slate-700',
+  refunded: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800',
+}
+
+const STATUS_DOT_COLORS = {
+  success: 'bg-emerald-500',
+  captured: 'bg-emerald-500',
+  failed: 'bg-rose-500',
+  pending: 'bg-amber-500',
+  initiated: 'bg-blue-500',
+  created: 'bg-slate-400',
+  expired: 'bg-slate-400',
+  refunded: 'bg-purple-500',
 }
 
 const STATUS_ICONS = {
@@ -284,16 +295,17 @@ const normalizeRows = (data) => {
 // --------------------------------------------------
 
 function StatusBadge({ status }) {
-  const Icon = STATUS_ICONS[status] || Clock3
+  const norm = String(status || '').toLowerCase()
+  const dot = STATUS_DOT_COLORS[norm] || 'bg-slate-400'
+  const style =
+    STATUS_COLORS[norm] ||
+    'bg-white text-slate-700 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-800'
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
-        STATUS_COLORS[status] ||
-        'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-      }`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize whitespace-nowrap ${style}`}
     >
-      <Icon size={12} strokeWidth={2.5} />
+      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${dot}`} />
       {titleCase(status || 'unknown')}
     </span>
   )
@@ -388,60 +400,6 @@ function SectionTitle({ icon: Icon, children }) {
   )
 }
 
-function KpiCard({ label, value, description, icon: Icon, tone = 'default' }) {
-  const tones = {
-    default: {
-      icon: 'bg-[var(--surface-elevated)] text-[var(--ink-secondary)]',
-      value: 'text-[var(--ink)]',
-    },
-    success: {
-      icon: '',
-      value: 'text-emerald-600 dark:text-emerald-400',
-    },
-    danger: {
-      icon: '',
-      value: 'text-rose-600 dark:text-rose-400',
-    },
-    warning: {
-      icon: '',
-      value: 'text-amber-600 dark:text-amber-400',
-    },
-    primary: {
-      icon: '',
-      value: 'text-indigo-600 dark:text-indigo-400',
-    },
-  }
-
-  const selected = tones[tone] || tones.default
-
-  return (
-    <div className="group rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
-            {label}
-          </p>
-
-          <p
-            className={`mt-2 truncate text-xl font-extrabold tracking-tight sm:text-2xl ${selected.value}`}
-          >
-            {value}
-          </p>
-
-          {description && (
-            <p className="mt-1 text-[11px] text-[var(--muted)]">
-              {description}
-            </p>
-          )}
-        </div>
-
-        <div className={`rounded-xl p-2.5 ${selected.icon}`}>
-          <Icon size={18} />
-        </div>
-      </div>
-    </div>
-  )
-}
 
 // --------------------------------------------------
 // MAIN COMPONENT
@@ -687,7 +645,7 @@ export default function PaymentReconciliation() {
   // --------------------------------------------------
 
   return (
-    <div className="min-h-full bg-[var(--background)] p-4 sm:p-6">
+    <div className="min-h-full bg-[var(--surface)] p-4 sm:p-6">
       <div className="mx-auto max-w-[1600px] space-y-6">
 
         {/* HEADER */}
@@ -726,9 +684,9 @@ export default function PaymentReconciliation() {
               type="button"
               onClick={exportCSV}
               disabled={loading || !visibleRows.length}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-2.5 text-sm font-semibold text-[var(--ink-secondary)] shadow-sm transition-colors hover:bg-[var(--surface-elevated)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn-secondary inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold shadow-xs"
             >
-              <Download size={16} />
+              <Download size={14} />
               Export CSV
             </button>
 
@@ -736,107 +694,118 @@ export default function PaymentReconciliation() {
               type="button"
               onClick={load}
               disabled={loading}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold shadow-xs"
             >
               <RefreshCw
-                size={16}
+                size={14}
                 className={loading ? 'animate-spin' : ''}
               />
-              Refresh
+              Refresh Data
             </button>
           </div>
         </div>
 
-        {/* KPI CARDS */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-          <KpiCard
-            label="Total Transactions"
-            value={summary.total.toLocaleString('en-IN')}
-            description="Loaded transactions"
-            icon={ReceiptText}
-          />
-
-          <KpiCard
-            label="Successful"
-            value={summary.success.toLocaleString('en-IN')}
-            description={`${summary.successRate.toFixed(1)}% success rate`}
-            icon={CheckCircle2}
-            tone="success"
-          />
-
-          <KpiCard
-            label="Failed"
-            value={summary.failed.toLocaleString('en-IN')}
-            description="Unsuccessful payments"
-            icon={XCircle}
-            tone="danger"
-          />
-
-          <KpiCard
-            label="Pending"
-            value={summary.pending.toLocaleString('en-IN')}
-            description="Awaiting completion"
-            icon={Clock3}
-            tone="warning"
-          />
-
-          <KpiCard
-            label="Collected"
-            value={fmtCompact(summary.amount)}
-            description="Successful payments"
-            icon={IndianRupee}
-            tone="primary"
-          />
-
-          <KpiCard
-            label="Net Amount"
-            value={fmtCompact(summary.net)}
-            description="After recorded fees & tax"
-            icon={CircleDollarSign}
-            tone="success"
-          />
-        </div>
-
-        {/* FINANCIAL SUMMARY */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-[var(--muted)]">
-              <Banknote size={14} />
-              Gateway Fees
+        {/* ERP RECONCILIATION SUMMARY MATRIX */}
+        <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+          {/* TIER 1: Transaction Volume & Reliability */}
+          <div className="grid grid-cols-2 divide-y divide-[var(--line-subtle)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x sm:divide-[var(--line)]">
+            <div className="p-3.5 sm:p-4">
+              <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                <ReceiptText size={13} className="text-blue-600" /> Total Volume
+              </span>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="font-mono text-xl sm:text-2xl font-black tracking-tight text-[var(--ink)]">
+                  {summary.total.toLocaleString('en-IN')}
+                </span>
+                <span className="text-xs text-[var(--muted)]">txns</span>
+              </div>
             </div>
-            <p className="mt-1 text-lg font-bold text-[var(--ink)]">
-              {fmt(summary.fees)}
-            </p>
+
+            <div className="p-3.5 sm:p-4">
+              <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                <CheckCircle2 size={13} className="text-emerald-600" /> Successful
+              </span>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="font-mono text-xl sm:text-2xl font-black tracking-tight text-emerald-600">
+                  {summary.success.toLocaleString('en-IN')}
+                </span>
+                <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+                  {summary.successRate.toFixed(1)}% rate
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3.5 sm:p-4">
+              <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                <Clock3 size={13} className="text-amber-600" /> Pending / In-Flight
+              </span>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="font-mono text-xl sm:text-2xl font-black tracking-tight text-amber-600">
+                  {summary.pending.toLocaleString('en-IN')}
+                </span>
+                <span className="text-xs text-[var(--muted)]">awaiting</span>
+              </div>
+            </div>
+
+            <div className="p-3.5 sm:p-4">
+              <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                <XCircle size={13} className="text-rose-600" /> Failed Payments
+              </span>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="font-mono text-xl sm:text-2xl font-black tracking-tight text-rose-600">
+                  {summary.failed.toLocaleString('en-IN')}
+                </span>
+                <span className="text-xs text-[var(--muted)]">unsuccessful</span>
+              </div>
+            </div>
           </div>
 
-          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-[var(--muted)]">
-              <CircleDollarSign size={14} />
-              Gateway Tax
+          {/* TIER 2: Financial Reconciliation & Net Settlement Breakdown */}
+          <div className="grid grid-cols-2 divide-y divide-[var(--line-subtle)] border-t border-[var(--line)] bg-[var(--surface-elevated)] sm:grid-cols-5 sm:divide-y-0 sm:divide-x sm:divide-[var(--line)]">
+            <div className="p-3 sm:px-4 sm:py-3">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                Gross Collected
+              </div>
+              <div className="mt-0.5 font-mono text-base sm:text-lg font-black text-blue-600">
+                {fmt(summary.amount)}
+              </div>
             </div>
-            <p className="mt-1 text-lg font-bold text-[var(--ink)]">
-              {fmt(summary.tax)}
-            </p>
-          </div>
 
-          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-[var(--muted)]">
-              <ArrowUpRight size={14} />
-              Refund Amount
+            <div className="p-3 sm:px-4 sm:py-3">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                Gateway Fees
+              </div>
+              <div className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink-secondary)]">
+                {fmt(summary.fees)}
+              </div>
             </div>
-            <p className="mt-1 text-lg font-bold text-[var(--ink)]">
-              {fmt(summary.refunds)}
-            </p>
-          </div>
 
-          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-[var(--muted)]">
-              <ShieldCheck size={14} />
-              Refunded Transactions
+            <div className="p-3 sm:px-4 sm:py-3">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                Gateway GST / Tax
+              </div>
+              <div className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink-secondary)]">
+                {fmt(summary.tax)}
+              </div>
             </div>
-            <p className="mt-1 text-lg font-bold text-[var(--ink)]">
-              {summary.refunded}
-            </p>
+
+            <div className="p-3 sm:px-4 sm:py-3">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                Refunds ({summary.refunded})
+              </div>
+              <div className="mt-0.5 font-mono text-base sm:text-lg font-bold text-purple-600">
+                {fmt(summary.refunds)}
+              </div>
+            </div>
+
+            <div className="p-3 sm:px-4 sm:py-3">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                Net Settled Amount
+              </div>
+              <div className="mt-0.5 font-mono text-base sm:text-lg font-black text-emerald-700 dark:text-emerald-300">
+                {fmt(summary.net)}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -850,7 +819,7 @@ export default function PaymentReconciliation() {
               />
 
               <input
-                className="h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--background)] pl-10 pr-3 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
+                className="h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] pl-10 pr-3 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
                 placeholder="Search invoice, order ID, payment ID, customer..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -859,7 +828,7 @@ export default function PaymentReconciliation() {
 
             <div className="flex flex-wrap gap-2">
               <select
-                className="h-11 min-w-[145px] rounded-xl border border-[var(--line)] bg-[var(--background)] px-3 text-sm text-[var(--ink)] outline-none focus:border-[var(--primary)]"
+                className="h-11 min-w-[145px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-sm text-[var(--ink)] outline-none focus:border-[var(--primary)]"
                 value={statusFilter}
                 onChange={(e) => setStatus(e.target.value)}
               >
@@ -886,7 +855,7 @@ export default function PaymentReconciliation() {
                 className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors ${
                   showFilters
                     ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]'
-                    : 'border-[var(--line)] bg-[var(--background)] text-[var(--ink-secondary)] hover:bg-[var(--surface-elevated)]'
+                    : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-blue-50/50 hover:text-blue-600'
                 }`}
               >
                 Filters
@@ -924,7 +893,7 @@ export default function PaymentReconciliation() {
                 </label>
 
                 <select
-                  className="h-10 w-full rounded-lg border border-[var(--line)] bg-[var(--background)] px-3 text-sm text-[var(--ink)] outline-none"
+                  className="h-10 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-sm text-[var(--ink)] outline-none"
                   value={methodFilter}
                   onChange={(e) => setMethod(e.target.value)}
                 >
@@ -946,7 +915,7 @@ export default function PaymentReconciliation() {
 
                 <input
                   type="date"
-                  className="h-10 w-full rounded-lg border border-[var(--line)] bg-[var(--background)] px-3 text-sm text-[var(--ink)] outline-none"
+                  className="h-10 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-sm text-[var(--ink)] outline-none"
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
                 />
@@ -962,25 +931,26 @@ export default function PaymentReconciliation() {
         </div>
 
         {/* TRANSACTION TABLE */}
-        <div className=" rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-sm sm:p-4">
-          <div className=" mb-4 flex items-center justify-between gap-3">
+        <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--line)] px-4 sm:px-6 py-4 bg-[var(--surface)]">
             <div>
               <h2 className="text-base font-bold text-[var(--ink)]">
                 Razorpay Transactions
               </h2>
 
               <p className="mt-0.5 text-xs text-[var(--muted)]">
-                Detailed payment records from your backend
+                Detailed payment records and gateway settlement audit
               </p>
             </div>
 
-            <div className="rounded-full bg-[var(--surface-elevated)] px-3 py-1 text-xs font-semibold text-[var(--muted)]">
+            <div className="rounded-full border border-[var(--line)] bg-[var(--surface-elevated)] px-3 py-1 text-xs font-semibold text-[var(--muted)] self-start sm:self-auto">
               {visibleRows.length} records
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1250px] text-sm">
+          {/* DESKTOP TABLE VIEW */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-[var(--line)] bg-[var(--surface-elevated)] text-left text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
                   <th className="px-4 py-3">Transaction</th>
@@ -1000,10 +970,10 @@ export default function PaymentReconciliation() {
                     <td colSpan={8} className="px-4 py-16 text-center">
                       <RefreshCw
                         size={24}
-                        className="mx-auto mb-3 animate-spin text-[var(--primary)]"
+                        className="mx-auto mb-3 animate-spin text-blue-600"
                       />
 
-                      <p className="text-sm font-medium text-[var(--ink)]">
+                      <p className="text-sm font-semibold text-[var(--ink)]">
                         Loading transactions...
                       </p>
 
@@ -1029,7 +999,7 @@ export default function PaymentReconciliation() {
                       </p>
 
                       <p className="mt-1 text-xs text-[var(--muted)]">
-                        Try changing your search or filters.
+                        Try changing your search keywords or filter criteria.
                       </p>
                     </td>
                   </tr>
@@ -1049,47 +1019,47 @@ export default function PaymentReconciliation() {
                     return (
                       <tr
                         key={row.id || paymentId || orderId || index}
-                        className="group transition-colors hover:bg-[var(--surface-elevated)]"
+                        className="group transition-colors hover:bg-blue-50/40 dark:hover:bg-slate-800/40"
                       >
                         {/* TRANSACTION */}
-                        <td className="px-4 py-4">
-                          <div className="flex items-start gap-3">
-                            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)]">
-                              <ReceiptText size={16} />
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-start gap-2.5">
+                            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-blue-600">
+                              <ReceiptText size={15} />
                             </div>
 
                             <div className="min-w-0">
-                              <p className="font-semibold text-[var(--ink)]">
-                                {invoice || 'Unlinked Transaction'}
+                              <p className="font-semibold text-blue-600 dark:text-blue-400 font-mono text-xs">
+                                {invoice || 'Unlinked Txn'}
                               </p>
 
-                              <p className="mt-1 text-[11px] text-[var(--muted)]">
-                                Record #{row.id || index + 1}
+                              <p className="mt-0.5 text-[10px] text-[var(--muted)]">
+                                #{row.id || index + 1}
                               </p>
                             </div>
                           </div>
                         </td>
 
                         {/* AMOUNT */}
-                        <td className="px-4 py-4 text-right">
-                          <p className="font-bold tabular-nums text-[var(--ink)]">
+                        <td className="px-4 py-3.5 text-right">
+                          <p className="font-bold tabular-nums text-sm font-mono text-[var(--ink)]">
                             {fmt(amount, currency)}
                           </p>
 
-                          <p className="mt-1 text-[10px] uppercase text-[var(--muted)]">
+                          <p className="mt-0.5 text-[10px] uppercase text-[var(--muted)] font-semibold">
                             {currency}
                           </p>
                         </td>
 
                         {/* METHOD */}
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-3.5">
                           <MethodBadge method={method} />
 
                           {(row.card_network ||
                             row.bank ||
                             row.wallet ||
                             row.vpa) && (
-                            <p className="mt-1 max-w-[130px] truncate text-[11px] text-[var(--muted)]">
+                            <p className="mt-0.5 max-w-[130px] truncate text-[10px] text-[var(--muted)]">
                               {row.card_network ||
                                 row.bank ||
                                 row.wallet ||
@@ -1099,10 +1069,10 @@ export default function PaymentReconciliation() {
                         </td>
 
                         {/* RAZORPAY IDS */}
-                        <td className="px-4 py-4">
-                          <div className="space-y-1.5">
-                            <div className="flex max-w-[240px] items-center gap-1">
-                              <span className="w-12 shrink-0 text-[10px] font-semibold uppercase text-[var(--muted)]">
+                        <td className="px-4 py-3.5">
+                          <div className="space-y-1">
+                            <div className="flex max-w-[220px] items-center gap-1">
+                              <span className="w-10 shrink-0 text-[10px] font-bold uppercase text-[var(--muted)]">
                                 Order
                               </span>
 
@@ -1119,8 +1089,8 @@ export default function PaymentReconciliation() {
                               />
                             </div>
 
-                            <div className="flex max-w-[240px] items-center gap-1">
-                              <span className="w-12 shrink-0 text-[10px] font-semibold uppercase text-[var(--muted)]">
+                            <div className="flex max-w-[220px] items-center gap-1">
+                              <span className="w-10 shrink-0 text-[10px] font-bold uppercase text-[var(--muted)]">
                                 Pay
                               </span>
 
@@ -1140,32 +1110,32 @@ export default function PaymentReconciliation() {
                         </td>
 
                         {/* CUSTOMER */}
-                        <td className="px-4 py-4">
-                          <div className="max-w-[180px]">
+                        <td className="px-4 py-3.5">
+                          <div className="max-w-[170px]">
                             <p className="truncate text-xs font-semibold text-[var(--ink)]">
-                              {customer || 'Guest Customer'}
+                              {customer || 'Walk-in / Guest'}
                             </p>
 
-                            <p className="mt-1 truncate text-[11px] text-[var(--muted)]">
+                            <p className="mt-0.5 truncate text-[11px] text-[var(--muted)]">
                               {getCustomerEmail(row) ||
                                 getCustomerPhone(row) ||
-                                'No contact details'}
+                                '—'}
                             </p>
                           </div>
                         </td>
 
                         {/* STATUS */}
-                        <td className="px-4 py-4 text-center">
+                        <td className="px-4 py-3.5 text-center">
                           <StatusBadge status={status} />
                         </td>
 
                         {/* CREATED */}
-                        <td className="whitespace-nowrap px-4 py-4">
+                        <td className="whitespace-nowrap px-4 py-3.5">
                           <p className="text-xs font-medium text-[var(--ink-secondary)]">
                             {fmtDateOnly(getCreatedAt(row))}
                           </p>
 
-                          <p className="mt-1 text-[11px] text-[var(--muted)]">
+                          <p className="mt-0.5 text-[10px] text-[var(--muted)]">
                             {getCreatedAt(row)
                               ? new Date(getCreatedAt(row)).toLocaleTimeString(
                                   'en-IN',
@@ -1179,13 +1149,13 @@ export default function PaymentReconciliation() {
                         </td>
 
                         {/* ACTION */}
-                        <td className="px-4 py-4 text-center">
+                        <td className="px-4 py-3.5 text-center">
                           <button
                             type="button"
                             onClick={() => setSelectedRow(row)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--ink-secondary)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 transition-all hover:bg-blue-600 hover:text-white hover:border-blue-600 active:scale-95"
                           >
-                            <Eye size={14} />
+                            <Eye size={13} />
                             View
                           </button>
                         </td>
@@ -1196,8 +1166,80 @@ export default function PaymentReconciliation() {
             </table>
           </div>
 
+          {/* MOBILE RESPONSIVE CARD VIEW (< md) */}
+          <div className="md:hidden divide-y divide-[var(--line-subtle)] p-3 space-y-3">
+            {loading && (
+              <div className="py-12 text-center">
+                <RefreshCw size={24} className="mx-auto mb-2 animate-spin text-blue-600" />
+                <p className="text-xs font-semibold text-[var(--ink)]">Loading transactions...</p>
+              </div>
+            )}
+
+            {!loading && visibleRows.length === 0 && (
+              <div className="py-10 text-center text-xs text-[var(--muted)]">
+                No transactions found
+              </div>
+            )}
+
+            {!loading &&
+              visibleRows.map((row, index) => {
+                const status = getStatus(row)
+                const currency = getCurrency(row)
+                const amount = getAmount(row)
+                const method = getPaymentMethod(row)
+                const orderId = getOrderId(row)
+                const paymentId = getPaymentId(row)
+                const invoice = getInvoiceNumber(row)
+                const customer = getCustomerName(row)
+
+                return (
+                  <div
+                    key={row.id || paymentId || orderId || index}
+                    className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-xs space-y-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-blue-600 dark:text-blue-400 font-mono text-sm break-all">
+                          {invoice || `Txn #${row.id || index + 1}`}
+                        </p>
+                        <p className="text-xs text-[var(--muted)] mt-0.5 truncate">
+                          {customer || 'Walk-in / Guest'}
+                        </p>
+                      </div>
+                      <StatusBadge status={status} />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 border-t border-[var(--line-subtle)] pt-2 text-xs">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-[var(--muted)] block">Amount</span>
+                        <span className="font-mono font-bold text-sm text-[var(--ink)]">{fmt(amount, currency)}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-[var(--muted)] block">Method</span>
+                        <MethodBadge method={method} />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 border-t border-[var(--line-subtle)] pt-2 text-xs">
+                      <div className="text-[11px] text-[var(--muted)]">
+                        {fmtDateOnly(getCreatedAt(row))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRow(row)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-all hover:bg-blue-600 hover:text-white"
+                      >
+                        <Eye size={12} />
+                        View Details
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+          </div>
+
           {!loading && visibleRows.length > 0 && (
-            <div className="flex flex-col justify-between gap-2 border-t border-[var(--line)] px-4 py-3 text-xs text-[var(--muted)] sm:flex-row sm:items-center">
+            <div className="flex flex-col justify-between gap-2 border-t border-[var(--line)] px-4 py-3 text-xs text-[var(--muted)] sm:flex-row sm:items-center bg-[var(--surface)]">
               <span>
                 Showing {visibleRows.length} transaction
                 {visibleRows.length !== 1 ? 's' : ''}
@@ -1244,7 +1286,7 @@ function TransactionDrawer({ row, onClose }) {
         type="button"
         aria-label="Close transaction details"
         onClick={onClose}
-        className="absolute inset-0 cursor-default bg-black/40 backdrop-blur-[2px]"
+        className="absolute inset-0 cursor-default bg-slate-950/50 backdrop-blur-xs"
       />
 
       <aside className="relative flex h-full w-full max-w-xl flex-col border-l border-[var(--line)] bg-[var(--surface)] shadow-2xl">
@@ -1591,7 +1633,7 @@ function TransactionDrawer({ row, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-3 text-sm font-semibold text-[var(--ink)] transition-colors hover:opacity-80"
+            className="btn-secondary w-full min-h-11 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2"
           >
             <X size={16} />
             Close Details

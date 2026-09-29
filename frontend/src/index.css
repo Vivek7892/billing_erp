@@ -10,15 +10,18 @@
   /* ----------------------------------------------------------
      Application Surfaces
   ---------------------------------------------------------- */
-  --app-bg: #f6f7f9;
+  --app-bg: #ffffff;
   --surface: #ffffff;
-  --surface-elevated: #fbfcfd;
-  --surface-hover: #f1f3f5;
-  --surface-active: #e9edf2;
+  --surface-elevated: #ffffff;
+  --surface-hover: #f0f7ff;
+  --surface-active: #e0edfe;
 
-  --line: #dfe3e8;
-  --line-subtle: #edf0f3;
-  --line-strong: #c7cdd5;
+  --line: #e2e8f0;
+  --line-subtle: #f1f5f9;
+  --line-strong: #cbd5e1;
+
+  --background: #ffffff;
+  --bg-subtle: #ffffff;
 
   /* ----------------------------------------------------------
      Typography
@@ -30,44 +33,44 @@
   --placeholder: #a1aab6;
 
   /* ----------------------------------------------------------
-     Primary — Used only for actions and navigation
+     Primary — Blue for primary ERP actions and navigation
   ---------------------------------------------------------- */
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-active: #3730a3;
-  --primary-light: #eef2ff;
-  --primary-border: #c7d2fe;
-  --primary-text: #4338ca;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-active: #1e40af;
+  --primary-light: #eff6ff;
+  --primary-border: #bfdbfe;
+  --primary-text: #1d4ed8;
 
   /* ----------------------------------------------------------
      Financial / ERP Semantic Colors
   ---------------------------------------------------------- */
 
   /* Revenue / Sales */
-  --sales: #0f766e;
-  --sales-light: #ecfdf5;
-  --sales-border: #99f6e4;
-  --sales-text: #0f766e;
+  --sales: #16a34a;
+  --sales-light: #f0fdf4;
+  --sales-border: #bbf7d0;
+  --sales-text: #15803d;
 
-  /* Profit / Positive */
-  --success: #15803d;
-  --success-hover: #166534;
+  /* Profit / Positive / Paid (Green) */
+  --success: #16a34a;
+  --success-hover: #15803d;
   --success-light: #f0fdf4;
   --success-border: #bbf7d0;
-  --success-text: #166534;
+  --success-text: #15803d;
 
   /* Stock / Inventory */
-  --stock: #0369a1;
+  --stock: #0284c7;
   --stock-light: #f0f9ff;
   --stock-border: #bae6fd;
-  --stock-text: #075985;
+  --stock-text: #0369a1;
 
-  /* Low Stock / Pending */
-  --warning: #b45309;
-  --warning-hover: #92400e;
-  --warning-light: #fffbeb;
-  --warning-border: #fde68a;
-  --warning-text: #92400e;
+  /* Pending / Warning (Orange) */
+  --warning: #ea580c;
+  --warning-hover: #c2410c;
+  --warning-light: #fff7ed;
+  --warning-border: #fed7aa;
+  --warning-text: #c2410c;
 
   /* Expenses */
   --expense: #c2410c;
@@ -206,6 +209,9 @@
   --line: #303a45;
   --line-subtle: #252e37;
   --line-strong: #465260;
+
+  --background: #101418;
+  --bg-subtle: #171c22;
 
   /* ----------------------------------------------------------
      Typography
@@ -620,7 +626,7 @@ small {
 .input:disabled {
   cursor: not-allowed;
   opacity: 0.55;
-  background: var(--surface-elevated);
+  background: var(--surface);
 }
 
 .input.error {
@@ -1622,6 +1628,11 @@ div[data-hot-toast],
     overflow: visible !important;
     background: #ffffff !important;
     color: #000000 !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .page-enter {

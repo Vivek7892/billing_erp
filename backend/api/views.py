@@ -1162,9 +1162,21 @@ class SettingViewSet(viewsets.ModelViewSet):
             'invoice_template': 'gst_a4', 'invoice_due_days': '15',
             'invoice_terms': '', 'invoice_footer': '',
             'show_discount_col': 'true', 'show_hsn_col': 'true',
+            'show_sku_col': 'false', 'show_unit_col': 'false',
             'show_batch_col': 'false', 'show_expiry_col': 'false',
-            'show_signature_area': 'false', 'show_fssai_on_invoice': 'false',
-            'show_cin_on_invoice': 'false', 'invoice_notes': '',
+            'show_tax_cols': 'true', 'show_signature_area': 'false',
+            'show_fssai_on_invoice': 'false', 'show_cin_on_invoice': 'false',
+            'invoice_notes': '',
+            # Invoice display toggles
+            'show_business_logo': 'true', 'show_business_address': 'true',
+            'show_business_phone': 'true', 'show_business_email': 'true',
+            'show_business_gstin': 'true', 'show_business_pan': 'true',
+            'show_customer_phone': 'true', 'show_customer_address': 'true',
+            'show_customer_gstin': 'true', 'show_place_of_supply': 'true',
+            'show_amount_in_words': 'true', 'show_payment_summary': 'true',
+            'show_payment_status': 'true', 'show_payment_mode': 'true',
+            'show_balance_due': 'true', 'show_bank_details': 'true',
+            'show_notes': 'true', 'show_terms': 'true', 'show_footer': 'true',
             # Invoice appearance
             'invoice_font': 'default', 'invoice_header_layout': 'logo_left',
             'invoice_footer_layout': 'text_center', 'invoice_paper_size': 'a4',
@@ -2225,9 +2237,9 @@ class RazorpayWebhookView(APIView):
 
 
 class BarcodeLabelView(APIView):
-    """GET /products/<pk>/barcode-label/?copies=N&token=<jwt>
-    Returns an A4 PDF sheet of barcode labels for the product.
-    Supports token-in-query-param so the browser can open it directly.
+    """GET /products/<pk>/barcode-label/?copies=N&size=...&show_store=...&token=<jwt>
+    Returns a PDF sheet of barcode labels for the product with custom sizing and field toggles.
+    Supports token-in-query-param so the browser can open/print it directly.
     """
     permission_classes = []
 
@@ -2252,63 +2264,143 @@ class BarcodeLabelView(APIView):
             return HttpResponse('Not found', status=404)
 
         try:
-            copies = max(1, min(int(request.query_params.get('copies', 1)), 100))
+            copies = max(1, min(int(request.query_params.get('copies', 1)), 500))
         except (ValueError, TypeError):
             copies = 1
 
-        buffer = _generate_barcode_label_pdf(product, copies)
+        size = request.query_params.get('size', 'a4_3x5')
+        try:
+            custom_cols = int(request.query_params.get('custom_cols', 3))
+            custom_rows = int(request.query_params.get('custom_rows', 5))
+        except (ValueError, TypeError):
+            custom_cols, custom_rows = 3, 5
+
+        def parse_bool(val, default=True):
+            if val is None:
+                return default
+            return str(val).lower() in ('1', 'true', 'yes')
+
+        options = {
+            'size': size,
+            'custom_cols': custom_cols,
+            'custom_rows': custom_rows,
+            'show_store': parse_bool(request.query_params.get('show_store'), True),
+            'show_name': parse_bool(request.query_params.get('show_name'), True),
+            'show_barcode': parse_bool(request.query_params.get('show_barcode'), True),
+            'show_number': parse_bool(request.query_params.get('show_number'), True),
+            'show_sku': parse_bool(request.query_params.get('show_sku'), True),
+            'show_price': parse_bool(request.query_params.get('show_price'), True),
+            'show_mrp': parse_bool(request.query_params.get('show_mrp'), True),
+            'show_unit': parse_bool(request.query_params.get('show_unit'), True),
+        }
+
+        download = parse_bool(request.query_params.get('download'), False)
+        buffer = _generate_barcode_label_pdf(product, copies, options)
         response = HttpResponse(buffer, content_type='application/pdf')
-        safe_name = product.name.replace('"', '').replace('\\', '')[:40]
-        response['Content-Disposition'] = f'inline; filename="barcode-{product.sku}.pdf"'
+        disp = 'attachment' if download else 'inline'
+        response['Content-Disposition'] = f'{disp}; filename="barcode-{product.sku or product.id}.pdf"'
         return response
 
 
-def _generate_barcode_label_pdf(product, copies):
-    """A4 sheet of 2×5 barcode labels (10 per page)."""
+def _generate_barcode_label_pdf(product, copies, options=None):
+    """Generates barcode labels supporting A4 3x5, A4 4x8, 58mm Thermal, 80mm Thermal, and Custom with customizable fields."""
     import barcode as pybarcode
     from barcode.writer import ImageWriter
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.pdfgen import canvas as rl_canvas
     from reportlab.lib import colors as rl_colors
-    from PIL import Image as PILImage
     import tempfile, os
 
-    PAGE_W, PAGE_H = A4
-    COLS, ROWS = 2, 5
-    LABEL_W = PAGE_W / COLS
-    LABEL_H = PAGE_H / ROWS
-    PADDING = 4 * mm
+    options = options or {}
+    size_type = options.get('size', 'a4_3x5')
+    custom_cols = max(1, min(10, int(options.get('custom_cols', 3))))
+    custom_rows = max(1, min(20, int(options.get('custom_rows', 5))))
 
-    # Determine barcode value: prefer product.barcode, fall back to SKU
+    show_store = options.get('show_store', True)
+    show_name = options.get('show_name', True)
+    show_barcode = options.get('show_barcode', True)
+    show_number = options.get('show_number', True)
+    show_sku = options.get('show_sku', True)
+    show_price = options.get('show_price', True)
+    show_mrp = options.get('show_mrp', True)
+    show_unit = options.get('show_unit', True)
+
+    if size_type == 'a4_4x8':
+        PAGE_W, PAGE_H = A4
+        COLS, ROWS = 4, 8
+        MARGIN_X, MARGIN_Y = 5 * mm, 6 * mm
+        GAP_X, GAP_Y = 2 * mm, 2 * mm
+        is_compact = True
+    elif size_type == 'thermal_58':
+        PAGE_W, PAGE_H = 58 * mm, 40 * mm
+        COLS, ROWS = 1, 1
+        MARGIN_X, MARGIN_Y = 2 * mm, 2 * mm
+        GAP_X, GAP_Y = 0, 0
+        is_compact = True
+    elif size_type == 'thermal_80':
+        PAGE_W, PAGE_H = 80 * mm, 50 * mm
+        COLS, ROWS = 1, 1
+        MARGIN_X, MARGIN_Y = 3 * mm, 3 * mm
+        GAP_X, GAP_Y = 0, 0
+        is_compact = False
+    elif size_type == 'custom':
+        PAGE_W, PAGE_H = A4
+        COLS, ROWS = custom_cols, custom_rows
+        MARGIN_X, MARGIN_Y = 5 * mm, 6 * mm
+        GAP_X, GAP_Y = 2 * mm, 2 * mm
+        is_compact = (ROWS > 6 or COLS > 3)
+    else:  # a4_3x5
+        PAGE_W, PAGE_H = A4
+        COLS, ROWS = 3, 5
+        MARGIN_X, MARGIN_Y = 6 * mm, 8 * mm
+        GAP_X, GAP_Y = 2.5 * mm, 2.5 * mm
+        is_compact = False
+
+    LABEL_W = (PAGE_W - (2 * MARGIN_X) - ((COLS - 1) * GAP_X)) / COLS
+    LABEL_H = (PAGE_H - (2 * MARGIN_Y) - ((ROWS - 1) * GAP_Y)) / ROWS
+
     barcode_value = (product.barcode or product.sku or str(product.id)).strip()
 
-    # Generate barcode image once into a temp file
     tmp_dir = tempfile.mkdtemp()
     tmp_path = os.path.join(tmp_dir, 'bc')
-    try:
-        # Try Code128 (accepts any alphanumeric)
-        bc_class = pybarcode.get_barcode_class('code128')
-        bc = bc_class(barcode_value, writer=ImageWriter())
-        saved = bc.save(tmp_path, options={'write_text': False, 'quiet_zone': 2, 'module_height': 10})
-        bc_img_path = saved
-    except Exception:
-        bc_img_path = None
+    bc_img_path = None
+    if show_barcode:
+        try:
+            bc_class = pybarcode.get_barcode_class('code128')
+            bc = bc_class(barcode_value, writer=ImageWriter())
+            saved = bc.save(tmp_path, options={
+                'write_text': False,
+                'quiet_zone': 1.5,
+                'module_height': 10 if is_compact else 14,
+                'dpi': 300,
+            })
+            bc_img_path = saved
+        except Exception:
+            bc_img_path = None
 
     buffer = BytesIO()
-    c = rl_canvas.Canvas(buffer, pagesize=A4)
+    c = rl_canvas.Canvas(buffer, pagesize=(PAGE_W, PAGE_H))
 
     shop_name = ''
-    try:
-        s = Setting.objects.filter(business=product.business, key='shop_name').first()
-        if s:
-            shop_name = s.value
-    except Exception:
-        pass
+    if show_store:
+        try:
+            s = Setting.objects.filter(business=product.business, key='shop_name').first()
+            if s and s.value:
+                shop_name = s.value.strip()
+        except Exception:
+            pass
+        if not shop_name:
+            shop_name = 'RETAIL STORE'
 
-    price_text = f'Rs.{product.selling_price}'
-    label_text = product.name[:28]
-    sku_text = f'SKU: {product.sku}'
+    try:
+        sp_num = float(product.selling_price or 0)
+        price_text = f'Rs. {sp_num:,.2f}' if sp_num > 0 else 'Rs. 0.00'
+    except (ValueError, TypeError):
+        price_text = f'Rs. {product.selling_price}'
+
+    label_text = (product.name or 'Product')[:(22 if is_compact else 28)]
+    sku_text = f'SKU: {product.sku[:12]}' if (show_sku and product.sku) else ''
 
     for i in range(copies):
         col = i % COLS
@@ -2316,61 +2408,87 @@ def _generate_barcode_label_pdf(product, copies):
         if i > 0 and col == 0 and row == 0:
             c.showPage()
 
-        x = col * LABEL_W
-        # ReportLab y=0 is bottom; row 0 is top of page
-        y = PAGE_H - (row + 1) * LABEL_H
+        x = MARGIN_X + col * (LABEL_W + GAP_X)
+        y = PAGE_H - MARGIN_Y - (row + 1) * LABEL_H - row * GAP_Y
 
-        # Border
+        # Label outline with rounded corners
         c.setStrokeColor(rl_colors.HexColor('#CBD5E1'))
         c.setLineWidth(0.5)
-        c.rect(x + PADDING / 2, y + PADDING / 2,
-               LABEL_W - PADDING, LABEL_H - PADDING)
+        c.roundRect(x, y, LABEL_W, LABEL_H, radius=1.5 * mm, stroke=1, fill=0)
 
-        inner_x = x + PADDING
-        inner_y = y + PADDING
-        inner_w = LABEL_W - 2 * PADDING
-        inner_h = LABEL_H - 2 * PADDING
+        curr_top = y + LABEL_H
 
-        # Shop name (top)
-        c.setFont('Helvetica-Bold', 7)
-        c.setFillColor(rl_colors.HexColor('#1E3A8A'))
-        c.drawCentredString(x + LABEL_W / 2, inner_y + inner_h - 6 * mm, shop_name[:30])
+        # 1. Store Name
+        if show_store and shop_name:
+            c.setFont('Helvetica-Bold', 6 if is_compact else 7)
+            c.setFillColor(rl_colors.HexColor('#312E81'))
+            curr_top -= (4 * mm if is_compact else 5 * mm)
+            c.drawCentredString(x + LABEL_W / 2, curr_top, shop_name[:26].upper())
 
-        # Product name
-        c.setFont('Helvetica-Bold', 8)
-        c.setFillColor(rl_colors.black)
-        c.drawCentredString(x + LABEL_W / 2, inner_y + inner_h - 11 * mm, label_text)
+        # 2. Product Name
+        if show_name:
+            c.setFont('Helvetica-Bold', 7 if is_compact else 8.5)
+            c.setFillColor(rl_colors.HexColor('#0F172A'))
+            curr_top -= (3.5 * mm if is_compact else 4.5 * mm)
+            c.drawCentredString(x + LABEL_W / 2, curr_top, label_text)
 
-        # Barcode image
-        if bc_img_path and os.path.exists(bc_img_path):
-            bc_h = 14 * mm
-            bc_w = inner_w * 0.85
+        # 3. Barcode graphic & number
+        if show_barcode and bc_img_path and os.path.exists(bc_img_path):
+            bc_h = 10 * mm if is_compact else 15 * mm
+            bc_w = LABEL_W - (6 * mm if is_compact else 8 * mm)
             bc_x = x + (LABEL_W - bc_w) / 2
-            bc_y = inner_y + inner_h - 11 * mm - bc_h - 2 * mm
-            c.drawImage(bc_img_path, bc_x, bc_y, width=bc_w, height=bc_h,
-                        preserveAspectRatio=False, mask='auto')
-            text_y = bc_y - 4 * mm
-        else:
-            # Fallback: print barcode value as text
-            text_y = inner_y + inner_h - 20 * mm
-            c.setFont('Courier-Bold', 9)
-            c.drawCentredString(x + LABEL_W / 2, text_y, barcode_value)
-            text_y -= 5 * mm
+            curr_top -= (bc_h + 1 * mm)
+            c.drawImage(bc_img_path, bc_x, curr_top, width=bc_w, height=bc_h, preserveAspectRatio=False, mask='auto')
 
-        # Barcode number
-        c.setFont('Courier', 7)
-        c.setFillColor(rl_colors.black)
-        c.drawCentredString(x + LABEL_W / 2, text_y, barcode_value)
+            if show_number:
+                curr_top -= 3 * mm
+                c.setFont('Courier-Bold', 6 if is_compact else 7)
+                c.setFillColor(rl_colors.HexColor('#475569'))
+                c.drawCentredString(x + LABEL_W / 2, curr_top, barcode_value)
+        elif show_barcode:
+            # Fallback text
+            curr_top -= 5 * mm
+            c.setFont('Courier-Bold', 8 if is_compact else 9)
+            c.setFillColor(rl_colors.HexColor('#0F172A'))
+            c.drawCentredString(x + LABEL_W / 2, curr_top, barcode_value)
+        elif show_number:
+            curr_top -= 4 * mm
+            c.setFont('Courier-Bold', 7 if is_compact else 8)
+            c.setFillColor(rl_colors.HexColor('#475569'))
+            c.drawCentredString(x + LABEL_W / 2, curr_top, barcode_value)
 
-        # SKU + Price
-        c.setFont('Helvetica', 7)
-        c.drawString(inner_x, inner_y + 3 * mm, sku_text)
-        c.setFont('Helvetica-Bold', 9)
-        c.drawRightString(x + LABEL_W - PADDING, inner_y + 3 * mm, price_text)
+        # 4. Bottom details line: SKU, Unit, MRP, Price
+        has_bottom_info = show_sku or show_unit or show_mrp or show_price
+        if has_bottom_info:
+            sep_y = y + (7 * mm if is_compact else 9.5 * mm)
+            c.setStrokeColor(rl_colors.HexColor('#E2E8F0'))
+            c.setLineWidth(0.4)
+            c.line(x + 2.5 * mm, sep_y, x + LABEL_W - 2.5 * mm, sep_y)
+
+            bottom_y = y + (2 * mm if is_compact else 3.5 * mm)
+
+            # Left items: SKU, MRP, Unit
+            c.setFont('Helvetica', 5.5 if is_compact else 6.5)
+            c.setFillColor(rl_colors.HexColor('#64748B'))
+            left_strs = []
+            if sku_text:
+                left_strs.append(sku_text)
+            if show_unit and product.unit:
+                left_strs.append(f'Unit: {product.unit}')
+            if show_mrp and product.mrp and float(product.mrp or 0) > 0:
+                left_strs.append(f'MRP: Rs.{product.mrp}')
+
+            if left_strs:
+                c.drawString(x + 3 * mm, bottom_y, ' · '.join(left_strs)[:28])
+
+            # Right item: Selling Price
+            if show_price:
+                c.setFont('Helvetica-Bold', 7.5 if is_compact else 9.5)
+                c.setFillColor(rl_colors.HexColor('#0F172A'))
+                c.drawRightString(x + LABEL_W - 3 * mm, bottom_y, price_text)
 
     c.save()
 
-    # Cleanup temp files
     try:
         import shutil
         shutil.rmtree(tmp_dir, ignore_errors=True)

@@ -74,7 +74,7 @@ export function StatCard({
       accent: 'border-l-violet-500',
     },
     gray: {
-      icon: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+      icon: 'bg-white text-slate-700 border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-700',
       accent: 'border-l-slate-400',
     },
   }
@@ -194,7 +194,7 @@ export function Badge({ status, label: customLabel }) {
     info:
       'bg-indigo-50 text-indigo-800 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800/60',
     neutral:
-      'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+      'bg-white text-slate-700 border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-700',
   }
 
   const type = statusMap[status] || 'neutral'

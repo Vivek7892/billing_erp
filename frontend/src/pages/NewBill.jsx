@@ -505,6 +505,7 @@ export default function NewBill() {
   const [addingCustomer, setAddingCustomer] = useState(false)
   const [now, setNow] = useState(new Date())
   const [cashier] = useState(getCashierName)
+  const [mobileTab, setMobileTab] = useState('catalog') // 'catalog' | 'cart'
 
   const searchRef = useRef()
   const customerRef = useRef()
@@ -578,6 +579,7 @@ export default function NewBill() {
     })
     setLastAddedId(product.id)
     addRecentProduct(product)
+    toast.success(`Added ${product.name} to bill`, { duration: 1200, id: `add-${product.id}` })
     setTimeout(() => setLastAddedId(null), 800)
     setSearch('')
     setActiveIdx(-1)
@@ -1327,10 +1329,37 @@ export default function NewBill() {
         </div>
       )}
 
+      {/* Mobile View Switcher (Catalog vs Cart) */}
+      <div className="pb-mobile-view-tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileTab === 'catalog'}
+          className={`pb-mobile-tab ${mobileTab === 'catalog' ? 'active' : ''}`}
+          onClick={() => setMobileTab('catalog')}
+        >
+          <Package size={14} />
+          <span>Catalog ({filtered.length})</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileTab === 'cart'}
+          className={`pb-mobile-tab ${mobileTab === 'cart' ? 'active' : ''}`}
+          onClick={() => setMobileTab('cart')}
+        >
+          <ShoppingCart size={14} />
+          <span>Active Cart</span>
+          <span className={`pb-mobile-cart-badge ${cart.length > 0 ? 'has-items' : ''}`}>
+            {cart.length} {cart.length > 0 ? `• ${fmt(grandTotal)}` : ''}
+          </span>
+        </button>
+      </div>
+
       {/* ============================ 2. MAIN WORKSPACE (45% / 55% SPLIT) ============================ */}
       <main className="pb-workspace">
         {/* ================= PRODUCT SECTION (45% WIDTH) ================= */}
-        <section className="pb-panel pb-products-col" aria-label="Products Catalog">
+        <section className={`pb-panel pb-products-col ${mobileTab === 'cart' ? 'pb-col-hidden-mobile' : ''}`} aria-label="Products Catalog">
           {/* Prominent Search and Scan Area */}
           <div className="pb-search-area">
             <div className="pb-search-field">
@@ -1561,7 +1590,42 @@ export default function NewBill() {
         </section>
 
         {/* ================= CART/BILL SECTION (55% WIDTH) ================= */}
-        <section className="pb-panel pb-bill-col" aria-label="Current Bill and Summary">
+        <section className={`pb-panel pb-bill-col ${mobileTab === 'catalog' ? 'pb-col-hidden-mobile' : ''}`} aria-label="Current Bill and Summary">
+          {/* Active Cart Section Header */}
+          <div className="pb-cart-header">
+            <div className="pb-cart-header-left">
+              <div className="pb-cart-title">
+                <ShoppingCart size={16} className="text-blue-600" />
+                <span>Active Sale Cart</span>
+              </div>
+              <span className="pb-cart-count-pill">
+                {cart.length} {cart.length === 1 ? 'item' : 'items'}
+                {totalQty > 0 ? ` (${totalQty} units)` : ''}
+              </span>
+            </div>
+
+            <div className="pb-cart-header-actions">
+              {cart.length > 0 && (
+                <button
+                  type="button"
+                  className="pb-btn-clear-cart"
+                  title="Clear all cart items"
+                  onClick={() => setShowClearConfirm(true)}
+                >
+                  <Trash2 size={13} />
+                  <span>Clear</span>
+                </button>
+              )}
+              <button
+                type="button"
+                className="pb-btn-add-more lg:hidden"
+                onClick={() => setMobileTab('catalog')}
+              >
+                + Add Items
+              </button>
+            </div>
+          </div>
+
           {/* Improved Customer Selection Row */}
           <div className="pb-cust-bar">
             <span className="pb-cust-label">Customer:</span>
@@ -1804,7 +1868,7 @@ export default function NewBill() {
       </main>
 
       {/* ============================ 3. STICKY PAYMENT DOCK (SINGLE COMPLETE SALE) ============================ */}
-      <footer className="pb-dock" aria-label="Payment dock and actions" ref={paymentSectionRef}>
+      <footer className={`pb-dock ${mobileTab === 'catalog' ? 'pb-dock-hidden-mobile' : ''}`} aria-label="Payment dock and actions" ref={paymentSectionRef}>
         <div className="pb-dock-main">
           {/* Top Row: Segmented Payment Method Selector + Contextual Fields */}
           <div className="pb-dock-top-row">
@@ -2098,6 +2162,30 @@ export default function NewBill() {
           </div>
         </div>
       </footer>
+
+      {/* Floating Mobile Cart Bar when viewing Catalog */}
+      {cart.length > 0 && mobileTab === 'catalog' && (
+        <aside className="pb-mobile-floating-dock" aria-label="Quick cart bar">
+          <div className="pb-floating-info">
+            <div className="pb-floating-qty">
+              <ShoppingCart size={15} />
+              <span><b>{cart.length}</b> {cart.length === 1 ? 'item' : 'items'} ({totalQty} units)</span>
+            </div>
+            <div className="pb-floating-total">
+              <span>Total:</span>
+              <b>{fmt(grandTotal)}</b>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="pb-floating-checkout-btn"
+            onClick={() => setMobileTab('cart')}
+          >
+            View Cart &amp; Pay →
+          </button>
+        </aside>
+      )}
+
       {/* ============================ MODALS ============================ */}
       <Modal open={showCustomerModal} onClose={() => setShowCustomerModal(false)} title="Add new customer" size="sm">
         <div className="pb-modal pb-stack">
