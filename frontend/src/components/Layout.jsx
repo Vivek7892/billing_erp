@@ -7,9 +7,10 @@ import {
   LayoutDashboard, ShoppingCart, FileText, Package, Users, BarChart2,
   UserCog, Settings, LogOut, ChevronDown, ChevronUp, ChevronRight,
   Search, Bell, RotateCcw, CreditCard, Boxes, ShoppingBag, Building2,
-  IndianRupee, HelpCircle, Layers, Activity, X, Sun, Moon, Clock, ScanLine
+  IndianRupee, HelpCircle, Layers, Activity, X, Sun, Moon, Clock, ScanLine, ArrowRight, Check,
+  ShieldCheck, Trash2
 } from 'lucide-react'
-import { useEffect, useState, createContext, useContext, useRef } from 'react'
+import { useEffect, useState, createContext, useContext, useRef, useCallback } from 'react'
 
 import AppFooter from './AppFooter'
 
@@ -28,8 +29,9 @@ const NAV_GROUPS = [
   {
     label: 'Overview',
     items: [
-      { to: '/', icon: LayoutDashboard, label: 'Dashboard' }
-    ]
+      { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+      
+  ]
   },
   {
     label: 'Sales',
@@ -69,6 +71,8 @@ const NAV_GROUPS = [
     items: [
       { to: '/users', icon: UserCog, label: 'Users', adminOnly: true },
       { to: '/settings', icon: Settings, label: 'Settings', adminOnly: true },
+      { to: '/audit-trail', icon: ShieldCheck, label: 'Audit Trail', adminOnly: true },
+      { to: '/recycle-bin', icon: Trash2, label: 'Recycle Bin', adminOnly: true },
       { to: '/payments/reconciliation', icon: ScanLine, label: 'Reconciliation', adminOnly: true },
       { to: '/support', icon: HelpCircle, label: 'Support' }
     ]
@@ -414,7 +418,10 @@ function GlobalSearch() {
 function NotificationBell() {
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [criticalCount, setCriticalCount] = useState(0)
   const ref = useRef()
+  const navigate = useNavigate()
 
   useEffect(() => {
     const handleClickOutside = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
@@ -422,64 +429,138 @@ function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  useEffect(() => {
-    api.get('/dashboard/').then(({ data }) => {
-      const iconMap = { stock: Activity, credit: CreditCard, purchases: ShoppingBag, invoices: FileText }
-      const colorMap = {
-        stock: 'text-teal-600 bg-teal-50 dark:bg-teal-950/60 dark:text-teal-300',
-        credit: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 dark:text-indigo-300',
-        purchases: 'text-teal-600 bg-teal-50 dark:bg-teal-950/60 dark:text-teal-300',
-        invoices: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/60 dark:text-indigo-300'
-      }
-      setNotifications((data.action_required || []).filter(item => Number(item.count || 0) > 0).map(item => ({
-        ...item,
-        icon: iconMap[item.key] || Bell,
-        color: colorMap[item.key] || 'text-blue-600 bg-blue-50 dark:bg-blue-950/60 dark:text-blue-300',
-        title: 'Action required',
-        desc: `${item.count} ${item.label}`,
-      })))
-    }).catch(() => setNotifications([]))
+  const loadNotifications = useCallback(() => {
+    api.get('/notifications/?limit=6').then(({ data }) => {
+      setNotifications(data.notifications || [])
+      setUnreadCount(data.unread_count || 0)
+      setCriticalCount(data.critical_count || 0)
+    }).catch(() => {})
   }, [])
 
-  const hasNotifications = notifications.length > 0
+  useEffect(() => {
+    loadNotifications()
+    const timer = setInterval(loadNotifications, 45000)
+    return () => clearInterval(timer)
+  }, [loadNotifications])
+
+  const handleMarkAllRead = async () => {
+    try {
+      await api.post('/notifications/read-all/')
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+      setUnreadCount(0)
+      setCriticalCount(0)
+    } catch {}
+  }
+
+  const handleNotificationClick = async (n) => {
+    if (!n.is_read) {
+      try {
+        await api.post(`/notifications/${n.id}/read/`)
+        setUnreadCount(c => Math.max(0, c - 1))
+      } catch {}
+    }
+    setOpen(false)
+    if (n.action_url) {
+      navigate(n.action_url)
+    } else {
+      navigate('/notifications')
+    }
+  }
 
   return (
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(v => !v)}
-        aria-label={`Notifications${hasNotifications ? `, ${notifications.length} items` : ''}`}
+        aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
         className="relative flex items-center justify-center w-9 h-9 rounded-xl text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-all"
       >
         <Bell size={17} />
-        {hasNotifications && (
-          <span aria-hidden="true" className="absolute top-2 right-2 w-2 h-2 bg-teal-500 rounded-full ring-2 ring-[var(--surface)]" />
+        {unreadCount > 0 && (
+          <span
+            className={`absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white ${
+              criticalCount > 0 ? 'bg-red-500 animate-pulse' : 'bg-[var(--primary)]'
+            }`}
+          >
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-[var(--surface)] rounded-2xl shadow-[var(--shadow-lg)] border border-[var(--line)] z-50 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--line)]">
-            <span className="font-semibold text-[var(--ink)] text-sm">Notifications</span>
-            {hasNotifications && (
-              <span className="text-[10px] font-bold bg-[var(--primary-light)] text-[var(--primary-text)] px-2 py-0.5 rounded-full">{notifications.length}</span>
+        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-[var(--surface)] rounded-xl shadow-[var(--shadow-lg)] border border-[var(--line)] z-50 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--line)] bg-[var(--surface-elevated)]">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-[var(--ink)] text-xs uppercase tracking-wider">Alerts</span>
+              {unreadCount > 0 && (
+                <span className="text-[10px] font-bold bg-[var(--primary-light)] text-[var(--primary-text)] px-1.5 py-0.2 rounded-full">
+                  {unreadCount} unread
+                </span>
+              )}
+            </div>
+            {unreadCount > 0 && (
+              <button
+                onClick={handleMarkAllRead}
+                className="text-[11px] font-medium text-[var(--primary)] hover:underline"
+              >
+                Mark all read
+              </button>
             )}
           </div>
-          <div className="divide-y divide-[var(--line-subtle)] max-h-72 overflow-y-auto">
-            {notifications.map((n, i) => {
-              const Icon = n.icon
-              return (
-                <button key={i} onClick={() => { window.location.href = n.route }} className="w-full flex items-start gap-3 px-4 py-3 hover:bg-[var(--surface-hover)] cursor-pointer transition-colors text-left">
-                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${n.color}`}>
-                    <Icon size={14} />
-                  </div>
+
+          <div className="divide-y divide-[var(--line-subtle)] max-h-80 overflow-y-auto">
+            {notifications.length ? (
+              notifications.map((n) => (
+                <button
+                  key={n.id}
+                  onClick={() => handleNotificationClick(n)}
+                  className={`w-full flex items-start gap-2.5 px-3.5 py-2.5 hover:bg-[var(--surface-hover)] cursor-pointer transition-colors text-left ${
+                    !n.is_read ? 'bg-indigo-50/20 dark:bg-indigo-950/20' : ''
+                  }`}
+                >
+                  <div
+                    className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${
+                      n.severity === 'danger'
+                        ? 'bg-red-500'
+                        : n.severity === 'warning'
+                          ? 'bg-amber-500'
+                          : n.severity === 'success'
+                            ? 'bg-teal-500'
+                            : 'bg-indigo-500'
+                    }`}
+                  />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-[var(--ink)]">{n.title}</div>
-                    <div className="text-xs text-[var(--muted)] truncate">{n.desc}</div>
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="text-xs font-bold text-[var(--ink)] truncate">
+                        {n.title}
+                      </p>
+                      <span className="text-[10px] font-mono text-[var(--muted)] flex-shrink-0">
+                        {n.created_at ? new Date(n.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[var(--ink-secondary)] line-clamp-2 mt-0.5">
+                      {n.message}
+                    </p>
                   </div>
                 </button>
-              )
-            })}
-            {!hasNotifications && <div className="px-4 py-6 text-xs text-[var(--muted)] text-center">All caught up — no action required</div>}
+              ))
+            ) : (
+              <div className="px-4 py-8 text-xs text-[var(--muted)] text-center">
+                All caught up — no notifications
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-[var(--line)] bg-[var(--surface-elevated)] p-2">
+            <button
+              onClick={() => {
+                setOpen(false)
+                navigate('/notifications')
+              }}
+              className="w-full py-1.5 text-center text-xs font-semibold text-[var(--primary)] hover:underline flex items-center justify-center gap-1"
+            >
+              <span>Open Notification Center</span>
+              <ArrowRight size={12} />
+            </button>
           </div>
         </div>
       )}

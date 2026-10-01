@@ -10,7 +10,7 @@ function MobileStockCard({ product }) {
   const minimum = Number(product.minimum_stock || 0)
 
   return (
-    <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow-card)]">
+    <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-[var(--ink)]">{product.name}</p>
@@ -20,28 +20,28 @@ function MobileStockCard({ product }) {
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <div className="rounded-xl bg-[var(--surface-elevated)] p-2.5">
+        <div className="rounded-md bg-[var(--surface-elevated)] p-2.5">
           <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--muted-light)]">Current</p>
           <p className={`mt-1 text-sm font-bold ${
-            current <= 0 ? 'text-red-600 dark:text-red-400' :
-            current <= minimum ? 'text-yellow-600' :
-            'text-green-600 dark:text-green-400'
+            current <= 0 ? 'text-rose-600 dark:text-rose-400' :
+            current <= minimum ? 'text-amber-600' :
+            'text-teal-600 dark:text-teal-400'
           }`}>
             {product.current_stock} {product.unit}
           </p>
         </div>
 
-        <div className="rounded-xl bg-[var(--surface-elevated)] p-2.5">
+        <div className="rounded-md bg-[var(--surface-elevated)] p-2.5">
           <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--muted-light)]">Minimum</p>
           <p className="mt-1 text-sm font-semibold text-[var(--ink-secondary)]">{product.minimum_stock}</p>
         </div>
 
-        <div className="rounded-xl bg-[var(--surface-elevated)] p-2.5">
+        <div className="rounded-md bg-[var(--surface-elevated)] p-2.5">
           <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--muted-light)]">Purchase</p>
           <p className="mt-1 text-sm font-semibold text-[var(--ink-secondary)]">₹{product.purchase_price}</p>
         </div>
 
-        <div className="rounded-xl bg-[var(--surface-elevated)] p-2.5">
+        <div className="rounded-md bg-[var(--surface-elevated)] p-2.5">
           <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--muted-light)]">Selling</p>
           <p className="mt-1 text-sm font-semibold text-[var(--ink-secondary)]">₹{product.selling_price}</p>
         </div>
@@ -55,7 +55,7 @@ function MobileTransactionCard({ transaction }) {
   const isSale = transaction.transaction_type === 'sale'
 
   return (
-    <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-[var(--shadow-card)]">
+    <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-[var(--ink)]">
@@ -66,22 +66,22 @@ function MobileTransactionCard({ transaction }) {
           </p>
         </div>
 
-        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold ${
+        <span className={`inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold border ${
           isSale
-            ? 'bg-red-100 text-red-700'
+            ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
             : transaction.transaction_type === 'purchase'
-              ? 'bg-green-100 text-green-700'
-              : 'bg-blue-100 text-blue-700'
+              ? 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800'
+              : 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800'
         }`}>
           {isSale ? <ArrowDownCircle size={11} /> : <ArrowUpCircle size={11} />}
           {transaction.transaction_type.replace('_', ' ')}
         </span>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-[var(--surface-elevated)] p-2.5">
+      <div className="mt-3 grid grid-cols-3 gap-2 rounded-md bg-[var(--surface-elevated)] p-2.5">
         <div>
           <p className="text-[9px] uppercase tracking-wide text-[var(--muted-light)]">Qty</p>
-          <p className={`mt-1 text-xs font-bold ${qty < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+          <p className={`mt-1 text-xs font-bold ${qty < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-teal-600 dark:text-teal-400'}`}>
             {qty > 0 ? '+' : ''}{transaction.quantity}
           </p>
         </div>
@@ -215,15 +215,15 @@ export default function Inventory() {
         }
       />
 
-      <div className="flex w-full gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1 sm:w-fit">
+      <div className="flex w-full gap-1.5 rounded-md border border-[var(--line)] bg-[var(--surface)] p-1 sm:w-fit">
         {['stock', 'transactions'].map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium capitalize transition sm:flex-none sm:px-4 ${
+            className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold capitalize transition sm:flex-none sm:px-4 ${
               tab === t
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-[var(--muted)] hover:bg-blue-50/50 hover:text-blue-600'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
             }`}
           >
             {t === 'stock' ? 'Current Stock' : 'Transactions'}

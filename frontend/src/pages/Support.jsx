@@ -143,19 +143,19 @@ export default function Support() {
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {/* Phone Support */}
         <a
-          href="tel:+919876543210"
-          className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm hover:border-indigo-400 hover:shadow-md transition-all group block"
+          href="tel:+917892409872"
+          className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none hover:border-indigo-400 transition-all group block"
         >
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
-              <Phone size={18} />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
+              <Phone size={16} />
             </div>
             <div className="min-w-0">
-              <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Phone Support
               </span>
-              <p className="mt-1 text-sm font-bold text-[var(--ink)] group-hover:text-indigo-600 transition-colors">
-                +91 98765 43210
+              <p className="mt-0.5 text-sm font-bold text-[var(--ink)] group-hover:text-indigo-600 transition-colors">
+                +91 78924 09872
               </p>
               <span className="text-[11px] text-[var(--muted-light)] mt-0.5 block">
                 Mon – Sat • 9:00 AM – 8:00 PM
@@ -166,20 +166,20 @@ export default function Support() {
 
         {/* WhatsApp Desk */}
         <a
-          href="https://wa.me/919876543210"
+          href="https://wa.me/917892409872"
           target="_blank"
           rel="noreferrer"
-          className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm hover:border-teal-400 hover:shadow-md transition-all group block"
+          className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none hover:border-teal-400 transition-all group block"
         >
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600 dark:bg-teal-950/50 dark:text-teal-400">
-              <MessageCircle size={18} />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-teal-50 text-teal-600 dark:bg-teal-950/50 dark:text-teal-400">
+              <MessageCircle size={16} />
             </div>
             <div className="min-w-0">
-              <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 WhatsApp Desk
               </span>
-              <p className="mt-1 text-sm font-bold text-[var(--ink)] group-hover:text-teal-600 transition-colors">
+              <p className="mt-0.5 text-sm font-bold text-[var(--ink)] group-hover:text-teal-600 transition-colors">
                 Instant Chat Assistance
               </p>
               <span className="text-[11px] text-[var(--muted-light)] mt-0.5 block">
@@ -192,17 +192,17 @@ export default function Support() {
         {/* Email Support */}
         <a
           href="mailto:support@balajistore.com"
-          className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm hover:border-blue-400 hover:shadow-md transition-all group block"
+          className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none hover:border-indigo-400 transition-all group block"
         >
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
-              <Mail size={18} />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
+              <Mail size={16} />
             </div>
             <div className="min-w-0">
-              <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Email Support
               </span>
-              <p className="mt-1 text-sm font-bold text-[var(--ink)] group-hover:text-blue-600 transition-colors truncate">
+              <p className="mt-0.5 text-sm font-bold text-[var(--ink)] group-hover:text-indigo-600 transition-colors truncate">
                 support@balajistore.com
               </p>
               <span className="text-[11px] text-[var(--muted-light)] mt-0.5 block">
@@ -216,14 +216,14 @@ export default function Support() {
       {/* =====================================================
           2. SYSTEM ENVIRONMENT & DIAGNOSTIC STATUS
       ====================================================== */}
-      <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5">
+      <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5">
         <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] mb-3 flex items-center gap-2">
           <Server size={14} className="text-indigo-600" />
           System &amp; POS Health Status
         </h3>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-xs">
-          <div className="rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-elevated)] p-3">
+          <div className="rounded-md border border-[var(--line-subtle)] bg-[var(--surface-elevated)] p-3">
             <span className="text-[10px] uppercase font-bold text-[var(--muted-light)]">
               Backend API
             </span>
@@ -233,7 +233,7 @@ export default function Support() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-elevated)] p-3">
+          <div className="rounded-md border border-[var(--line-subtle)] bg-[var(--surface-elevated)] p-3">
             <span className="text-[10px] uppercase font-bold text-[var(--muted-light)]">
               Database Service
             </span>
@@ -243,7 +243,7 @@ export default function Support() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-elevated)] p-3">
+          <div className="rounded-md border border-[var(--line-subtle)] bg-[var(--surface-elevated)] p-3">
             <span className="text-[10px] uppercase font-bold text-[var(--muted-light)]">
               Local POS Offline Cache
             </span>
@@ -253,7 +253,7 @@ export default function Support() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-[var(--line-subtle)] bg-[var(--surface-elevated)] p-3">
+          <div className="rounded-md border border-[var(--line-subtle)] bg-[var(--surface-elevated)] p-3">
             <span className="text-[10px] uppercase font-bold text-[var(--muted-light)]">
               Billing ERP Build
             </span>
@@ -267,7 +267,7 @@ export default function Support() {
       {/* =====================================================
           3. POS KEYBOARD SHORTCUTS REFERENCE
       ====================================================== */}
-      <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5">
+      <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5">
         <div className="flex items-center gap-2 mb-3">
           <Keyboard size={16} className="text-indigo-600" />
           <h3 className="text-sm font-bold text-[var(--ink)]">
@@ -279,7 +279,7 @@ export default function Support() {
           {SHORTCUTS.map(sc => (
             <div
               key={sc.key}
-              className="flex items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5"
+              className="flex items-center justify-between gap-2 rounded-md border border-[var(--line)] bg-[var(--surface)] p-2.5"
             >
               <span className="text-[11px] text-[var(--muted)] truncate">
                 {sc.label}
@@ -295,7 +295,7 @@ export default function Support() {
       {/* =====================================================
           4. FREQUENTLY ASKED QUESTIONS (Simple Accordion)
       ====================================================== */}
-      <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5 space-y-4">
+      <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[var(--line)] pb-3">
           <div>
             <h3 className="text-sm font-bold text-[var(--ink)]">
@@ -339,7 +339,7 @@ export default function Support() {
                 key={cat}
                 type="button"
                 onClick={() => setActiveCategory(cat)}
-                className={`rounded-lg px-3 py-1.5 font-semibold whitespace-nowrap transition-colors ${
+                className={`rounded-md px-3 py-1.5 font-semibold whitespace-nowrap transition-colors ${
                   activeCategory === cat
                     ? 'bg-indigo-600 text-white'
                     : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
@@ -369,7 +369,7 @@ export default function Support() {
                   return (
                     <div
                       key={itemIdx}
-                      className="rounded-xl border border-[var(--line)] bg-[var(--surface)] overflow-hidden transition-all"
+                      className="rounded-md border border-[var(--line)] bg-[var(--surface)] overflow-hidden transition-all"
                     >
                       <button
                         type="button"

@@ -86,7 +86,7 @@ function Txt({ value, onChange, rows = 3, placeholder }) {
 // Formal clean checkbox row (replaces oversized weird toggle cards)
 function FieldCheckbox({ checked, onChange, label, description }) {
   return (
-    <label className="flex items-start gap-3 p-2.5 rounded-xl border border-[var(--line-subtle)] bg-[var(--surface)] hover:bg-[var(--surface-elevated)] transition-colors cursor-pointer group">
+    <label className="flex items-start gap-3 p-2.5 rounded-md border border-[var(--line-subtle)] bg-[var(--surface)] hover:bg-[var(--surface-elevated)] transition-colors cursor-pointer group">
       <input
         type="checkbox"
         checked={Boolean(checked)}
@@ -109,7 +109,7 @@ function FieldCheckbox({ checked, onChange, label, description }) {
 
 function SectionCard({ title, description, children, action }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-none">
       <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-3 sm:px-5 flex items-center justify-between">
         <div>
           <h3 className="text-sm font-bold text-[var(--ink)]">{title}</h3>
@@ -157,13 +157,17 @@ export default function Settings() {
   const save = async () => {
     setSaving(true)
     try {
-      await api.post('/settings/bulk_update/', s)
+      await api.post('/settings/bulk_update/', {
+        ...s,
+        reason: 'Updated store configuration from Settings panel',
+      })
       toast.success('Settings saved successfully')
       window.dispatchEvent(
         new CustomEvent('shop-settings-updated', { detail: s }),
       )
-    } catch {
-      toast.error('Failed to save settings')
+    } catch (err) {
+      const msg = err.response?.data?.detail || err.response?.data?.error || 'Failed to save settings'
+      toast.error(msg)
     } finally {
       setSaving(false)
     }
@@ -254,16 +258,16 @@ export default function Settings() {
       {/* Grid: Formal Sidebar + Form Canvas */}
       <div className="grid gap-5 lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start">
         {/* Navigation Sidebar */}
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-sm lg:sticky lg:top-4">
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 shadow-none lg:sticky lg:top-4">
           <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1">
             {TABS.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => setTab(id)}
-                className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-xs font-semibold transition-all ${
+                className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-semibold transition-all ${
                   tab === id
-                    ? 'bg-indigo-600 text-white shadow-sm'
+                    ? 'bg-indigo-600 text-white shadow-xs'
                     : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
                 }`}
               >
@@ -287,7 +291,7 @@ export default function Settings() {
                 description="Printed on top of tax invoices, thermal receipts, and formal reports."
               >
                 <div className="sm:col-span-2 flex flex-col sm:flex-row items-center gap-4">
-                  <div className="w-24 h-24 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] flex items-center justify-center overflow-hidden shrink-0">
+                  <div className="w-24 h-24 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] flex items-center justify-center overflow-hidden shrink-0">
                     {s.shop_logo ? (
                       <img
                         src={s.shop_logo}
@@ -521,6 +525,20 @@ export default function Settings() {
                     placeholder="Thank you for shopping with us! Visit again."
                   />
                 </FormField>
+              </SectionCard>
+
+              <SectionCard
+                title="Digital Bill & QR Code"
+                description="Print a secure digital bill QR code at the bottom of bills for instant customer viewing on mobile phones."
+              >
+                <div className="sm:col-span-2">
+                  <FieldCheckbox
+                    checked={isTrue(s.enable_invoice_qr, true)}
+                    onChange={e => set('enable_invoice_qr', e.target.checked ? 'true' : 'false')}
+                    label="Enable QR Code"
+                    description="Print 'Scan to View Bill' QR code at the bottom of both A4 and thermal invoices. Customers can scan to view the complete mobile-friendly digital bill, download PDF, and print."
+                  />
+                </div>
               </SectionCard>
             </div>
           )}
@@ -892,7 +910,7 @@ export default function Settings() {
           ========================================================= */}
           {tab === 'preview' && (
             <div className="space-y-4">
-              <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 text-xs text-[var(--muted)] flex items-center justify-between">
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 text-xs text-[var(--muted)] flex items-center justify-between">
                 <span>
                   Interactive preview reflecting your current profile,
                   visibility settings, and layout options.

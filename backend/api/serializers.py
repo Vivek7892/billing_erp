@@ -156,6 +156,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
             'tax_amount', 'round_off', 'grand_total', 'paid_amount', 'balance_due',
             'payment_status', 'status', 'created_by', 'created_at',
             'confirmed_at', 'posted_at', 'cancelled_by', 'cancelled_at', 'cancel_reason',
+            'public_token',
         ]
 
     def get_customer_name_display(self, obj):
@@ -318,6 +319,8 @@ class PurchaseReturnSerializer(serializers.ModelSerializer):
 
 class AuditLogSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
+    user_email = serializers.CharField(source='user.email', read_only=True)
+    user_role = serializers.CharField(source='user.role', read_only=True)
 
     class Meta:
         model = AuditLog
@@ -335,5 +338,22 @@ class RazorpayTransactionSerializer(serializers.ModelSerializer):
             'amount', 'status', 'response_code', 'provider_reference',
             'failure_reason', 'created_at', 'updated_at',
         ]
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    read_by_name = serializers.CharField(source='read_by.username', read_only=True)
+    actioned_by_name = serializers.CharField(source='actioned_by.username', read_only=True)
+
+    class Meta:
+        model = Notification
+        fields = [
+            'id', 'notification_type', 'severity', 'title', 'message',
+            'action_url', 'action_label', 'data', 'is_read', 'read_at',
+            'read_by', 'read_by_name', 'status', 'requires_approval',
+            'actioned_by', 'actioned_by_name', 'actioned_at', 'action_notes',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
 
 

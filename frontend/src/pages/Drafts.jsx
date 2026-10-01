@@ -97,7 +97,7 @@ export default function Drafts() {
             <h2 className="text-xl font-bold tracking-tight text-[var(--ink)]">
               Parked Bills
             </h2>
-            <p className="text-xs text-[var(--muted)] mt-0.5">
+            <p className="text-xs text-[var(--muted)] mt-0.5 leading-5  ">
               {drafts.length} bill{drafts.length !== 1 ? 's' : ''} waiting to be resumed
             </p>
           </div>
@@ -123,44 +123,42 @@ export default function Drafts() {
       </div>
 
       {/* Summary strip */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-        <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl px-4 py-3 shadow-[var(--shadow-card)]">
-          <div className="text-[10px] uppercase tracking-[0.12em] font-bold text-[var(--muted)]">
-            Parked Bills
-          </div>
-          <div className="mt-1 text-xl font-bold text-[var(--ink)]">
-            {drafts.length}
-          </div>
-        </div>
-
-        <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl px-4 py-3 shadow-[var(--shadow-card)]">
-          <div className="text-[10px] uppercase tracking-[0.12em] font-bold text-[var(--muted)]">
-            Total Items
-          </div>
-          <div className="mt-1 text-xl font-bold text-[var(--ink)]">
-            {drafts.reduce((sum, draft) => sum + (draft.cart?.length || 0), 0)}
-          </div>
-        </div>
-
-        <div className="hidden md:block bg-[var(--surface)] border border-[var(--line)] rounded-xl px-4 py-3 shadow-[var(--shadow-card)]">
-          <div className="text-[10px] uppercase tracking-[0.12em] font-bold text-[var(--muted)]">
-            Draft Value
-          </div>
-          <div className="mt-1 text-xl font-bold text-[var(--primary)]">
-            {fmt(
-              drafts.reduce(
-                (sum, draft) =>
-                  sum +
-                  (draft.cart?.reduce((s, item) => s + (item.total || 0), 0) || 0),
-                0
-              )
-            )}
-          </div>
+      <div className="erp-table-container mb-4">
+        <div className="overflow-x-auto">
+          <table className="erp-summary-table">
+            <thead>
+              <tr>
+                <th>Parked Invoices</th>
+                <th>Total Line Items</th>
+                <th>Estimated Draft Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="font-mono font-bold text-sm text-[var(--ink)]">
+                  {drafts.length} bills
+                </td>
+                <td className="font-mono font-semibold text-sm text-[var(--ink)]">
+                  {drafts.reduce((sum, draft) => sum + (draft.cart?.length || 0), 0)} items
+                </td>
+                <td className="font-mono font-bold text-sm text-indigo-600 dark:text-indigo-400">
+                  {fmt(
+                    drafts.reduce(
+                      (sum, draft) =>
+                        sum +
+                        (draft.cart?.reduce((s, item) => s + (item.total || 0), 0) || 0),
+                      0
+                    )
+                  )}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
       {/* Draft list */}
-      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-xl overflow-hidden shadow-[var(--shadow-card)]">
+      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-md overflow-hidden">
         {/* Desktop list header */}
         <div className="hidden md:grid grid-cols-[minmax(220px,1.5fr)_1fr_140px_150px] gap-5 px-5 py-3 bg-[var(--surface-elevated)] border-b border-[var(--line)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--muted)]">
           <span>Customer</span>

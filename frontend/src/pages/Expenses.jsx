@@ -148,7 +148,7 @@ export default function Expenses() {
       {/* =====================================================
           ERP SUMMARY (Table-Based)
       ====================================================== */}
-      <section className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+      <section className="erp-table-container">
         <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
           Expense Tracking Summary
         </div>
@@ -157,7 +157,7 @@ export default function Expenses() {
             <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
               Total Expenses
             </span>
-            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-red-600">
+            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-rose-600 dark:text-rose-400">
               {fmt(totalAll)}
             </p>
             <p className="text-[10px] text-[var(--muted)]">{expenses.length} recorded entries</p>
@@ -167,7 +167,7 @@ export default function Expenses() {
             <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
               This Month
             </span>
-            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-orange-500">
+            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-400">
               {fmt(thisMonth)}
             </p>
             <p className="text-[10px] text-[var(--muted)]">Current monthly outflow</p>
@@ -190,12 +190,12 @@ export default function Expenses() {
       {/* =================================================
           EXPENSES
       ================================================== */}
-      <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-card)]">
+      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
 
         {/* Header + controls */}
-        <div className="border-b border-[var(--line-subtle)] px-3 py-3 sm:px-5 sm:py-4">
+        <div className="border-b border-[var(--line-subtle)] px-3 py-3 sm:px-5 sm:py-3.5">
           <div className="flex items-center gap-2">
-            <h2 className="shrink-0 text-sm font-semibold text-[var(--ink)]">
+            <h2 className="shrink-0 text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
               All Expenses
             </h2>
 
@@ -210,7 +210,7 @@ export default function Expenses() {
                   value={q}
                   onChange={e => setQ(e.target.value)}
                   placeholder="Search expenses..."
-                  className="h-9 w-full rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] pl-8 pr-3 text-xs text-[var(--ink-secondary)] outline-none placeholder:text-[var(--muted-light)] focus:border-slate-300 focus:bg-[var(--surface)]"
+                  className="h-8 w-full rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] pl-8 pr-3 text-xs text-[var(--ink-secondary)] outline-none placeholder:text-[var(--muted-light)] focus:border-slate-300 focus:bg-[var(--surface)]"
                 />
               </div>
 
@@ -219,26 +219,26 @@ export default function Expenses() {
                 type="button"
                 onClick={load}
                 disabled={loading}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] disabled:opacity-50"
+                className="btn-secondary h-8 w-8 p-0 shrink-0 inline-flex items-center justify-center rounded-md"
                 title="Refresh expenses"
                 aria-label="Refresh expenses"
               >
                 <RefreshCw
-                  size={14}
+                  size={13}
                   className={loading ? 'animate-spin' : ''}
                 />
               </button>
 
               {/* Add */}
-<button
-  type="button"
-  onClick={openAdd}
-  className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white transition hover:bg-blue-700"
->
-  <Plus size={14} strokeWidth={2} />
-  <span className="hidden sm:inline">Add Expense</span>
-  <span className="sm:hidden">Add</span>
-</button>
+              <button
+                type="button"
+                onClick={openAdd}
+                className="btn-primary h-8 px-3 text-xs font-semibold inline-flex items-center gap-1.5"
+              >
+                <Plus size={13} strokeWidth={2} />
+                <span className="hidden sm:inline">Add Expense</span>
+                <span className="sm:hidden">Add</span>
+              </button>
             </div>
           </div>
 

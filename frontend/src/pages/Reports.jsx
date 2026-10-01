@@ -260,13 +260,13 @@ export default function Reports() {
               key={t.key}
               type="button"
               onClick={() => setTab(t.key)}
-              className={`flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`flex items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold whitespace-nowrap transition-all ${
                 isActive
-                  ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-500'
+                  ? 'bg-indigo-600 text-white shadow-xs'
                   : 'border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
               }`}
             >
-              <Icon size={14} />
+              <Icon size={13} />
               {t.label}
             </button>
           )
@@ -277,7 +277,7 @@ export default function Reports() {
           DATE CONTROLS & PRESETS WORKBENCH
       ====================================================== */}
       {tab !== 'customers' && (
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-4">
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-3.5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             {/* Quick date presets */}
             <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
@@ -358,7 +358,7 @@ export default function Reports() {
           <Spinner />
         </div>
       ) : error ? (
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-8 text-center">
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-8 text-center">
           <AlertCircle className="mx-auto text-rose-500 mb-2" size={32} />
           <h3 className="text-sm font-bold text-[var(--ink)]">
             Report Generation Error
@@ -396,96 +396,63 @@ function SalesReportView({ data }) {
 
   return (
     <div className="space-y-4">
-      {/* Executive Tiles */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-            Total Sales
+      {/* Executive Financial Summary Table */}
+      <div className="erp-table-container">
+        <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--surface-elevated)] flex items-center justify-between">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+            Sales Performance Summary
           </span>
-          <p className="mt-2 font-mono text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-            {fmtCurrency(summary.total_sales)}
-          </p>
-          <span className="text-[11px] text-[var(--muted)]">
-            Gross invoiced value
-          </span>
+          <span className="text-xs text-[var(--muted)]">Gross &amp; Net Operations</span>
         </div>
-
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-            Net Sales Revenue
-          </span>
-          <p className="mt-2 font-mono text-xl sm:text-2xl font-bold text-teal-600 dark:text-teal-400">
-            {fmtCurrency(summary.net_sales || summary.total_sales)}
-          </p>
-          <span className="text-[11px] text-[var(--muted)]">
-            After discounts &amp; returns
-          </span>
-        </div>
-
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-            Total Invoices
-          </span>
-          <p className="mt-2 font-mono text-xl sm:text-2xl font-bold text-[var(--ink)]">
-            {summary.count ?? 0}
-          </p>
-          <span className="text-[11px] text-[var(--muted)]">
-            Avg: {fmtShort((summary.total_sales || 0) / (summary.count || 1))} / bill
-          </span>
-        </div>
-
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-            Total GST Output Tax
-          </span>
-          <p className="mt-2 font-mono text-xl sm:text-2xl font-bold text-[var(--ink)]">
-            {fmtCurrency(summary.total_tax)}
-          </p>
-          <span className="text-[11px] text-[var(--muted)]">
-            Tax collected on bills
-          </span>
-        </div>
-      </div>
-
-      {/* Secondary Metrics Strip */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-          <span className="text-[10px] font-bold uppercase text-[var(--muted)]">
-            Cash / Bank Collection
-          </span>
-          <p className="mt-1 font-mono text-base font-bold text-teal-600 dark:text-teal-400">
-            {fmtCurrency(summary.collection || summary.total_sales)}
-          </p>
-        </div>
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-          <span className="text-[10px] font-bold uppercase text-[var(--muted)]">
-            Outstanding Credit
-          </span>
-          <p className="mt-1 font-mono text-base font-bold text-rose-600 dark:text-rose-400">
-            {fmtCurrency(summary.outstanding)}
-          </p>
-        </div>
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-          <span className="text-[10px] font-bold uppercase text-[var(--muted)]">
-            Discounts Granted
-          </span>
-          <p className="mt-1 font-mono text-base font-bold text-amber-600 dark:text-amber-400">
-            {fmtCurrency(summary.total_discount)}
-          </p>
-        </div>
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-          <span className="text-[10px] font-bold uppercase text-[var(--muted)]">
-            Returns / Refunds
-          </span>
-          <p className="mt-1 font-mono text-base font-bold text-[var(--muted)]">
-            {fmtCurrency(summary.returns)}
-          </p>
+        <div className="overflow-x-auto">
+          <table className="erp-summary-table">
+            <thead>
+              <tr>
+                <th>Gross Invoiced Sales</th>
+                <th>Net Sales Revenue</th>
+                <th>Total Invoices</th>
+                <th>Output GST Tax</th>
+                <th>Collections</th>
+                <th>Outstanding Credit</th>
+                <th>Discounts</th>
+                <th>Returns</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-sm">
+                  {fmtCurrency(summary.total_sales)}
+                </td>
+                <td className="font-mono font-bold text-teal-600 dark:text-teal-400 text-sm">
+                  {fmtCurrency(summary.net_sales || summary.total_sales)}
+                </td>
+                <td className="font-mono font-semibold text-[var(--ink)] text-sm">
+                  {summary.count ?? 0}
+                </td>
+                <td className="font-mono font-semibold text-[var(--ink)] text-sm">
+                  {fmtCurrency(summary.total_tax)}
+                </td>
+                <td className="font-mono font-semibold text-teal-600 dark:text-teal-400 text-sm">
+                  {fmtCurrency(summary.collection || summary.total_sales)}
+                </td>
+                <td className="font-mono font-semibold text-rose-600 dark:text-rose-400 text-sm">
+                  {fmtCurrency(summary.outstanding)}
+                </td>
+                <td className="font-mono font-semibold text-amber-600 dark:text-amber-400 text-sm">
+                  {fmtCurrency(summary.total_discount)}
+                </td>
+                <td className="font-mono font-semibold text-[var(--muted)] text-sm">
+                  {fmtCurrency(summary.returns)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
       {/* Daily Sales Chart */}
       {daily.length > 0 && (
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5">
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5">
           <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] mb-4">
             Daily Sales Revenue Trend
           </h3>
@@ -509,7 +476,7 @@ function SalesReportView({ data }) {
                 contentStyle={{
                   backgroundColor: 'var(--surface)',
                   borderColor: 'var(--line)',
-                  borderRadius: '12px',
+                  borderRadius: '6px',
                   fontSize: '12px',
                 }}
               />
@@ -536,8 +503,8 @@ function ProductReportView({ data }) {
   const rows = Array.isArray(data) ? data : data?.results || []
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
-      <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5 flex items-center justify-between">
+    <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
+      <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5 flex items-center justify-between bg-[var(--surface-elevated)]">
         <h3 className="text-sm font-bold text-[var(--ink)]">
           Product Sales Performance
         </h3>
@@ -621,47 +588,51 @@ function ProfitReportView({ data }) {
 
   return (
     <div className="space-y-4">
-      {/* Top 3 Profit Tiles */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-            Total Revenue
+      {/* Financial Profit Summary Table */}
+      <div className="erp-table-container">
+        <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--surface-elevated)] flex items-center justify-between">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+            Profit &amp; Margin Overview
           </span>
-          <p className="mt-2 font-mono text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-            {fmtCurrency(data.total_revenue)}
-          </p>
-          <span className="text-[11px] text-[var(--muted)]">Billed sales</span>
+          <span className="text-xs font-bold text-teal-600 dark:text-teal-400">{margin}% Gross Profit Margin</span>
         </div>
-
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-            Cost of Goods Sold (COGS)
-          </span>
-          <p className="mt-2 font-mono text-2xl font-bold text-amber-600 dark:text-amber-400">
-            {fmtCurrency(data.total_cost)}
-          </p>
-          <span className="text-[11px] text-[var(--muted)]">Purchase basis</span>
-        </div>
-
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-            Gross Margin Profit
-          </span>
-          <p className="mt-2 font-mono text-2xl font-bold text-teal-600 dark:text-teal-400">
-            {fmtCurrency(data.total_profit)}
-          </p>
-          <span className="text-[11px] font-semibold text-teal-600 dark:text-teal-400">
-            {margin}% overall profit margin
-          </span>
+        <div className="overflow-x-auto">
+          <table className="erp-summary-table">
+            <thead>
+              <tr>
+                <th>Total Invoiced Revenue</th>
+                <th>Cost of Goods Sold (COGS)</th>
+                <th>Gross Margin Profit</th>
+                <th>Overall Margin (%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-sm">
+                  {fmtCurrency(data.total_revenue)}
+                </td>
+                <td className="font-mono font-bold text-amber-600 dark:text-amber-400 text-sm">
+                  {fmtCurrency(data.total_cost)}
+                </td>
+                <td className="font-mono font-bold text-teal-600 dark:text-teal-400 text-sm">
+                  {fmtCurrency(data.total_profit)}
+                </td>
+                <td className="font-mono font-bold text-teal-600 dark:text-teal-400 text-sm">
+                  {margin}%
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
       {/* Product Profit Table */}
-      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
-        <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5">
+      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
+        <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5 bg-[var(--surface-elevated)] flex items-center justify-between">
           <h3 className="text-sm font-bold text-[var(--ink)]">
             Item-wise Profitability Breakdown
           </h3>
+          <span className="text-xs text-[var(--muted)]">Top 40 active items</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -717,48 +688,47 @@ function GSTReportView({ data }) {
 
   return (
     <div className="space-y-4">
-      {/* GST Summary Tiles */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-            Total Taxable Turnover
+      {/* GST Summary Table */}
+      <div className="erp-table-container">
+        <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--surface-elevated)] flex items-center justify-between">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+            GST Liability Overview (GSTR-1)
           </span>
-          <p className="mt-2 font-mono text-xl sm:text-2xl font-bold text-[var(--ink)]">
-            {fmtCurrency(data.total_taxable)}
-          </p>
+          <span className="text-xs text-[var(--muted)]">Output Tax Liability</span>
         </div>
-
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-            Total CGST
-          </span>
-          <p className="mt-2 font-mono text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-            {fmtCurrency(data.total_cgst || Number(data.total_tax || 0) / 2)}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-            Total SGST
-          </span>
-          <p className="mt-2 font-mono text-xl sm:text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-            {fmtCurrency(data.total_sgst || Number(data.total_tax || 0) / 2)}
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-            Total Output GST
-          </span>
-          <p className="mt-2 font-mono text-xl sm:text-2xl font-bold text-teal-600 dark:text-teal-400">
-            {fmtCurrency(data.total_tax)}
-          </p>
+        <div className="overflow-x-auto">
+          <table className="erp-summary-table">
+            <thead>
+              <tr>
+                <th>Taxable Turnover</th>
+                <th>Output CGST</th>
+                <th>Output SGST</th>
+                <th>Total Output GST Tax</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="font-mono font-bold text-[var(--ink)] text-sm">
+                  {fmtCurrency(data.total_taxable)}
+                </td>
+                <td className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-sm">
+                  {fmtCurrency(data.total_cgst || Number(data.total_tax || 0) / 2)}
+                </td>
+                <td className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-sm">
+                  {fmtCurrency(data.total_sgst || Number(data.total_tax || 0) / 2)}
+                </td>
+                <td className="font-mono font-bold text-teal-600 dark:text-teal-400 text-sm">
+                  {fmtCurrency(data.total_tax)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
       {/* Tax Slab Breakdown Table */}
-      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
-        <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5">
+      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
+        <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5 bg-[var(--surface-elevated)]">
           <h3 className="text-sm font-bold text-[var(--ink)]">
             GST Slab-wise Tax Liability (GSTR-1 Format)
           </h3>
@@ -820,8 +790,8 @@ function CustomerReportView({ data }) {
   const rows = Array.isArray(data) ? data : data?.results || []
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
-      <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5 flex items-center justify-between">
+    <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
+      <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5 flex items-center justify-between bg-[var(--surface-elevated)]">
         <h3 className="text-sm font-bold text-[var(--ink)]">
           Customer Credit &amp; Outstanding Receivables
         </h3>
@@ -886,17 +856,20 @@ function PaymentReportView({ data }) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-          Total Payment Collections
-        </span>
-        <p className="mt-2 font-mono text-2xl font-bold text-teal-600 dark:text-teal-400">
-          {fmtCurrency(data.total_amount)}
-        </p>
+      {/* Payment Summary */}
+      <div className="erp-table-container">
+        <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--surface-elevated)] flex items-center justify-between">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+            Total Payment Collections Summary
+          </span>
+          <span className="font-mono text-sm font-bold text-teal-600 dark:text-teal-400">
+            {fmtCurrency(data.total_amount)}
+          </span>
+        </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
-        <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5">
+      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
+        <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5 bg-[var(--surface-elevated)]">
           <h3 className="text-sm font-bold text-[var(--ink)]">
             Collections by Payment Channel
           </h3>
@@ -949,17 +922,20 @@ function ExpenseReportView({ data }) {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-          Total Operating Expenses
-        </span>
-        <p className="mt-2 font-mono text-2xl font-bold text-rose-600 dark:text-rose-400">
-          {fmtCurrency(data.total_expenses)}
-        </p>
+      {/* Expense Summary */}
+      <div className="erp-table-container">
+        <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--surface-elevated)] flex items-center justify-between">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+            Total Operating Expenses Summary
+          </span>
+          <span className="font-mono text-sm font-bold text-rose-600 dark:text-rose-400">
+            {fmtCurrency(data.total_expenses)}
+          </span>
+        </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
-        <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5">
+      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
+        <div className="border-b border-[var(--line)] px-4 py-3 sm:px-5 bg-[var(--surface-elevated)]">
           <h3 className="text-sm font-bold text-[var(--ink)]">
             Expense Breakdown by Category
           </h3>

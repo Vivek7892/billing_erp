@@ -42,6 +42,8 @@ urlpatterns = [
     path('products/<int:pk>/barcode-label/', views.BarcodeLabelView.as_view(), name='barcode-label'),
     path('invoices/<int:pk>/pdf/', views.InvoicePDFView.as_view(), name='invoice-pdf'),
     path('invoices/<int:pk>/short-link/', views.InvoiceShortLinkView.as_view(), name='invoice-short-link-create'),
+    path('public/bill/<str:token>/', views.PublicBillDetailView.as_view(), name='public-bill-detail'),
+    path('public/bill/<str:token>/pdf/', views.PublicBillPDFView.as_view(), name='public-bill-pdf'),
     path('invoices/<int:pk>/cancel/', views.CancelInvoiceView.as_view(), name='cancel-invoice'),
     path('invoices/<int:pk>/refund/', views.RefundInvoiceView.as_view(), name='refund-invoice'),
     path('inventory/adjust/', views.StockAdjustView.as_view(), name='stock-adjust'),
@@ -51,7 +53,14 @@ urlpatterns = [
     path('payments/razorpay/verify/', views.RazorpayVerifyView.as_view(), name='razorpay-verify'),
     path('payments/razorpay/webhook/', views.RazorpayWebhookView.as_view(), name='razorpay-webhook'),
     path('payments/razorpay/reconciliation/', views.PaymentReconciliationView.as_view(), name='razorpay-reconciliation'),
+    path('notifications/', views.NotificationListView.as_view(), name='notifications-list'),
+    path('notifications/<int:pk>/read/', views.NotificationMarkReadView.as_view(), name='notification-mark-read'),
+    path('notifications/read-all/', views.NotificationMarkAllReadView.as_view(), name='notification-read-all'),
+    path('notifications/<int:pk>/action/', views.NotificationActionView.as_view(), name='notification-action'),
+    path('notifications/run-checks/', views.NotificationTriggerCheckView.as_view(), name='notification-run-checks'),
     path('docs/<str:doc>/', views.PublicDocView.as_view(), name='public-doc'),
+    path('recycle-bin/', views.RecycleBinView.as_view(), name='recycle-bin'),
+    path('recycle-bin/<str:entity_type>/<int:pk>/restore/', views.RecycleBinRestoreView.as_view(), name='recycle-bin-restore'),
     # Keep explicit actions ahead of router detail patterns such as /inventory/<pk>/.
     path('', include(router.urls)),
 ]

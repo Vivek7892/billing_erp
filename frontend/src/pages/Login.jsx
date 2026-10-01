@@ -434,9 +434,9 @@ export default function Login() {
                       )
                     }
                     className={`
-                      h-12
+                      h-11
                       w-full
-                      rounded-xl
+                      rounded-md
                       border
                       bg-[var(--surface)]
                       px-4
@@ -557,8 +557,8 @@ export default function Login() {
                       w-4
                       rounded
                       border-[var(--line)]
-                      text-blue-600
-                      focus:ring-blue-500/20
+                      text-indigo-600
+                      focus:ring-indigo-500/20
                     "
                   />
 
@@ -579,7 +579,7 @@ export default function Login() {
                     font-medium
                     text-[var(--muted)]
                     transition
-                    hover:text-blue-600 dark:hover:text-blue-400
+                    hover:text-indigo-600 dark:hover:text-indigo-400
                   "
                 >
                   Forgot password?
@@ -597,21 +597,21 @@ export default function Login() {
                 disabled={loading}
                 className="
                   flex
-                  h-12
+                  h-11
                   w-full
                   items-center
                   justify-center
-                  rounded-xl
-                  bg-blue-600
+                  rounded-md
+                  bg-indigo-600
                   text-sm
-                  font-bold
+                  font-semibold
                   text-white
-                  shadow-sm
+                  shadow-xs
                   transition-all
-                  hover:bg-blue-700
+                  hover:bg-indigo-700
                   focus:outline-none
-                  focus:ring-4
-                  focus:ring-blue-500/20
+                  focus:ring-2
+                  focus:ring-indigo-500/25
                   active:scale-[0.99]
                   disabled:cursor-not-allowed
                   disabled:opacity-60
@@ -864,9 +864,9 @@ function Field({
             : undefined
         }
         className={`
-          h-12
+          h-11
           w-full
-          rounded-xl
+          rounded-md
           border
           bg-[var(--surface)]
           px-4

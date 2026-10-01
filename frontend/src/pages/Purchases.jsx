@@ -26,7 +26,7 @@ const emptySupplier = { name: '', phone: '', email: '', address: '', gstin: '' }
 
 /* Adaptive Input Style — completely responsive to Light and Dark mode */
 const inputCls =
-  'input h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] text-sm text-[var(--ink)] ' +
+  'input h-9 w-full rounded-md border border-[var(--line)] bg-[var(--surface)] text-sm text-[var(--ink)] ' +
   'placeholder:text-[var(--placeholder)] focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)] ' +
   'transition-colors duration-150'
 
@@ -34,9 +34,9 @@ const dueOf = p => Math.max(0, Number(p.total_amount || 0) - Number(p.paid_amoun
 
 /* Surface Tokens matching ERP Theme */
 const cardCls =
-  'rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-card)]'
+  'rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-xs)]'
 const cardHover =
-  'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:border-[var(--line-strong)]'
+  'transition-all duration-150 hover:border-[var(--line-strong)]'
 const tableCls =
   '[&_thead]:bg-[var(--surface-elevated)] [&_th]:text-[11px] [&_th]:font-bold [&_th]:uppercase [&_th]:tracking-wider [&_th]:text-[var(--muted)] ' +
   '[&_th]:border-b [&_th]:border-[var(--line)] [&_td]:border-b [&_td]:border-[var(--line-subtle)] [&_td]:text-[var(--ink-secondary)]'
@@ -421,29 +421,33 @@ export default function Purchases() {
         </div>
       </div>
 
-      {/* KPI overview */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {summaryCards.map(({ label, value, hint, icon: Icon, iconClass, accent }) => (
-          <div
-            key={label}
-            className={`group relative overflow-hidden p-4 sm:p-5 ${cardCls} ${cardHover} ${accent}`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">{label}</p>
-                <p className="mt-2 truncate text-2xl font-bold tracking-tight text-[var(--ink)] tabular-nums">{value}</p>
-                <p className="mt-1 text-xs text-[var(--muted-light)]">{hint}</p>
+      {/* Table-First Procurement Summary */}
+      <section className="erp-table-container">
+        <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          Procurement & Supplier Payable Summary
+        </div>
+        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
+          {summaryCards.map(({ label, value, hint, icon: Icon, iconClass }) => (
+            <div key={label} className="p-3 sm:p-3.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                  {label}
+                </span>
+                <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${iconClass}`}>
+                  <Icon size={13} />
+                </div>
               </div>
-              <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm ${iconClass}`}>
-                <Icon size={20} />
-              </div>
+              <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[var(--ink)] tabular-nums">
+                {value}
+              </p>
+              <p className="text-[10px] text-[var(--muted)]">{hint}</p>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </section>
 
       {/* Navigation Tabs */}
-      <div className="flex w-full max-w-full gap-1 overflow-x-auto rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] p-1.5 shadow-sm sm:inline-flex sm:w-auto">
+      <div className="flex w-full max-w-full gap-1 overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] p-1 shadow-xs sm:inline-flex sm:w-auto">
         {[
           ['orders', `Purchase Orders (${purchases.length})`],
           ['suppliers', `Suppliers (${suppliers.length})`]
@@ -451,7 +455,7 @@ export default function Purchases() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+            className={`whitespace-nowrap rounded-md px-3.5 py-2 text-xs font-semibold transition-all ${
               tab === key
                 ? 'bg-[var(--primary)] text-white shadow-sm'
                 : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'

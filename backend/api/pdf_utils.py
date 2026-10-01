@@ -203,12 +203,17 @@ def dec(value):
 
 
 def mask_account_number(value, keep_last=4):
-    digits = str(value or "").strip()
-    if not digits:
-        return ""
-    if len(digits) <= keep_last:
-        return digits
-    return "*" * (len(digits) - keep_last) + digits[-keep_last:]
+    """
+    Return the complete account number without masking.
+
+    Args:
+        value: Account number or value to display.
+        keep_last: Kept for backward compatibility with existing code.
+
+    Returns:
+        Full account number as a string.
+    """
+    return str(value or "").strip()
 
 
 def _fmt_value(value, default=""):
@@ -284,6 +289,26 @@ def make_upi_qr(upi_id, shop_name, amount, size_mm=22, invoice_number=None):
             params["tn"] = invoice_number
         upi_str = f"upi://pay?{urlencode(params)}"
         qr = qrcode.make(upi_str)
+        qr_buf = BytesIO()
+        qr.save(qr_buf, format="PNG")
+        qr_buf.seek(0)
+        return RLImage(qr_buf, width=size_mm * mm, height=size_mm * mm)
+    except Exception:
+        return None
+
+
+def make_bill_qr(invoice, size_mm=22):
+    """Return a ReportLab Image for a 'Scan to View Bill' QR, or None if unavailable."""
+    if not invoice:
+        return None
+    try:
+        import qrcode
+        from reportlab.platypus import Image as RLImage
+
+        bill_url = invoice.get_public_url() if hasattr(invoice, 'get_public_url') else None
+        if not bill_url:
+            return None
+        qr = qrcode.make(bill_url)
         qr_buf = BytesIO()
         qr.save(qr_buf, format="PNG")
         qr_buf.seek(0)
@@ -1030,8 +1055,21 @@ def _invoice_datetime(invoice):
 
 
 def build_footer(s, invoice=None):
+    flowables = []
+    if s.flag("enable_invoice_qr", True) and invoice is not None:
+        qr_img = make_bill_qr(invoice, size_mm=20)
+        if qr_img:
+            flowables.extend([
+                Spacer(1, 2.0 * mm),
+                Table([[qr_img]], colWidths=[BODY_W], hAlign="CENTER", style=[("ALIGN", (0, 0), (-1, -1), "CENTER")]),
+                Spacer(1, 0.5 * mm),
+                para("Scan to View Bill", size=6.5, align=TA_CENTER, color=colors.HexColor("#475569")),
+                Spacer(1, 1.0 * mm),
+            ])
+
     if not s.flag("show_footer", True) or str(s.get("invoice_footer_layout", "text_center")).lower() == "none":
-        return []
+        return flowables
+
     date_text, time_text = _invoice_datetime(invoice) if invoice is not None else ("", "")
     meta = []
     if date_text:
@@ -1041,12 +1079,13 @@ def build_footer(s, invoice=None):
     meta.append(f"Bill Ref: {_bill_reference_token(invoice) if invoice is not None else 'BILL-REF'}")
     align = TA_LEFT if str(s.get("invoice_footer_layout", "text_center")).lower() == "text_left" else TA_CENTER
     footer_text = _clean_footer(s.get("invoice_footer"))
-    return [
+    flowables.extend([
         *_rule(0.45, 1.2 * mm, 2.0 * mm),
         para(f"<b>{footer_text}</b>", size=7.5, align=align, color=colors.HexColor("#334155")),
         Spacer(1, 1.0 * mm),
         para("  ·  ".join(meta), size=6.5, align=align, color=colors.HexColor("#64748B")),
-    ]
+    ])
+    return flowables
 
 def _page_chrome(canvas, doc):
     canvas.saveState()
@@ -1195,6 +1234,7 @@ def generate_thermal_invoice_pdf(invoice):
     show_signature = s.flag("show_signature_thermal", False)
     show_terms = has_val(s.get("invoice_terms"))
     show_qr = s.flag("show_upi_qr_on_thermal", True) and has_val(upi_id)
+    show_bill_qr = s.flag("enable_invoice_qr", True)
 
     items = list(invoice.items.all())
     inv_date = _date_text(invoice.created_at)
@@ -1222,6 +1262,7 @@ def generate_thermal_invoice_pdf(invoice):
         + (4 if shop_gstin else 0)
         + len(items) * 10
         + (45 if show_qr else 0)
+        + (38 if show_bill_qr else 0)
         + (16 if show_terms else 0)
         + (12 if show_signature else 0)
         + (10 if cust_address or cust_gstin or place else 0)
@@ -1454,6 +1495,18 @@ def generate_thermal_invoice_pdf(invoice):
             meta.append(f"Time: {time_text}")
         meta.append(f"Bill Ref: {_bill_reference_token(invoice)}")
         story.append(_tpara(" | ".join(meta), size=5.8, align=TA_CENTER))
+
+    if show_bill_qr:
+        bill_qr_img = make_bill_qr(invoice, size_mm=_qr_size_thermal(s))
+        if bill_qr_img:
+            _tdashed(story, content_w)
+            story.append(Spacer(1, 0.8 * mm))
+            qr_wrap = Table([[bill_qr_img]], colWidths=[content_w], hAlign="CENTER")
+            qr_wrap.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
+            story.append(qr_wrap)
+            story.append(Spacer(1, 0.5 * mm))
+            story.append(_tpara("Scan to View Bill", size=T_META, align=TA_CENTER, bold=True))
+            story.append(Spacer(1, 0.8 * mm))
 
     doc.build(story)
     buffer.seek(0)

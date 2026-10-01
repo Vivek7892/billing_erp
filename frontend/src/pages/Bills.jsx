@@ -37,6 +37,8 @@ import {
   RotateCcw as RefundIcon,
   SlidersHorizontal,
   FileText,
+  ExternalLink,
+  Copy,
 } from 'lucide-react'
 
 /* =========================================================
@@ -337,46 +339,46 @@ function StatusPill({ bill }) {
     paid: {
       label: 'Paid',
       icon: CheckCircle2,
-      className: 'bg-emerald-500 text-white',
+      className: 'bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-800',
     },
     completed: {
       label: 'Paid',
       icon: CheckCircle2,
-      className: 'bg-emerald-500 text-white',
+      className: 'bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-800',
     },
     partial: {
       label: 'Partial',
       icon: AlertCircle,
-      className: 'bg-amber-400 text-white',
+      className: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
     },
     pending: {
       label: 'Pending',
       icon: Clock3,
-      className: 'bg-orange-500 text-white',
+      className: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
     },
     cancelled: {
       label: 'Cancelled',
       icon: Ban,
-      className: 'bg-red-500 text-white',
+      className: 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800',
     },
     refunded: {
       label: 'Refunded',
       icon: RefundIcon,
-      className: 'bg-purple-50 text-purple-700 border border-purple-200',
+      className: 'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-800',
     },
   }
 
   const item = config[status] || {
     label: status || 'Unknown',
     icon: AlertCircle,
-    className: 'bg-white text-slate-700 border border-slate-200',
+    className: 'bg-[var(--surface-elevated)] text-[var(--muted)] border border-[var(--line)]',
   }
 
   const Icon = item.icon
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1 text-[11px] font-semibold ${item.className}`}
+      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-semibold ${item.className}`}
     >
       <Icon size={12} />
       {item.label}
@@ -392,19 +394,19 @@ function PaymentBadge({ method }) {
   const value = method?.toLowerCase()
 
   const styles = {
-    cash:     'bg-emerald-500 text-white',
-    upi:      'bg-blue-500 text-white',
-    card:     'bg-violet-500 text-white',
-    credit:   'bg-rose-500 text-white',
-    bank:     'bg-cyan-600 text-white',
-    razorpay: 'bg-indigo-500 text-white',
-    online:   'bg-sky-500 text-white',
+    cash:     'bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800',
+    upi:      'bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800',
+    card:     'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800',
+    credit:   'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800',
+    bank:     'bg-cyan-50 text-cyan-700 border border-cyan-200 dark:bg-cyan-950/40 dark:text-cyan-300 dark:border-cyan-800',
+    razorpay: 'bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800',
+    online:   'bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800',
   }
 
   return (
     <span
-      className={`inline-flex items-center rounded-sm px-2 py-1 text-[11px] font-semibold ${
-        styles[value] || 'bg-blue-50 text-blue-700 border border-blue-200'
+      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ${
+        styles[value] || 'bg-[var(--surface-elevated)] text-[var(--muted)] border border-[var(--line)]'
       }`}
     >
       {paymentLabel(method)}
@@ -505,17 +507,44 @@ function InvoiceActions({
 
           {menuOpen && (
             <div
-              className="absolute right-0 top-10 z-50 w-44 overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl"
+              className="absolute right-0 top-10 z-50 w-48 overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl"
               onClick={e => e.stopPropagation()}
             >
               <button
                 onClick={() => {
                   setMenuOpen(false)
+                  const url = `${window.location.origin}/bill/${bill.public_token || bill.id}`
+                  window.open(url, '_blank')
+                }}
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-[var(--ink-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]"
+              >
+                <ExternalLink size={14} />
+                View Digital Bill
+              </button>
+
+              <button
+                onClick={() => {
+                  setMenuOpen(false)
+                  const url = `${window.location.origin}/bill/${bill.public_token || bill.id}`
+                  navigator.clipboard.writeText(url)
+                  toast.success('Bill link copied!')
+                }}
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-[var(--ink-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]"
+              >
+                <Copy size={14} />
+                Copy Bill Link
+              </button>
+
+              <div className="my-1 border-t border-[var(--line)]" />
+
+              <button
+                onClick={() => {
+                  setMenuOpen(false)
                   onRefresh('cancel', bill.id)
                 }}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-sm text-[var(--ink-secondary)] hover:bg-red-50 dark:hover:bg-red-950/60 hover:text-red-600 dark:hover:text-red-400"
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-[var(--ink-secondary)] hover:bg-red-50 dark:hover:bg-red-950/60 hover:text-red-600 dark:hover:text-red-400"
               >
-                <XCircle size={15} />
+                <XCircle size={14} />
                 Cancel invoice
               </button>
 
@@ -524,9 +553,9 @@ function InvoiceActions({
                   setMenuOpen(false)
                   onRefresh('refund', bill.id)
                 }}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-sm text-[var(--ink-secondary)] hover:bg-amber-50 dark:hover:bg-amber-950/60 hover:text-amber-700"
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-[var(--ink-secondary)] hover:bg-amber-50 dark:hover:bg-amber-950/60 hover:text-amber-700"
               >
-                <RotateCcw size={15} />
+                <RotateCcw size={14} />
                 Refund invoice
               </button>
             </div>
@@ -584,6 +613,31 @@ function InvoiceModal({
             </div>
 
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/bill/${selected.public_token || selected.id}`
+                  window.open(url, '_blank')
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
+                title="View mobile-friendly digital bill"
+              >
+                <ExternalLink size={14} />
+                <span>View Bill</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/bill/${selected.public_token || selected.id}`
+                  navigator.clipboard.writeText(url)
+                  toast.success('Bill link copied!')
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
+                title="Copy digital bill link"
+              >
+                <Copy size={14} />
+                <span>Copy Link</span>
+              </button>
+
               <button
                 onClick={() => openPdf(selected.id, false)}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
@@ -971,9 +1025,9 @@ export default function Bills() {
 
           <button
             onClick={() => navigate('/billing/new')}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-none transition hover:bg-blue-700 active:scale-[0.98] sm:w-auto"
+            className="btn-primary inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold text-white shadow-none sm:w-auto"
           >
-            <Plus size={17} />
+            <Plus size={16} />
             New Bill
           </button>
         </div>
@@ -997,7 +1051,7 @@ export default function Bills() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Collected
               </span>
-              <p className="mt-1 font-mono text-lg font-bold text-green-600">
+              <p className="mt-1 font-mono text-lg font-bold text-teal-600 dark:text-teal-400">
                 {fmt(totals.paid)}
               </p>
               <p className="text-[10px] text-[var(--muted)]">Loaded invoices</p>
@@ -1015,7 +1069,7 @@ export default function Bills() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Average Bill
               </span>
-              <p className="mt-1 font-mono text-lg font-bold text-blue-600">
+              <p className="mt-1 font-mono text-lg font-bold text-indigo-600 dark:text-indigo-400">
                 {fmt(totals.average)}
               </p>
               <p className="text-[10px] text-[var(--muted)]">Average per sale</p>
@@ -1035,9 +1089,9 @@ export default function Bills() {
                 key={f.value}
                 type="button"
                 onClick={() => setDateFilter(f.value)}
-                className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-semibold border transition ${
                   dateFilter === f.value
-                    ? 'bg-blue-600 border-blue-600 text-white'
+                    ? 'bg-indigo-600 border-indigo-600 text-white'
                     : 'border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
                 }`}
               >
@@ -1055,7 +1109,7 @@ export default function Bills() {
               />
 
               <input
-                className="w-full rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] py-2.5 pl-10 pr-3 text-sm outline-none transition placeholder:text-[var(--muted-light)] focus:border-blue-500 focus:bg-[var(--surface)] focus:ring-4 focus:ring-blue-50 dark:focus:ring-blue-950/40"
+                className="w-full rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] py-2 pl-10 pr-3 text-sm outline-none transition placeholder:text-[var(--muted-light)] focus:border-indigo-500 focus:bg-[var(--surface)] focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-950/40"
                 placeholder="Search invoice, customer or phone..."
                 value={search}
                 onChange={e => {
@@ -1073,9 +1127,9 @@ export default function Bills() {
                   e.stopPropagation()
                   setFilterOpen(v => !v)
                 }}
-                className={`inline-flex h-[42px] items-center justify-center gap-1.5 rounded-md border px-3 text-xs font-semibold transition ${
+                className={`inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border px-3 text-xs font-semibold transition ${
                   statusFilter
-                    ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300'
+                    ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300'
                     : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
                 }`}
                 title="Filter invoices"
@@ -1085,7 +1139,7 @@ export default function Bills() {
                 <span className="hidden sm:inline">Filter</span>
 
                 {statusFilter && (
-                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] text-white">
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-600 px-1 text-[9px] text-white">
                     1
                   </span>
                 )}
@@ -1093,7 +1147,7 @@ export default function Bills() {
 
               {filterOpen && (
                 <div
-                  className="absolute right-0 top-11 z-50 w-48 max-w-[calc(100vw-1rem)] rounded-md border border-[var(--line)] bg-[var(--surface)] p-2 shadow-xl"
+                  className="absolute right-0 top-11 z-50 w-48 max-w-[calc(100vw-1rem)] rounded-md border border-[var(--line)] bg-[var(--surface)] p-2 shadow-lg"
                   onClick={e => e.stopPropagation()}
                 >
                   <p className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
@@ -1110,7 +1164,7 @@ export default function Bills() {
                       }}
                       className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-xs font-semibold ${
                         statusFilter === filter.value
-                          ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
+                          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300'
                           : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
                       }`}
                     >
@@ -1253,10 +1307,21 @@ export default function Bills() {
                 </thead>
 
                 <tbody className="divide-y divide-[var(--line-subtle)]">
-                  {visibleBills.map(bill => (
+                  {visibleBills.map(bill => {
+                    const statusClass =
+                      (bill.payment_status === 'paid' || bill.status === 'completed')
+                        ? 'row-paid'
+                        : (bill.payment_status === 'pending' || bill.payment_status === 'partial')
+                          ? 'row-pending'
+                          : (bill.payment_status === 'credit' || bill.status === 'overdue')
+                            ? 'row-overdue'
+                            : (bill.status === 'cancelled')
+                              ? 'row-cancelled'
+                              : ''
+                    return (
                     <tr
                       key={bill.id}
-                      className="group transition hover:bg-blue-50/50 dark:hover:bg-slate-800/40"
+                      className={`group transition ${statusClass}`}
                     >
                       {/* Invoice */}
                       <td className="px-5 py-3.5">
@@ -1361,7 +1426,7 @@ export default function Bills() {
                         />
                       </td>
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </table>
               </div>

@@ -25,6 +25,10 @@ import Settings from './pages/Settings'
 import Support from './pages/Support'
 import InvoicePreview from './pages/InvoicePreview'
 import PaymentReconciliation from './pages/PaymentReconciliation'
+import Notifications from './pages/Notifications'
+import PublicBill from './pages/PublicBill'
+import AuditTrail from './pages/AuditTrail'
+import RecycleBin from './pages/RecycleBin'
 
 /* -------------------------------------------------------
    Loading Screen
@@ -326,9 +330,36 @@ function AppRoutes() {
         }
       />
 
+      <Route
+        path="/audit-trail"
+        element={
+          <Guard adminOnly>
+            <AuditTrail />
+          </Guard>
+        }
+      />
+
+      <Route
+        path="/recycle-bin"
+        element={
+          <Guard adminOnly>
+            <RecycleBin />
+          </Guard>
+        }
+      />
+
       {/* -------------------------------------------------
           Miscellaneous
       ------------------------------------------------- */}
+
+      <Route
+        path="/notifications"
+        element={
+          <Guard>
+            <Notifications />
+          </Guard>
+        }
+      />
 
       <Route
         path="/support"
@@ -355,6 +386,12 @@ function AppRoutes() {
             <InvoicePreview />
           </Guard>
         }
+      />
+
+      {/* Public Digital Bill Route (Customer Scanning QR Code) */}
+      <Route
+        path="/bill/:token"
+        element={<PublicBill />}
       />
 
       {/* -------------------------------------------------

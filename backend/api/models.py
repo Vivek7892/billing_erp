@@ -23,6 +23,10 @@ def default_short_link_expiry():
     return timezone.now() + timedelta(days=30)
 
 
+def generate_public_token():
+    return secrets.token_urlsafe(24)
+
+
 class Business(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200)
@@ -93,8 +97,10 @@ class AuditLog(models.Model):
     module = models.CharField(max_length=100, blank=True)
     entity = models.CharField(max_length=100, blank=True)
     entity_id = models.CharField(max_length=100, blank=True)
+    entity_name = models.CharField(max_length=200, blank=True, default='')
     previous_value = models.TextField(blank=True)
     new_value = models.TextField(blank=True)
+    reason = models.TextField(blank=True, default='')
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
     result = models.CharField(max_length=10, choices=RESULT_CHOICES, default='success')
@@ -280,6 +286,7 @@ class Invoice(models.Model):
     cancelled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='cancelled_invoices')
     cancelled_at = models.DateTimeField(null=True, blank=True)
     cancel_reason = models.TextField(blank=True, default='')
+    public_token = models.CharField(max_length=64, unique=True, null=True, blank=True, db_index=True)
 
     class Meta:
         unique_together = [('business', 'invoice_number')]
@@ -291,6 +298,19 @@ class Invoice(models.Model):
             models.CheckConstraint(check=Q(paid_amount__gte=0), name='invoice_paid_nonnegative'),
             models.CheckConstraint(check=Q(balance_due__gte=0), name='invoice_balance_nonnegative'),
         ]
+
+    def save(self, *args, **kwargs):
+        if not self.public_token:
+            self.public_token = generate_public_token()
+        super().save(*args, **kwargs)
+
+    def get_public_url(self, request=None):
+        if not self.public_token:
+            self.public_token = generate_public_token()
+            Invoice.objects.filter(pk=self.pk).update(public_token=self.public_token)
+        from django.conf import settings
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
+        return f"{frontend_url}/bill/{self.public_token}"
 
     def __str__(self):
         return self.invoice_number
@@ -605,3 +625,65 @@ class RazorpayTransaction(models.Model):
 
     def __str__(self):
         return f'{self.razorpay_order_id} ({self.status})'
+
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = [
+        ('low_stock', 'Low Stock'),
+        ('invoice_overdue', 'Invoice Overdue'),
+        ('payment_received', 'Payment Received'),
+        ('purchase_order_pending', 'Purchase Order Pending'),
+        ('quotation_expiring', 'Quotation Expiring'),
+        ('batch_expiring', 'Batch Expiring'),
+        ('gst_submission_failed', 'GST Submission Failed'),
+        ('einvoice_failed', 'E-Invoice Failed'),
+        ('eway_bill_expiring', 'E-Way Bill Expiring'),
+        ('approval_required', 'User Action Requiring Approval'),
+    ]
+    SEVERITY_CHOICES = [
+        ('info', 'Info'),
+        ('warning', 'Warning'),
+        ('danger', 'Danger'),
+        ('success', 'Success'),
+    ]
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('resolved', 'Resolved'),
+        ('dismissed', 'Dismissed'),
+    ]
+
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='notifications', null=True, blank=True)
+    notification_type = models.CharField(max_length=40, choices=NOTIFICATION_TYPES)
+    severity = models.CharField(max_length=15, choices=SEVERITY_CHOICES, default='info')
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    action_url = models.CharField(max_length=255, blank=True, default='')
+    action_label = models.CharField(max_length=60, blank=True, default='View Details')
+    data = models.JSONField(default=dict, blank=True)
+
+    is_read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(null=True, blank=True)
+    read_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='read_notifications')
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    requires_approval = models.BooleanField(default=False)
+    actioned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='actioned_notifications')
+    actioned_at = models.DateTimeField(null=True, blank=True)
+    action_notes = models.TextField(blank=True, default='')
+
+    dedup_key = models.CharField(max_length=150, null=True, blank=True, db_index=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['business', 'is_read', 'created_at']),
+            models.Index(fields=['business', 'notification_type']),
+        ]
+
+    def __str__(self):
+        return f"[{self.notification_type}] {self.title}"

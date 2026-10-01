@@ -73,26 +73,44 @@ def audit(request, action, module='', entity='', entity_id='', prev='', new='', 
     )
 
 
-def audit_event(request, event, entity_type='', entity_id='', before=None, after=None, metadata=None):
+def audit_event(request, event, entity_type='', entity_id='', before=None, after=None, metadata=None, reason='', entity_name='', result='success', user=None, business=None):
     """Record a named business event without changing legacy audit callers."""
     from .models import AuditLog
 
-    user = request.user if request.user.is_authenticated else None
-    business = getattr(user, 'business', None) if user else None
+    if not user:
+        user = request.user if (request and getattr(request, 'user', None) and request.user.is_authenticated) else None
+    if not business:
+        business = getattr(user, 'business', None) if user else None
+        if not business and request and hasattr(request, 'business'):
+            business = request.business
+
     previous = json.dumps(before, default=str) if before is not None else ''
     current = json.dumps(after, default=str) if after is not None else ''
-    AuditLog.objects.create(
+
+    ip = get_client_ip(request) if request else '127.0.0.1'
+    ua = request.META.get('HTTP_USER_AGENT', '')[:500] if (request and hasattr(request, 'META')) else ''
+
+    name = str(entity_name or '')
+    if not name and isinstance(after, dict):
+        name = after.get('invoice_number') or after.get('name') or after.get('sku') or ''
+    elif not name and isinstance(before, dict):
+        name = before.get('invoice_number') or before.get('name') or before.get('sku') or ''
+
+    rec = AuditLog.objects.create(
         user=user,
         business=business,
         action=event,
         module=entity_type.lower(),
         entity=entity_type,
         entity_id=str(entity_id),
+        entity_name=name,
         previous_value=previous,
         new_value=current,
-        ip_address=get_client_ip(request),
-        user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
-        result='success',
+        reason=str(reason or ''),
+        ip_address=ip,
+        user_agent=ua,
+        result=result,
+        failure_reason=str(reason) if result == 'failure' else '',
     )
 
     legacy_events = {
@@ -120,11 +138,14 @@ def audit_event(request, event, entity_type='', entity_id='', before=None, after
             module=legacy[1],
             entity=entity_type,
             entity_id=str(entity_id),
+            entity_name=name,
             previous_value=previous,
             new_value=current,
-            ip_address=get_client_ip(request),
-            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+            reason=str(reason or ''),
+            ip_address=ip,
+            user_agent=ua,
             result='success',
         )
+    return rec
 
 

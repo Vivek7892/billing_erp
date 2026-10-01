@@ -28,7 +28,7 @@ from .models import *
 from .serializers import *
 from .permissions import (
     IsAdmin, IsAdminOrReadOnly, IsCashierOrAdmin, IsFinanceStaff,
-    IsManagerOrAdmin, IsManagerOrReadOnly,
+    IsManagerOrAdmin, IsManagerOrReadOnly, IsManagerOrAbove,
 )
 from .supabase_storage import SupabaseStorageError, upload_shop_logo
 from .pagination import NoPagination, StandardPagination
@@ -790,8 +790,29 @@ class LoginView(APIView):
         password = request.data.get('password')
         user = authenticate(username=username, password=password)
         if not user or not user.is_active:
+            audit_event(
+                request,
+                'LOGIN_FAILED',
+                'User',
+                entity_name=str(username or 'anonymous'),
+                after={'attempted_username': username},
+                reason='Invalid credentials or inactive account',
+                result='failure',
+            )
             return Response({'error': 'Invalid username or password.', 'code': 'invalid_credentials'}, status=401)
         refresh = RefreshToken.for_user(user)
+        audit_event(
+            request,
+            'USER_LOGIN',
+            'User',
+            entity_id=user.id,
+            entity_name=user.username,
+            after={'role': user.role, 'email': user.email},
+            reason='Successful user authentication',
+            result='success',
+            user=user,
+            business=getattr(user, 'business', None),
+        )
         return Response({
             'access': str(refresh.access_token),
             'refresh': str(refresh),
@@ -876,7 +897,43 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = serializer.save(business=self.request.user.business)
-        audit_event(self.request, 'USER_CREATED', 'User', user.id, after={'username': user.username, 'role': user.role})
+        audit_event(
+            self.request,
+            'USER_CREATED',
+            'User',
+            user.id,
+            entity_name=user.username,
+            after={'username': user.username, 'role': user.role, 'email': user.email},
+            reason=self.request.data.get('reason', 'User created by administrator'),
+        )
+
+    def perform_update(self, serializer):
+        old_inst = serializer.instance
+        old_role = old_inst.role
+        old_active = old_inst.is_active
+        user = serializer.save(business=self.request.user.business)
+        reason = self.request.data.get('reason', 'User account updated')
+        if old_role != user.role or old_active != user.is_active:
+            audit_event(
+                self.request,
+                'USER_PERMISSIONS_CHANGED',
+                'User',
+                user.id,
+                entity_name=user.username,
+                before={'role': old_role, 'is_active': old_active},
+                after={'role': user.role, 'is_active': user.is_active},
+                reason=reason or 'User role or active status changed by admin',
+            )
+        else:
+            audit_event(
+                self.request,
+                'USER_UPDATED',
+                'User',
+                user.id,
+                entity_name=user.username,
+                after={'username': user.username, 'role': user.role, 'email': user.email},
+                reason=reason,
+            )
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -903,7 +960,33 @@ class SupplierViewSet(viewsets.ModelViewSet):
         return Supplier.objects.filter(business=self.request.user.business)
 
     def perform_create(self, serializer):
-        serializer.save(business=self.request.user.business)
+        supplier = serializer.save(business=self.request.user.business)
+        audit_event(
+            self.request,
+            'SUPPLIER_CREATED',
+            'Supplier',
+            supplier.id,
+            entity_name=supplier.name,
+            after={'name': supplier.name, 'phone': supplier.phone, 'gstin': supplier.gstin},
+            reason=self.request.data.get('reason', 'Supplier created'),
+        )
+
+    def perform_update(self, serializer):
+        old_inst = serializer.instance
+        before = {'name': old_inst.name, 'phone': old_inst.phone, 'gstin': old_inst.gstin}
+        supplier = serializer.save(business=self.request.user.business)
+        after = {'name': supplier.name, 'phone': supplier.phone, 'gstin': supplier.gstin}
+        reason = self.request.data.get('reason', 'Supplier details updated')
+        audit_event(
+            self.request,
+            'SUPPLIER_UPDATED',
+            'Supplier',
+            supplier.id,
+            entity_name=supplier.name,
+            before=before,
+            after=after,
+            reason=reason,
+        )
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -922,13 +1005,57 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         product = serializer.save(business=self.request.user.business)
-        audit_event(self.request, 'PRODUCT_CREATED', 'Product', product.id, after={'name': product.name})
+        audit_event(
+            self.request,
+            'PRODUCT_CREATED',
+            'Product',
+            product.id,
+            entity_name=product.name,
+            after={'name': product.name, 'sku': product.sku, 'selling_price': float(product.selling_price)},
+            reason=self.request.data.get('reason', 'New product created'),
+        )
 
     def perform_update(self, serializer):
-        previous = f'{serializer.instance.purchase_price}|{serializer.instance.selling_price}|{serializer.instance.gst_percent}'
+        old_inst = serializer.instance
+        before_price = {
+            'purchase_price': float(old_inst.purchase_price or 0),
+            'selling_price': float(old_inst.selling_price or 0),
+            'mrp': float(old_inst.mrp or 0),
+        }
+        previous = f'{old_inst.purchase_price}|{old_inst.selling_price}|{old_inst.gst_percent}'
         product = serializer.save(business=self.request.user.business)
         current = f'{product.purchase_price}|{product.selling_price}|{product.gst_percent}'
-        audit_event(self.request, 'PRODUCT_UPDATED', 'Product', product.id, before=previous, after=current)
+        after_price = {
+            'purchase_price': float(product.purchase_price or 0),
+            'selling_price': float(product.selling_price or 0),
+            'mrp': float(product.mrp or 0),
+        }
+
+        reason = self.request.data.get('reason', '').strip()
+        if (before_price['selling_price'] != after_price['selling_price'] or
+                before_price['purchase_price'] != after_price['purchase_price'] or
+                before_price['mrp'] != after_price['mrp']):
+            audit_event(
+                self.request,
+                'PRICE_CHANGED',
+                'Product',
+                product.id,
+                entity_name=product.name,
+                before=before_price,
+                after=after_price,
+                reason=reason or 'Product price changed',
+            )
+
+        audit_event(
+            self.request,
+            'PRODUCT_UPDATED',
+            'Product',
+            product.id,
+            entity_name=product.name,
+            before=previous,
+            after=current,
+            reason=reason or 'Product updated',
+        )
 
     def destroy(self, request, *args, **kwargs):
         if request.user.role not in ('owner', 'admin', 'manager'):
@@ -937,7 +1064,17 @@ class ProductViewSet(viewsets.ModelViewSet):
         previous = product.status
         product.status = 'inactive'
         product.save(update_fields=['status', 'updated_at'])
-        audit_event(self.request, 'PRODUCT_ARCHIVED', 'Product', product.id, before=previous, after=product.status)
+        reason = request.data.get('reason', 'Product moved to recycle bin / archived')
+        audit_event(
+            self.request,
+            'PRODUCT_ARCHIVED',
+            'Product',
+            product.id,
+            entity_name=product.name,
+            before={'status': previous},
+            after={'status': product.status},
+            reason=reason,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -952,7 +1089,41 @@ class CustomerViewSet(viewsets.ModelViewSet):
         return Customer.objects.filter(business=self.request.user.business)
 
     def perform_create(self, serializer):
-        serializer.save(business=self.request.user.business)
+        customer = serializer.save(business=self.request.user.business)
+        audit_event(
+            self.request,
+            'CUSTOMER_CREATED',
+            'Customer',
+            customer.id,
+            entity_name=customer.name,
+            after={'name': customer.name, 'mobile': customer.mobile, 'credit_limit': float(customer.credit_limit or 0)},
+            reason=self.request.data.get('reason', 'Customer record created'),
+        )
+
+    def perform_update(self, serializer):
+        old_inst = serializer.instance
+        before = {
+            'name': old_inst.name,
+            'mobile': old_inst.mobile,
+            'credit_limit': float(old_inst.credit_limit or 0),
+        }
+        customer = serializer.save(business=self.request.user.business)
+        after = {
+            'name': customer.name,
+            'mobile': customer.mobile,
+            'credit_limit': float(customer.credit_limit or 0),
+        }
+        reason = self.request.data.get('reason', 'Customer details updated')
+        audit_event(
+            self.request,
+            'CUSTOMER_UPDATED',
+            'Customer',
+            customer.id,
+            entity_name=customer.name,
+            before=before,
+            after=after,
+            reason=reason,
+        )
 
     @action(detail=True, methods=['get'])
     def bills(self, request, pk=None):
@@ -1052,7 +1223,76 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def update(self, request, *args, **kwargs):
-        return Response({'detail': 'Invoices are immutable after creation.'}, status=405)
+        return self.partial_update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        if request.user.role not in ('owner', 'admin', 'manager'):
+            return Response({'detail': 'Only managers or admins can edit invoices.', 'error': 'permission_denied'}, status=403)
+        invoice = self.get_object()
+        if invoice.status in ('cancelled', 'refunded'):
+            return Response({'detail': 'Cancelled or refunded invoices cannot be modified.', 'error': 'invoice_immutable'}, status=400)
+
+        reason = request.data.get('reason', '').strip()
+        if not reason:
+            return Response({
+                'detail': 'A reason is required to edit an invoice for statutory audit compliance.',
+                'error': 'reason_required',
+            }, status=400)
+
+        before = {
+            'discount_amount': float(invoice.discount_amount),
+            'grand_total': float(invoice.grand_total),
+            'notes': invoice.notes or '',
+        }
+
+        fields_to_update = []
+        if 'discount_amount' in request.data:
+            try:
+                new_discount = Decimal(str(request.data['discount_amount']))
+                if new_discount < 0:
+                    return Response({'detail': 'Discount cannot be negative.'}, status=400)
+                old_total = invoice.grand_total
+                invoice.discount_amount = new_discount
+                invoice.grand_total = max(Decimal('0'), invoice.subtotal - invoice.discount_amount + invoice.tax_amount)
+                diff = invoice.grand_total - old_total
+                invoice.balance_due = max(Decimal('0'), invoice.balance_due + diff)
+                if invoice.balance_due <= 0:
+                    invoice.payment_status = 'paid'
+                elif invoice.balance_due < invoice.grand_total:
+                    invoice.payment_status = 'partial'
+                else:
+                    invoice.payment_status = 'pending'
+                fields_to_update.extend(['discount_amount', 'grand_total', 'balance_due', 'payment_status'])
+            except (ValueError, TypeError):
+                return Response({'detail': 'Invalid discount value.'}, status=400)
+
+        if 'notes' in request.data:
+            invoice.notes = str(request.data['notes'])
+            fields_to_update.append('notes')
+
+        if fields_to_update:
+            invoice.save(update_fields=list(set(fields_to_update)))
+        else:
+            invoice.save()
+
+        after = {
+            'discount_amount': float(invoice.discount_amount),
+            'grand_total': float(invoice.grand_total),
+            'notes': invoice.notes or '',
+        }
+
+        audit_event(
+            request,
+            'INVOICE_EDITED',
+            'Invoice',
+            invoice.id,
+            entity_name=invoice.invoice_number,
+            before=before,
+            after=after,
+            reason=reason,
+        )
+
+        return Response(InvoiceSerializer(invoice, context=self.get_serializer_context()).data)
 
     def destroy(self, request, *args, **kwargs):
         return Response({
@@ -1103,7 +1343,7 @@ class InventoryViewSet(viewsets.ReadOnlyModelViewSet):
 class SettingViewSet(viewsets.ModelViewSet):
     queryset = Setting.objects.all()
     serializer_class = SettingSerializer
-    permission_classes = [IsAdmin]
+    permission_classes = [IsManagerOrAbove]
 
     def get_queryset(self):
         return Setting.objects.filter(business=self.request.user.business)
@@ -1114,9 +1354,60 @@ class SettingViewSet(viewsets.ModelViewSet):
             setting.key: setting.value
             for setting in self.get_queryset().filter(key__in=request.data.keys())
         }
+
+        # Synchronize core business profile fields to Business model
+        biz = getattr(request.user, 'business', None)
+        if biz:
+            biz_map = {
+                'shop_name': 'name',
+                'shop_phone': 'mobile',
+                'shop_email': 'email',
+                'shop_address': 'address',
+                'shop_gstin': 'gstin',
+                'shop_pan': 'pan',
+                'business_type': 'business_type',
+                'currency': 'currency',
+                'invoice_prefix': 'invoice_prefix',
+            }
+            changed_fields = []
+            for s_key, b_field in biz_map.items():
+                if s_key in request.data:
+                    val = str(request.data[s_key] or '')
+                    if getattr(biz, b_field, '') != val:
+                        setattr(biz, b_field, val)
+                        changed_fields.append(b_field)
+            if 'invoice_start_number' in request.data:
+                try:
+                    start_num = int(request.data['invoice_start_number'])
+                    if biz.invoice_start_number != start_num:
+                        biz.invoice_start_number = start_num
+                        changed_fields.append('invoice_start_number')
+                except (ValueError, TypeError):
+                    pass
+            if changed_fields:
+                biz.save()
+
+        # Update Setting table key-values
         for key, value in request.data.items():
-            Setting.objects.update_or_create(business=request.user.business, key=key, defaults={'value': str(value)})
-        audit_event(request, 'SETTINGS_CHANGED', 'Setting', request.user.business_id, before=previous, after=request.data)
+            if key in ('reason', '_reason'):
+                continue
+            Setting.objects.update_or_create(
+                business=request.user.business,
+                key=key,
+                defaults={'value': str(value)},
+            )
+
+        reason = request.data.get('reason') or request.data.get('_reason') or 'Settings updated via settings panel'
+        audit_event(
+            request,
+            'SETTINGS_CHANGED',
+            'Setting',
+            request.user.business_id,
+            entity_name='Shop Settings',
+            before=previous,
+            after=request.data,
+            reason=reason,
+        )
         return Response({'status': 'updated'})
 
     @action(detail=False, methods=['post'], url_path='upload-logo')
@@ -1136,7 +1427,7 @@ class SettingViewSet(viewsets.ModelViewSet):
             return Response({'detail': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         Setting.objects.update_or_create(business=request.user.business, key='shop_logo', defaults={'value': url})
-        audit_event(request, 'SETTINGS_CHANGED', 'Setting', request.user.business_id, after={'shop_logo': url})
+        audit_event(request, 'SETTINGS_CHANGED', 'Setting', request.user.business_id, entity_name='Shop Logo', after={'shop_logo': url}, reason='Shop logo uploaded')
         return Response({'url': url})
 
     @action(detail=False, methods=['post'], url_path='remove-logo')
@@ -1146,19 +1437,28 @@ class SettingViewSet(viewsets.ModelViewSet):
             key='shop_logo',
             defaults={'value': ''},
         )
-        audit_event(request, 'SETTINGS_CHANGED', 'Setting', request.user.business_id, after={'shop_logo': ''})
+        audit_event(request, 'SETTINGS_CHANGED', 'Setting', request.user.business_id, entity_name='Shop Logo', after={'shop_logo': ''}, reason='Shop logo removed')
         return Response({'url': ''})
 
     @action(detail=False, methods=['get'], permission_classes=[IsCashierOrAdmin])
     def all(self, request):
+        biz = getattr(request.user, 'business', None)
         defaults = {
             # Business
-            'shop_name': '', 'shop_address': '', 'shop_phone': '', 'shop_email': '',
-            'shop_gstin': '', 'shop_pan': '', 'shop_logo': '', 'shop_state': '',
-            'business_type': 'retail_wholesale', 'cin': '', 'fssai_licence': '',
+            'shop_name': biz.name if biz else '',
+            'shop_address': biz.address if biz else '',
+            'shop_phone': biz.mobile if biz else '',
+            'shop_email': biz.email if biz else '',
+            'shop_gstin': biz.gstin if biz else '',
+            'shop_pan': biz.pan if biz else '',
+            'shop_logo': '',
+            'shop_state': '',
+            'business_type': (biz.business_type if biz and biz.business_type else 'retail_wholesale'),
+            'cin': '', 'fssai_licence': '',
             'fy_start': 'april',
             # Invoice
-            'invoice_prefix': 'INV', 'invoice_start_number': '1001',
+            'invoice_prefix': biz.invoice_prefix if biz else 'INV',
+            'invoice_start_number': str(biz.invoice_start_number) if biz else '1001',
             'invoice_template': 'gst_a4', 'invoice_due_days': '15',
             'invoice_terms': '', 'invoice_footer': '',
             'show_discount_col': 'true', 'show_hsn_col': 'true',
@@ -1167,6 +1467,7 @@ class SettingViewSet(viewsets.ModelViewSet):
             'show_tax_cols': 'true', 'show_signature_area': 'false',
             'show_fssai_on_invoice': 'false', 'show_cin_on_invoice': 'false',
             'invoice_notes': '',
+            'enable_invoice_qr': 'true',
             # Invoice display toggles
             'show_business_logo': 'true', 'show_business_address': 'true',
             'show_business_phone': 'true', 'show_business_email': 'true',
@@ -1200,7 +1501,8 @@ class SettingViewSet(viewsets.ModelViewSet):
             'auto_print': 'no', 'receipt_footer': 'Thank you for shopping with us!',
             'open_cash_drawer': 'false', 'print_duplicate': 'false',
             # System
-            'currency': '₹', 'allow_negative_stock': 'false',
+            'currency': biz.currency if biz else '₹',
+            'allow_negative_stock': 'false',
             # Policies & Legal
             'terms_url': '', 'privacy_url': '', 'refund_url': '',
             'return_url': '', 'shipping_url': '',
@@ -1263,6 +1565,49 @@ class DashboardView(APIView):
         today_profit = float(_profit_qs({'invoice__created_at__date': today}))
         yesterday_profit = float(_profit_qs({'invoice__created_at__date': yesterday}))
         month_profit = float(_profit_qs({'invoice__created_at__date__gte': month_start}))
+        last_month_profit = float(_profit_qs({
+            'invoice__created_at__date__gte': last_month_start,
+            'invoice__created_at__date__lte': last_month_end,
+        }))
+
+        # --- Purchases today / month / last month ---
+        purch_agg = Purchase.objects.filter(business=biz).aggregate(
+            today_purchases=Sum('total_amount', filter=Q(purchase_date=today)),
+            month_purchases=Sum('total_amount', filter=Q(purchase_date__gte=month_start)),
+            last_month_purchases=Sum('total_amount', filter=Q(
+                purchase_date__gte=last_month_start,
+                purchase_date__lte=last_month_end,
+            )),
+        )
+        today_purchases = float(purch_agg['today_purchases'] or 0)
+        month_purchases = float(purch_agg['month_purchases'] or 0)
+        last_month_purchases = float(purch_agg['last_month_purchases'] or 0)
+
+        # --- Expenses today / month / last month ---
+        exp_agg = Expense.objects.filter(business=biz).aggregate(
+            today_expenses=Sum('amount', filter=Q(expense_date=today)),
+            month_expenses=Sum('amount', filter=Q(expense_date__gte=month_start)),
+            last_month_expenses=Sum('amount', filter=Q(
+                expense_date__gte=last_month_start,
+                expense_date__lte=last_month_end,
+            )),
+        )
+        today_expenses = float(exp_agg['today_expenses'] or 0)
+        month_expenses = float(exp_agg['month_expenses'] or 0)
+        last_month_expenses = float(exp_agg['last_month_expenses'] or 0)
+
+        # --- Payments / Collections today / month / last month ---
+        pay_today_inv = Payment.objects.filter(invoice__business=biz, invoice__status='completed', created_at__date=today).aggregate(s=Sum('amount'))['s'] or 0
+        pay_today_cust = CustomerPayment.objects.filter(business=biz, created_at__date=today).aggregate(s=Sum('amount'))['s'] or 0
+        today_payments_total = float(pay_today_inv + pay_today_cust)
+
+        pay_month_inv = Payment.objects.filter(invoice__business=biz, invoice__status='completed', created_at__date__gte=month_start).aggregate(s=Sum('amount'))['s'] or 0
+        pay_month_cust = CustomerPayment.objects.filter(business=biz, created_at__date__gte=month_start).aggregate(s=Sum('amount'))['s'] or 0
+        month_payments_total = float(pay_month_inv + pay_month_cust)
+
+        pay_last_month_inv = Payment.objects.filter(invoice__business=biz, invoice__status='completed', created_at__date__gte=last_month_start, created_at__date__lte=last_month_end).aggregate(s=Sum('amount'))['s'] or 0
+        pay_last_month_cust = CustomerPayment.objects.filter(business=biz, created_at__date__gte=last_month_start, created_at__date__lte=last_month_end).aggregate(s=Sum('amount'))['s'] or 0
+        last_month_payments_total = float(pay_last_month_inv + pay_last_month_cust)
 
         # --- Inventory / customer counts (single queries) ---
         product_agg = Product.objects.filter(business=biz, status='active').aggregate(
@@ -1453,6 +1798,16 @@ class DashboardView(APIView):
             'month_discount': float(month_discount),
             'month_tax': float(month_tax),
             'last_month_sales': float(last_month_sales),
+            'last_month_profit': last_month_profit,
+            'today_purchases': today_purchases,
+            'month_purchases': month_purchases,
+            'last_month_purchases': last_month_purchases,
+            'today_expenses': today_expenses,
+            'month_expenses': month_expenses,
+            'last_month_expenses': last_month_expenses,
+            'today_payments_total': today_payments_total,
+            'month_payments_total': month_payments_total,
+            'last_month_payments_total': last_month_payments_total,
             'total_products': total_products,
             'out_of_stock': out_of_stock,
             'low_stock_count': low_stock_count,
@@ -1763,11 +2118,15 @@ class InvoicePDFView(APIView):
             )
         except Invoice.DoesNotExist:
             return HttpResponse('Not found', status=404)
-        return _invoice_pdf_response(invoice, request.query_params.get('printer'))
+        return _invoice_pdf_response(
+            invoice,
+            request.query_params.get('printer'),
+            request.query_params.get('download') == '1',
+        )
 
 
-def _invoice_pdf_response(invoice, printer=None):
-    """Generate an inline invoice PDF for both staff and public short links."""
+def _invoice_pdf_response(invoice, printer=None, download=False):
+    """Generate an A4/thermal invoice PDF with an explicit browser disposition."""
     from .pdf_utils import generate_invoice_pdf, generate_thermal_invoice_pdf
 
     business_settings = {
@@ -1789,7 +2148,10 @@ def _invoice_pdf_response(invoice, printer=None):
     buffer = generate_thermal_invoice_pdf(invoice) if use_thermal else generate_invoice_pdf(invoice, force_a4=True)
     response = HttpResponse(buffer, content_type='application/pdf')
     suffix = 'thermal' if use_thermal else 'a4'
-    response['Content-Disposition'] = f'inline; filename="invoice-{invoice.invoice_number}-{suffix}.pdf"'
+    disposition = 'attachment' if download else 'inline'
+    response['Content-Disposition'] = (
+        f'{disposition}; filename="invoice-{invoice.invoice_number}-{suffix}.pdf"'
+    )
     return response
 
 
@@ -1839,7 +2201,140 @@ class PublicInvoiceShortLinkView(APIView):
             # Use one response for missing and expired codes to avoid revealing
             # whether an invoice link once existed.
             raise Http404('This invoice link is invalid or has expired.')
-        return _invoice_pdf_response(link.invoice, request.query_params.get('printer'))
+        return _invoice_pdf_response(
+            link.invoice,
+            request.query_params.get('printer'),
+            request.query_params.get('download') == '1',
+        )
+
+
+class PublicBillDetailView(APIView):
+    """Serve full invoice details for the public 'Scan to View Bill' page without authentication."""
+    authentication_classes = []
+    permission_classes = []
+    throttle_classes = [AnonRateThrottle]
+
+    def get(self, request, token):
+        try:
+            invoice = Invoice.objects.select_related('customer', 'business', 'created_by').prefetch_related(
+                'items__product', 'payments'
+            ).get(public_token=token)
+        except Invoice.DoesNotExist:
+            raise Http404('This digital bill was not found or the link is invalid.')
+
+        # Fetch business public settings
+        business_settings = {
+            s.key: s.value
+            for s in Setting.objects.filter(business=invoice.business)
+        } if invoice.business else {}
+
+        items_data = [
+            {
+                'id': it.id,
+                'product_name': it.product_name,
+                'hsn_code': it.hsn_code,
+                'sku': it.sku,
+                'mrp': float(it.mrp),
+                'quantity': float(it.quantity),
+                'unit_price': float(it.unit_price),
+                'discount_percent': float(it.discount_percent),
+                'discount_amount': float(it.discount_amount),
+                'gst_percent': float(it.gst_percent),
+                'gst_amount': float(it.gst_amount),
+                'total': float(it.total),
+            }
+            for it in invoice.items.all()
+        ]
+
+        payments_data = [
+            {
+                'id': p.id,
+                'created_at': p.created_at,
+                'amount': float(p.amount),
+                'method': p.method,
+                'reference': getattr(p, 'reference', ''),
+            }
+            for p in invoice.payments.all()
+        ]
+
+        business = invoice.business
+        business_data = {
+            'name': (business.name if business else None) or business_settings.get('shop_name', 'Sri Balaji Store'),
+            'owner_name': business.owner_name if business else '',
+            'mobile': (business.mobile if business else None) or business_settings.get('shop_phone', ''),
+            'email': (business.email if business else None) or business_settings.get('shop_email', ''),
+            'address': (business.address if business else None) or business_settings.get('shop_address', ''),
+            'gstin': (business.gstin if business else None) or business_settings.get('shop_gstin', ''),
+            'pan': (business.pan if business else None) or business_settings.get('shop_pan', ''),
+            'currency': business.currency if business else '₹',
+            'logo': business.logo.url if (business and business.logo) else business_settings.get('shop_logo', ''),
+        }
+
+        invoice_data = {
+            'id': invoice.id,
+            'invoice_number': invoice.invoice_number,
+            'public_token': invoice.public_token,
+            'created_at': invoice.created_at,
+            'customer_name': invoice.customer.name if invoice.customer else invoice.customer_name,
+            'customer_phone': invoice.customer.mobile if invoice.customer else invoice.customer_phone,
+            'customer_address': invoice.customer.address if invoice.customer else '',
+            'customer_gstin': invoice.customer.gstin if invoice.customer else '',
+            'subtotal': float(invoice.subtotal),
+            'discount_amount': float(invoice.discount_amount),
+            'tax_amount': float(invoice.tax_amount),
+            'round_off': float(invoice.round_off),
+            'grand_total': float(invoice.grand_total),
+            'paid_amount': float(invoice.paid_amount),
+            'balance_due': float(invoice.balance_due),
+            'payment_method': invoice.payment_method,
+            'payment_status': invoice.payment_status,
+            'status': invoice.status,
+            'notes': invoice.notes,
+            'items': items_data,
+            'payments': payments_data,
+        }
+
+        public_settings = {
+            'shop_name': business_data['name'],
+            'shop_address': business_data['address'],
+            'shop_phone': business_data['mobile'],
+            'shop_email': business_data['email'],
+            'shop_gstin': business_data['gstin'],
+            'shop_pan': business_data['pan'],
+            'shop_upi_id': business_settings.get('shop_upi_id', ''),
+            'currency': business_settings.get('currency', '₹'),
+            'invoice_terms': business_settings.get('invoice_terms', ''),
+            'invoice_footer': business_settings.get('invoice_footer', 'Thank you for shopping with us! Visit again.'),
+            'invoice_template': business_settings.get('invoice_template', 'gst_a4'),
+            'enable_invoice_qr': business_settings.get('enable_invoice_qr', 'true'),
+        }
+
+        return Response({
+            'invoice': invoice_data,
+            'business': business_data,
+            'settings': public_settings,
+        })
+
+
+class PublicBillPDFView(APIView):
+    """Public endpoint to download/stream the PDF for a bill token without auth."""
+    authentication_classes = []
+    permission_classes = []
+    throttle_classes = [AnonRateThrottle]
+
+    def get(self, request, token):
+        try:
+            invoice = Invoice.objects.select_related('customer', 'business').prefetch_related(
+                'items', 'payments'
+            ).get(public_token=token)
+        except Invoice.DoesNotExist:
+            raise Http404('This digital bill was not found or the link is invalid.')
+
+        return _invoice_pdf_response(
+            invoice,
+            request.query_params.get('printer'),
+            request.query_params.get('download') == '1',
+        )
 
 
 class CancelInvoiceView(APIView):
@@ -2122,16 +2617,113 @@ class PurchaseReturnViewSet(viewsets.ModelViewSet):
 
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AuditLogSerializer
-    permission_classes = [IsAdmin]
+    permission_classes = [IsManagerOrAbove]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['module', 'action', 'result']
-    search_fields = ['action', 'entity', 'entity_id']
+    search_fields = ['action', 'entity', 'entity_id', 'entity_name', 'reason', 'user__username', 'user__email', 'ip_address']
     ordering = ['-created_at']
 
     def get_queryset(self):
-        return AuditLog.objects.select_related('user').filter(
+        qs = AuditLog.objects.select_related('user').filter(
             business=self.request.user.business
-        )
+        ).exclude(action__in=['create', 'update', 'cancel', 'refund', 'adjust', 'archive'])
+        date_from = self.request.query_params.get('date_from')
+        date_to = self.request.query_params.get('date_to')
+        if date_from:
+            qs = qs.filter(created_at__date__gte=date_from)
+        if date_to:
+            qs = qs.filter(created_at__date__lte=date_to)
+        return qs
+
+
+class RecycleBinView(APIView):
+    """
+    Statutory Recycle Bin & Reversal Register:
+    Under GST/ERP statutory standards, financial transactions (invoices, payments, purchases)
+    can NEVER be permanently deleted. They are preserved in this register for auditing.
+    Master entities (such as archived products) can be restored.
+    """
+    permission_classes = [IsManagerOrAbove]
+
+    def get(self, request):
+        biz = request.user.business
+
+        # Cancelled or refunded invoices
+        cancelled_invoices = list(Invoice.objects.filter(
+            business=biz,
+            status__in=['cancelled', 'refunded'],
+        ).select_related('customer', 'cancelled_by').order_by('-cancelled_at', '-created_at')[:100].values(
+            'id', 'invoice_number', 'status', 'payment_status', 'grand_total',
+            'customer__name', 'cancelled_by__username', 'cancelled_at', 'cancel_reason', 'created_at'
+        ))
+
+        # Inactive / archived products
+        archived_products = list(Product.objects.filter(
+            business=biz,
+            status='inactive',
+        ).order_by('-updated_at')[:100].values(
+            'id', 'name', 'sku', 'barcode', 'selling_price', 'current_stock', 'updated_at'
+        ))
+
+        # Cancelled purchases
+        cancelled_purchases = list(Purchase.objects.filter(
+            business=biz,
+            payment_status='cancelled',
+        ).select_related('supplier').order_by('-created_at')[:100].values(
+            'id', 'invoice_number', 'supplier__name', 'total_amount', 'payment_status', 'created_at', 'notes'
+        ))
+
+        return Response({
+            'cancelled_invoices': cancelled_invoices,
+            'archived_products': archived_products,
+            'cancelled_purchases': cancelled_purchases,
+            'statutory_notice': (
+                'Under statutory GST and ERP audit regulations, cancelled invoices and financial transactions '
+                'are permanently retained in this register for compliance. They cannot be permanently deleted '
+                'or restored. Master records (such as inactive products) can be restored.'
+            ),
+        })
+
+
+class RecycleBinRestoreView(APIView):
+    """
+    Restore restorable master items from the Recycle Bin.
+    Financial transactions strictly reject un-cancellation with HTTP 400.
+    """
+    permission_classes = [IsManagerOrAbove]
+
+    def post(self, request, entity_type, pk):
+        biz = request.user.business
+        reason = request.data.get('reason', '').strip() or 'Restored from Recycle Bin'
+
+        if entity_type == 'product':
+            product = Product.objects.filter(business=biz, pk=pk, status='inactive').first()
+            if not product:
+                return Response({'error': 'Product not found in recycle bin.'}, status=404)
+            product.status = 'active'
+            product.save(update_fields=['status', 'updated_at'])
+            audit_event(
+                request,
+                'PRODUCT_RESTORED',
+                'Product',
+                product.id,
+                entity_name=product.name,
+                before={'status': 'inactive'},
+                after={'status': 'active'},
+                reason=reason,
+            )
+            return Response({'status': 'restored', 'message': f'Product "{product.name}" restored successfully.'})
+
+        if entity_type in ('invoice', 'purchase', 'payment'):
+            return Response({
+                'detail': (
+                    'Statutory audit violation: Financial transactions cannot be restored or un-cancelled. '
+                    'To correct a billing transaction, issue a new invoice or credit/debit adjustment.'
+                ),
+                'error': 'financial_restoration_forbidden',
+            }, status=400)
+
+        return Response({'error': f'Unsupported entity type: {entity_type}'}, status=400)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -2737,3 +3329,155 @@ class PaymentReconciliationView(APIView):
 
         page_size = min(int(request.query_params.get('page_size', 50)), 200)
         return Response(RazorpayTransactionSerializer(qs[:page_size], many=True).data)
+
+
+from .services.notification_engine import NotificationEngine
+
+
+class NotificationListView(APIView):
+    """
+    List notifications with filters and aggregated counts.
+    Triggers notification engine checks automatically.
+    """
+    permission_classes = [IsCashierOrAdmin]
+
+    def get(self, request):
+        biz = request.user.business
+        if not biz:
+            return Response({
+                'notifications': [],
+                'unread_count': 0,
+                'critical_count': 0,
+                'pending_approval_count': 0,
+                'counts_by_type': {},
+            })
+
+        # Automatically execute active alert scanners
+        NotificationEngine.run_all_checks(biz)
+
+        qs = Notification.objects.filter(business=biz)
+
+        is_read = request.query_params.get('is_read')
+        if is_read is not None:
+            if is_read.lower() == 'true':
+                qs = qs.filter(is_read=True)
+            elif is_read.lower() == 'false':
+                qs = qs.filter(is_read=False)
+
+        type_filter = request.query_params.get('type')
+        if type_filter:
+            qs = qs.filter(notification_type=type_filter)
+
+        severity = request.query_params.get('severity')
+        if severity:
+            qs = qs.filter(severity=severity)
+
+        search = request.query_params.get('search', '').strip()
+        if search:
+            qs = qs.filter(Q(title__icontains=search) | Q(message__icontains=search))
+
+        limit = min(int(request.query_params.get('limit', 100)), 200)
+
+        unread_count = Notification.objects.filter(business=biz, is_read=False).count()
+        critical_count = Notification.objects.filter(
+            business=biz, is_read=False, severity__in=['danger', 'warning']
+        ).count()
+        pending_approval_count = Notification.objects.filter(
+            business=biz, requires_approval=True, status='active'
+        ).count()
+
+        counts_by_type = {}
+        for row in Notification.objects.filter(business=biz, is_read=False).values('notification_type').annotate(cnt=Count('id')):
+            counts_by_type[row['notification_type']] = row['cnt']
+
+        return Response({
+            'notifications': NotificationSerializer(qs[:limit], many=True).data,
+            'unread_count': unread_count,
+            'critical_count': critical_count,
+            'pending_approval_count': pending_approval_count,
+            'counts_by_type': counts_by_type,
+        })
+
+
+class NotificationMarkReadView(APIView):
+    """Mark a single notification as read."""
+    permission_classes = [IsCashierOrAdmin]
+
+    def post(self, request, pk):
+        try:
+            notif = Notification.objects.get(pk=pk, business=request.user.business)
+            notif.is_read = True
+            notif.read_at = timezone.now()
+            notif.read_by = request.user
+            notif.save(update_fields=['is_read', 'read_at', 'read_by', 'updated_at'])
+            return Response({'status': 'ok', 'is_read': True})
+        except Notification.DoesNotExist:
+            return Response({'error': 'Notification not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class NotificationMarkAllReadView(APIView):
+    """Mark all unread notifications as read for current business."""
+    permission_classes = [IsCashierOrAdmin]
+
+    def post(self, request):
+        biz = request.user.business
+        now = timezone.now()
+        updated = Notification.objects.filter(business=biz, is_read=False).update(
+            is_read=True, read_at=now, read_by=request.user
+        )
+        return Response({'status': 'ok', 'updated_count': updated})
+
+
+class NotificationActionView(APIView):
+    """Approve or reject a user action requiring approval."""
+    permission_classes = [IsManagerOrAdmin]
+
+    def post(self, request, pk):
+        try:
+            notif = Notification.objects.get(pk=pk, business=request.user.business)
+            action_type = request.data.get('action')  # 'approve' | 'reject'
+            notes = request.data.get('notes', '').strip()
+
+            if action_type not in ('approve', 'reject'):
+                return Response(
+                    {'error': 'Action must be "approve" or "reject"'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            notif.status = 'approved' if action_type == 'approve' else 'rejected'
+            notif.actioned_by = request.user
+            notif.actioned_at = timezone.now()
+            notif.action_notes = notes
+            notif.is_read = True
+            notif.save()
+
+            audit_event(request, 'update', 'Notification', notif.id, {
+                'action': action_type,
+                'notes': notes,
+                'type': notif.notification_type,
+            })
+
+            return Response({
+                'status': 'ok',
+                'notification_status': notif.status,
+                'actioned_by': request.user.username,
+            })
+        except Notification.DoesNotExist:
+            return Response({'error': 'Notification not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class NotificationTriggerCheckView(APIView):
+    """Manually force execution of all 10 alert engines."""
+    permission_classes = [IsCashierOrAdmin]
+
+    def post(self, request):
+        biz = request.user.business
+        if biz:
+            NotificationEngine.run_all_checks(biz)
+        unread = Notification.objects.filter(business=biz, is_read=False).count()
+        return Response({
+            'status': 'ok',
+            'message': 'Notification checks executed successfully',
+            'unread_count': unread,
+        })
+

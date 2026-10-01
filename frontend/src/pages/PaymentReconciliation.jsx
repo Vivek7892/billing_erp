@@ -706,7 +706,7 @@ export default function PaymentReconciliation() {
         </div>
 
         {/* ERP RECONCILIATION SUMMARY MATRIX */}
-        <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+        <div className="erp-table-container">
           {/* TIER 1: Transaction Volume & Reliability */}
           <div className="grid grid-cols-2 divide-y divide-[var(--line-subtle)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x sm:divide-[var(--line)]">
             <div className="p-3.5 sm:p-4">
@@ -810,16 +810,16 @@ export default function PaymentReconciliation() {
         </div>
 
         {/* FILTERS */}
-        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-sm sm:p-4">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 shadow-xs sm:p-3.5">
+          <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center">
             <div className="relative min-w-0 flex-1">
               <Search
-                size={17}
+                size={15}
                 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]"
               />
 
               <input
-                className="h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] pl-10 pr-3 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20"
+                className="h-9 w-full rounded-md border border-[var(--line)] bg-[var(--surface)] pl-9 pr-3 text-xs sm:text-sm text-[var(--ink)] outline-none transition focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)]/20"
                 placeholder="Search invoice, order ID, payment ID, customer..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -828,7 +828,7 @@ export default function PaymentReconciliation() {
 
             <div className="flex flex-wrap gap-2">
               <select
-                className="h-11 min-w-[145px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-sm text-[var(--ink)] outline-none focus:border-[var(--primary)]"
+                className="h-9 min-w-[140px] rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs text-[var(--ink)] outline-none focus:border-[var(--primary)]"
                 value={statusFilter}
                 onChange={(e) => setStatus(e.target.value)}
               >
@@ -852,15 +852,15 @@ export default function PaymentReconciliation() {
               <button
                 type="button"
                 onClick={() => setShowFilters((value) => !value)}
-                className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-semibold transition-colors ${
+                className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-md border px-3 text-xs font-semibold transition-colors ${
                   showFilters
                     ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]'
-                    : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-blue-50/50 hover:text-blue-600'
+                    : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)]'
                 }`}
               >
                 Filters
                 <ChevronDown
-                  size={15}
+                  size={14}
                   className={`transition-transform ${
                     showFilters ? 'rotate-180' : ''
                   }`}
@@ -931,10 +931,10 @@ export default function PaymentReconciliation() {
         </div>
 
         {/* TRANSACTION TABLE */}
-        <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--line)] px-4 sm:px-6 py-4 bg-[var(--surface)]">
+        <div className="erp-table-container">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--line)] px-4 sm:px-6 py-3.5 bg-[var(--surface)]">
             <div>
-              <h2 className="text-base font-bold text-[var(--ink)]">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
                 Razorpay Transactions
               </h2>
 

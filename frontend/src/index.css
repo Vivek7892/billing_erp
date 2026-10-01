@@ -12,52 +12,61 @@
   ---------------------------------------------------------- */
   --app-bg: #ffffff;
   --surface: #ffffff;
-  --surface-elevated: #ffffff;
-  --surface-hover: #f0f7ff;
-  --surface-active: #e0edfe;
+  --surface-elevated: #f5f7ff;
+  --surface-hover: #f5f7ff;
+  --surface-active: #eef2ff;
 
-  --line: #e2e8f0;
-  --line-subtle: #f1f5f9;
-  --line-strong: #cbd5e1;
+  --line: #e5e7eb;
+  --line-subtle: #f3f4f6;
+  --line-strong: #d1d5db;
 
   --background: #ffffff;
-  --bg-subtle: #ffffff;
+  --bg-subtle: #f5f7ff;
 
   /* ----------------------------------------------------------
      Typography
   ---------------------------------------------------------- */
-  --ink: #17202a;
-  --ink-secondary: #394452;
-  --muted: #687382;
-  --muted-light: #98a2b3;
-  --placeholder: #a1aab6;
+  --ink: #111827;
+  --ink-secondary: #475569;
+  --muted: #64748b;
+  --muted-light: #94a3b8;
+  --placeholder: #94a3b8;
 
   /* ----------------------------------------------------------
-     Primary — Blue for primary ERP actions and navigation
+     Primary — Indigo for primary ERP actions and navigation
   ---------------------------------------------------------- */
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-active: #1e40af;
-  --primary-light: #eff6ff;
-  --primary-border: #bfdbfe;
-  --primary-text: #1d4ed8;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-active: #3730a3;
+  --primary-light: #eef2ff;
+  --primary-border: #c7d2fe;
+  --primary-text: #4338ca;
+
+  /* ----------------------------------------------------------
+     Secondary — Teal for secondary / success ERP states
+  ---------------------------------------------------------- */
+  --secondary: #0f766e;
+  --secondary-hover: #115e59;
+  --secondary-light: #ccfbf1;
+  --secondary-border: #99f6e4;
+  --secondary-text: #0f766e;
 
   /* ----------------------------------------------------------
      Financial / ERP Semantic Colors
   ---------------------------------------------------------- */
 
-  /* Revenue / Sales */
-  --sales: #16a34a;
-  --sales-light: #f0fdf4;
-  --sales-border: #bbf7d0;
-  --sales-text: #15803d;
+  /* Revenue / Sales (Teal-Emerald) */
+  --sales: #0d9488;
+  --sales-light: #f0fdfa;
+  --sales-border: #99f6e4;
+  --sales-text: #0f766e;
 
-  /* Profit / Positive / Paid (Green) */
-  --success: #16a34a;
-  --success-hover: #15803d;
-  --success-light: #f0fdf4;
-  --success-border: #bbf7d0;
-  --success-text: #15803d;
+  /* Profit / Positive / Paid (Teal) */
+  --success: #0d9488;
+  --success-hover: #0f766e;
+  --success-light: #f0fdfa;
+  --success-border: #99f6e4;
+  --success-text: #0f766e;
 
   /* Stock / Inventory */
   --stock: #0284c7;
@@ -154,11 +163,11 @@
   /* ----------------------------------------------------------
      Radius
   ---------------------------------------------------------- */
-  --radius-sm: 0.375rem;
-  --radius: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 0.875rem;
-  --radius-2xl: 1.25rem;
+  --radius-sm: 0.25rem;
+  --radius: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.625rem;
 
   /* ----------------------------------------------------------
      Typography
@@ -180,14 +189,14 @@
   /* ----------------------------------------------------------
      Numbers and Amounts
   ---------------------------------------------------------- */
-  --num-color: #17202a;
-  --num-positive: #15803d;
+  --num-color: #0f172a;
+  --num-positive: #0d9488;
   --num-negative: #dc2626;
-  --num-neutral: #687382;
+  --num-neutral: #64748b;
 
-  --amount-sales: #0f766e;
+  --amount-sales: #0d9488;
   --amount-expense: #c2410c;
-  --amount-profit: #15803d;
+  --amount-profit: #0d9488;
   --amount-due: #7c3aed;
   --amount-refund: #dc2626;
 }
@@ -200,51 +209,60 @@
   /* ----------------------------------------------------------
      Application Surfaces
   ---------------------------------------------------------- */
-  --app-bg: #101418;
-  --surface: #171c22;
-  --surface-elevated: #1d242c;
-  --surface-hover: #252e38;
-  --surface-active: #303b47;
+  --app-bg: #0b1120;
+  --surface: #0f172a;
+  --surface-elevated: #172554;
+  --surface-hover: #172033;
+  --surface-active: #1e293b;
 
-  --line: #303a45;
-  --line-subtle: #252e37;
-  --line-strong: #465260;
+  --line: #26344d;
+  --line-subtle: #1e293b;
+  --line-strong: #334155;
 
-  --background: #101418;
-  --bg-subtle: #171c22;
+  --background: #0b1120;
+  --bg-subtle: #0f172a;
 
   /* ----------------------------------------------------------
      Typography
   ---------------------------------------------------------- */
-  --ink: #f1f5f9;
+  --ink: #f8fafc;
   --ink-secondary: #cbd5e1;
-  --muted: #9aa7b5;
-  --muted-light: #748191;
-  --placeholder: #697787;
+  --muted: #94a3b8;
+  --muted-light: #64748b;
+  --placeholder: #64748b;
 
   /* ----------------------------------------------------------
      Primary
   ---------------------------------------------------------- */
   --primary: #818cf8;
-  --primary-hover: #a5b4fc;
-  --primary-active: #6366f1;
-  --primary-light: #272554;
-  --primary-border: #4f46e5;
+  --primary-hover: #6366f1;
+  --primary-active: #4f46e5;
+  --primary-light: #1e1b4b;
+  --primary-border: #3730a3;
   --primary-text: #c7d2fe;
+
+  /* ----------------------------------------------------------
+     Secondary — Teal for secondary / success ERP states
+  ---------------------------------------------------------- */
+  --secondary: #2dd4bf;
+  --secondary-hover: #14b8a6;
+  --secondary-light: #042f2e;
+  --secondary-border: #115e59;
+  --secondary-text: #2dd4bf;
 
   /* ----------------------------------------------------------
      Financial / ERP Semantic Colors
   ---------------------------------------------------------- */
-  --sales: #5eead4;
-  --sales-light: #123b37;
-  --sales-border: #17665d;
-  --sales-text: #99f6e4;
+  --sales: #14b8a6;
+  --sales-light: #042f2e;
+  --sales-border: #115e59;
+  --sales-text: #2dd4bf;
 
-  --success: #4ade80;
-  --success-hover: #86efac;
-  --success-light: #12351f;
-  --success-border: #21643a;
-  --success-text: #86efac;
+  --success: #14b8a6;
+  --success-hover: #2dd4bf;
+  --success-light: #042f2e;
+  --success-border: #115e59;
+  --success-text: #2dd4bf;
 
   --stock: #38bdf8;
   --stock-light: #102f42;
@@ -940,14 +958,141 @@ select.input {
 }
 
 .table tbody tr {
+  background: #ffffff;
   transition: background-color 0.12s ease;
 }
 
+.dark .table tbody tr {
+  background: #111827;
+}
+
 .table tbody tr:hover {
-  background: var(--surface-hover);
+  background: #f5f7ff;
+}
+
+.dark .table tbody tr:hover {
+  background: #172033;
+}
+
+.table tbody tr.selected {
+  background: #eef2ff !important;
+}
+
+.dark .table tbody tr.selected {
+  background: #312e81 !important;
+}
+
+/* Status-based Table Row Highlighting (Subtle Indication) */
+.row-paid,
+.row-completed,
+tr.row-paid,
+tr.row-completed {
+  background-color: #f0fdf4 !important;
+}
+.dark .row-paid,
+.dark .row-completed,
+.dark tr.row-paid,
+.dark tr.row-completed {
+  background-color: #052e16 !important;
+}
+
+.row-pending,
+.row-partial,
+tr.row-pending,
+tr.row-partial {
+  background-color: #fffbeb !important;
+}
+.dark .row-pending,
+.dark .row-partial,
+.dark tr.row-pending,
+.dark tr.row-partial {
+  background-color: #451a03 !important;
+}
+
+.row-overdue,
+.row-credit,
+tr.row-overdue,
+tr.row-credit {
+  background-color: #fef2f2 !important;
+}
+.dark .row-overdue,
+.dark .row-credit,
+.dark tr.row-overdue,
+.dark tr.row-credit {
+  background-color: #450a0a !important;
+}
+
+.row-cancelled,
+tr.row-cancelled {
+  background-color: #fdf2f8 !important;
+}
+.dark .row-cancelled,
+.dark tr.row-cancelled {
+  background-color: #500724 !important;
+}
+
+.row-low-stock,
+tr.row-low-stock {
+  background-color: #fff7ed !important;
+}
+.dark .row-low-stock,
+.dark tr.row-low-stock {
+  background-color: #431407 !important;
 }
 
 .table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Compact ERP Table variant */
+.table-compact th {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.6875rem;
+}
+
+.table-compact td {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+/* ERP Table container with clean borders and subtle rounded corners */
+.erp-table-container {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  overflow-x: auto;
+}
+
+/* ERP Summary Table (Metric comparison table) */
+.erp-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.erp-summary-table th {
+  padding: 0.625rem 1rem;
+  background: var(--surface-elevated);
+  border-bottom: 1px solid var(--line);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.erp-summary-table td {
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--line-subtle);
+  font-size: 0.8125rem;
+  color: var(--ink);
+  vertical-align: middle;
+}
+
+.erp-summary-table tr:hover td {
+  background: var(--surface-hover);
+}
+
+.erp-summary-table tr:last-child td {
   border-bottom: none;
 }
 
@@ -970,6 +1115,131 @@ select.input {
   line-height: 1.3;
   text-transform: capitalize;
   white-space: nowrap;
+}
+
+/* Specific Theme Status Badges */
+.badge-paid,
+.badge-completed,
+.status-paid,
+.status-completed {
+  background-color: #dcfce7 !important;
+  color: #166534 !important;
+  border: 1px solid #86efac !important;
+}
+.dark .badge-paid,
+.dark .badge-completed,
+.dark .status-paid,
+.dark .status-completed {
+  background-color: #052e16 !important;
+  color: #86efac !important;
+  border-color: #166534 !important;
+}
+
+.badge-pending,
+.badge-partial,
+.status-pending,
+.status-partial {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+  border: 1px solid #fde68a !important;
+}
+.dark .badge-pending,
+.dark .badge-partial,
+.dark .status-pending,
+.dark .status-partial {
+  background-color: #451a03 !important;
+  color: #fde68a !important;
+  border-color: #92400e !important;
+}
+
+.badge-overdue,
+.badge-credit,
+.badge-failed,
+.status-overdue,
+.status-credit,
+.status-failed {
+  background-color: #fee2e2 !important;
+  color: #991b1b !important;
+  border: 1px solid #fca5a5 !important;
+}
+.dark .badge-overdue,
+.dark .badge-credit,
+.dark .badge-failed,
+.dark .status-overdue,
+.dark .status-credit,
+.dark .status-failed {
+  background-color: #450a0a !important;
+  color: #fca5a5 !important;
+  border-color: #991b1b !important;
+}
+
+.badge-cancelled,
+.badge-refunded,
+.status-cancelled,
+.status-refunded {
+  background-color: #fce7f3 !important;
+  color: #9d174d !important;
+  border: 1px solid #f9a8d4 !important;
+}
+.dark .badge-cancelled,
+.dark .badge-refunded,
+.dark .status-cancelled,
+.dark .status-refunded {
+  background-color: #500724 !important;
+  color: #f9a8d4 !important;
+  border-color: #9d174d !important;
+}
+
+.badge-active,
+.status-active {
+  background-color: #eef2ff !important;
+  color: #3730a3 !important;
+  border: 1px solid #c7d2fe !important;
+}
+.dark .badge-active,
+.dark .status-active {
+  background-color: #1e1b4b !important;
+  color: #c7d2fe !important;
+  border-color: #3730a3 !important;
+}
+
+.badge-low-stock,
+.status-low-stock {
+  background-color: #fff7ed !important;
+  color: #9a3412 !important;
+  border: 1px solid #fed7aa !important;
+}
+.dark .badge-low-stock,
+.dark .status-low-stock {
+  background-color: #431407 !important;
+  color: #fed7aa !important;
+  border-color: #9a3412 !important;
+}
+
+.badge-out-of-stock,
+.status-out-of-stock {
+  background-color: #fee2e2 !important;
+  color: #991b1b !important;
+  border: 1px solid #fca5a5 !important;
+}
+.dark .badge-out-of-stock,
+.dark .status-out-of-stock {
+  background-color: #450a0a !important;
+  color: #fca5a5 !important;
+  border-color: #991b1b !important;
+}
+
+.badge-in-stock,
+.status-in-stock {
+  background-color: #dcfce7 !important;
+  color: #166534 !important;
+  border: 1px solid #86efac !important;
+}
+.dark .badge-in-stock,
+.dark .status-in-stock {
+  background-color: #052e16 !important;
+  color: #86efac !important;
+  border-color: #166534 !important;
 }
 
 .status-success {
@@ -1002,39 +1272,15 @@ select.input {
   color: var(--muted);
 }
 
-.status-stock {
-  border-color: var(--stock-border);
-  background: var(--stock-light);
-  color: var(--stock-text);
-}
-
-.status-sales {
-  border-color: var(--sales-border);
-  background: var(--sales-light);
-  color: var(--sales-text);
-}
-
-.status-expense {
-  border-color: var(--expense-border);
-  background: var(--expense-light);
-  color: var(--expense-text);
-}
-
-.status-due {
-  border-color: var(--receivable-border);
-  background: var(--receivable-light);
-  color: var(--receivable-text);
-}
-
 /* ============================================================
    CARDS
 ============================================================ */
 
 .card {
   border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-xs);
   color: var(--ink);
   transition:
     border-color 0.15s ease,
@@ -1057,21 +1303,15 @@ select.input {
 }
 
 /* ============================================================
-   KPI CARDS
+   KPI CARDS (Exact 6 Specification Variants)
 ============================================================ */
 
 .kpi-card {
   position: relative;
   overflow: hidden;
-
   padding: 1rem 1.125rem;
-
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
-
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
-
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease,
@@ -1079,23 +1319,208 @@ select.input {
 }
 
 .kpi-card:hover {
-  border-color: var(--line-strong);
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
+/* KPI 1 — Sales */
+.kpi-card-sales {
+  background-color: #eef2ff !important;
+  border: 1px solid #c7d2fe !important;
+}
+.kpi-card-sales .kpi-label {
+  color: #312e81;
+}
+.kpi-card-sales .kpi-value {
+  color: #312e81;
+}
+.kpi-card-sales .kpi-icon {
+  color: #4f46e5;
+  background-color: rgba(79, 70, 229, 0.12);
+}
+.dark .kpi-card-sales {
+  background-color: #1e1b4b !important;
+  border-color: #3730a3 !important;
+}
+.dark .kpi-card-sales .kpi-label {
+  color: #c7d2fe;
+}
+.dark .kpi-card-sales .kpi-value {
+  color: #c7d2fe;
+}
+.dark .kpi-card-sales .kpi-icon {
+  color: #818cf8;
+  background-color: rgba(129, 140, 248, 0.2);
+}
+
+/* KPI 2 — Revenue */
+.kpi-card-revenue {
+  background-color: #ecfeff !important;
+  border: 1px solid #a5f3fc !important;
+}
+.kpi-card-revenue .kpi-label {
+  color: #155e75;
+}
+.kpi-card-revenue .kpi-value {
+  color: #155e75;
+}
+.kpi-card-revenue .kpi-icon {
+  color: #0891b2;
+  background-color: rgba(8, 145, 178, 0.12);
+}
+.dark .kpi-card-revenue {
+  background-color: #083344 !important;
+  border-color: #155e75 !important;
+}
+.dark .kpi-card-revenue .kpi-label {
+  color: #a5f3fc;
+}
+.dark .kpi-card-revenue .kpi-value {
+  color: #a5f3fc;
+}
+.dark .kpi-card-revenue .kpi-icon {
+  color: #22d3ee;
+  background-color: rgba(34, 211, 238, 0.2);
+}
+
+/* KPI 3 — Profit */
+.kpi-card-profit {
+  background-color: #ecfdf5 !important;
+  border: 1px solid #a7f3d0 !important;
+}
+.kpi-card-profit .kpi-label {
+  color: #065f46;
+}
+.kpi-card-profit .kpi-value {
+  color: #065f46;
+}
+.kpi-card-profit .kpi-icon {
+  color: #059669;
+  background-color: rgba(5, 150, 105, 0.12);
+}
+.dark .kpi-card-profit {
+  background-color: #064e3b !important;
+  border-color: #047857 !important;
+}
+.dark .kpi-card-profit .kpi-label {
+  color: #a7f3d0;
+}
+.dark .kpi-card-profit .kpi-value {
+  color: #a7f3d0;
+}
+.dark .kpi-card-profit .kpi-icon {
+  color: #34d399;
+  background-color: rgba(52, 211, 153, 0.2);
+}
+
+/* KPI 4 — Outstanding */
+.kpi-card-outstanding {
+  background-color: #fff7ed !important;
+  border: 1px solid #fed7aa !important;
+}
+.kpi-card-outstanding .kpi-label {
+  color: #9a3412;
+}
+.kpi-card-outstanding .kpi-value {
+  color: #9a3412;
+}
+.kpi-card-outstanding .kpi-icon {
+  color: #ea580c;
+  background-color: rgba(234, 88, 12, 0.12);
+}
+.dark .kpi-card-outstanding {
+  background-color: #431407 !important;
+  border-color: #9a3412 !important;
+}
+.dark .kpi-card-outstanding .kpi-label {
+  color: #fed7aa;
+}
+.dark .kpi-card-outstanding .kpi-value {
+  color: #fed7aa;
+}
+.dark .kpi-card-outstanding .kpi-icon {
+  color: #fb923c;
+  background-color: rgba(251, 146, 60, 0.2);
+}
+
+/* KPI 5 — Low Stock */
+.kpi-card-low-stock,
+.kpi-card-low_stock {
+  background-color: #fefce8 !important;
+  border: 1px solid #fef08a !important;
+}
+.kpi-card-low-stock .kpi-label,
+.kpi-card-low_stock .kpi-label {
+  color: #854d0e;
+}
+.kpi-card-low-stock .kpi-value,
+.kpi-card-low_stock .kpi-value {
+  color: #854d0e;
+}
+.kpi-card-low-stock .kpi-icon,
+.kpi-card-low_stock .kpi-icon {
+  color: #ca8a04;
+  background-color: rgba(202, 138, 4, 0.12);
+}
+.dark .kpi-card-low-stock,
+.dark .kpi-card-low_stock {
+  background-color: #422006 !important;
+  border-color: #a16207 !important;
+}
+.dark .kpi-card-low-stock .kpi-label,
+.dark .kpi-card-low_stock .kpi-label {
+  color: #fef08a;
+}
+.dark .kpi-card-low-stock .kpi-value,
+.dark .kpi-card-low_stock .kpi-value {
+  color: #fef08a;
+}
+.dark .kpi-card-low-stock .kpi-icon,
+.dark .kpi-card-low_stock .kpi-icon {
+  color: #facc15;
+  background-color: rgba(250, 204, 21, 0.2);
+}
+
+/* KPI 6 — Expenses */
+.kpi-card-expenses {
+  background-color: #fef2f2 !important;
+  border: 1px solid #fecaca !important;
+}
+.kpi-card-expenses .kpi-label {
+  color: #991b1b;
+}
+.kpi-card-expenses .kpi-value {
+  color: #991b1b;
+}
+.kpi-card-expenses .kpi-icon {
+  color: #dc2626;
+  background-color: rgba(220, 38, 38, 0.12);
+}
+.dark .kpi-card-expenses {
+  background-color: #450a0a !important;
+  border-color: #991b1b !important;
+}
+.dark .kpi-card-expenses .kpi-label {
+  color: #fecaca;
+}
+.dark .kpi-card-expenses .kpi-value {
+  color: #fecaca;
+}
+.dark .kpi-card-expenses .kpi-icon {
+  color: #f87171;
+  background-color: rgba(248, 113, 113, 0.2);
+}
+
 .kpi-card .kpi-value {
-  color: var(--ink);
-  font-size: 1.875rem;
+  font-size: 1.5rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
-  letter-spacing: -0.04em;
-  line-height: 1.05;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
 }
 
 .kpi-card .kpi-label {
-  color: var(--muted);
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.08em;

@@ -225,35 +225,50 @@ export default function Returns() {
   return (
     <div className="space-y-6 min-w-0 pb-6">
       <div className="flex flex-col gap-1 px-0.5">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink)]">Returns & Refunds</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink)]">Returns &amp; Refunds</h1>
         <p className="text-sm text-[var(--muted)] max-w-2xl">Review returned items, refunded invoices, and process new returns.</p>
       </div>
-      <div className="grid grid-cols-1 min-[360px]:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
-        {stats.map((s, i) => (
-          <div
-            key={i}
-            className={`group relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5 min-w-0 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md`}
-          >
-            <div className={`absolute inset-x-0 top-0 h-0.5 ${s.iconBg}`} />
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <span className="text-[10px] sm:text-[11px] font-bold text-[var(--muted-light)] uppercase tracking-[0.08em]">
-                  {s.label}
-                </span>
-                <div className="mt-2 text-2xl sm:text-[26px] font-bold tracking-tight text-[var(--ink)] break-words">
-                  {s.value}
-                </div>
-              </div>
-              <div className={`w-10 h-10 sm:w-11 sm:h-11 shrink-0 rounded-xl ${s.iconBg} bg-white border border-slate-200 shadow-sm flex items-center justify-center`}>
-                <s.icon size={17} strokeWidth={2.2} className={s.accent} />
-              </div>
-            </div>
-          </div>
-        ))}
+
+      {/* Return & Refund Summary (Table-Based) */}
+      <div className="erp-table-container">
+        <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--surface-elevated)] flex items-center justify-between">
+          <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+            Returns &amp; Refund Valuation Summary
+          </span>
+          <span className="text-xs text-[var(--muted)]">Audit overview</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="erp-summary-table">
+            <thead>
+              <tr>
+                <th>Total Returns</th>
+                <th>Refunded Invoices</th>
+                <th>Cancelled Invoices</th>
+                <th>Value Refunded</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="font-mono font-bold text-sm text-[var(--ink)]">
+                  {returns.length + refundedInvoices.length}
+                </td>
+                <td className="font-mono font-bold text-sm text-amber-600 dark:text-amber-400">
+                  {refundedInvoices.length}
+                </td>
+                <td className="font-mono font-bold text-sm text-[var(--muted)]">
+                  {cancelledInvoices.length}
+                </td>
+                <td className="font-mono font-bold text-sm text-rose-600 dark:text-rose-400">
+                  {fmt(totalRefunded)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Sales Returns (item-level) */}
-      <div className="bg-[var(--surface)] rounded-2xl border border-[var(--line)] shadow-sm overflow-hidden min-w-0">
+      <div className="bg-[var(--surface)] rounded-lg border border-[var(--line)] shadow-none overflow-hidden min-w-0">
 
   {/* Header */}
   <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-[var(--line-subtle)] bg-[var(--surface)]">
@@ -380,20 +395,20 @@ export default function Returns() {
       </div>
 
       {/* Cancelled / Refunded invoices */}
-      <div className="bg-[var(--surface)] rounded-2xl border border-[var(--line)] shadow-sm overflow-hidden min-w-0">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-[var(--line-subtle)] bg-[var(--surface)]">
+      <div className="bg-[var(--surface)] rounded-lg border border-[var(--line)] shadow-none overflow-hidden min-w-0">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b border-[var(--line-subtle)] bg-[var(--surface)]">
           <div className="flex items-center gap-2">
             <PackageX size={16} className="text-rose-600" />
-            <h2 className="font-semibold text-[var(--ink)] text-base leading-5 tracking-tight">Cancelled & Refunded Invoices</h2>
+            <h2 className="font-semibold text-[var(--ink)] text-sm sm:text-base leading-5 tracking-tight">Cancelled &amp; Refunded Invoices</h2>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="flex gap-1 bg-[var(--surface-elevated)] border border-[var(--line)] rounded-lg p-1 w-full sm:w-auto">
+            <div className="flex gap-1 bg-[var(--surface-elevated)] border border-[var(--line)] rounded-md p-1 w-full sm:w-auto">
               {FILTERS.map(f => (
                 <button key={f.key} onClick={() => setFilter(f.key)}
-                  className={`flex-1 sm:flex-none min-h-9 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                  className={`flex-1 sm:flex-none min-h-8 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
                     filter === f.key
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50/50'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface)]'
                   }`}>
                   {f.label}
                 </button>

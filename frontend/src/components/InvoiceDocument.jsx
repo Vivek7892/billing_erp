@@ -199,6 +199,12 @@ export default function InvoiceDocument({
   const qrSizeThermal = ({ small: 72, medium: 96, large: 120 })[s.upi_qr_size_thermal] || 96
   const qrValue = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(shopName)}&am=${grandTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(invoiceNo)}`
 
+  // Digital Bill QR Code ("Scan to View Bill")
+  const showDigitalBillQr = isTrue(s.enable_invoice_qr, true)
+  const digitalBillUrl = inv.public_token
+    ? `${window.location.origin}/bill/${inv.public_token}`
+    : `${window.location.origin}/bill/${inv.id || 'preview'}`
+
   // Notes, Terms & Footer
   const notesText = inv.notes || s.invoice_notes || ''
   const termsText = inv.terms || s.invoice_terms || ''
@@ -402,6 +408,19 @@ export default function InvoiceDocument({
                 <b>{footerText}</b>
                 <div style={{ fontSize: 8, marginTop: 1 }}>Date: {invoiceDate} | Ref: {invoiceNo}</div>
               </div>
+            )}
+
+            {/* Scan to View Bill QR */}
+            {showDigitalBillQr && (
+              <>
+                <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0' }}>
+                  <QRCodeSVG value={digitalBillUrl} size={qrSizeThermal} />
+                </div>
+                <div style={{ textAlign: 'center', fontSize: 8.5, fontWeight: 'bold', marginTop: 1, letterSpacing: '0.02em' }}>
+                  Scan to View Bill
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -782,11 +801,28 @@ export default function InvoiceDocument({
             </div>
           )}
 
+          {/* Scan to View Bill QR */}
+          {showDigitalBillQr && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginTop: 14,
+              marginBottom: 4,
+            }}>
+              <QRCodeSVG value={digitalBillUrl} size={68} />
+              <span style={{ fontSize: 9, fontWeight: '700', color: '#475569', marginTop: 3, letterSpacing: '0.02em' }}>
+                Scan to View Bill
+              </span>
+            </div>
+          )}
+
           {/* 7. CLEAN FOOTER */}
           {showFooter && (
             <div style={{
               borderTop: '1px solid #E2E8F0',
-              marginTop: 16,
+              marginTop: 12,
               paddingTop: 8,
               textAlign: footerAlign,
               fontSize: 9.5,

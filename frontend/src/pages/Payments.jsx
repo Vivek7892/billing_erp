@@ -441,9 +441,9 @@ export default function Payments() {
           type="button"
           onClick={loadPayments}
           disabled={loading}
-          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl sm:w-auto border border-[var(--line)] bg-[var(--surface)] px-4 text-xs font-semibold text-[var(--ink-secondary)] shadow-sm transition hover:bg-[var(--surface-elevated)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md sm:w-auto border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink-secondary)] shadow-xs transition hover:bg-[var(--surface-elevated)] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
           Refresh
         </button>
       </header>
@@ -451,7 +451,7 @@ export default function Payments() {
       {/* =====================================================
           ERP SUMMARY (Table-Based)
       ====================================================== */}
-      <section className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+      <section className="erp-table-container">
         <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
           Payment & Collection Summary
         </div>
@@ -460,7 +460,7 @@ export default function Payments() {
             <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
               Collected
             </span>
-            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-green-600">
+            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-teal-600 dark:text-teal-400">
               {formatCurrency(totalCollected)}
             </p>
             <p className="text-[10px] text-[var(--muted)]">Non-credit receipts</p>
@@ -470,7 +470,7 @@ export default function Payments() {
             <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
               Credit Due
             </span>
-            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-red-600">
+            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-rose-600 dark:text-rose-400">
               {formatCurrency(totalCredit)}
             </p>
             <p className="text-[10px] text-[var(--muted)]">Receivable balances</p>
@@ -491,7 +491,7 @@ export default function Payments() {
               key={item.key}
               onClick={() => setFilter(c => (c === item.key ? 'all' : item.key))}
               className={`p-3 sm:p-3.5 cursor-pointer transition ${
-                filter === item.key ? 'bg-blue-50/50 dark:bg-blue-950/30' : 'hover:bg-[var(--surface-elevated)]'
+                filter === item.key ? 'bg-indigo-50/50 dark:bg-indigo-950/30' : 'hover:bg-[var(--surface-elevated)]'
               }`}
             >
               <div className="flex items-center justify-between">
@@ -499,10 +499,10 @@ export default function Payments() {
                   {item.label}
                 </span>
                 {filter === item.key && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-600"></span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-600"></span>
                 )}
               </div>
-              <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-blue-600">
+              <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-indigo-600 dark:text-indigo-400">
                 {formatCurrency(item.total)}
               </p>
               <p className="text-[10px] text-[var(--muted)]">{item.count} bills ({item.label})</p>
@@ -511,21 +511,21 @@ export default function Payments() {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-card)]">
-        <div className="section-heading border-b border-[var(--line)] p-3 sm:p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+        <div className="section-heading border-b border-[var(--line)] p-3 sm:p-3.5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <SlidersHorizontal
-                  size={16}
+                  size={15}
                   className="text-[var(--muted)]"
                 />
-                <h2 className="text-sm font-bold text-[var(--ink)]">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
                   Payment Transactions
                 </h2>
               </div>
 
-              <p className="mt-1 text-xs text-[var(--muted-light)]">
+              <p className="mt-0.5 text-xs text-[var(--muted-light)]">
                 {filteredBills.length} transaction
                 {filteredBills.length === 1 ? '' : 's'} displayed
               </p>
@@ -534,7 +534,7 @@ export default function Payments() {
             <div className="flex w-full min-w-0 gap-2 lg:w-auto">
               <div className="relative min-w-0 flex-1 lg:w-72 lg:flex-none">
                 <Search
-                  size={15}
+                  size={14}
                   className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]"
                 />
 
@@ -542,7 +542,7 @@ export default function Payments() {
                   value={search}
                   onChange={event => setSearch(event.target.value)}
                   placeholder="Search invoice or customer..."
-                  className="h-10 w-full rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] pl-9 pr-9 text-xs text-[var(--ink)] outline-none transition placeholder:text-[var(--muted-light)] focus:border-[var(--primary-border)] focus:ring-2 focus:ring-[var(--focus-ring)]"
+                  className="h-8 w-full rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] pl-8 pr-8 text-xs text-[var(--ink)] outline-none transition placeholder:text-[var(--muted-light)] focus:border-[var(--primary-border)] focus:ring-1 focus:ring-[var(--primary)]"
                 />
 
                 {search && (
@@ -550,9 +550,9 @@ export default function Payments() {
                     type="button"
                     onClick={() => setSearch('')}
                     aria-label="Clear search"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)] transition hover:text-[var(--ink)]"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted-light)] transition hover:text-[var(--ink)]"
                   >
-                    <X size={14} />
+                    <X size={13} />
                   </button>
                 )}
               </div>
@@ -562,17 +562,17 @@ export default function Payments() {
                 onClick={loadPayments}
                 disabled={loading}
                 aria-label="Refresh payment transactions"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] disabled:opacity-50"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] disabled:opacity-50"
               >
                 <RefreshCw
-                  size={15}
+                  size={14}
                   className={loading ? 'animate-spin' : ''}
                 />
               </button>
             </div>
           </div>
 
-          <div className="mt-3 flex gap-1 overflow-x-auto rounded-xl pb-0.5 sm:mt-4 bg-[var(--surface-elevated)] p-1">
+          <div className="mt-2.5 flex gap-1 overflow-x-auto rounded-md pb-0.5 bg-[var(--surface-elevated)] p-1">
             {FILTERS.map(item => (
               <button
                 key={item.key}

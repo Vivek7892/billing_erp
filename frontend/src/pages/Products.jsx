@@ -1073,130 +1073,114 @@ export default function Products() {
       />
 
       {/* =====================================================
-          PRODUCT KPIS & STOCK ALERTS BANNER
+          PRODUCT METRICS & STOCK ALERTS SUMMARY TABLE
       ====================================================== */}
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {/* Total Products */}
-        <div
-          onClick={() => setStockFilter('all')}
-          className={`cursor-pointer rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md ${
-            stockFilter === 'all'
-              ? 'border-indigo-400 bg-[var(--surface-elevated)] ring-1 ring-indigo-400'
-              : 'border-[var(--line)] bg-[var(--surface)]'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-              Total Products
-            </span>
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
-              <Boxes size={15} />
-            </span>
-          </div>
-          <p className="mt-2 font-mono text-2xl font-bold text-[var(--ink)]">
-            {stats.total}
-          </p>
-          <p className="mt-1 text-[11px] text-[var(--muted)]">All catalog items</p>
+      <section className="erp-table-container">
+        <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          Product Catalog & Stock Valuation
         </div>
-
-        {/* Active Products */}
-        <div
-          onClick={() => setStatusFilter(statusFilter === 'active' ? 'all' : 'active')}
-          className={`cursor-pointer rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md ${
-            statusFilter === 'active'
-              ? 'border-teal-400 bg-[var(--surface-elevated)] ring-1 ring-teal-400'
-              : 'border-[var(--line)] bg-[var(--surface)]'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-              Active Items
-            </span>
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-50 text-teal-600 dark:bg-teal-950/50 dark:text-teal-400">
-              <CheckCircle2 size={15} />
-            </span>
+        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-5 sm:divide-y-0 sm:divide-x">
+          <div
+            onClick={() => setStockFilter('all')}
+            className={`p-3 cursor-pointer transition-colors ${
+              stockFilter === 'all'
+                ? 'bg-[var(--surface-elevated)] font-semibold'
+                : 'hover:bg-[var(--surface-hover)]'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                Total Products
+              </span>
+              <Boxes size={13} className="text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+              {stats.total}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">All catalog items</p>
           </div>
-          <p className="mt-2 font-mono text-2xl font-bold text-teal-600 dark:text-teal-400">
-            {stats.active}
-          </p>
-          <p className="mt-1 text-[11px] text-[var(--muted)]">Available for sale</p>
-        </div>
 
-        {/* Low Stock Alert */}
-        <div
-          onClick={() =>
-            setStockFilter(stockFilter === 'low_stock' ? 'all' : 'low_stock')
-          }
-          className={`cursor-pointer rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md ${
-            stockFilter === 'low_stock'
-              ? 'border-amber-400 bg-[var(--surface-elevated)] ring-1 ring-amber-400'
-              : 'border-[var(--line)] bg-[var(--surface)]'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-              Low Stock Alert
-            </span>
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
-              <AlertTriangle size={15} />
-            </span>
+          <div
+            onClick={() => setStatusFilter(statusFilter === 'active' ? 'all' : 'active')}
+            className={`p-3 cursor-pointer transition-colors ${
+              statusFilter === 'active'
+                ? 'bg-[var(--surface-elevated)] font-semibold'
+                : 'hover:bg-[var(--surface-hover)]'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                Active Items
+              </span>
+              <CheckCircle2 size={13} className="text-teal-600 dark:text-teal-400" />
+            </div>
+            <p className="mt-1 font-mono text-lg font-bold text-teal-600 dark:text-teal-400">
+              {stats.active}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">Available for sale</p>
           </div>
-          <p className="mt-2 font-mono text-2xl font-bold text-amber-600 dark:text-amber-400">
-            {stats.low}
-          </p>
-          <p className="mt-1 text-[11px] text-[var(--muted)]">
-            ≤ threshold &amp; reorder
-          </p>
-        </div>
 
-        {/* Out of Stock Alert */}
-        <div
-          onClick={() =>
-            setStockFilter(stockFilter === 'out_of_stock' ? 'all' : 'out_of_stock')
-          }
-          className={`cursor-pointer rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md ${
-            stockFilter === 'out_of_stock'
-              ? 'border-rose-400 bg-[var(--surface-elevated)] ring-1 ring-rose-400'
-              : 'border-[var(--line)] bg-[var(--surface)]'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-              Out of Stock
-            </span>
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400">
-              <XCircle size={15} />
-            </span>
+          <div
+            onClick={() => setStockFilter(stockFilter === 'low_stock' ? 'all' : 'low_stock')}
+            className={`p-3 cursor-pointer transition-colors ${
+              stockFilter === 'low_stock'
+                ? 'bg-[var(--surface-elevated)] font-semibold'
+                : 'hover:bg-[var(--surface-hover)]'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                Low Stock Alert
+              </span>
+              <AlertTriangle size={13} className="text-amber-600 dark:text-amber-400" />
+            </div>
+            <p className="mt-1 font-mono text-lg font-bold text-amber-600 dark:text-amber-400">
+              {stats.low}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">Threshold reached</p>
           </div>
-          <p className="mt-2 font-mono text-2xl font-bold text-rose-600 dark:text-rose-400">
-            {stats.out}
-          </p>
-          <p className="mt-1 text-[11px] text-[var(--muted)]">Zero inventory balance</p>
-        </div>
 
-        {/* Total Stock Valuation */}
-        <div className="col-span-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:col-span-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-              Stock Valuation
-            </span>
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
-              <Tag size={15} />
-            </span>
+          <div
+            onClick={() => setStockFilter(stockFilter === 'out_of_stock' ? 'all' : 'out_of_stock')}
+            className={`p-3 cursor-pointer transition-colors ${
+              stockFilter === 'out_of_stock'
+                ? 'bg-[var(--surface-elevated)] font-semibold'
+                : 'hover:bg-[var(--surface-hover)]'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                Out of Stock
+              </span>
+              <XCircle size={13} className="text-rose-600 dark:text-rose-400" />
+            </div>
+            <p className="mt-1 font-mono text-lg font-bold text-rose-600 dark:text-rose-400">
+              {stats.out}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">Zero balance</p>
           </div>
-          <p className="mt-2 font-mono text-xl sm:text-2xl font-bold text-[var(--ink)]">
-            {formatCurrency(stats.stockValue)}
-          </p>
-          <p className="mt-1 text-[11px] text-[var(--muted)]">
-            Retail: {formatCurrency(stats.retailValue)}
-          </p>
+
+          <div className="p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                Stock Valuation
+              </span>
+              <Tag size={13} className="text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <p className="mt-1 font-mono text-lg font-bold text-indigo-600 dark:text-indigo-400">
+              {formatCurrency(stats.stockValue)}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">
+              Retail: {formatCurrency(stats.retailValue)}
+            </p>
+          </div>
         </div>
       </section>
 
       {/* =====================================================
           SEARCH & MULTI-FILTER TOOLBAR
       ====================================================== */}
-      <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-4">
+      <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-3.5">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-12 lg:items-center">
           {/* Search bar */}
           <div className="relative min-w-0 sm:col-span-2 lg:col-span-4">
@@ -1610,7 +1594,10 @@ export default function Products() {
                         : 0
 
                     return (
-                      <tr key={product.id}>
+                      <tr
+                        key={product.id}
+                        className={stockAlert.isLow || stockAlert.isOut ? 'row-low-stock' : ''}
+                      >
                         {/* Product Name */}
                         <td>
                           <div className="min-w-44">

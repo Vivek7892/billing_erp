@@ -499,3 +499,6 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = (
 
 
 SECURE_HSTS_PRELOAD = False
+
+# Frontend public URL for digital bills and redirects
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')

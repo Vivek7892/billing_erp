@@ -4,11 +4,13 @@ import {
   AlertTriangle,
   ArrowUpRight,
   BarChart3,
+  Boxes,
   CheckCircle2,
   Clock3,
   CreditCard,
   Eye,
   FileText,
+  IndianRupee,
   Package,
   Plus,
   RefreshCw,
@@ -26,7 +28,7 @@ import {
   YAxis,
 } from 'recharts'
 import api from '../api'
-import { Badge } from '../components/UI'
+import { Badge, KpiCard } from '../components/UI'
 import { useShop } from '../components/Layout'
 
 const EMPTY = {
@@ -37,11 +39,28 @@ const EMPTY = {
   today_bills: 0,
   avg_bill_today: 0,
   today_tax: 0,
-  sales_7days: [],
-  payment_distribution: [],
-  low_stock_products: [],
+  month_sales: 0,
+  month_bills: 0,
+  month_profit: 0,
+  last_month_sales: 0,
+  last_month_profit: 0,
+  today_purchases: 0,
+  month_purchases: 0,
+  last_month_purchases: 0,
+  today_expenses: 0,
+  month_expenses: 0,
+  last_month_expenses: 0,
+  today_payments_total: 0,
+  month_payments_total: 0,
+  last_month_payments_total: 0,
+  pending_credit: 0,
   out_of_stock: 0,
   low_stock_count: 0,
+  profit_margin: 0,
+  sales_7days: [],
+  payment_distribution: [],
+  action_required: [],
+  low_stock_products: [],
   recent_bills: [],
 }
 
@@ -94,6 +113,15 @@ function EmptyState({ icon: Icon, text }) {
   )
 }
 
+const getInvoiceRowClass = status => {
+  const s = String(status || '').toLowerCase()
+  if (s === 'paid' || s === 'completed') return 'row-paid'
+  if (s === 'pending' || s === 'partial') return 'row-pending'
+  if (s === 'credit' || s === 'overdue') return 'row-overdue'
+  if (s === 'cancelled') return 'row-cancelled'
+  return ''
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const { shopName } = useShop()
@@ -133,20 +161,73 @@ export default function Dashboard() {
   const payments = data.payment_distribution || []
   const lowStock = data.low_stock_products || []
   const recentBills = data.recent_bills || []
+  const actionRequired = data.action_required || []
 
   const totalSales = useMemo(
     () => salesData.reduce((sum, item) => sum + Number(item.sales || 0), 0),
     [salesData]
   )
 
+  const creditDueCount = useMemo(() => {
+    const item = actionRequired.find(a => a.key === 'credit')
+    return item ? item.count : 0
+  }, [actionRequired])
+
+  const summaryRows = useMemo(
+    () => [
+      {
+        metric: 'Gross Sales',
+        today: fmtCurrency(data.today_sales),
+        month: fmtCurrency(data.month_sales),
+        prevMonth: fmtCurrency(data.last_month_sales),
+      },
+      {
+        metric: 'Collections / Received',
+        today: fmtCurrency(data.today_collection || data.today_payments_total),
+        month: fmtCurrency(data.month_payments_total),
+        prevMonth: fmtCurrency(data.last_month_payments_total),
+      },
+      {
+        metric: 'Gross Profit',
+        today: fmtCurrency(data.today_profit),
+        month: fmtCurrency(data.month_profit),
+        prevMonth: fmtCurrency(data.last_month_profit),
+      },
+      {
+        metric: 'Purchases (Inward)',
+        today: fmtCurrency(data.today_purchases),
+        month: fmtCurrency(data.month_purchases),
+        prevMonth: fmtCurrency(data.last_month_purchases),
+      },
+      {
+        metric: 'Operating Expenses',
+        today: fmtCurrency(data.today_expenses),
+        month: fmtCurrency(data.month_expenses),
+        prevMonth: fmtCurrency(data.last_month_expenses),
+      },
+      {
+        metric: 'Invoices Generated',
+        today: `${data.today_bills || 0} bills`,
+        month: `${data.month_bills || 0} bills`,
+        prevMonth: '—',
+      },
+    ],
+    [data]
+  )
+
   if (loading) {
     return (
       <div className="min-w-0 space-y-4 pb-6 animate-pulse">
-        <div className="h-20 rounded-xl bg-[var(--surface-elevated)] border border-[var(--line)]" />
-        <div className="h-24 rounded-xl bg-[var(--surface-elevated)] border border-[var(--line)]" />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="h-64 rounded-xl bg-[var(--surface-elevated)] border border-[var(--line)]" />
-          <div className="h-64 rounded-xl bg-[var(--surface-elevated)] border border-[var(--line)]" />
+        <div className="h-16 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)]" />
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-24 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)]" />
+          ))}
+        </div>
+        <div className="h-48 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)]" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 h-64 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)]" />
+          <div className="h-64 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)]" />
         </div>
       </div>
     )
@@ -157,13 +238,13 @@ export default function Dashboard() {
       {/* -------------------------------------------------------------
           TOP BAR: Store Name, Current Date, Action Controls
       -------------------------------------------------------------- */}
-      <header className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
+      <header className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-blue-600"></span>
+              <span className="h-2 w-2 rounded-full bg-[var(--primary)]" />
               <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                ERP Billing Station
+                ERP Management Station
               </p>
             </div>
             <h1 className="mt-0.5 truncate text-lg sm:text-xl font-bold text-[var(--ink)]">
@@ -223,145 +304,145 @@ export default function Dashboard() {
       )}
 
       {/* -------------------------------------------------------------
-          TABLE-BASED ERP METRICS BAR (Replaces Floating Cards)
+          SECTION 1: 4–6 PRIMARY KPI CARDS (Exact Theme Palette)
       -------------------------------------------------------------- */}
-      <section className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
-        <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-          Today's Financial Summary
-        </div>
-        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
-          {/* Today's Sales */}
-          <div className="p-3.5 sm:p-4">
-            <div className="flex items-center justify-between text-xs text-[var(--muted)]">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">
-                Today's Sales
-              </span>
-              <TrendingUp size={14} className="text-blue-600" />
-            </div>
-            <p className="mt-2 text-lg sm:text-xl font-bold font-mono text-[var(--ink)]">
-              {fmtCurrency(data.today_sales)}
-            </p>
-            <p className="mt-1 text-[11px] text-[var(--muted)]">
-              <span
-                className={`font-semibold ${
-                  salesTrend >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}
-              >
-                {salesTrend >= 0 ? '+' : ''}
-                {salesTrend}%
-              </span>{' '}
-              vs yesterday
-            </p>
-          </div>
-
-          {/* Collection */}
-          <div className="p-3.5 sm:p-4">
-            <div className="flex items-center justify-between text-xs text-[var(--muted)]">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">
-                Collection
-              </span>
-              <CreditCard size={14} className="text-green-600" />
-            </div>
-            <p className="mt-2 text-lg sm:text-xl font-bold font-mono text-green-600">
-              {fmtCurrency(data.today_collection)}
-            </p>
-            <p className="mt-1 text-[11px] text-[var(--muted)]">
-              Tax: {fmtCurrency(data.today_tax)}
-            </p>
-          </div>
-
-          {/* Today's Profit */}
-          <div className="p-3.5 sm:p-4">
-            <div className="flex items-center justify-between text-xs text-[var(--muted)]">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">
-                Today's Profit
-              </span>
-              <BarChart3 size={14} className="text-blue-600" />
-            </div>
-            <p className="mt-2 text-lg sm:text-xl font-bold font-mono text-[var(--ink)]">
-              {fmtCurrency(data.today_profit)}
-            </p>
-            <p className="mt-1 text-[11px] text-[var(--muted)]">
-              Avg Bill: {fmtCompact(data.avg_bill_today)}
-            </p>
-          </div>
-
-          {/* Bills Generated */}
-          <div className="p-3.5 sm:p-4">
-            <div className="flex items-center justify-between text-xs text-[var(--muted)]">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">
-                Invoices Today
-              </span>
-              <FileText size={14} className="text-[var(--muted)]" />
-            </div>
-            <p className="mt-2 text-lg sm:text-xl font-bold font-mono text-[var(--ink)]">
-              {data.today_bills || 0}
-            </p>
-            <p className="mt-1 text-[11px] text-[var(--muted)]">
-              Completed transactions
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* -------------------------------------------------------------
-          ERP QUICK ACTIONS TOOLBAR
-      -------------------------------------------------------------- */}
-      <section className="flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => navigate('/billing/new')}
-          className="btn-primary h-9 text-xs px-3.5 flex items-center gap-1.5"
-        >
-          <ShoppingCart size={14} />
-          <span>POS Billing</span>
-        </button>
-        <button
-          onClick={() => navigate('/inventory/products')}
-          className="btn-secondary h-9 text-xs px-3 flex items-center gap-1.5"
-        >
-          <Package size={14} />
-          <span>Products</span>
-        </button>
-        <button
-          onClick={() => navigate('/parties/customers')}
-          className="btn-secondary h-9 text-xs px-3 flex items-center gap-1.5"
-        >
-          <Users size={14} />
-          <span>Customers</span>
-        </button>
-        <button
-          onClick={() => navigate('/reports')}
-          className="btn-secondary h-9 text-xs px-3 flex items-center gap-1.5"
-        >
-          <BarChart3 size={14} />
-          <span>Reports</span>
-        </button>
-        <button
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {/* KPI 1: Sales */}
+        <KpiCard
+          type="sales"
+          label="Today's Sales"
+          value={fmtCurrency(data.today_sales)}
+          sub={`${data.today_bills || 0} bills today`}
+          icon={TrendingUp}
+          trend={salesTrend}
           onClick={() => navigate('/sales/invoices')}
-          className="btn-secondary h-9 text-xs px-3 flex items-center gap-1.5 ml-auto"
-        >
-          <span>All Invoices</span>
-          <ArrowUpRight size={13} />
-        </button>
+        />
+
+        {/* KPI 2: Revenue / Collections */}
+        <KpiCard
+          type="revenue"
+          label="Collections"
+          value={fmtCurrency(data.today_collection || data.today_payments_total)}
+          sub={`Tax: ${fmtCurrency(data.today_tax)}`}
+          icon={CreditCard}
+          onClick={() => navigate('/sales/payments')}
+        />
+
+        {/* KPI 3: Profit */}
+        <KpiCard
+          type="profit"
+          label="Gross Profit"
+          value={fmtCurrency(data.today_profit)}
+          sub={`Margin: ${data.profit_margin || 0}%`}
+          icon={BarChart3}
+          onClick={() => navigate('/reports')}
+        />
+
+        {/* KPI 4: Outstanding Receivables */}
+        <KpiCard
+          type="outstanding"
+          label="Outstanding"
+          value={fmtCurrency(data.pending_credit)}
+          sub={`${creditDueCount} customers due`}
+          icon={IndianRupee}
+          onClick={() => navigate('/parties/customers?credit_due=1')}
+        />
+
+        {/* KPI 5: Low Stock */}
+        <KpiCard
+          type="low_stock"
+          label="Stock Alerts"
+          value={`${(data.low_stock_count || 0) + (data.out_of_stock || 0)} Items`}
+          sub={`${data.out_of_stock || 0} out of stock`}
+          icon={Package}
+          onClick={() => navigate('/inventory/stock')}
+        />
+
+        {/* KPI 6: Expenses */}
+        <KpiCard
+          type="expenses"
+          label="Expenses Today"
+          value={fmtCurrency(data.today_expenses)}
+          sub={`Month: ${fmtCompact(data.month_expenses)}`}
+          icon={AlertTriangle}
+          onClick={() => navigate('/expenses')}
+        />
       </section>
 
       {/* -------------------------------------------------------------
-          SALES TREND & PAYMENT DISTRIBUTION
+          SECTION 2: SUMMARY TABLE (Metric | Today | This Month | Previous Month)
+      -------------------------------------------------------------- */}
+      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
+        <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5">
+          <div>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+              Financial & Operational Summary
+            </h2>
+            <p className="text-[11px] text-[var(--muted)]">
+              Multi-period comparison across key ERP performance metrics
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/reports')}
+            className="text-xs font-semibold text-[var(--primary)] hover:underline flex items-center gap-1"
+          >
+            <span>Detailed Reports</span>
+            <ArrowUpRight size={13} />
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="table table-compact">
+            <thead>
+              <tr>
+                <th className="w-1/3">Financial Metric</th>
+                <th className="num-col">Today</th>
+                <th className="num-col">This Month</th>
+                <th className="num-col">Previous Month</th>
+              </tr>
+            </thead>
+            <tbody>
+              {summaryRows.map((row, idx) => (
+                <tr key={idx}>
+                  <td className="font-semibold text-[var(--ink)]">
+                    {row.metric}
+                  </td>
+                  <td className="num-col font-bold font-mono text-[var(--ink)]">
+                    {row.today}
+                  </td>
+                  <td className="num-col font-mono text-[var(--ink-secondary)]">
+                    {row.month}
+                  </td>
+                  <td className="num-col font-mono text-[var(--muted)]">
+                    {row.prevMonth}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* -------------------------------------------------------------
+          SECTION 3: CHARTS (Sales Daily Trend & Payment Breakdown)
       -------------------------------------------------------------- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Sales Overview Chart (2 cols) */}
-        <section className="lg:col-span-2 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+        <section className="lg:col-span-2 overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
           <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5">
             <div>
               <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-                Sales Overview (Last 7 Days)
+                Sales Trend (Last 7 Days)
               </h2>
               <p className="text-[11px] text-[var(--muted)]">
-                Total: <span className="font-mono font-bold text-blue-600">{fmtCurrency(totalSales)}</span>
+                7-day total:{' '}
+                <span className="font-mono font-bold text-[var(--primary)]">
+                  {fmtCurrency(totalSales)}
+                </span>
               </p>
             </div>
             <span className="text-[11px] font-semibold text-[var(--muted)]">
-              Daily Trend
+              Daily Distribution
             </span>
           </div>
 
@@ -373,9 +454,9 @@ export default function Dashboard() {
                   margin={{ top: 8, right: 8, left: -20, bottom: 0 }}
                 >
                   <defs>
-                    <linearGradient id="blueSalesFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#2563EB" stopOpacity={0.25} />
-                      <stop offset="100%" stopColor="#2563EB" stopOpacity={0.01} />
+                    <linearGradient id="primarySalesFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.22} />
+                      <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.01} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid vertical={false} stroke="var(--line)" strokeDasharray="3 3" />
@@ -384,6 +465,11 @@ export default function Dashboard() {
                     tick={{ fontSize: 10, fill: 'var(--muted)' }}
                     axisLine={false}
                     tickLine={false}
+                    tickFormatter={d => {
+                      if (!d) return ''
+                      const parts = d.split('-')
+                      return parts.length === 3 ? `${parts[2]}/${parts[1]}` : d
+                    }}
                   />
                   <YAxis
                     tick={{ fontSize: 10, fill: 'var(--muted)' }}
@@ -396,9 +482,9 @@ export default function Dashboard() {
                   <Area
                     type="monotone"
                     dataKey="sales"
-                    stroke="#2563EB"
+                    stroke="#4f46e5"
                     strokeWidth={2}
-                    fill="url(#blueSalesFill)"
+                    fill="url(#primarySalesFill)"
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -411,8 +497,8 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {/* Payment Summary (1 col) */}
-        <section className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] flex flex-col">
+        {/* Payment Methods (1 col) */}
+        <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] flex flex-col">
           <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5">
             <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
               Payment Methods
@@ -441,7 +527,7 @@ export default function Dashboard() {
                       </div>
                       <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-elevated)] border border-[var(--line)]">
                         <div
-                          className="h-full rounded-full bg-blue-600"
+                          className="h-full rounded-full bg-[var(--primary)]"
                           style={{ width: `${share}%` }}
                         />
                       </div>
@@ -460,23 +546,23 @@ export default function Dashboard() {
       </div>
 
       {/* -------------------------------------------------------------
-          RECENT INVOICES (Table-Based ERP Standard)
+          SECTION 4: RECENT TRANSACTIONS TABLE
       -------------------------------------------------------------- */}
-      <section className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
         <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5">
           <div>
             <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
               Recent Invoices
             </h2>
             <p className="text-[11px] text-[var(--muted)]">
-              Latest transactions
+              Latest transactions with payment status
             </p>
           </div>
           <button
             onClick={() => navigate('/sales/invoices')}
-            className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+            className="text-xs font-semibold text-[var(--primary)] hover:underline flex items-center gap-1"
           >
-            <span>View All</span>
+            <span>All Invoices</span>
             <ArrowUpRight size={13} />
           </button>
         </div>
@@ -486,21 +572,24 @@ export default function Dashboard() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Invoice</th>
+                  <th>Invoice #</th>
                   <th>Customer</th>
                   <th>Date</th>
-                  <th className="num-col">Amount</th>
+                  <th className="num-col">Grand Total</th>
                   <th>Status</th>
-                  <th className="text-right">Actions</th>
+                  <th className="text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {recentBills.slice(0, 8).map(bill => (
-                  <tr key={bill.id}>
+                  <tr
+                    key={bill.id}
+                    className={getInvoiceRowClass(bill.payment_status || bill.status)}
+                  >
                     <td>
                       <button
                         onClick={() => navigate(`/invoice/${bill.id}`)}
-                        className="font-mono font-bold text-blue-600 hover:text-blue-800 hover:underline"
+                        className="font-mono font-bold text-[var(--primary)] hover:underline"
                       >
                         {bill.invoice_number}
                       </button>
@@ -520,16 +609,14 @@ export default function Dashboard() {
                       <Badge status={bill.payment_status || bill.status} />
                     </td>
                     <td className="text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => navigate(`/invoice/${bill.id}`)}
-                          className="btn-secondary btn-sm flex items-center gap-1 text-xs"
-                          title="View Invoice"
-                        >
-                          <Eye size={12} />
-                          <span>View</span>
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => navigate(`/invoice/${bill.id}`)}
+                        className="btn-secondary btn-sm flex items-center gap-1 text-xs inline-flex"
+                        title="View Invoice"
+                      >
+                        <Eye size={12} />
+                        <span>View</span>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -545,21 +632,21 @@ export default function Dashboard() {
       </section>
 
       {/* -------------------------------------------------------------
-          INVENTORY ALERTS (Table-Based ERP Standard)
+          SECTION 5: LOW-STOCK ALERTS TABLE
       -------------------------------------------------------------- */}
-      <section className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
         <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5">
           <div>
             <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-              Inventory Alerts
+              Low-Stock Inventory Alerts
             </h2>
             <p className="text-[11px] text-[var(--muted)]">
-              {data.out_of_stock || 0} out of stock · {data.low_stock_count || 0} low stock
+              {data.out_of_stock || 0} out of stock · {data.low_stock_count || 0} below minimum threshold
             </p>
           </div>
           <button
             onClick={() => navigate('/inventory/stock')}
-            className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+            className="text-xs font-semibold text-[var(--primary)] hover:underline flex items-center gap-1"
           >
             <span>Manage Stock</span>
             <ArrowUpRight size={13} />
@@ -581,7 +668,7 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {lowStock.slice(0, 6).map(prod => (
-                  <tr key={prod.id}>
+                  <tr key={prod.id} className="row-low-stock">
                     <td className="font-semibold text-[var(--ink)]">
                       {prod.name}
                     </td>
@@ -592,7 +679,7 @@ export default function Dashboard() {
                       className={`num-col font-bold font-mono ${
                         Number(prod.current_stock) <= 0
                           ? 'text-red-600'
-                          : 'text-orange-500'
+                          : 'text-amber-600'
                       }`}
                     >
                       {prod.current_stock}
@@ -625,7 +712,78 @@ export default function Dashboard() {
         ) : (
           <EmptyState
             icon={CheckCircle2}
-            text="All products are sufficiently stocked."
+            text="All inventory items are sufficiently stocked."
+          />
+        )}
+      </section>
+
+      {/* -------------------------------------------------------------
+          SECTION 6: OUTSTANDING PAYMENTS / ACTION REQUIRED TABLE
+      -------------------------------------------------------------- */}
+      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
+        <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5">
+          <div>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+              Operational Action Items
+            </h2>
+            <p className="text-[11px] text-[var(--muted)]">
+              Items requiring immediate staff review or reconciliation
+            </p>
+          </div>
+        </div>
+
+        {actionRequired.length ? (
+          <div className="overflow-x-auto">
+            <table className="table table-compact">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Status Detail</th>
+                  <th className="num-col">Pending Count</th>
+                  <th className="text-right">Quick Navigation</th>
+                </tr>
+              </thead>
+              <tbody>
+                {actionRequired.map((item, idx) => (
+                  <tr
+                    key={idx}
+                    className={item.count > 0 ? 'row-pending' : ''}
+                  >
+                    <td className="font-semibold capitalize text-[var(--ink)]">
+                      {item.key}
+                    </td>
+                    <td className="text-[var(--ink-secondary)]">
+                      {item.label}
+                    </td>
+                    <td className="num-col font-mono font-bold">
+                      <span
+                        className={
+                          item.count > 0
+                            ? 'text-amber-600 font-bold'
+                            : 'text-[var(--muted)]'
+                        }
+                      >
+                        {item.count}
+                      </span>
+                    </td>
+                    <td className="text-right">
+                      <button
+                        onClick={() => navigate(item.route)}
+                        className="btn-secondary btn-sm text-xs inline-flex items-center gap-1"
+                      >
+                        <span>Resolve</span>
+                        <ArrowUpRight size={12} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState
+            icon={CheckCircle2}
+            text="No immediate pending operational tasks."
           />
         )}
       </section>

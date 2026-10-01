@@ -13,13 +13,13 @@ export function Card({
   return (
     <div
       className={[
-        'rounded-2xl border border-[var(--line)]',
+        'rounded-lg border border-[var(--line)]',
         'bg-[var(--surface)]',
-        'shadow-[var(--shadow-card)]',
-        'transition-all duration-200',
+        'shadow-[var(--shadow-xs)]',
+        'transition-all duration-150',
         padding ? 'p-4 sm:p-5' : '',
         hover
-          ? 'hover:-translate-y-0.5 hover:shadow-lg hover:border-[var(--primary-border)]'
+          ? 'hover:border-[var(--line-strong)]'
           : '',
         className,
       ].join(' ')}
@@ -30,7 +30,78 @@ export function Card({
 }
 
 /* ============================================================
-   KPI / STAT CARD
+   KPI CARD (ERP Style - Strict 6 Colored Variants)
+   Section 5: Sales, Revenue, Profit, Outstanding, Low Stock, Expenses
+============================================================ */
+
+export function KpiCard({
+  type = 'sales', // 'sales' | 'revenue' | 'profit' | 'outstanding' | 'low_stock' | 'expenses'
+  label,
+  value,
+  sub,
+  icon: Icon,
+  trend,
+  onClick,
+  className = '',
+}) {
+  const Tag = onClick ? 'button' : 'div'
+  const cardVariantClass = `kpi-card-${type.replace(/_/g, '-')}`
+
+  return (
+    <Tag
+      type={onClick ? 'button' : undefined}
+      onClick={onClick}
+      className={[
+        'kpi-card group w-full text-left',
+        cardVariantClass,
+        onClick ? 'cursor-pointer' : 'cursor-default',
+        className,
+      ].join(' ')}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="kpi-label leading-tight">
+            {label}
+          </p>
+
+          <p
+            className="kpi-value mt-1.5 truncate leading-none font-bold"
+            style={{
+              fontVariantNumeric: 'tabular-nums',
+              fontFeatureSettings: '"tnum"',
+            }}
+          >
+            {value}
+          </p>
+
+          {sub && (
+            <p className="mt-1.5 truncate text-xs opacity-85">
+              {sub}
+            </p>
+          )}
+        </div>
+
+        {Icon && (
+          <div
+            className="kpi-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+          >
+            <Icon size={17} strokeWidth={2} />
+          </div>
+        )}
+      </div>
+
+      {trend !== undefined && (
+        <div className="mt-2.5 flex items-center gap-1 text-[11px] opacity-90 font-medium">
+          <span>{trend > 0 ? '↑' : trend < 0 ? '↓' : '—'}</span>
+          <span>{trend !== 0 ? `${Math.abs(trend)}% vs previous` : 'No change'}</span>
+        </div>
+      )}
+    </Tag>
+  )
+}
+
+/* ============================================================
+   KPI / STAT SUMMARY BOX (ERP Style)
 ============================================================ */
 
 export function StatCard({
@@ -46,35 +117,35 @@ export function StatCard({
 
   const colorStyles = {
     blue: {
-      icon: 'bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-400 dark:border-indigo-800/60',
-      accent: 'border-l-indigo-500',
+      icon: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800/60',
+      accent: 'border-l-indigo-600',
     },
     indigo: {
-      icon: 'bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-indigo-950/50 dark:text-indigo-400 dark:border-indigo-800/60',
-      accent: 'border-l-indigo-500',
+      icon: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800/60',
+      accent: 'border-l-indigo-600',
     },
     teal: {
-      icon: 'bg-teal-50 text-teal-600 border-teal-100 dark:bg-teal-950/50 dark:text-teal-400 dark:border-teal-800/60',
-      accent: 'border-l-teal-500',
+      icon: 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-800/60',
+      accent: 'border-l-teal-600',
     },
     green: {
-      icon: 'bg-teal-50 text-teal-600 border-teal-100 dark:bg-teal-950/50 dark:text-teal-400 dark:border-teal-800/60',
-      accent: 'border-l-teal-500',
+      icon: 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-800/60',
+      accent: 'border-l-teal-600',
     },
     orange: {
-      icon: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/50 dark:text-amber-400 dark:border-amber-800/60',
-      accent: 'border-l-amber-500',
+      icon: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800/60',
+      accent: 'border-l-amber-600',
     },
     red: {
-      icon: 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/50 dark:text-rose-400 dark:border-rose-800/60',
-      accent: 'border-l-rose-500',
+      icon: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800/60',
+      accent: 'border-l-rose-600',
     },
     purple: {
-      icon: 'bg-violet-50 text-violet-600 border-violet-100 dark:bg-violet-950/50 dark:text-violet-400 dark:border-violet-800/60',
-      accent: 'border-l-violet-500',
+      icon: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800/60',
+      accent: 'border-l-indigo-600',
     },
     gray: {
-      icon: 'bg-white text-slate-700 border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-700',
+      icon: 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-700',
       accent: 'border-l-slate-400',
     },
   }
@@ -87,26 +158,26 @@ export function StatCard({
       onClick={onClick}
       className={[
         'group w-full text-left',
-        'rounded-2xl border border-[var(--line)]',
-        'border-l-4',
+        'rounded-lg border border-[var(--line)]',
+        'border-l-2',
         selectedColor.accent,
         'bg-[var(--surface)]',
-        'p-4 sm:p-5',
-        'shadow-[var(--shadow-card)]',
-        'transition-all duration-200',
+        'p-3.5 sm:p-4',
+        'shadow-[var(--shadow-xs)]',
+        'transition-all duration-150',
         onClick
-          ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-lg hover:border-[var(--primary-border)]'
+          ? 'cursor-pointer hover:border-[var(--line-strong)]'
           : 'cursor-default',
       ].join(' ')}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--muted)] leading-tight">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)] leading-tight">
             {label}
           </p>
 
           <p
-            className="mt-3 truncate text-2xl sm:text-[1.9rem] font-semibold tracking-tight text-[var(--ink)] leading-none"
+            className="mt-1.5 truncate text-xl font-bold tracking-tight text-[var(--ink)] leading-none"
             style={{
               fontVariantNumeric: 'tabular-nums',
               fontFeatureSettings: '"tnum"',
@@ -116,7 +187,7 @@ export function StatCard({
           </p>
 
           {sub && (
-            <p className="mt-2 truncate text-xs text-[var(--muted)]">
+            <p className="mt-1.5 truncate text-xs text-[var(--muted)]">
               {sub}
             </p>
           )}
@@ -125,20 +196,18 @@ export function StatCard({
         {Icon && (
           <div
             className={[
-              'flex h-10 w-10 shrink-0 items-center justify-center',
-              'rounded-xl border',
-              'transition-transform duration-200',
-              'group-hover:scale-105',
+              'flex h-8 w-8 shrink-0 items-center justify-center',
+              'rounded-md border',
               selectedColor.icon,
             ].join(' ')}
           >
-            <Icon size={18} strokeWidth={1.8} />
+            <Icon size={16} strokeWidth={1.8} />
           </div>
         )}
       </div>
 
       {trend !== undefined && (
-        <div className="mt-4 flex items-center gap-1 text-xs">
+        <div className="mt-2.5 flex items-center gap-1 text-[11px]">
           <span
             className={[
               'font-semibold',
@@ -153,7 +222,7 @@ export function StatCard({
           </span>
 
           <span className="text-[var(--muted)]">
-            {trend !== 0 ? `${Math.abs(trend)}% from previous period` : 'No change'}
+            {trend !== 0 ? `${Math.abs(trend)}% vs previous` : 'No change'}
           </span>
         </div>
       )}
@@ -162,72 +231,105 @@ export function StatCard({
 }
 
 /* ============================================================
+   COMPACT SUMMARY TABLE (ERP Style)
+   Metric | Column 1 | Column 2 | Column 3 ...
+============================================================ */
+
+export function CompactSummaryTable({
+  columns = [],
+  rows = [],
+  className = '',
+  title,
+  action,
+}) {
+  return (
+    <div className={['erp-table-container', className].join(' ')}>
+      {title && (
+        <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+            {title}
+          </h3>
+          {action}
+        </div>
+      )}
+      <table className="erp-summary-table">
+        <thead>
+          <tr>
+            {columns.map((col, idx) => (
+              <th
+                key={idx}
+                className={col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}
+              >
+                {col.header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, rIdx) => (
+            <tr key={rIdx}>
+              {columns.map((col, cIdx) => (
+                <td
+                  key={cIdx}
+                  className={[
+                    col.align === 'right' ? 'text-right tabular' : col.align === 'center' ? 'text-center' : 'text-left',
+                    col.className || '',
+                    cIdx === 0 ? 'font-medium text-[var(--ink)]' : 'text-[var(--ink-secondary)]',
+                  ].join(' ')}
+                >
+                  {row[col.key]}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+/* ============================================================
    BADGE
 ============================================================ */
 
 export function Badge({ status, label: customLabel }) {
-  const statusMap = {
-    in_stock: 'success',
-    low_stock: 'warning',
-    out_of_stock: 'danger',
-    paid: 'success',
-    partial: 'warning',
-    credit: 'danger',
-    completed: 'success',
-    cancelled: 'danger',
-    refunded: 'warning',
-    active: 'success',
-    inactive: 'neutral',
-    pending: 'warning',
-    failed: 'danger',
-    processing: 'info',
-    draft: 'neutral',
+  const statusKey = String(status || '').toLowerCase().trim().replace(/\s+/g, '_')
+
+  const classMap = {
+    paid: 'badge-paid',
+    completed: 'badge-completed',
+    in_stock: 'badge-in-stock',
+    active: 'badge-active',
+    pending: 'badge-pending',
+    partial: 'badge-partial',
+    low_stock: 'badge-low-stock',
+    credit: 'badge-credit',
+    overdue: 'badge-overdue',
+    failed: 'badge-failed',
+    out_of_stock: 'badge-out-of-stock',
+    cancelled: 'badge-cancelled',
+    refunded: 'badge-refunded',
+    draft: 'status-neutral',
+    inactive: 'status-neutral',
   }
 
-  const styles = {
-    success:
-      'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800/60',
-    warning:
-      'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60',
-    danger:
-      'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60',
-    info:
-      'bg-indigo-50 text-indigo-800 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800/60',
-    neutral:
-      'bg-white text-slate-700 border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-700',
-  }
-
-  const type = statusMap[status] || 'neutral'
+  const badgeClass = classMap[statusKey] || 'status-neutral'
   const label =
     customLabel ||
-    status?.replace(/_/g, ' ') ||
+    statusKey.replace(/_/g, ' ') ||
     'Unknown'
 
   return (
     <span
       className={[
         'inline-flex items-center gap-1.5',
-        'rounded-full border px-2.5 py-1',
-        'text-[11px] font-medium capitalize',
-        'whitespace-nowrap',
-        styles[type],
+        'rounded-full px-2.5 py-0.5',
+        'text-[11px] font-semibold capitalize',
+        'whitespace-nowrap transition-colors',
+        badgeClass,
       ].join(' ')}
     >
-      <span
-        className={[
-          'h-1.5 w-1.5 rounded-full',
-          type === 'success'
-            ? 'bg-teal-500'
-            : type === 'warning'
-              ? 'bg-amber-500'
-              : type === 'danger'
-                ? 'bg-rose-500'
-                : type === 'info'
-                  ? 'bg-indigo-500'
-                  : 'bg-slate-400',
-        ].join(' ')}
-      />
-
+      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
       {label}
     </span>
   )
@@ -357,7 +459,7 @@ export function Modal({
         className={[
           'flex max-h-[95dvh] w-full flex-col',
           sizes[size] || sizes.md,
-          'overflow-hidden rounded-t-2xl sm:max-h-[90vh] sm:rounded-2xl',
+          'overflow-hidden rounded-t-lg sm:max-h-[90vh] sm:rounded-lg',
           'border border-[var(--line)]',
           'bg-[var(--surface)]',
           'shadow-[var(--shadow-modal)]',
@@ -428,7 +530,7 @@ export function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-modal)] sm:p-6">
+      <div className="w-full max-w-sm rounded-lg border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-modal)] sm:p-6">
         <div
           className={[
             'mb-4 flex h-11 w-11 items-center justify-center rounded-xl border',

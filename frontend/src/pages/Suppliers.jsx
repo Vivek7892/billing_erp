@@ -216,10 +216,10 @@ export default function Suppliers() {
       {/* -------------------------------------------------------------
           PAGE HEADER
       -------------------------------------------------------------- */}
-      <header className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
+      <header className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-3.5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-lg sm:text-xl font-bold text-[var(--ink)]">
+            <h1 className="text-base sm:text-lg font-bold text-[var(--ink)]">
               Suppliers Directory
             </h1>
             <p className="mt-0.5 text-xs text-[var(--muted)]">
@@ -227,12 +227,12 @@ export default function Suppliers() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={load} className="btn-secondary h-9 text-xs px-3" title="Refresh">
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <button onClick={load} className="btn-secondary h-8 text-xs px-2.5" title="Refresh">
+              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
               <span className="hidden sm:inline">Refresh</span>
             </button>
-            <button onClick={openAdd} className="btn-primary h-9 text-xs px-4 flex items-center gap-1.5">
-              <Plus size={15} />
+            <button onClick={openAdd} className="btn-primary h-8 text-xs px-3 flex items-center gap-1.5">
+              <Plus size={14} />
               <span>Add Supplier</span>
             </button>
           </div>
@@ -240,41 +240,41 @@ export default function Suppliers() {
       </header>
 
       {/* -------------------------------------------------------------
-          ERP METRICS BAR (Replaces Floating Cards)
+          ERP METRICS BAR (Table-Based Summary Strip)
       -------------------------------------------------------------- */}
-      <section className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+      <section className="erp-table-container">
         <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
           Supplier Summary
         </div>
         <div className="grid grid-cols-1 divide-y divide-[var(--line)] sm:grid-cols-3 sm:divide-y-0 sm:divide-x">
-          <div className="p-3.5 sm:p-4">
+          <div className="p-3 sm:p-3.5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
               Total Suppliers
             </span>
-            <p className="mt-1 text-xl font-bold font-mono text-[var(--ink)]">
+            <p className="mt-1 text-lg sm:text-xl font-bold font-mono text-[var(--ink)]">
               {suppliers.length}
             </p>
-            <p className="text-[11px] text-[var(--muted)]">Active business vendors</p>
+            <p className="text-[10px] text-[var(--muted)]">Active business vendors</p>
           </div>
 
-          <div className="p-3.5 sm:p-4">
+          <div className="p-3 sm:p-3.5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
               Total Outstanding Due
             </span>
-            <p className="mt-1 text-xl font-bold font-mono text-red-600">
+            <p className="mt-1 text-lg sm:text-xl font-bold font-mono text-rose-600 dark:text-rose-400">
               {fmt(totalOutstanding)}
             </p>
-            <p className="text-[11px] text-[var(--muted)]">Payable balance across suppliers</p>
+            <p className="text-[10px] text-[var(--muted)]">Payable balance across suppliers</p>
           </div>
 
-          <div className="p-3.5 sm:p-4">
+          <div className="p-3 sm:p-3.5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
               Supplied Catalog Items
             </span>
-            <p className="mt-1 text-xl font-bold font-mono text-blue-600">
+            <p className="mt-1 text-lg sm:text-xl font-bold font-mono text-indigo-600 dark:text-indigo-400">
               {suppliedProductCount}
             </p>
-            <p className="text-[11px] text-[var(--muted)]">Linked inventory products</p>
+            <p className="text-[10px] text-[var(--muted)]">Linked inventory products</p>
           </div>
         </div>
       </section>

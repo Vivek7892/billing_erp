@@ -291,6 +291,8 @@ class InvoiceService:
                     'INVOICE_CANCELLED' if status == 'cancelled' else 'INVOICE_REFUNDED',
                     'Invoice',
                     invoice.id,
+                    entity_name=invoice.invoice_number,
+                    reason=reason,
                     after={
                         'status': invoice.status,
                         'payment_status': invoice.payment_status,
