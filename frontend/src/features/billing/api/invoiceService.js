@@ -42,6 +42,11 @@ export const invoiceService = {
     const response = await api.post(`/invoices/${invoiceId}/short-link/`)
     return unwrapResponse(response)
   },
+
+  async sendWhatsApp(invoiceId, phone = '') {
+    const response = await api.post(`/invoices/${invoiceId}/send-whatsapp/`, { phone })
+    return unwrapResponse(response)
+  },
 }
 
 export default invoiceService

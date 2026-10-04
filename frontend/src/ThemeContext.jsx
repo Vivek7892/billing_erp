@@ -67,6 +67,7 @@ function getSystemTheme() {
   } catch {
     return THEMES.LIGHT
   }
+  return THEMES.DARK
 }
 
 /**
@@ -74,6 +75,7 @@ function getSystemTheme() {
  */
 function getInitialTheme() {
   return getSavedTheme() || getSystemTheme()
+  return getSavedTheme() || THEMES.DARK
 }
 
 /**

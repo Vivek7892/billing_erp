@@ -20,6 +20,7 @@ router.register('purchase-returns', views.PurchaseReturnViewSet, basename='purch
 router.register('customer-payments', views.CustomerPaymentViewSet, basename='customer-payment')
 router.register('supplier-payments', views.SupplierPaymentViewSet, basename='supplier-payment')
 router.register('audit-logs', views.AuditLogViewSet, basename='audit-log')
+router.register('communication-logs', views.CommunicationLogViewSet, basename='communication-log')
 
 urlpatterns = [
     path('auth/login/', views.LoginView.as_view(), name='login'),
@@ -61,6 +62,10 @@ urlpatterns = [
     path('docs/<str:doc>/', views.PublicDocView.as_view(), name='public-doc'),
     path('recycle-bin/', views.RecycleBinView.as_view(), name='recycle-bin'),
     path('recycle-bin/<str:entity_type>/<int:pk>/restore/', views.RecycleBinRestoreView.as_view(), name='recycle-bin-restore'),
+    path('invoices/<int:pk>/send-whatsapp/', views.InvoiceSendWhatsAppView.as_view(), name='invoice-send-whatsapp'),
+    path('customers/<int:pk>/send-reminder/', views.CustomerSendReminderView.as_view(), name='customer-send-reminder'),
+    path('customers/<int:pk>/send-statement/', views.CustomerSendStatementView.as_view(), name='customer-send-statement'),
+    path('purchases/<int:pk>/send-confirmation/', views.PurchaseSendConfirmationView.as_view(), name='purchase-send-confirmation'),
     # Keep explicit actions ahead of router detail patterns such as /inventory/<pk>/.
     path('', include(router.urls)),
 ]

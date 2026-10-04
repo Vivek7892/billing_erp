@@ -167,7 +167,7 @@ export default function BarcodePrintModal({ open, onClose, product, shopName = '
                 SKU: {product.sku || '—'} {product.barcode ? `· Barcode: ${product.barcode}` : ''}
               </span>
             </div>
-            <span className="font-mono font-bold text-indigo-600 text-sm shrink-0">
+            <span className="font-mono font-bold text-[#1E3A5F] dark:text-slate-100 text-sm shrink-0">
               {formattedPrice}
             </span>
           </div>
@@ -188,7 +188,7 @@ export default function BarcodePrintModal({ open, onClose, product, shopName = '
                         key={s.id}
                         className={`flex items-start gap-3 p-2.5 rounded-xl border cursor-pointer transition-all ${
                           isSelected
-                            ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 ring-1 ring-indigo-500/20'
+                            ? 'border-[#1E3A5F] bg-[var(--surface-elevated)] ring-1 ring-[#1E3A5F]/20'
                             : 'border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-elevated)]'
                         }`}
                       >
@@ -201,11 +201,11 @@ export default function BarcodePrintModal({ open, onClose, product, shopName = '
                             setSize(s.id)
                             if (s.perSheet) setCopies(s.perSheet)
                           }}
-                          className="mt-0.5 h-4 w-4 text-indigo-600 border-[var(--line)] focus:ring-indigo-500 accent-indigo-600 cursor-pointer"
+                          className="mt-0.5 h-4 w-4 text-[#1E3A5F] border-[var(--line)] focus:ring-[#1E3A5F] accent-[#1E3A5F] cursor-pointer"
                         />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between">
-                            <span className={`text-xs font-bold ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-[var(--ink)]'}`}>
+                            <span className={`text-xs font-bold ${isSelected ? 'text-[#1E3A5F] dark:text-slate-200' : 'text-[var(--ink)]'}`}>
                               {s.title}
                             </span>
                             {s.perSheet && (
@@ -288,7 +288,7 @@ export default function BarcodePrintModal({ open, onClose, product, shopName = '
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleField(key)}
-                          className="h-4 w-4 rounded border-[var(--line)] text-indigo-600 focus:ring-indigo-500 accent-indigo-600 cursor-pointer shrink-0"
+                          className="h-4 w-4 rounded border-[var(--line)] text-[#1E3A5F] focus:ring-[#1E3A5F] accent-[#1E3A5F] cursor-pointer shrink-0"
                         />
                         <span className="text-xs font-semibold text-[var(--ink)]">
                           {label}
@@ -313,7 +313,7 @@ export default function BarcodePrintModal({ open, onClose, product, shopName = '
                         onClick={() => setCopies(cnt)}
                         className={`rounded px-2 py-0.5 text-[10px] font-semibold border transition ${
                           copies === cnt
-                            ? 'bg-indigo-600 text-white border-indigo-600'
+                            ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
                             : 'bg-[var(--surface)] text-[var(--muted)] border-[var(--line)] hover:bg-[var(--surface-elevated)]'
                         }`}
                       >
@@ -368,7 +368,7 @@ export default function BarcodePrintModal({ open, onClose, product, shopName = '
               <div>
                 <div className="flex items-center justify-between mb-3 border-b border-[var(--line)] pb-2">
                   <span className="text-xs font-bold text-[var(--ink)] flex items-center gap-1.5">
-                    <Eye size={13} className="text-indigo-600" />
+                    <Eye size={13} className="text-[#1E3A5F] dark:text-slate-300" />
                     Live Label Preview
                   </span>
                   <span className="text-[10px] font-mono text-[var(--muted)]">
@@ -384,7 +384,7 @@ export default function BarcodePrintModal({ open, onClose, product, shopName = '
                 >
                   {/* Store Name */}
                   {fields.storeName && (
-                    <p className="text-[10px] font-bold tracking-wider text-indigo-900 dark:text-indigo-300 uppercase truncate">
+                    <p className="text-[10px] font-bold tracking-wider text-[#1E3A5F] dark:text-slate-300 uppercase truncate">
                       {shopName}
                     </p>
                   )}
@@ -453,7 +453,7 @@ export default function BarcodePrintModal({ open, onClose, product, shopName = '
               {/* Total info badge */}
               <div className="mt-4 rounded-xl bg-[var(--surface)] border border-[var(--line)] p-2.5 text-center text-xs">
                 <span className="text-[var(--muted)]">Total Labels to Print: </span>
-                <span className="font-mono font-bold text-indigo-600 text-sm">
+                <span className="font-mono font-bold text-[#1E3A5F] dark:text-slate-100 text-sm">
                   {copies} {copies === 1 ? 'Label' : 'Labels'}
                 </span>
                 {selectedSizeObj.perSheet && (

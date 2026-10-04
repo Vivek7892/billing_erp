@@ -305,7 +305,9 @@ def make_bill_qr(invoice, size_mm=22):
         import qrcode
         from reportlab.platypus import Image as RLImage
 
-        bill_url = invoice.get_public_url() if hasattr(invoice, 'get_public_url') else None
+        bill_url = invoice.get_short_url() if hasattr(invoice, 'get_short_url') else (
+            invoice.get_public_url() if hasattr(invoice, 'get_public_url') else None
+        )
         if not bill_url:
             return None
         qr = qrcode.make(bill_url)

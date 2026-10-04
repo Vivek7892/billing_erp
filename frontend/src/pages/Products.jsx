@@ -39,6 +39,7 @@ import {
   Copy,
   Check,
   FileSpreadsheet,
+  MoreVertical,
 } from 'lucide-react'
 
 const UNITS = [
@@ -114,10 +115,9 @@ function getStockAlertState(product) {
     return {
       type: 'out_of_stock',
       label: 'Out of Stock',
-      badgeClass:
-        'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900',
+      badgeClass: 'bg-rose-950/40 text-rose-300 border border-rose-800/40',
       dotClass: 'bg-rose-500',
-      textClass: 'text-rose-600 dark:text-rose-400 font-bold',
+      textClass: 'text-rose-400 font-bold',
       icon: XCircle,
     }
   }
@@ -126,10 +126,9 @@ function getStockAlertState(product) {
     return {
       type: 'low_stock',
       label: 'Low Stock',
-      badgeClass:
-        'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900',
+      badgeClass: 'bg-amber-950/40 text-amber-300 border border-amber-800/40',
       dotClass: 'bg-amber-500',
-      textClass: 'text-amber-600 dark:text-amber-400 font-bold',
+      textClass: 'text-amber-400 font-bold',
       icon: AlertTriangle,
     }
   }
@@ -137,10 +136,9 @@ function getStockAlertState(product) {
   return {
     type: 'in_stock',
     label: 'In Stock',
-    badgeClass:
-      ' bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-900',
-    dotClass: 'bg-teal-500',
-    textClass: 'text-teal-700 dark:text-teal-300  font-bold ',
+    badgeClass: 'bg-emerald-950/40 text-emerald-300 border border-emerald-800/40',
+    dotClass: 'bg-emerald-500',
+    textClass: 'text-emerald-300 font-bold',
     icon: CheckCircle2,
   }
 }
@@ -234,6 +232,13 @@ export default function Products() {
   const [deleteId, setDeleteId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [copiedSku, setCopiedSku] = useState(null)
+  const [openActionMenuId, setOpenActionMenuId] = useState(null)
+
+  useEffect(() => {
+    const handleOutsideClick = () => setOpenActionMenuId(null)
+    window.addEventListener('click', handleOutsideClick)
+    return () => window.removeEventListener('click', handleOutsideClick)
+  }, [])
 
   // Details Modal State
   const [detailProduct, setDetailProduct] = useState(null)
@@ -1092,7 +1097,7 @@ export default function Products() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Total Products
               </span>
-              <Boxes size={13} className="text-indigo-600 dark:text-indigo-400" />
+              <Boxes size={13} className="text-[#1E3A5F] dark:text-slate-300" />
             </div>
             <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
               {stats.total}
@@ -1165,9 +1170,9 @@ export default function Products() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Stock Valuation
               </span>
-              <Tag size={13} className="text-indigo-600 dark:text-indigo-400" />
+              <Tag size={13} className="text-[#1E3A5F] dark:text-slate-300" />
             </div>
-            <p className="mt-1 font-mono text-lg font-bold text-indigo-600 dark:text-indigo-400">
+            <p className="mt-1 font-mono text-lg font-bold text-[#1E3A5F] dark:text-slate-200">
               {formatCurrency(stats.stockValue)}
             </p>
             <p className="text-[10px] text-[var(--muted)]">
@@ -1274,32 +1279,21 @@ export default function Products() {
             </select>
           </div>
 
-          {/* Refresh & Reset Actions */}
-          <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-1">
-            <button
-              type="button"
-              onClick={() => load(search, catFilter)}
-              disabled={loading}
-              className="btn-secondary h-11 flex-1 flex items-center justify-center px-3"
-              title="Refresh product list"
-            >
-              <RefreshCw
-                size={15}
-                className={loading ? 'animate-spin text-indigo-600' : ''}
-              />
-            </button>
-
-            {isFilterActive && (
+          {/* Reset Filters Action */}
+          {isFilterActive && (
+            <div className="flex items-center sm:col-span-2 lg:col-span-1">
               <button
                 type="button"
                 onClick={resetFilters}
-                className="btn-secondary h-11 px-2.5 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                className="btn-secondary h-11 w-full px-3 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center gap-1.5 font-medium"
+                className="btn-secondary h-11 w-full px-3 text-xs text-rose-400 hover:bg-rose-950/40 flex items-center justify-center gap-1.5 font-medium"
                 title="Reset all filters"
               >
-                <X size={15} />
+                <X size={14} />
+                <span>Reset</span>
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Quick Filter Pill Badges */}
@@ -1318,9 +1312,9 @@ export default function Products() {
               key={f.key}
               type="button"
               onClick={() => setStockFilter(f.key)}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors ${
+              className={`rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors ${
                 stockFilter === f.key
-                  ? 'bg-indigo-600 text-white font-semibold'
+                  ? 'bg-[#1E3A5F] text-white font-semibold'
                   : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
               }`}
             >
@@ -1543,14 +1537,13 @@ export default function Products() {
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th>Category &amp; Brand</th>
-                    <th className="text-center">Unit</th>
+                    <th>Category</th>
                     <th
                       className="text-right cursor-pointer hover:text-[var(--ink)]"
                       onClick={() => handleSort('purchase_price')}
                     >
                       <div className="flex items-center justify-end gap-1">
-                        Purchase
+                        Purchase Price
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
@@ -1559,12 +1552,10 @@ export default function Products() {
                       onClick={() => handleSort('selling_price')}
                     >
                       <div className="flex items-center justify-end gap-1">
-                        Selling
+                        Selling Price
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
-                    <th className="text-right">MRP</th>
-                    <th className="text-center">GST</th>
                     <th
                       className="text-right cursor-pointer hover:text-[var(--ink)]"
                       onClick={() => handleSort('current_stock')}
@@ -1574,8 +1565,9 @@ export default function Products() {
                         <ArrowUpDown size={12} />
                       </div>
                     </th>
+                    <th className="text-center">GST</th>
                     <th className="text-center">Status</th>
-                    <th className="text-right">Actions</th>
+                    <th className="text-right w-24">Actions</th>
                   </tr>
                 </thead>
 
@@ -1598,13 +1590,13 @@ export default function Products() {
                         key={product.id}
                         className={stockAlert.isLow || stockAlert.isOut ? 'row-low-stock' : ''}
                       >
-                        {/* Product Name */}
+                        {/* 1. Product Name */}
                         <td>
                           <div className="min-w-44">
                             <button
                               type="button"
                               onClick={() => openDetails(product)}
-                              className="text-left font-bold text-sm text-[var(--ink)] hover:text-indigo-600 transition-colors line-clamp-1"
+                              className="text-left font-bold text-sm text-[var(--ink)] hover:text-[#1E3A5F] transition-colors line-clamp-1"
                             >
                               {product.name}
                             </button>
@@ -1618,7 +1610,7 @@ export default function Products() {
                           </div>
                         </td>
 
-                        {/* SKU & Barcode */}
+                        {/* 2. SKU & Barcode */}
                         <td>
                           <div className="min-w-32">
                             <div className="flex items-center gap-1">
@@ -1629,7 +1621,7 @@ export default function Products() {
                                 <button
                                   type="button"
                                   onClick={() => copySKU(product.sku)}
-                                  className="text-[var(--muted)] hover:text-indigo-600"
+                                  className="text-[var(--muted)] hover:text-[#1E3A5F]"
                                   title="Copy SKU"
                                 >
                                   {copiedSku === product.sku ? (
@@ -1647,35 +1639,42 @@ export default function Products() {
                           </div>
                         </td>
 
-                        {/* Category & Brand */}
+                        {/* 3. Category & Unit */}
                         <td>
                           <div className="text-xs">
                             <span className="font-medium text-[var(--ink-secondary)]">
                               {product.category_name || '—'}
                             </span>
-                            {product.brand && (
-                              <p className="text-[11px] text-[var(--muted)] mt-0.5">
-                                {product.brand}
-                              </p>
-                            )}
+                            <div className="flex items-center gap-1 mt-0.5">
+                              {product.brand && (
+                                <span className="text-[11px] text-[var(--muted)]">
+                                  {product.brand}
+                                </span>
+                              )}
+                              {product.unit && (
+                                <span className="rounded bg-[var(--surface-elevated)] px-1 py-0.2 font-mono text-[10px] text-[var(--muted)]">
+                                  {product.unit}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </td>
 
-                        {/* Unit */}
-                        <td className="text-center font-mono text-xs text-[var(--muted)]">
-                          {product.unit || 'pcs'}
-                        </td>
-
-                        {/* Purchase Price */}
+                        {/* 4. Purchase Price */}
                         <td className="text-right font-mono text-xs text-[var(--muted)]">
                           {formatCurrency(product.purchase_price)}
                         </td>
 
-                        {/* Selling Price & Margin */}
+                        {/* 5. Selling Price, MRP & Margin */}
                         <td className="text-right font-mono">
                           <span className="font-bold text-sm text-[var(--ink)]">
                             {formatCurrency(product.selling_price)}
                           </span>
+                          {product.mrp && Number(product.mrp) > Number(product.selling_price) && (
+                            <span className="block text-[10px] text-[var(--muted-light)] line-through">
+                              MRP {formatCurrency(product.mrp)}
+                            </span>
+                          )}
                           {margin > 0 && (
                             <span className="block text-[10px] font-semibold text-teal-600 dark:text-teal-400">
                               +{margin}% margin
@@ -1683,19 +1682,7 @@ export default function Products() {
                           )}
                         </td>
 
-                        {/* MRP */}
-                        <td className="text-right font-mono text-xs text-[var(--muted-light)]">
-                          {product.mrp ? formatCurrency(product.mrp) : '—'}
-                        </td>
-
-                        {/* GST */}
-                        <td className="text-center">
-                          <span className="inline-flex rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 font-mono text-[11px] font-semibold text-[var(--muted)]">
-                            {product.gst_percent ?? 0}%
-                          </span>
-                        </td>
-
-                        {/* Current Stock with Alert Badge */}
+                        {/* 6. Current Stock with Alert Badge */}
                         <td className="text-right">
                           <div className="inline-flex flex-col items-end gap-1">
                             <span
@@ -1715,7 +1702,14 @@ export default function Products() {
                           </div>
                         </td>
 
-                        {/* Status */}
+                        {/* 7. GST */}
+                        <td className="text-center">
+                          <span className="inline-flex rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 font-mono text-[11px] font-semibold text-[var(--muted)]">
+                            {product.gst_percent ?? 0}%
+                          </span>
+                        </td>
+
+                        {/* 8. Status */}
                         <td className="text-center">
                           <button
                             type="button"
@@ -1726,19 +1720,9 @@ export default function Products() {
                           </button>
                         </td>
 
-                        {/* Actions */}
-                        <td className="text-right">
+                        {/* 9. Actions with Primary Edit and Three-dot Menu */}
+                        <td className="text-right relative">
                           <div className="flex items-center justify-end gap-1">
-                            <button
-                              type="button"
-                              onClick={() => openDetails(product)}
-                              className="icon-btn"
-                              title="View Product Details"
-                              aria-label="View details"
-                            >
-                              <Eye size={14} />
-                            </button>
-
                             <button
                               type="button"
                               onClick={() => openEdit(product)}
@@ -1746,48 +1730,93 @@ export default function Products() {
                               title="Edit Product"
                               aria-label="Edit"
                             >
-                              <Edit2 size={14} />
+                              <Edit2 size={13} />
                             </button>
 
-                            <button
-                              type="button"
-                              onClick={() => openAdjust(product)}
-                              className="icon-btn"
-                              title="Adjust Stock"
-                              aria-label="Adjust stock"
-                            >
-                              <SlidersHorizontal size={14} />
-                            </button>
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={e => {
+                                  e.stopPropagation()
+                                  setOpenActionMenuId(openActionMenuId === product.id ? null : product.id)
+                                }}
+                                className={`icon-btn ${openActionMenuId === product.id ? 'bg-[var(--surface-elevated)] text-[var(--ink)]' : ''}`}
+                                title="More Actions"
+                                aria-label="More actions"
+                              >
+                                <MoreVertical size={13} />
+                              </button>
 
-                            <button
-                              type="button"
-                              onClick={() => openDetails(product, 'movements')}
-                              className="icon-btn"
-                              title="Stock History"
-                              aria-label="Stock history"
-                            >
-                              <History size={14} />
-                            </button>
+                              {openActionMenuId === product.id && (
+                                <div
+                                  className="absolute right-0 top-full mt-1 z-30 w-44 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1 text-left shadow-lg"
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuId(null)
+                                      openDetails(product)
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
+                                  >
+                                    <Eye size={13} className="text-[var(--muted)]" />
+                                    <span>View Details</span>
+                                  </button>
 
-                            <button
-                              type="button"
-                              onClick={() => openBarcode(product)}
-                              className="icon-btn"
-                              title="Print Barcode"
-                              aria-label="Print barcode"
-                            >
-                              <Barcode size={14} />
-                            </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuId(null)
+                                      openAdjust(product)
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
+                                  >
+                                    <SlidersHorizontal size={13} className="text-[var(--muted)]" />
+                                    <span>Adjust Stock</span>
+                                  </button>
 
-                            <button
-                              type="button"
-                              onClick={() => setDeleteId(product.id)}
-                              className="icon-btn danger"
-                              title="Delete Product"
-                              aria-label="Delete"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuId(null)
+                                      openDetails(product, 'movements')
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
+                                  >
+                                    <History size={13} className="text-[var(--muted)]" />
+                                    <span>Stock History</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuId(null)
+                                      openBarcode(product)
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
+                                  >
+                                    <Barcode size={13} className="text-[var(--muted)]" />
+                                    <span>Print Barcode</span>
+                                  </button>
+
+                                  <div className="my-1 border-t border-[var(--line)]" />
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setOpenActionMenuId(null)
+                                      setDeleteId(product.id)
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs text-[var(--danger)] hover:bg-red-50 dark:hover:bg-red-950/30"
+                                    className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs text-rose-400 hover:bg-rose-950/40"
+                                  >
+                                    <Trash2 size={13} />
+                                    <span>Delete Product</span>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -1830,7 +1859,7 @@ export default function Products() {
           {/* SECTION 1: BASIC INFORMATION */}
           <div>
             <div className="mb-3 flex items-center justify-between border-b border-[var(--line-subtle)] pb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#1E3A5F] dark:text-slate-200">
                 1. General Information
               </span>
               <span className="text-[11px] text-[var(--muted-light)]">
@@ -2280,7 +2309,7 @@ export default function Products() {
                   <span className="text-[10px] font-bold uppercase text-[var(--muted)]">
                     Selling Price
                   </span>
-                  <p className="font-mono text-base font-bold text-indigo-600 dark:text-indigo-400">
+                  <p className="font-mono text-base font-bold text-[#1E3A5F] dark:text-slate-200">
                     {formatCurrency(detailProduct.selling_price)}
                   </p>
                   <span className="text-[10px] text-[var(--muted-light)]">
@@ -2331,7 +2360,7 @@ export default function Products() {
                   onClick={() => handleTabChange(t.key)}
                   className={`border-b-2 px-3.5 py-2.5 font-semibold whitespace-nowrap transition-colors ${
                     detailTab === t.key
-                      ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                      ? 'border-[#1E3A5F] text-[#1E3A5F] dark:text-slate-200'
                       : 'border-transparent text-[var(--muted)] hover:text-[var(--ink)]'
                   }`}
                 >
@@ -2412,7 +2441,7 @@ export default function Products() {
                     </div>
                     <div className="flex justify-between pt-2">
                       <span className="text-[var(--muted)]">Selling Price</span>
-                      <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                      <span className="font-mono font-bold text-[#1E3A5F] dark:text-slate-200">
                         {formatCurrency(detailProduct.selling_price)}
                       </span>
                     </div>
@@ -2509,12 +2538,12 @@ export default function Products() {
                           </td>
                           <td>
                             <span
-                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${
+                              className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
                                 tx.transaction_type === 'sale'
-                                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300'
+                                  ? 'text-[#1E3A5F] dark:text-slate-300'
                                   : tx.transaction_type === 'purchase'
-                                    ? 'bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300'
-                                    : 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
+                                    ? 'text-teal-700 dark:text-teal-400'
+                                    : 'text-amber-700 dark:text-amber-400'
                               }`}
                             >
                               {tx.transaction_type}
@@ -2613,9 +2642,9 @@ export default function Products() {
                     key={mode.key}
                     type="button"
                     onClick={() => setAdjustMode(mode.key)}
-                    className={`rounded-xl border py-2 text-xs font-semibold transition ${
+                    className={`rounded-md border py-2 text-xs font-semibold transition ${
                       adjustMode === mode.key
-                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300'
+                        ? 'border-[#1E3A5F] bg-[#1E3A5F] text-white'
                         : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
                     }`}
                   >
@@ -2645,10 +2674,10 @@ export default function Products() {
             </FormField>
 
             {/* Preview of resulting stock */}
-            <div className="rounded-xl border border-[var(--line)] p-3 text-xs bg-[var(--surface)]">
+            <div className="rounded-md border border-[var(--line)] p-3 text-xs bg-[var(--surface)]">
               <div className="flex items-center justify-between">
                 <span className="text-[var(--muted)]">Resulting Stock:</span>
-                <span className="font-mono text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                <span className="font-mono text-sm font-bold text-[#1E3A5F] dark:text-slate-200">
                   {(() => {
                     const current = numVal(adjustProduct.current_stock)
                     const parsed = Number(adjustQty) || 0
@@ -2746,7 +2775,7 @@ export default function Products() {
               <button
                 type="button"
                 onClick={downloadSampleTemplate}
-                className="btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5 font-semibold text-indigo-600"
+                className="btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5 font-semibold text-[#1E3A5F]"
               >
                 <FileSpreadsheet size={14} />
                 Sample Template
@@ -2756,9 +2785,9 @@ export default function Products() {
 
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[var(--line)] bg-[var(--surface)] p-6 cursor-pointer hover:border-indigo-400 transition"
+            className="flex flex-col items-center justify-center rounded-md border-2 border-dashed border-[var(--line)] bg-[var(--surface)] p-6 cursor-pointer hover:border-[#1E3A5F] transition"
           >
-            <Upload size={28} className="text-indigo-600 mb-2" />
+            <Upload size={28} className="text-[#1E3A5F] mb-2" />
             <p className="text-sm font-semibold text-[var(--ink)]">
               {importFile ? importFile.name : 'Click to select CSV file'}
             </p>

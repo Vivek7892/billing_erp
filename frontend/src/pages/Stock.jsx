@@ -38,25 +38,25 @@ const STATUS_META = {
   in_stock: {
     label: 'In Stock',
     icon: CheckCircle,
-    text: 'text-teal-700 dark:text-teal-300 font-semibold',
-    soft: 'bg-teal-50 dark:bg-teal-950/40',
-    border: 'border-teal-200 dark:border-teal-800/60',
-    bar: 'bg-teal-500',
+    text: 'text-emerald-300 font-semibold',
+    soft: 'bg-emerald-950/40',
+    border: 'border-emerald-800/60',
+    bar: 'bg-emerald-500',
   },
   low_stock: {
     label: 'Low Stock',
     icon: AlertTriangle,
-    text: 'text-amber-700 dark:text-amber-300 font-bold',
-    soft: 'bg-amber-50 dark:bg-amber-950/40',
-    border: 'border-amber-200 dark:border-amber-800/60',
+    text: 'text-amber-300 font-bold',
+    soft: 'bg-amber-950/40',
+    border: 'border-amber-800/60',
     bar: 'bg-amber-500',
   },
   out_of_stock: {
     label: 'Out of Stock',
     icon: XCircle,
-    text: 'text-rose-700 dark:text-rose-300 font-bold',
-    soft: 'bg-rose-50 dark:bg-rose-950/40',
-    border: 'border-rose-200 dark:border-rose-800/60',
+    text: 'text-rose-300 font-bold',
+    soft: 'bg-rose-950/40',
+    border: 'border-rose-800/60',
     bar: 'bg-rose-500',
   },
 }
@@ -396,19 +396,6 @@ export default function Stock() {
               <Download size={14} />
               Export Stock
             </button>
-            <button
-              type="button"
-              onClick={load}
-              disabled={loading}
-              className="btn-secondary btn-base text-xs flex items-center gap-1.5"
-              title="Refresh balances"
-            >
-              <RefreshCw
-                size={14}
-                className={loading ? 'animate-spin text-indigo-600' : ''}
-              />
-              Refresh
-            </button>
           </div>
         }
       />
@@ -433,7 +420,7 @@ export default function Stock() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Total Products
               </span>
-              <Boxes size={13} className="text-indigo-600 dark:text-indigo-400" />
+              <Boxes size={13} className="text-[#1E3A5F] dark:text-slate-300" />
             </div>
             <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
               {metrics.totalItems}
@@ -514,9 +501,9 @@ export default function Stock() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Stock Valuation
               </span>
-              <Tag size={13} className="text-indigo-600 dark:text-indigo-400" />
+              <Tag size={13} className="text-[#1E3A5F] dark:text-slate-300" />
             </div>
-            <p className="mt-1 font-mono text-lg font-bold text-indigo-600 dark:text-indigo-400">
+            <p className="mt-1 font-mono text-lg font-bold text-[#1E3A5F] dark:text-slate-200">
               {fmtCurrency(metrics.totalStockValue)}
             </p>
             <p className="text-[10px] text-[var(--muted)]">
@@ -597,7 +584,7 @@ export default function Stock() {
               <button
                 type="button"
                 onClick={resetFilters}
-                className="btn-secondary h-11 w-full flex items-center justify-center gap-1 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                className="btn-secondary h-11 w-full flex items-center justify-center gap-1 text-xs text-rose-400 hover:bg-rose-950/40"
                 title="Clear all filters"
               >
                 <X size={14} />
@@ -623,9 +610,9 @@ export default function Stock() {
               key={tab.key}
               type="button"
               onClick={() => setFilter(tab.key)}
-              className={`rounded-lg px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors ${
+              className={`rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors ${
                 filter === tab.key
-                  ? 'bg-indigo-600 text-white font-semibold'
+                  ? 'bg-[#1E3A5F] text-white font-semibold'
                   : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
               }`}
             >
@@ -772,7 +759,7 @@ export default function Stock() {
                       <button
                         type="button"
                         onClick={() => openHistory(p)}
-                        className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-elevated)] flex items-center gap-1"
+                        className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-elevated)] flex items-center gap-1"
                       >
                         <History size={12} />
                         History
@@ -780,7 +767,7 @@ export default function Stock() {
                       <button
                         type="button"
                         onClick={() => openAdjust(p)}
-                        className="rounded-lg bg-indigo-600 text-white px-3 py-1 text-xs font-semibold hover:bg-indigo-700 flex items-center gap-1"
+                        className="rounded-md bg-[#1E3A5F] text-white px-3 py-1 text-xs font-semibold hover:bg-[#162F4D] flex items-center gap-1"
                       >
                         <SlidersHorizontal size={12} />
                         Adjust Stock
@@ -1021,9 +1008,9 @@ export default function Stock() {
                     key={m.key}
                     type="button"
                     onClick={() => setAdjustMode(m.key)}
-                    className={`rounded-xl border py-2 text-xs font-semibold transition ${
+                    className={`rounded-md border py-2 text-xs font-semibold transition ${
                       adjustMode === m.key
-                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300'
+                        ? 'border-[#1E3A5F] bg-[#1E3A5F] text-white'
                         : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
                     }`}
                   >
@@ -1049,10 +1036,10 @@ export default function Stock() {
             </div>
 
             {/* Projected Result */}
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-xs">
+            <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-3 text-xs">
               <div className="flex items-center justify-between">
                 <span className="text-[var(--muted)]">Resulting Stock:</span>
-                <span className="font-mono text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                <span className="font-mono text-sm font-bold text-[#1E3A5F] dark:text-slate-200">
                   {(() => {
                     const cur = Number(adjustProduct.current_stock || 0)
                     const qVal = Number(adjustQty) || 0
@@ -1182,12 +1169,12 @@ export default function Stock() {
                       </td>
                       <td>
                         <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${
+                          className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
                             tx.transaction_type === 'sale'
-                              ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300'
+                              ? 'text-[#1E3A5F] dark:text-slate-300'
                               : tx.transaction_type === 'purchase'
-                                ? 'bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300'
-                                : 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'
+                                ? 'text-teal-700 dark:text-teal-400'
+                                : 'text-amber-700 dark:text-amber-400'
                           }`}
                         >
                           {tx.transaction_type}

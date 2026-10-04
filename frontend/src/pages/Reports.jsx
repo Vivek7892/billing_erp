@@ -230,20 +230,6 @@ export default function Reports() {
               <FileSpreadsheet size={14} className="text-teal-600" />
               {exporting === 'xlsx' ? 'Generating...' : 'Export Excel'}
             </button>
-
-            <button
-              type="button"
-              onClick={load}
-              disabled={loading}
-              className="btn-secondary btn-base text-xs flex items-center gap-1.5"
-              title="Reload report data"
-            >
-              <RefreshCw
-                size={14}
-                className={loading ? 'animate-spin text-indigo-600' : ''}
-              />
-              Refresh
-            </button>
           </div>
         }
       />
@@ -262,7 +248,7 @@ export default function Reports() {
               onClick={() => setTab(t.key)}
               className={`flex items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold whitespace-nowrap transition-all ${
                 isActive
-                  ? 'bg-indigo-600 text-white shadow-xs'
+                  ? 'bg-[#1E3A5F] text-white shadow-xs'
                   : 'border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
               }`}
             >
@@ -303,9 +289,9 @@ export default function Reports() {
                     setStart(fDate)
                     setEnd(tDate)
                   }}
-                  className={`rounded-lg px-2.5 py-1 font-medium whitespace-nowrap transition-colors ${
+                  className={`rounded-md px-2.5 py-1 font-medium whitespace-nowrap transition-colors ${
                     start === fDate && end === tDate
-                      ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 font-semibold'
+                      ? 'bg-[#1E3A5F] text-white font-semibold'
                       : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
                   }`}
                 >
@@ -420,7 +406,7 @@ function SalesReportView({ data }) {
             </thead>
             <tbody>
               <tr>
-                <td className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-sm">
+                <td className="font-mono font-bold text-[#1E3A5F] dark:text-slate-200 text-sm">
                   {fmtCurrency(summary.total_sales)}
                 </td>
                 <td className="font-mono font-bold text-teal-600 dark:text-teal-400 text-sm">
@@ -484,9 +470,9 @@ function SalesReportView({ data }) {
                 type="monotone"
                 dataKey="total"
                 name="Sales"
-                stroke="#4f46e5"
+                stroke="#1E3A5F"
                 strokeWidth={2.5}
-                dot={{ r: 3, fill: '#4f46e5' }}
+                dot={{ r: 3, fill: '#1E3A5F' }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -608,7 +594,7 @@ function ProfitReportView({ data }) {
             </thead>
             <tbody>
               <tr>
-                <td className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-sm">
+                <td className="font-mono font-bold text-[#1E3A5F] dark:text-slate-200 text-sm">
                   {fmtCurrency(data.total_revenue)}
                 </td>
                 <td className="font-mono font-bold text-amber-600 dark:text-amber-400 text-sm">
@@ -711,10 +697,10 @@ function GSTReportView({ data }) {
                 <td className="font-mono font-bold text-[var(--ink)] text-sm">
                   {fmtCurrency(data.total_taxable)}
                 </td>
-                <td className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-sm">
+                <td className="font-mono font-bold text-[#1E3A5F] dark:text-slate-200 text-sm">
                   {fmtCurrency(data.total_cgst || Number(data.total_tax || 0) / 2)}
                 </td>
-                <td className="font-mono font-bold text-indigo-600 dark:text-indigo-400 text-sm">
+                <td className="font-mono font-bold text-[#1E3A5F] dark:text-slate-200 text-sm">
                   {fmtCurrency(data.total_sgst || Number(data.total_tax || 0) / 2)}
                 </td>
                 <td className="font-mono font-bold text-teal-600 dark:text-teal-400 text-sm">

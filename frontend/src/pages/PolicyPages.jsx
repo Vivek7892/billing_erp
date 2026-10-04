@@ -53,7 +53,7 @@ export function PolicyPage({ type }) {
 
   if (loading) return (
     <div className="flex items-center justify-center py-20">
-      <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+      <div className="w-8 h-8 border-4 border-slate-200 border-t-[#1E3A5F] rounded-full animate-spin" />
     </div>
   )
 
@@ -62,8 +62,8 @@ export function PolicyPage({ type }) {
       <PageHeader title={config.title} subtitle={shopName} />
       <Card className="p-6 max-w-2xl">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-md bg-indigo-50 dark:bg-indigo-950/60 flex items-center justify-center">
-            <Icon size={20} className="text-indigo-600 dark:text-indigo-400" />
+          <div className="w-10 h-10 rounded-md bg-[var(--surface-elevated)] border border-[var(--line)] flex items-center justify-center">
+            <Icon size={20} className="text-[#1E3A5F] dark:text-slate-300" />
           </div>
           <h2 className="text-lg font-semibold text-[var(--ink)]">{config.title}</h2>
         </div>
@@ -77,7 +77,7 @@ export function PolicyPage({ type }) {
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-medium"
+              className="inline-flex items-center gap-2 text-[#1E3A5F] dark:text-slate-300 hover:underline text-sm font-semibold"
             >
               <ExternalLink size={14} />
               View {config.title}

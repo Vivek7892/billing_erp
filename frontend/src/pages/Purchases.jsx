@@ -5,8 +5,9 @@ import toast from 'react-hot-toast'
 import {
   Plus, Trash2, Printer, Package, ChevronDown, ChevronRight,
   Building2, Phone, Mail, MapPin, Edit2, Search, Save,
-  Wallet, Clock3, ClipboardList, TrendingUp, Filter
+  Wallet, Clock3, ClipboardList, TrendingUp, Filter, MessageCircle
 } from 'lucide-react'
+import CommunicationHistory from '../components/CommunicationHistory'
 
 const fmt = v => `₹${Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
 const fmt2 = v => Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -147,8 +148,8 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
     <div className={`group overflow-hidden ${cardCls} ${cardHover}`}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5">
         <div className="flex items-start gap-3.5 min-w-0">
-          <div className="w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200/80 dark:border-indigo-800/60 flex items-center justify-center flex-shrink-0 text-indigo-600 dark:text-indigo-400 shadow-sm">
-            <Building2 size={20} />
+          <div className="w-10 h-10 rounded-md bg-slate-100 dark:bg-slate-800 border border-[var(--line)] flex items-center justify-center flex-shrink-0 text-[#1E3A5F] dark:text-slate-300">
+            <Building2 size={18} />
           </div>
           <div className="min-w-0">
             <div className="font-bold text-base text-[var(--ink)] truncate">{supplier.name}</div>
@@ -176,7 +177,7 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
 
         <div className="flex w-full items-center gap-2 flex-wrap sm:w-auto sm:flex-nowrap sm:flex-shrink-0">
           {supplier.outstanding_amount > 0 && (
-            <span className="text-xs bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800/60 text-rose-600 dark:text-rose-400 font-semibold px-2.5 py-1 rounded-lg">
+            <span className="text-xs bg-rose-950/40 border border-rose-800/50 text-rose-300 font-semibold px-2.5 py-1 rounded-lg">
               Due: {fmt(supplier.outstanding_amount)}
             </span>
           )}
@@ -186,7 +187,7 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
           <button onClick={() => onEdit(supplier)} className="icon-btn hover:bg-[var(--surface-hover)] text-[var(--ink-secondary)]" title="Edit supplier">
             <Edit2 size={14} />
           </button>
-          <button onClick={() => onDelete(supplier)} className="icon-btn hover:bg-rose-50 dark:hover:bg-rose-950/50 text-rose-500" title="Delete supplier">
+          <button onClick={() => onDelete(supplier)} className="icon-btn hover:bg-rose-950/50 text-rose-400" title="Delete supplier">
             <Trash2 size={14} />
           </button>
           <button onClick={() => setExpanded(x => !x)} className="icon-btn hover:bg-[var(--surface-hover)] text-[var(--ink-secondary)]" title={expanded ? 'Collapse' : 'Expand products'}>
@@ -256,6 +257,27 @@ export default function Purchases() {
   const [supSearch, setSupSearch] = useState('')
   const [poSearch, setPoSearch] = useState('')
   const [expandedPO, setExpandedPO] = useState(null)
+  const [sendingPO, setSendingPO] = useState(null)
+  const [poCommsKey, setPoCommsKey] = useState(0)
+
+  const sendConfirmation = async (p, channel = 'whatsapp') => {
+    setSendingPO(p.id)
+    const popup = channel === 'whatsapp' ? window.open('', '_blank') : null
+    try {
+      const res = await api.post(`/purchases/${p.id}/send-confirmation/`, { channel })
+      if (res.data?.whatsapp_url && channel === 'whatsapp') {
+        if (popup) popup.location.href = res.data.whatsapp_url
+        else window.location.href = res.data.whatsapp_url
+      }
+      toast.success('PO confirmation sent via WhatsApp!')
+      setPoCommsKey(k => k + 1)
+    } catch (err) {
+      popup?.close()
+      toast.error(err?.response?.data?.error || 'Failed to send confirmation')
+    } finally {
+      setSendingPO(null)
+    }
+  }
 
   const load = () => {
     setLoading(true)
@@ -364,15 +386,13 @@ export default function Purchases() {
       value: fmt(purchaseSummary.total),
       hint: 'Across all purchase orders',
       icon: TrendingUp,
-      iconClass: 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/80 dark:border-indigo-800/60',
-      accent: 'border-l-4 border-l-indigo-500',
+      accent: 'border-l-4 border-l-[#1E3A5F]',
     },
     {
       label: 'Amount Paid',
       value: fmt(purchaseSummary.paid),
       hint: 'Settled with suppliers',
       icon: Wallet,
-      iconClass: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60',
       accent: 'border-l-4 border-l-emerald-500',
     },
     {
@@ -380,7 +400,6 @@ export default function Purchases() {
       value: fmt(purchaseSummary.due),
       hint: purchaseSummary.due > 0 ? 'Requires payment attention' : 'No outstanding balance',
       icon: Clock3,
-      iconClass: 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200/80 dark:border-amber-800/60',
       accent: 'border-l-4 border-l-amber-500',
     },
     {
@@ -388,7 +407,6 @@ export default function Purchases() {
       value: purchaseSummary.orders,
       hint: `${suppliers.length} registered suppliers`,
       icon: ClipboardList,
-      iconClass: 'bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 border border-sky-200/80 dark:border-sky-800/60',
       accent: 'border-l-4 border-l-sky-500',
     },
   ]
@@ -412,7 +430,7 @@ export default function Purchases() {
 
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-indigo-600 dark:text-indigo-400">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#1E3A5F] dark:text-slate-300">
             Procurement workspace
           </p>
           <p className="mt-1 text-sm text-[var(--muted)]">
@@ -511,7 +529,7 @@ export default function Purchases() {
                               className="cursor-pointer transition-colors hover:bg-[var(--surface-hover)]"
                               onClick={() => setExpandedPO(expandedPO === p.id ? null : p.id)}
                             >
-                              <td className="font-mono font-bold text-indigo-600 dark:text-indigo-400">PO-{p.id}</td>
+                              <td className="font-mono font-bold text-[#1E3A5F] dark:text-slate-200">PO-{p.id}</td>
                               <td className="font-semibold text-[var(--ink)]">{p.supplier_name || '—'}</td>
                               <td className="text-sm text-[var(--muted)]">{p.invoice_number || '—'}</td>
                               <td className="text-sm whitespace-nowrap text-[var(--ink-secondary)]">{fmtDate(p.purchase_date)}</td>
@@ -521,13 +539,26 @@ export default function Purchases() {
                                 {fmt(dueOf(p))}
                               </td>
                               <td><Badge status={p.payment_status} /></td>
-                              <td className="text-right">
+                              <td className="text-right whitespace-nowrap">
+                                <button
+                                  onClick={e => {
+                                    e.stopPropagation()
+                                    sendConfirmation(p)
+                                  }}
+                                  disabled={sendingPO === p.id}
+                                  className="btn-secondary text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/50 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold mr-1.5"
+                                  title="Send PO Confirmation via WhatsApp"
+                                >
+                                  <MessageCircle size={13} />
+                                  <span className="hidden sm:inline">{sendingPO === p.id ? 'Sending…' : 'Send Confirmation'}</span>
+                                </button>
+
                                 <button
                                   onClick={e => { e.stopPropagation(); printPO(p, suppliers) }}
-                                  className="icon-btn transition-colors hover:bg-indigo-50 dark:hover:bg-indigo-950/60 hover:text-indigo-600 dark:hover:text-indigo-400 text-[var(--muted)]"
+                                  className="icon-btn"
                                   title="Print purchase order"
                                 >
-                                  <Printer size={15} />
+                                  <Printer size={14} />
                                 </button>
                               </td>
                             </tr>
@@ -573,6 +604,14 @@ export default function Purchases() {
                                       <span className="font-semibold text-[var(--ink)]">Notes: </span>{p.notes}
                                     </p>
                                   )}
+
+                                  <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-xs">
+                                    <CommunicationHistory
+                                      referenceType="purchase"
+                                      referenceId={p.id}
+                                      key={poCommsKey}
+                                    />
+                                  </div>
                                 </td>
                               </tr>
                             )}
@@ -702,7 +741,7 @@ export default function Purchases() {
               <h3 className="text-sm font-bold text-[var(--ink)]">Items</h3>
               <button
                 onClick={() => setForm(p => ({ ...p, items: [...p.items, { product: '', quantity: 1, purchase_price: '', gst_percent: 0, total: 0 }] }))}
-                className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1.5"
+                className="text-xs font-semibold text-[#1E3A5F] dark:text-slate-300 hover:underline flex items-center gap-1.5"
               >
                 <Plus size={13} /> Add Item
               </button>
@@ -811,7 +850,7 @@ export default function Purchases() {
                 </div>
                 <div className="flex items-center justify-between border-t border-[var(--line)] pt-3">
                   <dt className="font-bold text-[var(--ink)]">Grand total</dt>
-                  <dd className="text-xl font-extrabold text-indigo-600 dark:text-indigo-400 tabular-nums">₹{fmt2(grandTotal)}</dd>
+                  <dd className="text-xl font-extrabold text-[#1E3A5F] dark:text-slate-200 tabular-nums">₹{fmt2(grandTotal)}</dd>
                 </div>
                 <div className="flex items-center justify-between">
                   <dt className="text-[var(--muted)]">Paid</dt>

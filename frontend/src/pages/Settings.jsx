@@ -83,6 +83,66 @@ function Txt({ value, onChange, rows = 3, placeholder }) {
   )
 }
 
+const INDIAN_STATES = [
+  'Tamil Nadu (33)',
+  'Karnataka (29)',
+  'Kerala (32)',
+  'Andhra Pradesh (37)',
+  'Telangana (36)',
+  'Maharashtra (27)',
+  'Delhi (07)',
+  'Gujarat (24)',
+  'Uttar Pradesh (09)',
+  'West Bengal (19)',
+  'Rajasthan (08)',
+  'Madhya Pradesh (23)',
+  'Bihar (10)',
+  'Punjab (03)',
+  'Haryana (06)',
+  'Odisha (21)',
+  'Jharkhand (20)',
+  'Assam (18)',
+  'Chhattisgarh (22)',
+  'Uttarakhand (05)',
+  'Himachal Pradesh (02)',
+  'Goa (30)',
+  'Jammu & Kashmir (01)',
+  'Puducherry (34)',
+  'Chandigarh (04)',
+  'Tripura (16)',
+  'Manipur (14)',
+  'Meghalaya (17)',
+  'Nagaland (13)',
+  'Mizoram (15)',
+  'Sikkim (11)',
+  'Arunachal Pradesh (12)',
+  'Ladakh (38)',
+  'Dadra & Nagar Haveli and Daman & Diu (26)',
+  'Andaman & Nicobar Islands (35)',
+  'Lakshadweep (31)',
+  'Other Territory (97)',
+]
+
+function StateInput({ value, onChange, placeholder = 'Tamil Nadu (33)' }) {
+  return (
+    <>
+      <input
+        type="text"
+        list="indian-states-settings-list"
+        className="input w-full h-11 text-xs sm:text-sm font-medium"
+        value={value || ''}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+      />
+      <datalist id="indian-states-settings-list">
+        {INDIAN_STATES.map(st => (
+          <option key={st} value={st} />
+        ))}
+      </datalist>
+    </>
+  )
+}
+
 // Formal clean checkbox row (replaces oversized weird toggle cards)
 function FieldCheckbox({ checked, onChange, label, description }) {
   return (
@@ -91,10 +151,10 @@ function FieldCheckbox({ checked, onChange, label, description }) {
         type="checkbox"
         checked={Boolean(checked)}
         onChange={onChange}
-        className="mt-0.5 h-4 w-4 rounded border-[var(--line)] text-indigo-600 focus:ring-indigo-500 accent-indigo-600 cursor-pointer shrink-0"
+        className="mt-0.5 h-4 w-4 rounded border-[var(--line)] text-[#1E3A5F] focus:ring-[#1E3A5F] accent-[#1E3A5F] cursor-pointer shrink-0"
       />
       <div className="min-w-0">
-        <span className="block text-xs font-semibold text-[var(--ink)] group-hover:text-indigo-600 transition-colors">
+        <span className="block text-xs font-semibold text-[var(--ink)] group-hover:text-[#1E3A5F] transition-colors">
           {label}
         </span>
         {description && (
@@ -157,13 +217,17 @@ export default function Settings() {
   const save = async () => {
     setSaving(true)
     try {
-      await api.post('/settings/bulk_update/', {
+      const pos = s.place_of_supply || s.shop_state || ''
+      const payload = {
         ...s,
+        place_of_supply: pos,
+        shop_state: pos,
         reason: 'Updated store configuration from Settings panel',
-      })
+      }
+      await api.post('/settings/bulk_update/', payload)
       toast.success('Settings saved successfully')
       window.dispatchEvent(
-        new CustomEvent('shop-settings-updated', { detail: s }),
+        new CustomEvent('shop-settings-updated', { detail: { ...s, place_of_supply: pos, shop_state: pos } })
       )
     } catch (err) {
       const msg = err.response?.data?.detail || err.response?.data?.error || 'Failed to save settings'
@@ -267,7 +331,7 @@ export default function Settings() {
                 onClick={() => setTab(id)}
                 className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-semibold transition-all ${
                   tab === id
-                    ? 'bg-indigo-600 text-white shadow-xs'
+                    ? 'bg-[#1E3A5F] text-white shadow-xs'
                     : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
                 }`}
               >
@@ -330,7 +394,7 @@ export default function Settings() {
                           type="button"
                           onClick={removeLogo}
                           disabled={removing}
-                          className="btn-secondary btn-sm text-rose-600 hover:bg-rose-50 flex items-center gap-1"
+                          className="btn-secondary btn-sm text-rose-400 hover:bg-rose-950/40 flex items-center gap-1"
                         >
                           <Trash2 size={12} />
                           Remove
@@ -403,10 +467,13 @@ export default function Settings() {
                   />
                 </FormField>
 
-                <FormField label="State / Place of Business">
-                  <Inp
-                    value={s.shop_state}
-                    onChange={v => set('shop_state', v)}
+                <FormField label="State / Place of Supply">
+                  <StateInput
+                    value={s.place_of_supply || s.shop_state}
+                    onChange={v => {
+                      set('place_of_supply', v)
+                      set('shop_state', v)
+                    }}
                     placeholder="Tamil Nadu (33)"
                   />
                 </FormField>
@@ -753,6 +820,17 @@ export default function Settings() {
                   />
                 </FormField>
 
+                <FormField label="Default Place of Supply" hint="Printed on invoices and used to determine CGST/SGST vs IGST">
+                  <StateInput
+                    value={s.place_of_supply || s.shop_state}
+                    onChange={v => {
+                      set('place_of_supply', v)
+                      set('shop_state', v)
+                    }}
+                    placeholder="Tamil Nadu (33)"
+                  />
+                </FormField>
+
                 <FormField label="Invoice Round-off Rule">
                   <Sel
                     value={s.round_off || 'nearest'}
@@ -915,7 +993,7 @@ export default function Settings() {
                   Interactive preview reflecting your current profile,
                   visibility settings, and layout options.
                 </span>
-                <span className="font-semibold text-indigo-600">
+                <span className="font-semibold text-[#1E3A5F] dark:text-slate-200">
                   Real-time Simulation
                 </span>
               </div>

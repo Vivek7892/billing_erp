@@ -201,9 +201,9 @@ export default function InvoiceDocument({
 
   // Digital Bill QR Code ("Scan to View Bill")
   const showDigitalBillQr = isTrue(s.enable_invoice_qr, true)
-  const digitalBillUrl = inv.public_token
-    ? `${window.location.origin}/bill/${inv.public_token}`
-    : `${window.location.origin}/bill/${inv.id || 'preview'}`
+  const digitalBillUrl = inv.short_url
+    || (inv.public_token ? `${window.location.origin}/bill/${inv.public_token}` : `${window.location.origin}/bill/${inv.id || 'preview'}`)
+    || (inv.id ? `http://127.0.0.1:8000/s/${inv.public_token ? inv.public_token.slice(0, 6) : inv.id}/` : '')
 
   // Notes, Terms & Footer
   const notesText = inv.notes || s.invoice_notes || ''

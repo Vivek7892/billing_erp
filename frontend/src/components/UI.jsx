@@ -13,13 +13,13 @@ export function Card({
   return (
     <div
       className={[
-        'rounded-lg border border-[var(--line)]',
+        'rounded-[12px] border border-[var(--line)]',
         'bg-[var(--surface)]',
-        'shadow-[var(--shadow-xs)]',
+        'shadow-[0_1px_2px_rgba(15,23,42,0.04)]',
         'transition-all duration-150',
-        padding ? 'p-4 sm:p-5' : '',
+        padding ? 'p-5 sm:p-6' : '',
         hover
-          ? 'hover:border-[var(--line-strong)]'
+          ? 'hover:border-[var(--line-strong)] hover:shadow-xs'
           : '',
         className,
       ].join(' ')}
@@ -116,38 +116,14 @@ export function StatCard({
   const Tag = onClick ? 'button' : 'div'
 
   const colorStyles = {
-    blue: {
-      icon: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800/60',
-      accent: 'border-l-indigo-600',
-    },
-    indigo: {
-      icon: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800/60',
-      accent: 'border-l-indigo-600',
-    },
-    teal: {
-      icon: 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-800/60',
-      accent: 'border-l-teal-600',
-    },
-    green: {
-      icon: 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-800/60',
-      accent: 'border-l-teal-600',
-    },
-    orange: {
-      icon: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800/60',
-      accent: 'border-l-amber-600',
-    },
-    red: {
-      icon: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800/60',
-      accent: 'border-l-rose-600',
-    },
-    purple: {
-      icon: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800/60',
-      accent: 'border-l-indigo-600',
-    },
-    gray: {
-      icon: 'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-700',
-      accent: 'border-l-slate-400',
-    },
+    blue: { icon: 'bg-slate-100 text-[#1E3A5F] border-[#D7DEE7] dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700', accent: 'border-l-[#1E3A5F]' },
+    indigo: { icon: 'bg-slate-100 text-[#1E3A5F] border-[#D7DEE7] dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700', accent: 'border-l-[#1E3A5F]' },
+    teal: { icon: 'bg-teal-50 text-[#0F766E] border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800/40', accent: 'border-l-[#0F766E]' },
+    green: { icon: 'bg-emerald-50 text-[#15803D] border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/40', accent: 'border-l-[#15803D]' },
+    orange: { icon: 'bg-amber-50 text-[#B45309] border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40', accent: 'border-l-[#B45309]' },
+    red: { icon: 'bg-red-50 text-[#B91C1C] border-red-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/40', accent: 'border-l-[#B91C1C]' },
+    purple: { icon: 'bg-slate-100 text-[#1E3A5F] border-[#D7DEE7] dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700', accent: 'border-l-[#1E3A5F]' },
+    gray: { icon: 'bg-slate-100 text-[#475569] border-[#D7DEE7] dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-700/60', accent: 'border-l-[#475569]' },
   }
 
   const selectedColor = colorStyles[color] || colorStyles.indigo || colorStyles.blue
@@ -300,8 +276,10 @@ export function Badge({ status, label: customLabel }) {
     completed: 'badge-completed',
     in_stock: 'badge-in-stock',
     active: 'badge-active',
+    confirmed: 'badge-confirmed',
     pending: 'badge-pending',
     partial: 'badge-partial',
+    partially_paid: 'badge-pending',
     low_stock: 'badge-low-stock',
     credit: 'badge-credit',
     overdue: 'badge-overdue',
@@ -309,8 +287,10 @@ export function Badge({ status, label: customLabel }) {
     out_of_stock: 'badge-out-of-stock',
     cancelled: 'badge-cancelled',
     refunded: 'badge-refunded',
-    draft: 'status-neutral',
-    inactive: 'status-neutral',
+    unpaid: 'badge-unpaid',
+    draft: 'badge-draft',
+    inactive: 'badge-inactive',
+    archived: 'badge-archived',
   }
 
   const badgeClass = classMap[statusKey] || 'status-neutral'
@@ -459,7 +439,7 @@ export function Modal({
         className={[
           'flex max-h-[95dvh] w-full flex-col',
           sizes[size] || sizes.md,
-          'overflow-hidden rounded-t-lg sm:max-h-[90vh] sm:rounded-lg',
+          'overflow-hidden rounded-t-[12px] sm:max-h-[90vh] sm:rounded-[12px]',
           'border border-[var(--line)]',
           'bg-[var(--surface)]',
           'shadow-[var(--shadow-modal)]',
@@ -530,13 +510,13 @@ export function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-lg border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-modal)] sm:p-6">
+      <div className="w-full max-w-sm rounded-[12px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-modal)] sm:p-6">
         <div
           className={[
             'mb-4 flex h-11 w-11 items-center justify-center rounded-xl border',
             danger
-              ? 'border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-800/60 dark:bg-rose-950/40 dark:text-rose-400'
-              : 'border-indigo-200 bg-indigo-50 text-indigo-600 dark:border-indigo-800/60 dark:bg-indigo-950/40 dark:text-indigo-400',
+              ? 'border-red-200 bg-red-50 text-[#B91C1C] dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-400'
+              : 'border-[#D7DEE7] bg-slate-100 text-[#1E3A5F] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200',
           ].join(' ')}
         >
           {danger ? (
@@ -805,7 +785,7 @@ export function ErrorState({
       role="alert"
       className="flex flex-col items-center justify-center px-6 py-14 text-center"
     >
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 text-rose-600">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-800/50 dark:bg-rose-950/40 dark:text-rose-400">
         <svg
           width="24"
           height="24"
@@ -869,7 +849,7 @@ export function SuccessState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-600">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-800/50 dark:bg-emerald-950/40 dark:text-emerald-400">
         <svg
           width="24"
           height="24"
@@ -1066,24 +1046,24 @@ export function AlertBanner({
 }) {
   const styles = {
     info: {
-      wrapper: 'border-indigo-200 bg-indigo-50 dark:border-indigo-800/60 dark:bg-indigo-950/30',
-      icon: 'text-indigo-700 dark:text-indigo-400',
-      text: 'text-indigo-950 dark:text-indigo-200',
+      wrapper: 'border-blue-200 bg-blue-50/70 dark:border-blue-900/50 dark:bg-blue-950/40',
+      icon: 'text-[#2563EB] dark:text-blue-400',
+      text: 'text-blue-950 dark:text-blue-200',
     },
     success: {
-      wrapper: 'border-teal-200 bg-teal-50 dark:border-teal-800/60 dark:bg-teal-950/30',
-      icon: 'text-teal-700 dark:text-teal-400',
-      text: 'text-teal-950 dark:text-teal-200',
+      wrapper: 'border-emerald-200 bg-emerald-50 dark:border-teal-800/50 dark:bg-teal-950/40',
+      icon: 'text-emerald-600 dark:text-teal-400',
+      text: 'text-emerald-900 dark:text-teal-200',
     },
     warning: {
-      wrapper: 'border-amber-200 bg-amber-50 dark:border-amber-800/60 dark:bg-amber-950/30',
-      icon: 'text-amber-700 dark:text-amber-400',
-      text: 'text-amber-950 dark:text-amber-200',
+      wrapper: 'border-amber-200 bg-amber-50 dark:border-amber-800/50 dark:bg-amber-950/40',
+      icon: 'text-amber-600 dark:text-amber-400',
+      text: 'text-amber-900 dark:text-amber-200',
     },
     danger: {
-      wrapper: 'border-rose-200 bg-rose-50 dark:border-rose-800/60 dark:bg-rose-950/30',
-      icon: 'text-rose-700 dark:text-rose-400',
-      text: 'text-rose-950 dark:text-rose-200',
+      wrapper: 'border-red-200 bg-red-50 dark:border-rose-800/50 dark:bg-rose-950/40',
+      icon: 'text-red-600 dark:text-rose-400',
+      text: 'text-red-900 dark:text-rose-200',
     },
   }
 
@@ -1158,3 +1138,458 @@ export function AlertBanner({
     </div>
   )
 }
+
+/* ============================================================
+   GLOBAL BUTTON COMPONENTS (Standard Height: 40px, Radius: 8px)
+============================================================ */
+
+export function PrimaryButton({
+  children,
+  className = '',
+  icon: Icon,
+  loading = false,
+  disabled = false,
+  ...props
+}) {
+  return (
+    <button
+      className={`btn-base btn-primary ${className}`}
+      disabled={disabled || loading}
+      {...props}
+    >
+      {loading ? <InlineSpinner className="w-4 h-4 mr-1 text-white" /> : Icon && <Icon size={16} />}
+      <span>{children}</span>
+    </button>
+  )
+}
+
+export function SecondaryButton({
+  children,
+  className = '',
+  icon: Icon,
+  loading = false,
+  disabled = false,
+  ...props
+}) {
+  return (
+    <button
+      className={`btn-base btn-secondary ${className}`}
+      disabled={disabled || loading}
+      {...props}
+    >
+      {loading ? <InlineSpinner className="w-4 h-4 mr-1 text-[var(--ink)]" /> : Icon && <Icon size={16} />}
+      <span>{children}</span>
+    </button>
+  )
+}
+
+export function DangerButton({
+  children,
+  className = '',
+  icon: Icon,
+  loading = false,
+  disabled = false,
+  ...props
+}) {
+  return (
+    <button
+      className={`btn-base btn-danger ${className}`}
+      disabled={disabled || loading}
+      {...props}
+    >
+      {loading ? <InlineSpinner className="w-4 h-4 mr-1 text-white" /> : Icon && <Icon size={16} />}
+      <span>{children}</span>
+    </button>
+  )
+}
+
+export function SuccessButton({
+  children,
+  className = '',
+  icon: Icon,
+  loading = false,
+  disabled = false,
+  ...props
+}) {
+  return (
+    <button
+      className={`btn-base btn-success ${className}`}
+      disabled={disabled || loading}
+      {...props}
+    >
+      {loading ? <InlineSpinner className="w-4 h-4 mr-1 text-white" /> : Icon && <Icon size={16} />}
+      <span>{children}</span>
+    </button>
+  )
+}
+
+export function WarningButton({
+  children,
+  className = '',
+  icon: Icon,
+  loading = false,
+  disabled = false,
+  ...props
+}) {
+  return (
+    <button
+      className={`btn-base btn-warning ${className}`}
+      disabled={disabled || loading}
+      {...props}
+    >
+      {loading ? <InlineSpinner className="w-4 h-4 mr-1 text-white" /> : Icon && <Icon size={16} />}
+      <span>{children}</span>
+    </button>
+  )
+}
+
+export function IconButton({
+  icon: Icon,
+  label,
+  className = '',
+  danger = false,
+  disabled = false,
+  ...props
+}) {
+  return (
+    <button
+      type="button"
+      className={`icon-btn ${danger ? 'danger' : ''} ${className}`}
+      title={label}
+      aria-label={label}
+      disabled={disabled}
+      {...props}
+    >
+      {Icon && <Icon size={16} />}
+    </button>
+  )
+}
+
+/* ============================================================
+   STATUS BADGE (Strict Semantic Mapping)
+   Paid / Active / In Stock / Operational = Green
+   Pending / Partial / Low Stock / Due = Amber
+   Failed / Cancelled / Out of Stock / Overdue = Red
+   Draft / Authorized / Information = Blue
+   Inactive / Archived = Gray
+============================================================ */
+
+export function StatusBadge({ status, label: customLabel }) {
+  const statusKey = String(status || '').toLowerCase().trim().replace(/[\s-]+/g, '_')
+
+  const classMap = {
+    // Green
+    paid: 'badge-paid',
+    completed: 'badge-completed',
+    active: 'badge-active',
+    in_stock: 'badge-in-stock',
+    confirmed: 'badge-confirmed',
+    operational: 'badge-operational',
+    success: 'badge-paid',
+    settled: 'badge-paid',
+
+    // Amber
+    pending: 'badge-pending',
+    partial: 'badge-partial',
+    partially_paid: 'badge-partial',
+    low_stock: 'badge-low-stock',
+    due: 'badge-due',
+    warning: 'badge-pending',
+
+    // Red
+    failed: 'badge-failed',
+    cancelled: 'badge-cancelled',
+    canceled: 'badge-cancelled',
+    out_of_stock: 'badge-out-of-stock',
+    overdue: 'badge-overdue',
+    credit: 'badge-credit',
+    refunded: 'badge-refunded',
+    unpaid: 'badge-unpaid',
+    danger: 'badge-failed',
+
+    // Blue
+    draft: 'badge-draft',
+    authorized: 'badge-authorized',
+    info: 'badge-info',
+    information: 'badge-info',
+
+    // Gray
+    inactive: 'badge-inactive',
+    archived: 'badge-archived',
+    neutral: 'badge-inactive',
+  }
+
+  const badgeClass = classMap[statusKey] || 'status-neutral'
+  const displayLabel =
+    customLabel ||
+    statusKey.replace(/_/g, ' ') ||
+    'Unknown'
+
+  return (
+    <span
+      className={[
+        'inline-flex items-center gap-1.5',
+        'rounded-full px-2.5 py-0.5',
+        'text-[11px] font-semibold capitalize',
+        'whitespace-nowrap transition-colors',
+        badgeClass,
+      ].join(' ')}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-80" />
+      {displayLabel}
+    </span>
+  )
+}
+
+/* ============================================================
+   SEARCH BAR (With Ctrl+K and clear button)
+============================================================ */
+
+export function SearchBar({
+  value,
+  onChange,
+  placeholder = 'Search products, customers, invoices… (Ctrl+K)',
+  className = '',
+  onClear,
+}) {
+  return (
+    <div className={`relative flex-1 min-w-[200px] ${className}`}>
+      <svg
+        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]"
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.3-4.3" />
+      </svg>
+      <input
+        type="text"
+        value={value || ''}
+        onChange={e => onChange?.(e.target.value)}
+        placeholder={placeholder}
+        className="h-10 w-full pl-9 pr-8 text-xs rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] placeholder:text-[var(--placeholder)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-all"
+      />
+      {value ? (
+        <button
+          type="button"
+          onClick={() => {
+            onChange?.('')
+            onClear?.()
+          }}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--ink)] p-1 text-xs"
+          aria-label="Clear search"
+        >
+          ✕
+        </button>
+      ) : (
+        <kbd className="hidden sm:inline-flex absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] bg-[var(--surface-elevated)] border border-[var(--line)] rounded">
+          Ctrl+K
+        </kbd>
+      )}
+    </div>
+  )
+}
+
+/* ============================================================
+   FILTER BAR (Structured toolbar for search & filters)
+============================================================ */
+
+export function FilterBar({ children, className = '' }) {
+  return (
+    <div className={`flex flex-wrap items-center gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3 ${className}`}>
+      {children}
+    </div>
+  )
+}
+
+/* ============================================================
+   DATA TABLE (Consistent Reusable Table)
+============================================================ */
+
+export function DataTable({
+  columns = [],
+  data = [],
+  loading = false,
+  emptyMessage = 'No records found',
+  onRowClick,
+  rowClassName,
+  className = '',
+}) {
+  if (loading) {
+    return <TableSkeleton rows={5} cols={columns.length || 4} />
+  }
+
+  return (
+    <div className={`overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] ${className}`}>
+      <table className="table">
+        <thead>
+          <tr>
+            {columns.map((col, idx) => (
+              <th
+                key={col.key || idx}
+                className={[col.align === 'right' ? 'num-col' : '', col.className || ''].join(' ')}
+              >
+                {col.header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data && data.length > 0 ? (
+            data.map((row, rIdx) => (
+              <tr
+                key={row.id || rIdx}
+                onClick={() => onRowClick?.(row)}
+                className={[
+                  onRowClick ? 'cursor-pointer' : '',
+                  typeof rowClassName === 'function' ? rowClassName(row) : (rowClassName || ''),
+                ].join(' ')}
+              >
+                {columns.map((col, cIdx) => (
+                  <td
+                    key={col.key || cIdx}
+                    className={[
+                      col.align === 'right' ? 'num-col' : '',
+                      col.cellClassName || col.className || '',
+                    ].join(' ')}
+                  >
+                    {col.render ? col.render(row[col.key], row, rIdx) : row[col.key]}
+                  </td>
+                ))}
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={columns.length || 1} className="py-8 text-center text-xs text-[var(--muted)]">
+                {emptyMessage}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+/* ============================================================
+   DRAWER (Slide-over panel from right)
+============================================================ */
+
+export function Drawer({
+  isOpen,
+  onClose,
+  title,
+  subtitle,
+  children,
+  footer,
+  width = 'max-w-md',
+}) {
+  useEffect(() => {
+    if (!isOpen) return
+    const onKey = e => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isOpen, onClose])
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/50 backdrop-blur-xs transition-opacity animate-in fade-in">
+      <div className="absolute inset-y-0 right-0 flex max-w-full pl-10">
+        <div className={`w-screen ${width} flex flex-col bg-[var(--surface)] border-l border-[var(--line)] shadow-xl animate-in slide-in-from-right duration-200`}>
+          {/* Drawer Header */}
+          <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-4">
+            <div className="min-w-0">
+              <h3 className="card-title truncate">{title}</h3>
+              {subtitle && <p className="mt-0.5 text-xs text-[var(--muted)] truncate">{subtitle}</p>}
+            </div>
+            <button
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] transition-colors"
+              aria-label="Close drawer"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Drawer Body */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            {children}
+          </div>
+
+          {/* Drawer Footer */}
+          {footer && (
+            <div className="border-t border-[var(--line)] bg-[var(--surface-elevated)] p-4 flex items-center justify-end gap-2">
+              {footer}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ============================================================
+   PAGINATION
+============================================================ */
+
+export function Pagination({
+  currentPage = 1,
+  totalPages = 1,
+  totalItems,
+  pageSize = 10,
+  onPageChange,
+  className = '',
+}) {
+  const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1
+  const end = Math.min(currentPage * pageSize, totalItems || currentPage * pageSize)
+
+  return (
+    <div className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-[var(--line)] bg-[var(--surface)] text-xs text-[var(--muted)] ${className}`}>
+      <div>
+        {totalItems !== undefined ? (
+          <span>
+            Showing <strong className="text-[var(--ink)] font-semibold">{start}</strong> to <strong className="text-[var(--ink)] font-semibold">{end}</strong> of <strong className="text-[var(--ink)] font-semibold">{totalItems}</strong> entries
+          </span>
+        ) : (
+          <span>
+            Page <strong className="text-[var(--ink)]">{currentPage}</strong> of <strong className="text-[var(--ink)]">{totalPages}</strong>
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+          disabled={currentPage <= 1}
+          className="btn-secondary h-8 px-2.5 text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Previous
+        </button>
+
+        <span className="px-2 text-xs font-semibold text-[var(--ink)]">
+          {currentPage} / {Math.max(1, totalPages)}
+        </span>
+
+        <button
+          type="button"
+          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+          disabled={currentPage >= totalPages}
+          className="btn-secondary h-8 px-2.5 text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* Alias for compatibility */
+export const ConfirmationDialog = ConfirmDialog

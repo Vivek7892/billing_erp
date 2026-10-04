@@ -59,7 +59,7 @@ const METHOD_META = {
     label: 'Card',
     description: 'Card payments',
     icon: CreditCard,
-    tone: 'violet',
+    tone: 'slate',
     iconClass:
       'bg-[var(--payment-card-bg)] text-[var(--payment-card-text)] border-[var(--payment-card-border)]',
     badgeClass:
@@ -362,7 +362,7 @@ export default function Payments() {
         }
 
         .payments-page .section-heading {
-          background: linear-gradient(180deg, var(--surface), var(--surface-elevated));
+          background: var(--surface);
         }
         .payments-page .payment-table tbody tr:hover td {
           background: var(--surface-elevated);
@@ -436,16 +436,6 @@ export default function Payments() {
             Track collections, credit sales, and payment transactions.
           </p>
         </div>
-
-        <button
-          type="button"
-          onClick={loadPayments}
-          disabled={loading}
-          className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md sm:w-auto border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink-secondary)] shadow-xs transition hover:bg-[var(--surface-elevated)] disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-          Refresh
-        </button>
       </header>
 
       {/* =====================================================
@@ -491,7 +481,7 @@ export default function Payments() {
               key={item.key}
               onClick={() => setFilter(c => (c === item.key ? 'all' : item.key))}
               className={`p-3 sm:p-3.5 cursor-pointer transition ${
-                filter === item.key ? 'bg-indigo-50/50 dark:bg-indigo-950/30' : 'hover:bg-[var(--surface-elevated)]'
+                filter === item.key ? 'bg-[var(--surface-elevated)] border-l-2 border-[#1E3A5F]' : 'hover:bg-[var(--surface-elevated)]'
               }`}
             >
               <div className="flex items-center justify-between">
@@ -499,10 +489,10 @@ export default function Payments() {
                   {item.label}
                 </span>
                 {filter === item.key && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-600"></span>
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#1E3A5F] dark:bg-slate-300"></span>
                 )}
               </div>
-              <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-indigo-600 dark:text-indigo-400">
+              <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[#1E3A5F] dark:text-slate-100">
                 {formatCurrency(item.total)}
               </p>
               <p className="text-[10px] text-[var(--muted)]">{item.count} bills ({item.label})</p>
@@ -700,7 +690,7 @@ export default function Payments() {
                   {filteredBills.map(bill => (
                     <tr key={bill.id}>
                       <td>
-                        <span className="font-mono text-xs font-bold text-blue-600">
+                        <span className="font-mono text-xs font-bold text-[#1E3A5F] dark:text-slate-200">
                           {bill.invoice_number || '—'}
                         </span>
                       </td>

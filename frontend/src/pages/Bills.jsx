@@ -6,6 +6,7 @@ import settingsService from '../features/settings/api/settingsService'
 import { Spinner, ConfirmDialog } from '../components/UI'
 import toast from 'react-hot-toast'
 import InvoiceDocument from '../components/InvoiceDocument'
+import CommunicationHistory from '../components/CommunicationHistory'
 
 import {
   Eye,
@@ -44,7 +45,7 @@ import {
 /* =========================================================
    ERP BILLING UI — CLEAN BUSINESS / POS STYLE
    - White / soft-gray surfaces
-   - Indigo primary actions
+   - Dark navy primary actions
    - Thin borders and restrained radius
    - Monospaced, tabular financial figures
 ========================================================= */
@@ -163,11 +164,19 @@ function ShareMenu({ bill, shopName, onClose }) {
       label: 'WhatsApp',
       icon: <MessageCircle size={16} className="text-green-600 dark:text-green-400" />,
       hover: 'hover:bg-green-50 dark:bg-green-950/60',
+      icon: <MessageCircle size={16} className="text-emerald-400" />,
+      hover: 'hover:bg-emerald-950/40',
       action: async () => {
         const cleanPhone = phone.replace(/\D/g, '')
-        // Reserve the popup while this click still has browser user activation.
         const popup = window.open('', '_blank')
         try {
+          const res = await invoiceService.sendWhatsApp(bill.id, cleanPhone)
+          if (res?.whatsapp_url) {
+            if (popup) popup.location.href = res.whatsapp_url
+            else window.location.href = res.whatsapp_url
+            toast.success('WhatsApp opened & logged!')
+            return
+          }
           const { text: message } = await shareTextWithLink()
           const url = cleanPhone
             ? `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(message)}`
@@ -182,8 +191,8 @@ function ShareMenu({ bill, shopName, onClose }) {
     },
     {
       label: 'SMS',
-      icon: <Phone size={16} className="text-[#4338CA]" />,
-      hover: 'hover:bg-indigo-50',
+      icon: <Phone size={16} className="text-[#1E3A5F]" />,
+      hover: 'hover:bg-[var(--surface-hover)]',
       action: async () => {
         if (!phone) {
           toast.error('No phone number for this customer')
@@ -199,8 +208,8 @@ function ShareMenu({ bill, shopName, onClose }) {
     },
     {
       label: 'Email',
-      icon: <Mail size={16} className="text-purple-600" />,
-      hover: 'hover:bg-purple-50',
+      icon: <Mail size={16} className="text-[#475569]" />,
+      hover: 'hover:bg-[var(--surface-hover)]',
       action: async () => {
         try {
           const { text: message } = await shareTextWithLink()
@@ -217,6 +226,8 @@ function ShareMenu({ bill, shopName, onClose }) {
       label: 'Share PDF',
       icon: <FileText size={16} className="text-rose-600 dark:text-rose-400" />,
       hover: 'hover:bg-rose-50 dark:bg-rose-950/60',
+      icon: <FileText size={16} className="text-rose-400" />,
+      hover: 'hover:bg-rose-950/40',
       action: async () => {
         try {
           const [blob, shortUrl] = await Promise.all([
@@ -295,11 +306,11 @@ function StatCard({
   tone = 'blue',
 }) {
   const tones = {
-    blue:   { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-indigo-600 dark:text-indigo-400', accent: 'text-indigo-600 dark:text-indigo-400' },
-    green:  { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-teal-600 dark:text-teal-400',     accent: 'text-teal-600 dark:text-teal-400' },
-    violet: { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-violet-600 dark:text-violet-400', accent: 'text-violet-600 dark:text-violet-400' },
-    amber:  { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-amber-600 dark:text-amber-400',   accent: 'text-amber-600 dark:text-amber-400' },
-    rose:   { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-rose-600 dark:text-rose-400',     accent: 'text-rose-600 dark:text-rose-400' },
+    blue:   { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-[#1E3A5F] dark:text-slate-200', accent: 'text-[#1E3A5F] dark:text-slate-200' },
+    green:  { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-teal-700 dark:text-teal-400',     accent: 'text-teal-700 dark:text-teal-400' },
+    violet: { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-[#475569] dark:text-slate-300', accent: 'text-[#475569] dark:text-slate-300' },
+    amber:  { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-amber-700 dark:text-amber-400',   accent: 'text-amber-700 dark:text-amber-400' },
+    rose:   { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-red-600 dark:text-red-400',     accent: 'text-red-600 dark:text-red-400' },
   }
 
   const style = tones[tone] || tones.blue
@@ -339,32 +350,32 @@ function StatusPill({ bill }) {
     paid: {
       label: 'Paid',
       icon: CheckCircle2,
-      className: 'bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-800',
+      className: 'bg-emerald-50 text-[#15803D] border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/40',
     },
     completed: {
       label: 'Paid',
       icon: CheckCircle2,
-      className: 'bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-800',
+      className: 'bg-emerald-50 text-[#15803D] border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/40',
     },
     partial: {
       label: 'Partial',
       icon: AlertCircle,
-      className: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
+      className: 'bg-amber-50 text-[#B45309] border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40',
     },
     pending: {
       label: 'Pending',
       icon: Clock3,
-      className: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
+      className: 'bg-amber-50 text-[#B45309] border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40',
     },
     cancelled: {
       label: 'Cancelled',
       icon: Ban,
-      className: 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800',
+      className: 'bg-red-50 text-[#B91C1C] border border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800/40',
     },
     refunded: {
       label: 'Refunded',
       icon: RefundIcon,
-      className: 'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-800',
+      className: 'bg-orange-50 text-[#C2410C] border border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800/40',
     },
   }
 
@@ -378,7 +389,7 @@ function StatusPill({ bill }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-semibold ${item.className}`}
+      className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-[11px] font-semibold ${item.className}`}
     >
       <Icon size={12} />
       {item.label}
@@ -391,24 +402,8 @@ function StatusPill({ bill }) {
 ========================================================= */
 
 function PaymentBadge({ method }) {
-  const value = method?.toLowerCase()
-
-  const styles = {
-    cash:     'bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800',
-    upi:      'bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800',
-    card:     'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800',
-    credit:   'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800',
-    bank:     'bg-cyan-50 text-cyan-700 border border-cyan-200 dark:bg-cyan-950/40 dark:text-cyan-300 dark:border-cyan-800',
-    razorpay: 'bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800',
-    online:   'bg-sky-50 text-sky-700 border border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800',
-  }
-
   return (
-    <span
-      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ${
-        styles[value] || 'bg-[var(--surface-elevated)] text-[var(--muted)] border border-[var(--line)]'
-      }`}
-    >
+    <span className="inline-flex items-center text-xs font-medium text-[var(--ink-secondary)]">
       {paymentLabel(method)}
     </span>
   )
@@ -450,6 +445,33 @@ function InvoiceActions({
         title="View invoice"
       >
         <Eye size={15} />
+      </button>
+
+      <button
+        onClick={async e => {
+          e.stopPropagation()
+          const cleanPhone = (bill.customer_phone || '').replace(/\D/g, '')
+          const popup = window.open('', '_blank')
+          try {
+            const res = await invoiceService.sendWhatsApp(bill.id, cleanPhone)
+            if (res?.whatsapp_url) {
+              if (popup) popup.location.href = res.whatsapp_url
+              else window.location.href = res.whatsapp_url
+              toast.success('WhatsApp opened & logged!')
+            } else {
+              popup?.close()
+              toast.error('Could not open WhatsApp')
+            }
+          } catch {
+            popup?.close()
+            toast.error('Failed to initiate WhatsApp')
+          }
+        }}
+        className="icon-btn text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/60"
+        className="icon-btn text-emerald-400 hover:bg-emerald-950/60"
+        title="Send WhatsApp"
+      >
+        <MessageCircle size={15} />
       </button>
 
       <button
@@ -511,10 +533,14 @@ function InvoiceActions({
               onClick={e => e.stopPropagation()}
             >
               <button
-                onClick={() => {
+                onClick={async () => {
                   setMenuOpen(false)
-                  const url = `${window.location.origin}/bill/${bill.public_token || bill.id}`
-                  window.open(url, '_blank')
+                  try {
+                    const url = bill.short_url || await getShortPdfUrl(bill.id)
+                    window.open(url, '_blank')
+                  } catch {
+                    toast.error('Could not get bill link')
+                  }
                 }}
                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-[var(--ink-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]"
               >
@@ -523,11 +549,15 @@ function InvoiceActions({
               </button>
 
               <button
-                onClick={() => {
+                onClick={async () => {
                   setMenuOpen(false)
-                  const url = `${window.location.origin}/bill/${bill.public_token || bill.id}`
-                  navigator.clipboard.writeText(url)
-                  toast.success('Bill link copied!')
+                  try {
+                    const url = bill.short_url || await getShortPdfUrl(bill.id)
+                    await navigator.clipboard.writeText(url)
+                    toast.success('Bill link copied!')
+                  } catch {
+                    toast.error('Could not copy bill link')
+                  }
                 }}
                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-[var(--ink-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]"
               >
@@ -543,6 +573,7 @@ function InvoiceActions({
                   onRefresh('cancel', bill.id)
                 }}
                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-[var(--ink-secondary)] hover:bg-red-50 dark:hover:bg-red-950/60 hover:text-red-600 dark:hover:text-red-400"
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-[var(--ink-secondary)] hover:bg-rose-950/50 hover:text-rose-300"
               >
                 <XCircle size={14} />
                 Cancel invoice
@@ -554,6 +585,7 @@ function InvoiceActions({
                   onRefresh('refund', bill.id)
                 }}
                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-[var(--ink-secondary)] hover:bg-amber-50 dark:hover:bg-amber-950/60 hover:text-amber-700"
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-[var(--ink-secondary)] hover:bg-amber-950/50 hover:text-amber-300"
               >
                 <RotateCcw size={14} />
                 Refund invoice
@@ -577,10 +609,35 @@ function InvoiceModal({
   onClose,
 }) {
   const [shareOpen, setShareOpen] = useState(false)
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false)
+  const [historyKey, setHistoryKey] = useState(0)
   const defaultMode = settings?.invoice_template === 'thermal_80' ? 'thermal' : 'a4'
   const [modalMode, setModalMode] = useState(defaultMode)
 
   if (!selected) return null
+
+  const handleSendWhatsApp = async () => {
+    setSendingWhatsApp(true)
+    const cleanPhone = (selected.customer_phone || '').replace(/\D/g, '')
+    const popup = window.open('', '_blank')
+    try {
+      const res = await invoiceService.sendWhatsApp(selected.id, cleanPhone)
+      if (res?.whatsapp_url) {
+        if (popup) popup.location.href = res.whatsapp_url
+        else window.location.href = res.whatsapp_url
+        toast.success('WhatsApp opened & communication logged!')
+        setHistoryKey(k => k + 1)
+      } else {
+        popup?.close()
+        toast.error('Could not prepare WhatsApp link')
+      }
+    } catch {
+      popup?.close()
+      toast.error('Failed to send WhatsApp')
+    } finally {
+      setSendingWhatsApp(false)
+    }
+  }
 
   return (
     <div
@@ -595,7 +652,7 @@ function InvoiceModal({
         <div className="border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3 sm:px-6">
           <div className="flex items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[#1E3A5F] border border-[#D7DEE7] dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
                 <Receipt size={18} />
               </div>
 
@@ -614,9 +671,23 @@ function InvoiceModal({
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => {
-                  const url = `${window.location.origin}/bill/${selected.public_token || selected.id}`
-                  window.open(url, '_blank')
+                onClick={handleSendWhatsApp}
+                disabled={sendingWhatsApp}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-800/50 bg-emerald-950/40 px-3 py-1.5 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-900/50"
+                title="Send invoice via WhatsApp"
+              >
+                <MessageCircle size={14} />
+                <span>{sendingWhatsApp ? 'Sending…' : 'Send WhatsApp'}</span>
+              </button>
+
+              <button
+                onClick={async () => {
+                  try {
+                    const url = selected.short_url || await getShortPdfUrl(selected.id)
+                    window.open(url, '_blank')
+                  } catch {
+                    toast.error('Could not get bill link')
+                  }
                 }}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
                 title="View mobile-friendly digital bill"
@@ -626,10 +697,14 @@ function InvoiceModal({
               </button>
 
               <button
-                onClick={() => {
-                  const url = `${window.location.origin}/bill/${selected.public_token || selected.id}`
-                  navigator.clipboard.writeText(url)
-                  toast.success('Bill link copied!')
+                onClick={async () => {
+                  try {
+                    const url = selected.short_url || await getShortPdfUrl(selected.id)
+                    await navigator.clipboard.writeText(url)
+                    toast.success('Bill link copied!')
+                  } catch {
+                    toast.error('Could not copy bill link')
+                  }
                 }}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
                 title="Copy digital bill link"
@@ -688,8 +763,8 @@ function InvoiceModal({
           </div>
         </div>
 
-        {/* Modal body: settings-driven invoice */}
-        <div className="overflow-y-auto bg-[var(--surface-elevated)] p-4 sm:p-6">
+        {/* Modal body: settings-driven invoice + communication history */}
+        <div className="overflow-y-auto bg-[var(--surface-elevated)] p-4 sm:p-6 space-y-5">
           <InvoiceDocument
             invoice={selected}
             settings={settings}
@@ -697,6 +772,15 @@ function InvoiceModal({
             onModeChange={setModalMode}
             showModePicker={true}
           />
+
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5 shadow-xs">
+            <CommunicationHistory
+              referenceType="invoice"
+              referenceId={selected.id}
+              initialLogs={selected.communication_history}
+              key={historyKey}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -721,7 +805,7 @@ function MobileInvoiceCard({ bill, shopName, onView, onRefresh }) {
               e.stopPropagation()
               navigate(`/invoice/${bill.id}`)
             }}
-            className="font-mono text-xs font-bold text-[#4338CA]"
+            className="font-mono text-xs font-bold text-[#1E3A5F] hover:underline"
           >
             {bill.invoice_number}
           </button>
@@ -1069,7 +1153,7 @@ export default function Bills() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Average Bill
               </span>
-              <p className="mt-1 font-mono text-lg font-bold text-indigo-600 dark:text-indigo-400">
+              <p className="mt-1 font-mono text-lg font-bold text-[#1E3A5F] dark:text-slate-200">
                 {fmt(totals.average)}
               </p>
               <p className="text-[10px] text-[var(--muted)]">Average per sale</p>
@@ -1091,7 +1175,7 @@ export default function Bills() {
                 onClick={() => setDateFilter(f.value)}
                 className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-semibold border transition ${
                   dateFilter === f.value
-                    ? 'bg-indigo-600 border-indigo-600 text-white'
+                    ? 'bg-[#1E3A5F] border-[#1E3A5F] text-white'
                     : 'border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
                 }`}
               >
@@ -1109,7 +1193,7 @@ export default function Bills() {
               />
 
               <input
-                className="w-full rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] py-2 pl-10 pr-3 text-sm outline-none transition placeholder:text-[var(--muted-light)] focus:border-indigo-500 focus:bg-[var(--surface)] focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-950/40"
+                className="w-full rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] py-2 pl-10 pr-3 text-sm outline-none transition placeholder:text-[var(--muted-light)] focus:border-[#1E3A5F] focus:bg-[var(--surface)] focus:ring-1 focus:ring-[#1E3A5F]"
                 placeholder="Search invoice, customer or phone..."
                 value={search}
                 onChange={e => {
@@ -1129,7 +1213,7 @@ export default function Bills() {
                 }}
                 className={`inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border px-3 text-xs font-semibold transition ${
                   statusFilter
-                    ? 'border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300'
+                    ? 'border-[#D7DEE7] bg-slate-100 text-[#1E3A5F] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
                     : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
                 }`}
                 title="Filter invoices"
@@ -1139,7 +1223,7 @@ export default function Bills() {
                 <span className="hidden sm:inline">Filter</span>
 
                 {statusFilter && (
-                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-600 px-1 text-[9px] text-white">
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#1E3A5F] px-1 text-[9px] text-white">
                     1
                   </span>
                 )}
@@ -1164,7 +1248,7 @@ export default function Bills() {
                       }}
                       className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-xs font-semibold ${
                         statusFilter === filter.value
-                          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300'
+                          ? 'bg-slate-100 text-[#1E3A5F] dark:bg-slate-800 dark:text-slate-200'
                           : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
                       }`}
                     >
@@ -1178,18 +1262,6 @@ export default function Bills() {
                 </div>
               )}
             </div>
-
-            {/* Refresh */}
-            <button
-              type="button"
-              onClick={() => load(page)}
-              className="inline-flex h-[42px] shrink-0 items-center justify-center gap-1.5 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]"
-              title="Refresh invoices"
-              aria-label="Refresh invoices"
-            >
-              <RefreshCw size={14} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
           </div>
         </div>
 
@@ -1551,7 +1623,7 @@ export default function Bills() {
                   onClick={() => setCancelReason(preset)}
                   className={`rounded border px-2 py-0.5 text-[10px] font-medium transition ${
                     cancelReason === preset
-                      ? 'border-red-500 bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300'
+                      ? 'border-rose-800/60 bg-rose-950/40 text-rose-300'
                       : 'border-[var(--line)] text-[var(--muted)] hover:border-[var(--line-strong)]'
                   }`}
                 >

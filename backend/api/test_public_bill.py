@@ -59,6 +59,7 @@ class PublicBillEndpointTests(APITestCase):
         self.assertTrue(len(self.invoice.public_token) >= 20)
         url = self.invoice.get_public_url()
         self.assertIn(f"/bill/{self.invoice.public_token}", url)
+        self.assertIn("/s/", url)
 
     def test_public_bill_detail_view(self):
         response = self.client.get(f"/api/public/bill/{self.invoice.public_token}/")

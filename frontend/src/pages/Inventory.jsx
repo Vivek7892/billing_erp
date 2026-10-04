@@ -23,9 +23,9 @@ function MobileStockCard({ product }) {
         <div className="rounded-md bg-[var(--surface-elevated)] p-2.5">
           <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--muted-light)]">Current</p>
           <p className={`mt-1 text-sm font-bold ${
-            current <= 0 ? 'text-rose-600 dark:text-rose-400' :
-            current <= minimum ? 'text-amber-600' :
-            'text-teal-600 dark:text-teal-400'
+            current <= 0 ? 'text-[#B91C1C] dark:text-red-400' :
+            current <= minimum ? 'text-[#B45309] dark:text-amber-400' :
+            'text-[#0F766E] dark:text-teal-400'
           }`}>
             {product.current_stock} {product.unit}
           </p>
@@ -66,12 +66,12 @@ function MobileTransactionCard({ transaction }) {
           </p>
         </div>
 
-        <span className={`inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold border ${
+        <span className={`inline-flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-[10px] font-semibold border ${
           isSale
-            ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
+            ? 'bg-transparent text-[#B91C1C] dark:text-red-400 border-[var(--line)]'
             : transaction.transaction_type === 'purchase'
-              ? 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800'
-              : 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800'
+              ? 'bg-transparent text-[#0F766E] dark:text-teal-400 border-[var(--line)]'
+              : 'bg-transparent text-[#1E3A5F] dark:text-slate-300 border-[var(--line)]'
         }`}>
           {isSale ? <ArrowDownCircle size={11} /> : <ArrowUpCircle size={11} />}
           {transaction.transaction_type.replace('_', ' ')}
@@ -81,7 +81,7 @@ function MobileTransactionCard({ transaction }) {
       <div className="mt-3 grid grid-cols-3 gap-2 rounded-md bg-[var(--surface-elevated)] p-2.5">
         <div>
           <p className="text-[9px] uppercase tracking-wide text-[var(--muted-light)]">Qty</p>
-          <p className={`mt-1 text-xs font-bold ${qty < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-teal-600 dark:text-teal-400'}`}>
+          <p className={`mt-1 text-xs font-bold ${qty < 0 ? 'text-[#B91C1C] dark:text-red-400' : 'text-[#0F766E] dark:text-teal-400'}`}>
             {qty > 0 ? '+' : ''}{transaction.quantity}
           </p>
         </div>
@@ -222,7 +222,7 @@ export default function Inventory() {
             onClick={() => setTab(t)}
             className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold capitalize transition sm:flex-none sm:px-4 ${
               tab === t
-                ? 'bg-indigo-600 text-white shadow-xs'
+                ? 'bg-[#1E3A5F] text-white shadow-xs'
                 : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
             }`}
           >
@@ -244,17 +244,6 @@ export default function Inventory() {
                   onChange={e => setSearch(e.target.value)}
                 />
               </div>
-
-              <button
-                type="button"
-                onClick={() => loadProducts()}
-                className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--muted)] hover:bg-[var(--surface-elevated)]"
-                title="Refresh stock"
-                aria-label="Refresh stock"
-              >
-                <RefreshCw size={14} />
-                <span className="hidden sm:inline">Refresh</span>
-              </button>
             </div>
           </Card>
           <Card>
@@ -307,15 +296,15 @@ export default function Inventory() {
                         <td className="text-sm text-[var(--muted)]">{new Date(t.created_at).toLocaleDateString('en-IN')}</td>
                         <td className="font-medium text-sm">{t.product_name}</td>
                         <td>
-                          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
-                            t.transaction_type === 'sale' ? 'bg-red-100 text-red-700' :
-                            t.transaction_type === 'purchase' ? 'bg-green-100 text-green-700' :
-                            'bg-blue-100 text-blue-700'}`}>
+                          <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded border ${
+                            t.transaction_type === 'sale' ? 'bg-transparent text-[#B91C1C] dark:text-red-400 border-[var(--line)]' :
+                            t.transaction_type === 'purchase' ? 'bg-transparent text-[#0F766E] dark:text-teal-400 border-[var(--line)]' :
+                            'bg-transparent text-[#1E3A5F] dark:text-slate-300 border-[var(--line)]'}`}>
                             {t.transaction_type === 'sale' ? <ArrowDownCircle size={11} /> : <ArrowUpCircle size={11} />}
                             {t.transaction_type.replace('_', ' ')}
                           </span>
                         </td>
-                        <td className={`font-semibold ${t.quantity < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{t.quantity > 0 ? '+' : ''}{t.quantity}</td>
+                        <td className={`font-semibold ${t.quantity < 0 ? 'text-[#B91C1C] dark:text-red-400' : 'text-[#0F766E] dark:text-teal-400'}`}>{t.quantity > 0 ? '+' : ''}{t.quantity}</td>
                         <td className="text-sm">{t.before_stock}</td>
                         <td className="text-sm font-medium">{t.after_stock}</td>
                         <td className="text-xs text-[var(--muted)]">{t.reference}</td>
@@ -412,11 +401,11 @@ export default function Inventory() {
       <Modal open={importModal} onClose={() => !importing && setImportModal(false)} title="Import Stock from File" size="md">
         <div className="space-y-4">
           <p className="text-sm text-[var(--muted)]">Upload a CSV or Excel file (.xlsx/.xlsm) to update existing products. Match each product by <b>SKU</b> (recommended) or Product Name.</p>
-          <div className="rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-100 p-3 text-xs text-blue-900 space-y-1">
+          <div className="rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)] p-3 text-xs text-[var(--ink-secondary)] space-y-1">
             <p><b>To add or remove stock:</b> use columns <code>SKU, Quantity</code>; negative quantities remove stock.</p>
             <p><b>To set an exact balance:</b> use <code>SKU, Current Stock</code>.</p>
           </div>
-          <button type="button" onClick={downloadImportTemplate} className="text-sm text-blue-700 inline-flex items-center gap-1 hover:underline"><Download size={15} /> Download CSV template</button>
+          <button type="button" onClick={downloadImportTemplate} className="text-xs font-semibold text-[#1E3A5F] dark:text-slate-300 inline-flex items-center gap-1 hover:underline"><Download size={15} /> Download CSV template</button>
           <input type="file" accept=".csv,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={e => setImportFile(e.target.files?.[0] || null)} className="block w-full text-sm" disabled={importing} />
           {importFile && <p className="text-xs text-[var(--muted)]">Selected: {importFile.name}</p>}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2"><button onClick={importStock} disabled={importing} className="btn-primary w-full">{importing ? 'Importing...' : 'Import Stock'}</button><button onClick={() => setImportModal(false)} disabled={importing} className="btn-secondary w-full">Cancel</button></div>

@@ -100,7 +100,7 @@ export default function AuditTrail() {
     const isFail = result === 'failure'
     if (isFail) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/50">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-transparent text-[#B91C1C] dark:text-red-400 border border-[var(--line)]">
           <XCircle size={12} /> {action}
         </span>
       )
@@ -108,7 +108,7 @@ export default function AuditTrail() {
 
     if (action.includes('PRICE')) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900/50">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-transparent text-[#B45309] dark:text-amber-400 border border-[var(--line)]">
           <Tag size={12} /> {action}
         </span>
       )
@@ -116,7 +116,7 @@ export default function AuditTrail() {
 
     if (action.includes('INVOICE') || action.includes('PAYMENT')) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900/50">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-transparent text-[#1E3A5F] dark:text-slate-300 border border-[var(--line)]">
           <FileText size={12} /> {action}
         </span>
       )
@@ -124,14 +124,14 @@ export default function AuditTrail() {
 
     if (action.includes('STOCK')) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-cyan-50 text-cyan-700 border border-cyan-200 dark:bg-cyan-950/40 dark:text-cyan-400 dark:border-cyan-900/50">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-transparent text-[#0F766E] dark:text-teal-400 border border-[var(--line)]">
           <Layers size={12} /> {action}
         </span>
       )
     }
 
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/50">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-transparent text-[#15803D] dark:text-green-400 border border-[var(--line)]">
         <CheckCircle2 size={12} /> {action}
       </span>
     )
@@ -176,13 +176,6 @@ export default function AuditTrail() {
               title="Export filtered audit logs to CSV"
             >
               <Download size={14} /> Export CSV
-            </button>
-            <button
-              onClick={fetchLogs}
-              className="btn-secondary btn-base flex items-center gap-1.5 text-xs font-semibold px-3"
-              title="Refresh log entries"
-            >
-              <RotateCcw size={14} /> Refresh
             </button>
           </div>
         }
@@ -248,163 +241,241 @@ export default function AuditTrail() {
         </div>
       </div>
 
-      {/* Audit Log Table */}
+      {/* Audit Log Table & Mobile Cards */}
       <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="erp-table w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-[var(--line)] bg-[var(--surface-elevated)] font-semibold text-[var(--ink-secondary)]">
-                <th className="py-2.5 px-3">When</th>
-                <th className="py-2.5 px-3">Who</th>
-                <th className="py-2.5 px-3">What (Action)</th>
-                <th className="py-2.5 px-3">Target Entity</th>
-                <th className="py-2.5 px-3">Reason / Justification</th>
-                <th className="py-2.5 px-3">Changes (Diff)</th>
-                <th className="py-2.5 px-3">IP / Device</th>
-                <th className="py-2.5 px-3 text-right">Details</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--line-subtle)]">
-              {loading ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center text-[var(--muted)]">
-                    <Spinner />
-                  </td>
-                </tr>
-              ) : filteredLogs.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center text-[var(--muted)]">
-                    <ShieldCheck size={28} className="mx-auto mb-2 opacity-40 text-indigo-500" />
-                    <p className="text-sm font-medium text-[var(--ink)]">No audit events found</p>
-                    <p className="text-xs text-[var(--muted)]">Try adjusting search filters or date range.</p>
-                  </td>
-                </tr>
-              ) : (
-                filteredLogs.map(log => {
-                  const prevObj = parseJsonSafe(log.previous_value)
-                  const newObj = parseJsonSafe(log.new_value)
+        {loading ? (
+          <div className="py-12 text-center text-[var(--muted)]">
+            <Spinner />
+          </div>
+        ) : filteredLogs.length === 0 ? (
+          <div className="py-12 text-center text-[var(--muted)]">
+            <ShieldCheck size={28} className="mx-auto mb-2 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
+            <p className="text-sm font-medium text-[var(--ink)]">No audit events found</p>
+            <p className="text-xs text-[var(--muted)]">Try adjusting search filters or date range.</p>
+          </div>
+        ) : (
+          <>
+            {/* Mobile Cards (sm:hidden) */}
+            <div className="divide-y divide-[var(--line-subtle)] sm:hidden">
+              {filteredLogs.map(log => {
+                const prevObj = parseJsonSafe(log.previous_value)
+                const newObj = parseJsonSafe(log.new_value)
 
-                  return (
-                    <tr
-                      key={log.id}
-                      className="hover:bg-[var(--surface-elevated)] transition-colors group cursor-pointer"
-                      onClick={() => setSelectedLog(log)}
-                    >
-                      {/* When */}
-                      <td className="py-2.5 px-3 whitespace-nowrap text-[11px] text-[var(--ink-secondary)] font-mono">
-                        {log.created_at ? new Date(log.created_at).toLocaleString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                        }) : '—'}
-                      </td>
-
-                      {/* Who */}
-                      <td className="py-2.5 px-3 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          <User size={13} className="text-indigo-500 shrink-0" />
-                          <div className="min-w-0">
-                            <span className="font-semibold text-[var(--ink)]">
-                              {log.username || 'System'}
-                            </span>
-                            {log.user_role && (
-                              <span className="ml-1 text-[10px] px-1 py-0.2 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-medium uppercase">
-                                {log.user_role}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* What */}
-                      <td className="py-2.5 px-3 whitespace-nowrap">
+                return (
+                  <div
+                    key={log.id}
+                    onClick={() => setSelectedLog(log)}
+                    className="p-3.5 space-y-2.5 active:bg-[var(--surface-elevated)] transition cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
                         {getActionBadge(log.action, log.result)}
-                      </td>
+                        <span className="block mt-1 text-[11px] font-mono text-[var(--muted)]">
+                          {log.created_at ? new Date(log.created_at).toLocaleString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          }) : '—'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={e => {
+                          e.stopPropagation()
+                          setSelectedLog(log)
+                        }}
+                        className="btn-secondary h-8 px-2.5 text-xs inline-flex items-center gap-1 font-medium"
+                      >
+                        <Eye size={12} />
+                        View
+                      </button>
+                    </div>
 
-                      {/* Target Entity */}
-                      <td className="py-2.5 px-3 whitespace-nowrap">
-                        <div className="font-medium text-[var(--ink)]">
-                          {log.entity_name || log.entity_id || '—'}
-                        </div>
-                        <div className="text-[10px] text-[var(--muted)]">
-                          {log.entity || log.module || ''} {log.entity_id && log.entity_name ? `(#${log.entity_id})` : ''}
-                        </div>
-                      </td>
+                    <div className="text-xs">
+                      <div className="font-semibold text-[var(--ink)]">
+                        {log.entity_name || log.entity_id || 'System Entity'}
+                      </div>
+                      <div className="text-[11px] text-[var(--muted)]">
+                        {log.entity || log.module || ''} {log.entity_id ? `(#${log.entity_id})` : ''}
+                      </div>
+                    </div>
 
-                      {/* Reason */}
-                      <td className="py-2.5 px-3 max-w-[200px] truncate text-[var(--ink-secondary)]" title={log.reason || log.failure_reason}>
-                        {log.reason ? (
-                          <span className="italic text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50/70 dark:bg-amber-950/30 px-1.5 py-0.5 rounded border border-amber-200/50">
-                            "{log.reason}"
+                    {/* Diff Preview */}
+                    {log.action === 'PRICE_CHANGED' && prevObj && newObj && (
+                      <div className="flex items-center gap-1.5 font-mono text-xs bg-[var(--surface-elevated)] p-2 rounded border border-[var(--line)]">
+                        <span className="text-[#B91C1C] line-through">₹{Number(prevObj.selling_price || 0).toFixed(2)}</span>
+                        <ArrowRight size={11} className="text-[var(--muted)]" />
+                        <span className="text-[#0F766E] font-bold">₹{Number(newObj.selling_price || 0).toFixed(2)}</span>
+                      </div>
+                    )}
+
+                    {/* Reason */}
+                    {log.reason && (
+                      <div className="text-[11px] italic text-[#B45309] dark:text-amber-400 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">
+                        "{log.reason}"
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between text-[11px] text-[var(--muted)] pt-1 border-t border-[var(--line-subtle)]">
+                      <div className="flex items-center gap-1">
+                        <User size={12} className="text-[#1E3A5F] dark:text-slate-300" />
+                        <span className="font-medium text-[var(--ink)]">{log.username || 'System'}</span>
+                        {log.user_role && (
+                          <span className="text-[9px] uppercase px-1 rounded bg-[var(--surface-elevated)] text-[var(--muted)] border border-[var(--line)]">
+                            {log.user_role}
                           </span>
-                        ) : log.failure_reason ? (
-                          <span className="text-rose-600 text-[11px]">
-                            {log.failure_reason}
-                          </span>
-                        ) : (
-                          <span className="text-[var(--muted)] text-[11px]">Standard operation</span>
                         )}
-                      </td>
+                      </div>
+                      <span className="font-mono text-[10px]">{log.ip_address || '127.0.0.1'}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
 
-                      {/* Changes (Diff) */}
-                      <td className="py-2.5 px-3 max-w-[220px]">
-                        {log.action === 'PRICE_CHANGED' && prevObj && newObj ? (
-                          <div className="flex items-center gap-1.5 font-mono text-[11px]">
-                            <span className="text-rose-600 dark:text-rose-400 line-through">
-                              ₹{Number(prevObj.selling_price || 0).toFixed(2)}
-                            </span>
-                            <ArrowRight size={11} className="text-[var(--muted)]" />
-                            <span className="text-teal-600 dark:text-teal-400 font-bold">
-                              ₹{Number(newObj.selling_price || 0).toFixed(2)}
-                            </span>
+            {/* Desktop Table (hidden sm:block) */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="erp-table w-full text-left text-xs min-w-[760px]">
+                <thead>
+                  <tr className="border-b border-[var(--line)] bg-[var(--surface-elevated)] font-semibold text-[var(--ink-secondary)]">
+                    <th className="py-2.5 px-3">When</th>
+                    <th className="py-2.5 px-3">Who</th>
+                    <th className="py-2.5 px-3">What (Action)</th>
+                    <th className="py-2.5 px-3">Target Entity</th>
+                    <th className="py-2.5 px-3">Reason / Justification</th>
+                    <th className="py-2.5 px-3">Changes (Diff)</th>
+                    <th className="py-2.5 px-3">IP / Device</th>
+                    <th className="py-2.5 px-3 text-right">Details</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--line-subtle)]">
+                  {filteredLogs.map(log => {
+                    const prevObj = parseJsonSafe(log.previous_value)
+                    const newObj = parseJsonSafe(log.new_value)
+
+                    return (
+                      <tr
+                        key={log.id}
+                        className="hover:bg-[var(--surface-elevated)] transition-colors group cursor-pointer"
+                        onClick={() => setSelectedLog(log)}
+                      >
+                        {/* When */}
+                        <td className="py-2.5 px-3 whitespace-nowrap text-[11px] text-[var(--ink-secondary)] font-mono">
+                          {log.created_at ? new Date(log.created_at).toLocaleString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          }) : '—'}
+                        </td>
+
+                        {/* Who */}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            <User size={13} className="text-[#1E3A5F] dark:text-slate-300 shrink-0" />
+                            <div className="min-w-0">
+                              <span className="font-semibold text-[var(--ink)]">
+                                {log.username || 'System'}
+                              </span>
+                              {log.user_role && (
+                                <span className="ml-1 text-[10px] px-1 py-0.2 rounded bg-[var(--surface-elevated)] text-[var(--muted)] border border-[var(--line)] font-medium uppercase">
+                                  {log.user_role}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        ) : log.action === 'INVOICE_EDITED' && prevObj && newObj ? (
-                          <div className="flex items-center gap-1.5 font-mono text-[11px]">
-                            <span className="text-[var(--muted)]">
-                              Disc: ₹{Number(prevObj.discount_amount || 0).toFixed(0)}
-                            </span>
-                            <ArrowRight size={11} className="text-[var(--muted)]" />
-                            <span className="text-indigo-600 dark:text-indigo-400 font-bold">
-                              ₹{Number(newObj.discount_amount || 0).toFixed(0)}
-                            </span>
+                        </td>
+
+                        {/* What */}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          {getActionBadge(log.action, log.result)}
+                        </td>
+
+                        {/* Target Entity */}
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <div className="font-medium text-[var(--ink)]">
+                            {log.entity_name || log.entity_id || '—'}
                           </div>
-                        ) : (
-                          <span className="text-[11px] text-[var(--muted)] truncate block">
-                            {log.new_value ? (typeof newObj === 'object' ? Object.keys(newObj).slice(0, 3).join(', ') : String(log.new_value).slice(0, 30)) : '—'}
-                          </span>
-                        )}
-                      </td>
+                          <div className="text-[10px] text-[var(--muted)]">
+                            {log.entity || log.module || ''} {log.entity_id && log.entity_name ? `(#${log.entity_id})` : ''}
+                          </div>
+                        </td>
 
-                      {/* IP / Device */}
-                      <td className="py-2.5 px-3 whitespace-nowrap text-[11px] text-[var(--muted)]">
-                        <div className="flex items-center gap-1">
-                          <Laptop size={12} className="text-[var(--muted)] shrink-0" />
-                          <span className="font-mono">{log.ip_address || '127.0.0.1'}</span>
-                        </div>
-                      </td>
+                        {/* Reason */}
+                        <td className="py-2.5 px-3 max-w-[200px] truncate text-[var(--ink-secondary)]" title={log.reason || log.failure_reason}>
+                          {log.reason ? (
+                            <span className="italic text-[11px] text-[#B45309] dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                              "{log.reason}"
+                            </span>
+                          ) : log.failure_reason ? (
+                            <span className="text-[#B91C1C] dark:text-red-400 text-[11px]">
+                              {log.failure_reason}
+                            </span>
+                          ) : (
+                            <span className="text-[var(--muted)] text-[11px]">Standard operation</span>
+                          )}
+                        </td>
 
-                      {/* Details Button */}
-                      <td className="py-2.5 px-3 whitespace-nowrap text-right">
-                        <button
-                          onClick={e => {
-                            e.stopPropagation()
-                            setSelectedLog(log)
-                          }}
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
-                        >
-                          <Eye size={12} /> View
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                        {/* Changes (Diff) */}
+                        <td className="py-2.5 px-3 max-w-[220px]">
+                          {log.action === 'PRICE_CHANGED' && prevObj && newObj ? (
+                            <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                              <span className="text-[#B91C1C] line-through">
+                                ₹{Number(prevObj.selling_price || 0).toFixed(2)}
+                              </span>
+                              <ArrowRight size={11} className="text-[var(--muted)]" />
+                              <span className="text-[#0F766E] font-bold">
+                                ₹{Number(newObj.selling_price || 0).toFixed(2)}
+                              </span>
+                            </div>
+                          ) : log.action === 'INVOICE_EDITED' && prevObj && newObj ? (
+                            <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                              <span className="text-[var(--muted)]">
+                                Disc: ₹{Number(prevObj.discount_amount || 0).toFixed(0)}
+                              </span>
+                              <ArrowRight size={11} className="text-[var(--muted)]" />
+                              <span className="text-[#1E3A5F] dark:text-slate-100 font-bold">
+                                ₹{Number(newObj.discount_amount || 0).toFixed(0)}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-[var(--muted)] truncate block">
+                              {log.new_value ? (typeof newObj === 'object' ? Object.keys(newObj).slice(0, 3).join(', ') : String(log.new_value).slice(0, 30)) : '—'}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* IP / Device */}
+                        <td className="py-2.5 px-3 whitespace-nowrap text-[11px] text-[var(--muted)]">
+                          <div className="flex items-center gap-1">
+                            <Laptop size={12} className="text-[var(--muted)] shrink-0" />
+                            <span className="font-mono">{log.ip_address || '127.0.0.1'}</span>
+                          </div>
+                        </td>
+
+                        {/* Details Button */}
+                        <td className="py-2.5 px-3 whitespace-nowrap text-right">
+                          <button
+                            onClick={e => {
+                              e.stopPropagation()
+                              setSelectedLog(log)
+                            }}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#1E3A5F] hover:text-[#162F4D] dark:text-slate-300"
+                          >
+                            <Eye size={12} /> View
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Detailed Audit Modal */}
@@ -421,7 +492,7 @@ export default function AuditTrail() {
                 <span className="text-[10px] font-semibold uppercase text-[var(--muted)]">Who (Operator)</span>
                 <p className="font-medium text-[var(--ink)]">{selectedLog.username || 'System'}</p>
                 <p className="text-[11px] text-[var(--muted)]">{selectedLog.user_email || 'No email registered'}</p>
-                <p className="text-[10px] text-indigo-600 font-semibold uppercase">{selectedLog.user_role || 'Staff'}</p>
+                <p className="text-[10px] text-[var(--muted)] font-semibold uppercase">{selectedLog.user_role || 'Staff'}</p>
               </div>
 
               <div>
@@ -454,7 +525,7 @@ export default function AuditTrail() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">Before State</span>
+                  <span className="text-[11px] font-semibold text-[#B91C1C] dark:text-red-400">Before State</span>
                   <span className="text-[10px] text-[var(--muted)] font-mono">prior</span>
                 </div>
                 <pre className="p-2 rounded bg-[var(--surface-elevated)] text-[10px] font-mono overflow-x-auto max-h-48 text-[var(--ink-secondary)]">
@@ -466,7 +537,7 @@ export default function AuditTrail() {
 
               <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-semibold text-teal-600 dark:text-teal-400">After State</span>
+                  <span className="text-[11px] font-semibold text-[#0F766E] dark:text-teal-400">After State</span>
                   <span className="text-[10px] text-[var(--muted)] font-mono">new</span>
                 </div>
                 <pre className="p-2 rounded bg-[var(--surface-elevated)] text-[10px] font-mono overflow-x-auto max-h-48 text-[var(--ink)]">
@@ -492,4 +563,3 @@ export default function AuditTrail() {
     </div>
   )
 }
-

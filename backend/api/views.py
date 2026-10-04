@@ -14,15 +14,17 @@ from datetime import timedelta
 from decimal import Decimal
 from io import BytesIO
 import csv
+import urllib.request
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.drawing.image import Image as XLImage
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as RLImage
 
 from .models import *
 from .serializers import *
@@ -35,6 +37,7 @@ from .pagination import NoPagination, StandardPagination
 from .utils import audit_event
 from .services.report_service import ReportService
 from django_filters.rest_framework import DjangoFilterBackend
+from PIL import Image as PILImage
 
 
 class LoginRateThrottle(AnonRateThrottle):
@@ -71,113 +74,212 @@ def _report_response(filename, content, content_type):
     return response
 
 
-def _export_report_xlsx(title, headers, rows, filename, summary_rows=None):
+
+def _report_setting(request_user, key, default=''):
+    """Read a business-scoped setting safely."""
+    try:
+        business = getattr(request_user, 'business', None)
+        if business is not None:
+            setting = Setting.objects.filter(business=business, key=key).first()
+        else:
+            setting = Setting.objects.filter(key=key).first()
+        return setting.value if setting else default
+    except Exception:
+        return default
+
+
+def _get_report_business_profile(request_user=None):
+    """Return report identity/settings used by both PDF and Excel exports."""
+    business = getattr(request_user, 'business', None)
+    return {
+        'shop_name': _report_setting(request_user, 'shop_name', getattr(business, 'name', '') or 'ShopEase POS'),
+        'shop_address': _report_setting(request_user, 'shop_address', getattr(business, 'address', '') or ''),
+        'shop_phone': _report_setting(request_user, 'shop_phone', getattr(business, 'mobile', '') or ''),
+        'shop_email': _report_setting(request_user, 'shop_email', getattr(business, 'email', '') or ''),
+        'shop_gstin': _report_setting(request_user, 'shop_gstin', getattr(business, 'gstin', '') or ''),
+        'shop_logo': _report_setting(request_user, 'shop_logo', ''),
+    }
+
+
+def _download_report_logo(url):
     """
-    Professional spreadsheet export used by every report.
-    Keeps a consistent ShopEase-style hierarchy across Sales, Product,
-    Profit, GST, Customer Credit, Payment and Expense reports.
+    Download the configured public shop logo and normalize it to PNG.
+    Returns PNG bytes or None. Report generation never fails because a logo
+    cannot be downloaded.
+    """
+    if not url:
+        return None
+    try:
+        request = urllib.request.Request(
+            str(url),
+            headers={'User-Agent': 'ShopEase-ERP/1.0'},
+        )
+        with urllib.request.urlopen(request, timeout=5) as response:
+            raw = response.read(3 * 1024 * 1024)
+        image = PILImage.open(BytesIO(raw)).convert('RGBA')
+        output = BytesIO()
+        image.save(output, format='PNG', optimize=True)
+        return output.getvalue()
+    except Exception:
+        return None
+
+
+def _format_report_money(value):
+    """Consistent Indian-style report currency without relying on the ₹ glyph."""
+    if value in (None, ''):
+        return ''
+    try:
+        amount = Decimal(str(value).replace(',', '').replace('Rs.', '').strip())
+        return f'Rs.{amount:,.2f}'
+    except Exception:
+        return str(value)
+
+
+def _export_report_xlsx(
+    title,
+    headers,
+    rows,
+    filename,
+    summary_rows=None,
+    request_user=None,
+):
+    """
+    Branded Excel report exporter.
+
+    - Uses the business shop logo from the `shop_logo` setting.
+    - Uses the same Indigo/Teal visual identity as PDF reports.
+    - Keeps report data/API behavior unchanged.
     """
     workbook = Workbook()
     sheet = workbook.active
     sheet.title = title[:31]
 
-    # Palette
-    NAVY = '1E3A8A'
-    BLUE = '2563EB'
-    LIGHT_BLUE = 'EFF6FF'
-    SLATE = '475569'
+    # Business identity
+    profile = _get_report_business_profile(request_user)
+    logo_bytes = _download_report_logo(profile['shop_logo'])
+
+    # Theme
+    INDIGO = '1E3A8A'
+    INDIGO_2 = '2563EB'
+    TEAL = '0F766E'
+    LIGHT_INDIGO = 'EEF4FF'
+    LIGHT_TEAL = 'ECFDF5'
     BORDER = 'CBD5E1'
+    TEXT = '1F2937'
+    MUTED = '64748B'
     WHITE = 'FFFFFF'
     ALT = 'F8FAFC'
 
-    max_cols = max(len(headers), 2)
+    max_cols = max(len(headers or []), 4)
     last_col = max_cols
 
-    # Title bar
-    sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=last_col)
-    title_cell = sheet.cell(row=1, column=1, value=title.upper())
+    # Business header
+    sheet.merge_cells(start_row=1, start_column=2, end_row=1, end_column=last_col)
+    title_cell = sheet.cell(row=1, column=2, value=profile['shop_name'].upper())
     title_cell.font = Font(name='Calibri', bold=True, size=18, color=WHITE)
-    title_cell.fill = PatternFill('solid', fgColor=NAVY)
+    title_cell.fill = PatternFill('solid', fgColor=INDIGO)
     title_cell.alignment = Alignment(horizontal='left', vertical='center')
-    sheet.row_dimensions[1].height = 30
 
-    # Generated timestamp
-    sheet.merge_cells(start_row=2, start_column=1, end_row=2, end_column=last_col)
-    generated_cell = sheet.cell(
-        row=2,
-        column=1,
-        value=f"Generated: {timezone.localtime(timezone.now()).strftime('%d-%m-%Y %I:%M %p')}"
+    if logo_bytes:
+        try:
+            logo = XLImage(BytesIO(logo_bytes))
+            max_w, max_h = 58, 42
+            ratio = min(max_w / logo.width, max_h / logo.height)
+            logo.width = max(1, int(logo.width * ratio))
+            logo.height = max(1, int(logo.height * ratio))
+            sheet.add_image(logo, 'A1')
+        except Exception:
+            pass
+
+    sheet.row_dimensions[1].height = 45
+
+    # Business contact line
+    contact = ' | '.join(
+        part for part in [
+            profile['shop_address'],
+            f"Phone: {profile['shop_phone']}" if profile['shop_phone'] else '',
+            f"Email: {profile['shop_email']}" if profile['shop_email'] else '',
+            f"GSTIN: {profile['shop_gstin']}" if profile['shop_gstin'] else '',
+        ] if part
     )
-    generated_cell.font = Font(name='Calibri', italic=True, size=9, color=SLATE)
-    generated_cell.fill = PatternFill('solid', fgColor=LIGHT_BLUE)
-    generated_cell.alignment = Alignment(horizontal='left', vertical='center')
-    sheet.row_dimensions[2].height = 20
+    sheet.merge_cells(start_row=2, start_column=1, end_row=2, end_column=last_col)
+    meta = sheet.cell(row=2, column=1, value=contact or profile['shop_name'])
+    meta.font = Font(name='Calibri', size=9, color=MUTED)
+    meta.fill = PatternFill('solid', fgColor=LIGHT_INDIGO)
+    meta.alignment = Alignment(horizontal='left', vertical='center')
+    sheet.row_dimensions[2].height = 21
 
-    row_index = 4
+    # Report title + generated time
+    sheet.merge_cells(start_row=3, start_column=1, end_row=3, end_column=last_col)
+    report_title = sheet.cell(row=3, column=1, value=title.upper())
+    report_title.font = Font(name='Calibri', bold=True, size=14, color=INDIGO)
+    report_title.alignment = Alignment(horizontal='left', vertical='center')
+
+    sheet.merge_cells(start_row=4, start_column=1, end_row=4, end_column=last_col)
+    generated_cell = sheet.cell(
+        row=4,
+        column=1,
+        value=f"Generated: {timezone.localtime(timezone.now()).strftime('%d-%m-%Y %I:%M %p')}",
+    )
+    generated_cell.font = Font(name='Calibri', italic=True, size=9, color=MUTED)
+    generated_cell.alignment = Alignment(horizontal='left', vertical='center')
+    sheet.row_dimensions[4].height = 19
+
+    row_index = 6
 
     # KPI / summary block
     if summary_rows:
         summary_count = len(summary_rows)
-        compact = summary_count <= last_col
-        summary_width = max(1, last_col // summary_count) if compact else last_col
-        for i, (label, value) in enumerate(summary_rows):
-            if compact:
-                col = 1 + i * summary_width
-                end_col = min(last_col, col + summary_width - 1)
-            else:
-                col = 1
-                end_col = last_col
+        cards_per_row = min(4, max(1, last_col))
+        for offset in range(0, summary_count, cards_per_row):
+            group = summary_rows[offset:offset + cards_per_row]
+            group_width = max(1, last_col // len(group))
+            for i, (label, value) in enumerate(group):
+                col = 1 + i * group_width
+                end_col = last_col if i == len(group) - 1 else min(last_col, col + group_width - 1)
 
-            sheet.merge_cells(
-                start_row=row_index,
-                start_column=col,
-                end_row=row_index,
-                end_column=end_col,
-            )
-            label_cell = sheet.cell(row=row_index, column=col, value=str(label).upper())
-            label_cell.font = Font(bold=True, size=9, color=SLATE)
-            label_cell.fill = PatternFill('solid', fgColor=LIGHT_BLUE)
-            label_cell.alignment = Alignment(horizontal='left', vertical='center')
+                sheet.merge_cells(
+                    start_row=row_index,
+                    start_column=col,
+                    end_row=row_index,
+                    end_column=end_col,
+                )
+                label_cell = sheet.cell(row=row_index, column=col, value=str(label).upper())
+                label_cell.font = Font(bold=True, size=8, color=MUTED)
+                label_cell.fill = PatternFill('solid', fgColor=LIGHT_INDIGO)
+                label_cell.alignment = Alignment(horizontal='left', vertical='center')
 
-            sheet.merge_cells(
-                start_row=row_index + 1,
-                start_column=col,
-                end_row=row_index + 1,
-                end_column=end_col,
-            )
-            value_cell = sheet.cell(
-                row=row_index + 1,
-                column=col,
-                value=_report_value(value),
-            )
-            value_cell.font = Font(bold=True, size=13, color=NAVY)
-            value_cell.fill = PatternFill('solid', fgColor='FFFFFF')
-            value_cell.alignment = Alignment(horizontal='left', vertical='center')
+                sheet.merge_cells(
+                    start_row=row_index + 1,
+                    start_column=col,
+                    end_row=row_index + 1,
+                    end_column=end_col,
+                )
+                value_cell = sheet.cell(
+                    row=row_index + 1,
+                    column=col,
+                    value=_format_report_money(value),
+                )
+                value_cell.font = Font(bold=True, size=12, color=INDIGO)
+                value_cell.fill = PatternFill('solid', fgColor=WHITE)
+                value_cell.alignment = Alignment(horizontal='left', vertical='center')
 
-            for r in (row_index, row_index + 1):
-                for c in range(col, end_col + 1):
-                    sheet.cell(row=r, column=c).border = Border(
-                        left=Side(style='thin', color=BORDER),
-                        right=Side(style='thin', color=BORDER),
-                        top=Side(style='thin', color=BORDER),
-                        bottom=Side(style='thin', color=BORDER),
-                    )
+                for rr in (row_index, row_index + 1):
+                    for cc in range(col, end_col + 1):
+                        sheet.cell(row=rr, column=cc).border = Border(
+                            left=Side(style='thin', color=BORDER),
+                            right=Side(style='thin', color=BORDER),
+                            top=Side(style='thin', color=BORDER),
+                            bottom=Side(style='thin', color=BORDER),
+                        )
+            row_index += 3
 
-            if not compact:
-                row_index += 2
-
-        if compact:
-            sheet.row_dimensions[row_index].height = 20
-            sheet.row_dimensions[row_index + 1].height = 25
-            row_index += 4
-        else:
-            row_index += 2
-
-    # Report table header
-    for col_index, header in enumerate(headers, 1):
-        cell = sheet.cell(row=row_index, column=col_index, value=header)
+    # Report table
+    header_row = row_index
+    for col_index, header in enumerate(headers or [], 1):
+        cell = sheet.cell(row=header_row, column=col_index, value=header)
         cell.font = Font(bold=True, size=10, color=WHITE)
-        cell.fill = PatternFill('solid', fgColor=BLUE)
+        cell.fill = PatternFill('solid', fgColor=INDIGO)
         cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
         cell.border = Border(
             left=Side(style='thin', color=WHITE),
@@ -185,15 +287,25 @@ def _export_report_xlsx(title, headers, rows, filename, summary_rows=None):
             top=Side(style='thin', color=WHITE),
             bottom=Side(style='thin', color=WHITE),
         )
-    sheet.row_dimensions[row_index].height = 24
-    header_row = row_index
+    sheet.row_dimensions[header_row].height = 25
     row_index += 1
 
-    # Data rows
-    for data_index, row in enumerate(rows):
+    currency_keywords = (
+        'amount', 'revenue', 'cost', 'profit', 'total', 'sales', 'discount',
+        'tax', 'gst', 'outstanding', 'credit', 'expense', 'payment', 'price',
+        'value', 'collection', 'returns', 'net', 'balance', 'paid', 'due',
+    )
+
+    for data_index, row in enumerate(rows or []):
         for col_index, value in enumerate(row, 1):
-            cell = sheet.cell(row=row_index, column=col_index, value=_report_value(value))
-            cell.font = Font(name='Calibri', size=10, color='1E293B')
+            header_name = str(headers[col_index - 1]).lower() if col_index <= len(headers) else ''
+            display = (
+                _format_report_money(value)
+                if any(keyword in header_name for keyword in currency_keywords)
+                else _report_value(value)
+            )
+            cell = sheet.cell(row=row_index, column=col_index, value=display)
+            cell.font = Font(name='Calibri', size=10, color=TEXT)
             cell.alignment = Alignment(
                 horizontal='left' if col_index == 1 else 'right',
                 vertical='center',
@@ -201,47 +313,40 @@ def _export_report_xlsx(title, headers, rows, filename, summary_rows=None):
             )
             if data_index % 2 == 1:
                 cell.fill = PatternFill('solid', fgColor=ALT)
-            cell.border = Border(
-                bottom=Side(style='hair', color=BORDER),
-            )
+            cell.border = Border(bottom=Side(style='hair', color=BORDER))
         sheet.row_dimensions[row_index].height = 21
         row_index += 1
 
-    # Total/footer row emphasis when summary exists.
-    if rows and summary_rows:
-        for col in range(1, last_col + 1):
-            cell = sheet.cell(row=row_index - 1, column=col)
-            cell.border = Border(
-                bottom=Side(style='thin', color=BORDER),
-            )
+    # Empty state
+    if not rows:
+        sheet.cell(row=row_index, column=1, value='No records found for this report.')
+        sheet.cell(row=row_index, column=1).font = Font(italic=True, color=MUTED)
+        row_index += 1
 
-    # Freeze table header and enable filters.
     sheet.freeze_panes = f'A{header_row + 1}'
-    sheet.auto_filter.ref = f"A{header_row}:{sheet.cell(row=max(header_row, row_index - 1), column=last_col).coordinate}"
+    if headers:
+        sheet.auto_filter.ref = (
+            f"A{header_row}:{sheet.cell(row=max(header_row, row_index - 1), column=last_col).coordinate}"
+        )
 
-    # Print / page setup.
     sheet.sheet_view.showGridLines = False
-    sheet.page_setup.orientation = 'landscape' if len(headers) >= 5 else 'portrait'
+    sheet.page_setup.orientation = 'landscape' if len(headers or []) >= 5 else 'portrait'
     sheet.page_setup.fitToWidth = 1
     sheet.page_setup.fitToHeight = 0
     sheet.sheet_properties.pageSetUpPr.fitToPage = True
     sheet.print_title_rows = f'{header_row}:{header_row}'
     sheet.page_margins.left = 0.3
     sheet.page_margins.right = 0.3
-    sheet.page_margins.top = 0.5
+    sheet.page_margins.top = 0.4
     sheet.page_margins.bottom = 0.5
 
-    # Sensible widths.
     for col_index in range(1, last_col + 1):
         values = [
             _report_value(sheet.cell(row=r, column=col_index).value)
             for r in range(header_row, row_index)
         ]
         width = max([len(v) for v in values if v] + [12])
-        if col_index == 1:
-            width = min(max(width + 3, 18), 34)
-        else:
-            width = min(max(width + 3, 12), 24)
+        width = min(max(width + 3, 12), 34 if col_index == 1 else 24)
         sheet.column_dimensions[get_column_letter(col_index)].width = width
 
     buffer = BytesIO()
@@ -253,6 +358,7 @@ def _export_report_xlsx(title, headers, rows, filename, summary_rows=None):
     )
 
 
+
 def _export_report_pdf(
     title,
     headers,
@@ -261,87 +367,83 @@ def _export_report_pdf(
     summary_rows=None,
     request_user=None,
 ):
-    """
-    Consistent professional A4 PDF exporter for every business report.
+    """Simple business report PDF with optional shop logo and clean table layout."""
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib import colors as rl_colors
+    from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as RLImage
+    from xml.sax.saxutils import escape as xml_escape
 
-    Design goals:
-      - One visual system for Sales, Products, Profit, GST, Customer Credit,
-        Payments and Expenses.
-      - Printer-friendly black/white document with subtle grey hierarchy.
-      - A4 portrait for compact reports and landscape for wide reports.
-      - KPI cards wrap automatically instead of overflowing.
-      - Long tables repeat their header on every page.
-      - Long text wraps safely inside cells.
-      - Footer contains shop identity, generated timestamp and page number.
-    """
-    from .models import Setting
-    from reportlab.platypus import KeepTogether
+    profile = _get_report_business_profile(request_user)
 
-    def get_setting(key, default=''):
-        try:
-            business = getattr(request_user, 'business', None)
-            if business is not None:
-                setting = Setting.objects.filter(
-                    business=business,
-                    key=key,
-                ).first()
-            else:
-                setting = Setting.objects.filter(key=key).first()
-            return setting.value if setting else default
-        except Exception:
-            return default
-
-    def safe_text(value):
+    def plain_text(value):
         if value is None:
             return ''
-        return str(value).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+        text = str(value)
+        replacements = {
+            '₹': 'Rs.', '₨': 'Rs.', '•': '-', '·': '-', '–': '-',
+            '—': '-', '−': '-', '“': '"', '”': '"', '‘': "'",
+            '’': "'", '…': '...', '\u00a0': ' ', '\n': ' ', '\r': ' ', '\t': ' ',
+        }
+        for old, new in replacements.items():
+            text = text.replace(old, new)
+        return text.encode('latin-1', errors='replace').decode('latin-1')
+
+    def safe_text(value):
+        return xml_escape(plain_text(value))
 
     def money_text(value):
-        raw = _report_value(value)
-        if raw in ('', '0', '0.00'):
-            return raw
-        try:
-            float(raw.replace(',', '').replace('Rs.', '').strip())
-            return f'Rs.{raw}'
-        except (ValueError, TypeError):
-            return raw
+        return plain_text(_format_report_money(value))
 
-    shop_name = get_setting('shop_name', 'ShopEase POS')
-    shop_address = get_setting('shop_address', '')
-    shop_phone = get_setting('shop_phone', '')
-    shop_email = get_setting('shop_email', '')
-    shop_gstin = get_setting('shop_gstin', '')
+    def is_money_header(header):
+        name = str(header or '').lower()
+        keywords = (
+            'amount', 'revenue', 'cost', 'profit', 'total', 'sales', 'discount',
+            'tax', 'gst', 'outstanding', 'credit', 'expense', 'payment', 'price',
+            'value', 'collection', 'returns', 'return', 'net', 'balance', 'paid', 'due',
+            'purchase', 'mrp', 'subtotal', 'round off',
+        )
+        return any(k in name for k in keywords)
 
-    now = timezone.localtime(timezone.now())
-    generated_at = now.strftime('%d %b %Y, %I:%M %p')
+    title_plain = plain_text(title) or 'Report'
+    shop_name = plain_text(profile.get('shop_name') or 'ShopEase POS')
+    generated_at = timezone.localtime(timezone.now()).strftime('%d %b %Y, %I:%M %p')
 
-    # Printer-friendly monochrome palette.
-    BLACK = colors.HexColor('#111111')
-    DARK = colors.HexColor('#262626')
-    GREY = colors.HexColor('#666666')
-    MID_GREY = colors.HexColor('#A3A3A3')
-    LIGHT_GREY = colors.HexColor('#F3F3F3')
-    VERY_LIGHT = colors.HexColor('#FAFAFA')
-    BORDER = colors.HexColor('#D4D4D4')
-    WHITE = colors.white
+    headers = list(headers or [])
+    normalized_rows = []
+    for row in rows or []:
+        row = list(row or [])
+        if len(row) < len(headers):
+            row.extend([''] * (len(headers) - len(row)))
+        normalized_rows.append(row[:len(headers)])
 
-    # Wide reports need more horizontal room.
-    column_count = len(headers or [])
-    landscape_report = column_count >= 5
+    if not headers:
+        headers = ['Message']
+        normalized_rows = [['No report data available.']]
 
-    from reportlab.lib.pagesizes import A4, landscape
-
+    column_count = len(headers)
+    landscape_report = column_count >= 6
     page_size = landscape(A4) if landscape_report else A4
     page_width, page_height = page_size
 
     left_margin = 12 * mm
     right_margin = 12 * mm
-    top_margin = 11 * mm
+    top_margin = 10 * mm
     bottom_margin = 17 * mm
     body_width = page_width - left_margin - right_margin
 
-    buffer = BytesIO()
+    INDIGO = rl_colors.HexColor('#1E3A8A')
+    TEAL = rl_colors.HexColor('#0F766E')
+    DARK = rl_colors.HexColor('#1F2937')
+    MUTED = rl_colors.HexColor('#64748B')
+    BORDER = rl_colors.HexColor('#CBD5E1')
+    LIGHT = rl_colors.HexColor('#EEF4FF')
+    ALT = rl_colors.HexColor('#F8FAFC')
+    WHITE = rl_colors.white
 
+    buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
         pagesize=page_size,
@@ -349,436 +451,194 @@ def _export_report_pdf(
         rightMargin=right_margin,
         topMargin=top_margin,
         bottomMargin=bottom_margin,
-        title=title,
+        title=title_plain,
         author=shop_name,
-        subject=f'{title} generated by {shop_name}',
-        allowSplitting=1,
     )
 
-    # ---------- TYPOGRAPHY ----------
-    shop_style = ParagraphStyle(
-        'report_shop_name_v3',
-        fontName='Helvetica-Bold',
-        fontSize=14,
-        leading=16,
-        textColor=BLACK,
-        alignment=TA_LEFT,
-        spaceAfter=1 * mm,
-    )
-
-    shop_meta = ParagraphStyle(
-        'report_shop_meta_v3',
-        fontName='Helvetica',
-        fontSize=7,
-        leading=9,
-        textColor=GREY,
-        alignment=TA_LEFT,
-    )
-
-    title_style = ParagraphStyle(
-        'report_title_v3',
-        fontName='Helvetica-Bold',
-        fontSize=16,
-        leading=18,
-        textColor=BLACK,
-        alignment=TA_RIGHT,
-    )
-
-    title_meta_style = ParagraphStyle(
-        'report_title_meta_v3',
-        fontName='Helvetica',
-        fontSize=7,
-        leading=9,
-        textColor=GREY,
-        alignment=TA_RIGHT,
-    )
-
-    section_style = ParagraphStyle(
-        'report_section_v3',
-        fontName='Helvetica-Bold',
-        fontSize=8,
-        leading=10,
-        textColor=BLACK,
-        alignment=TA_LEFT,
-    )
-
-    header_style = ParagraphStyle(
-        'report_table_header_v3',
-        fontName='Helvetica-Bold',
-        fontSize=7,
-        leading=8.5,
-        textColor=WHITE,
-        alignment=TA_LEFT,
-    )
-
-    cell_style = ParagraphStyle(
-        'report_table_cell_v3',
-        fontName='Helvetica',
-        fontSize=7,
-        leading=8.5,
-        textColor=DARK,
-        alignment=TA_LEFT,
-        wordWrap='LTR',
-    )
-
-    cell_right_style = ParagraphStyle(
-        'report_table_cell_right_v3',
-        fontName='Helvetica',
-        fontSize=7,
-        leading=8.5,
-        textColor=DARK,
-        alignment=TA_RIGHT,
-        wordWrap='LTR',
-    )
-
-    empty_style = ParagraphStyle(
-        'report_empty_v3',
-        fontName='Helvetica',
-        fontSize=8,
-        leading=10,
-        textColor=GREY,
-        alignment=TA_CENTER,
-    )
+    styles = {
+        'shop': ParagraphStyle('simple_shop', fontName='Helvetica-Bold', fontSize=14, leading=16, textColor=INDIGO, alignment=TA_LEFT),
+        'meta': ParagraphStyle('simple_meta', fontName='Helvetica', fontSize=7.5, leading=9, textColor=MUTED, alignment=TA_LEFT),
+        'title': ParagraphStyle('simple_title', fontName='Helvetica-Bold', fontSize=15, leading=17, textColor=INDIGO, alignment=TA_RIGHT),
+        'date': ParagraphStyle('simple_date', fontName='Helvetica', fontSize=7, leading=9, textColor=MUTED, alignment=TA_RIGHT),
+        'header': ParagraphStyle('simple_header', fontName='Helvetica-Bold', fontSize=7, leading=8.5, textColor=WHITE, alignment=TA_LEFT),
+        'left': ParagraphStyle('simple_left', fontName='Helvetica', fontSize=7.2, leading=8.8, textColor=DARK, alignment=TA_LEFT),
+        'right': ParagraphStyle('simple_right', fontName='Helvetica', fontSize=7.2, leading=8.8, textColor=DARK, alignment=TA_RIGHT),
+        'kpi_label': ParagraphStyle('simple_kpi_label', fontName='Helvetica-Bold', fontSize=6.5, leading=7.5, textColor=MUTED, alignment=TA_LEFT),
+        'kpi_value': ParagraphStyle('simple_kpi_value', fontName='Helvetica-Bold', fontSize=10, leading=12, textColor=INDIGO, alignment=TA_LEFT),
+        'empty': ParagraphStyle('simple_empty', fontName='Helvetica', fontSize=8, leading=10, textColor=MUTED, alignment=TA_CENTER),
+    }
 
     story = []
 
-    # ---------- HEADER ----------
-    shop_lines = [
-        Paragraph(safe_text(shop_name or 'ShopEase POS'), shop_style)
-    ]
+    # ---------------------------------------------------------
+    # Simple header: LOGO | BUSINESS | REPORT TITLE
+    # ---------------------------------------------------------
+    logo_cell = ''
+    logo_bytes = _download_report_logo(profile.get('shop_logo'))
+    if logo_bytes:
+        try:
+            logo_stream = BytesIO(logo_bytes)
+            logo = RLImage(logo_stream)
+            max_logo_w = 22 * mm
+            max_logo_h = 18 * mm
+            scale = min(max_logo_w / float(logo.imageWidth), max_logo_h / float(logo.imageHeight), 1)
+            logo.drawWidth = logo.imageWidth * scale
+            logo.drawHeight = logo.imageHeight * scale
+            logo_cell = logo
+        except Exception:
+            logo_cell = ''
 
-    if shop_address:
-        shop_lines.append(
-            Paragraph(safe_text(shop_address).replace('\n', ', '), shop_meta)
-        )
+    contact = []
+    if profile.get('shop_address'):
+        contact.append(plain_text(profile['shop_address']))
+    if profile.get('shop_phone'):
+        contact.append(f"Phone: {plain_text(profile['shop_phone'])}")
+    if profile.get('shop_email'):
+        contact.append(f"Email: {plain_text(profile['shop_email'])}")
+    if profile.get('shop_gstin'):
+        contact.append(f"GSTIN: {plain_text(profile['shop_gstin'])}")
 
-    contact_parts = []
-    if shop_phone:
-        contact_parts.append(f'Phone: {safe_text(shop_phone)}')
-    if shop_email:
-        contact_parts.append(f'Email: {safe_text(shop_email)}')
-    if shop_gstin:
-        contact_parts.append(f'GSTIN: {safe_text(shop_gstin)}')
+    business_block = [Paragraph(safe_text(shop_name), styles['shop'])]
+    if contact:
+        business_block.append(Paragraph(safe_text(' | '.join(contact)), styles['meta']))
 
-    if contact_parts:
-        shop_lines.append(
-            Paragraph(' &nbsp;|&nbsp; '.join(contact_parts), shop_meta)
-        )
-
-    report_lines = [
-        Paragraph(safe_text(title).upper(), title_style),
+    report_block = [
+        Paragraph(safe_text(title_plain.upper()), styles['title']),
         Spacer(1, 1 * mm),
-        Paragraph(f'Generated {generated_at}', title_meta_style),
+        Paragraph(safe_text(generated_at), styles['date']),
     ]
 
     header = Table(
-        [[shop_lines, report_lines]],
-        colWidths=[body_width * 0.58, body_width * 0.42],
+        [[logo_cell, business_block, report_block]],
+        colWidths=[24 * mm, body_width * 0.53, body_width * 0.47 - 24 * mm],
+        hAlign='LEFT',
     )
     header.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+        ('ALIGN', (2, 0), (2, 0), 'RIGHT'),
         ('LEFTPADDING', (0, 0), (-1, -1), 0),
         ('RIGHTPADDING', (0, 0), (-1, -1), 0),
         ('TOPPADDING', (0, 0), (-1, -1), 0),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
     ]))
     story.append(header)
-    story.append(Spacer(1, 3 * mm))
+    story.append(Spacer(1, 2.5 * mm))
 
-    # Strong monochrome title rule.
-    rule = Table([['']], colWidths=[body_width], rowHeights=[1.2 * mm])
-    rule.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), BLACK),
+    accent = Table([['']], colWidths=[body_width], rowHeights=[1.2 * mm])
+    accent.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), INDIGO),
         ('LEFTPADDING', (0, 0), (-1, -1), 0),
         ('RIGHTPADDING', (0, 0), (-1, -1), 0),
         ('TOPPADDING', (0, 0), (-1, -1), 0),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
     ]))
-    story.append(rule)
-    story.append(Spacer(1, 3.5 * mm))
+    story.append(accent)
+    story.append(Spacer(1, 3 * mm))
 
-    # ---------- REPORT INFO ----------
-    info_parts = [
-        Paragraph(
-            f'<b>REPORT</b>&nbsp;&nbsp;{safe_text(title)}',
-            shop_meta,
-        ),
-        Paragraph(
-            f'<b>CREATED</b>&nbsp;&nbsp;{generated_at}',
-            shop_meta,
-        ),
-    ]
-
-    info_table = Table(
-        [info_parts],
-        colWidths=[body_width * 0.65, body_width * 0.35],
-    )
-    info_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), VERY_LIGHT),
-        ('BOX', (0, 0), (-1, -1), 0.4, BORDER),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 5),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-    ]))
-    story.append(info_table)
-    story.append(Spacer(1, 4 * mm))
-
-    # ---------- KPI SUMMARY ----------
+    # ---------------------------------------------------------
+    # Small summary line instead of large modern cards
+    # ---------------------------------------------------------
     if summary_rows:
-        # Four cards per row on A4. This avoids the previous one-row overflow
-        # on reports with many summary values.
-        card_gap = 3 * mm
-        cards_per_row = 4 if landscape_report else 3
-        card_width = (body_width - card_gap * (cards_per_row - 1)) / cards_per_row
-
-        card_tables = []
-
-        for index, (label, value) in enumerate(summary_rows):
-            value_text = money_text(value)
-
-            card = Table(
-                [[
-                    Paragraph(
-                        safe_text(label).upper(),
-                        ParagraphStyle(
-                            f'report_kpi_label_v3_{index}',
-                            fontName='Helvetica-Bold',
-                            fontSize=6.3,
-                            leading=7.5,
-                            textColor=GREY,
-                            alignment=TA_LEFT,
-                        ),
-                    )
-                ], [
-                    Paragraph(
-                        safe_text(value_text),
-                        ParagraphStyle(
-                            f'report_kpi_value_v3_{index}',
-                            fontName='Helvetica-Bold',
-                            fontSize=10,
-                            leading=12,
-                            textColor=BLACK,
-                            alignment=TA_LEFT,
-                        ),
-                    )
-                ]],
-                colWidths=[card_width],
-                rowHeights=[6 * mm, 8 * mm],
-            )
-
-            card.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, -1), LIGHT_GREY),
-                ('BOX', (0, 0), (-1, -1), 0.45, BORDER),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 5),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 5),
-                ('TOPPADDING', (0, 0), (-1, -1), 1.5),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 1.5),
-            ]))
-            card_tables.append(card)
-
-        for offset in range(0, len(card_tables), cards_per_row):
-            row_cards = card_tables[offset:offset + cards_per_row]
-            row_widths = [card_width] * len(row_cards)
-
+        summary = []
+        for item in summary_rows:
+            try:
+                label, value = item
+                summary.append(f"{plain_text(label)}: {money_text(value)}")
+            except Exception:
+                continue
+        if summary:
             summary_table = Table(
-                [row_cards],
-                colWidths=row_widths,
-                hAlign='LEFT',
+                [[Paragraph(safe_text('  |  '.join(summary)), styles['meta'])]],
+                colWidths=[body_width],
             )
-            summary_style = [
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                ('RIGHTPADDING', (0, 0), (-1, -1), card_gap),
-                ('TOPPADDING', (0, 0), (-1, -1), 0),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-            ]
-            summary_style.append(
-                ('RIGHTPADDING', (-1, 0), (-1, 0), 0)
-            )
-            summary_table.setStyle(TableStyle(summary_style))
+            summary_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), LIGHT),
+                ('BOX', (0, 0), (-1, -1), 0.4, BORDER),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ]))
             story.append(summary_table)
-            story.append(Spacer(1, 2.5 * mm))
+            story.append(Spacer(1, 3 * mm))
 
-        story.append(Spacer(1, 1 * mm))
+    # ---------------------------------------------------------
+    # Main report table
+    # ---------------------------------------------------------
+    table_data = [[Paragraph(safe_text(h), styles['header']) for h in headers]]
+    for row in normalized_rows:
+        rendered = []
+        for i, value in enumerate(row):
+            display = money_text(value) if is_money_header(headers[i]) else plain_text(value)
+            rendered.append(Paragraph(safe_text(display), styles['right'] if i > 0 and is_money_header(headers[i]) else styles['left']))
+        table_data.append(rendered)
 
-    # ---------- TABLE ----------
-    if not headers:
-        story.append(Paragraph('No report data available.', empty_style))
+    if not normalized_rows:
+        empty = [Paragraph('', styles['left']) for _ in headers]
+        empty[0] = Paragraph('No records found for this report.', styles['empty'])
+        table_data.append(empty)
+
+    count = len(headers)
+    if count == 1:
+        widths = [body_width]
+    elif count == 2:
+        widths = [body_width * .58, body_width * .42]
+    elif count == 3:
+        widths = [body_width * .40, body_width * .30, body_width * .30]
+    elif count == 4:
+        widths = [body_width * .30, body_width * .23, body_width * .23, body_width * .24]
+    elif count == 5:
+        widths = [body_width * .26, body_width * .18, body_width * .18, body_width * .19, body_width * .19]
     else:
-        header_cells = [
-            Paragraph(safe_text(header), header_style)
-            for header in headers
-        ]
+        first = body_width * .22
+        rest = (body_width - first) / (count - 1)
+        widths = [first] + [rest] * (count - 1)
 
-        currency_keywords = (
-            'amount', 'revenue', 'cost', 'profit', 'total',
-            'sales', 'discount', 'tax', 'gst', 'outstanding',
-            'credit', 'expense', 'payment', 'price', 'value',
-            'collection', 'returns', 'net',
-        )
+    report_table = Table(table_data, colWidths=widths, repeatRows=1, splitByRow=1, hAlign='LEFT')
+    table_style = [
+        ('BACKGROUND', (0, 0), (-1, 0), INDIGO),
+        ('TEXTCOLOR', (0, 0), (-1, 0), WHITE),
+        ('BOX', (0, 0), (-1, -1), .45, BORDER),
+        ('LINEBELOW', (0, 0), (-1, 0), .7, INDIGO),
+        ('LINEBELOW', (0, 1), (-1, -1), .25, BORDER),
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 3.5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]
+    for r in range(1, len(table_data)):
+        if r % 2 == 0:
+            table_style.append(('BACKGROUND', (0, r), (-1, r), ALT))
+    report_table.setStyle(TableStyle(table_style))
+    story.append(report_table)
 
-        data_cells = []
+    # ---------------------------------------------------------
+    # Footer
+    # ---------------------------------------------------------
+    footer_shop = shop_name[:120]
+    footer_phone = plain_text(profile.get('shop_phone')) if profile.get('shop_phone') else ''
 
-        for row in rows or []:
-            rendered_row = []
-
-            for index, value in enumerate(row):
-                header_name = (
-                    str(headers[index]).lower()
-                    if index < len(headers)
-                    else ''
-                )
-
-                is_currency = any(
-                    keyword in header_name
-                    for keyword in currency_keywords
-                )
-
-                display = money_text(value) if is_currency else _report_value(value)
-
-                rendered_row.append(
-                    Paragraph(
-                        safe_text(display),
-                        cell_right_style if index > 0 else cell_style,
-                    )
-                )
-
-            # Guard against malformed rows returned by future report services.
-            while len(rendered_row) < len(headers):
-                rendered_row.append(Paragraph('', cell_style))
-
-            data_cells.append(rendered_row[:len(headers)])
-
-        # Adaptive column widths.
-        count = len(headers)
-
-        if count == 1:
-            widths = [body_width]
-        elif count == 2:
-            widths = [body_width * 0.60, body_width * 0.40]
-        elif count == 3:
-            widths = [body_width * 0.34, body_width * 0.33, body_width * 0.33]
-        elif count == 4:
-            widths = [
-                body_width * 0.29,
-                body_width * 0.21,
-                body_width * 0.25,
-                body_width * 0.25,
-            ]
-        elif count == 5:
-            widths = [
-                body_width * 0.25,
-                body_width * 0.15,
-                body_width * 0.20,
-                body_width * 0.20,
-                body_width * 0.20,
-            ]
-        elif count == 6:
-            widths = [
-                body_width * 0.22,
-                body_width * 0.15,
-                body_width * 0.16,
-                body_width * 0.16,
-                body_width * 0.15,
-                body_width * 0.16,
-            ]
-        else:
-            equal_width = body_width / count
-            widths = [equal_width] * count
-
-        table_data = [header_cells] + data_cells
-
-        if not data_cells:
-            table_data.append([
-                Paragraph('No records found for this report.', empty_style)
-                if i == 0
-                else Paragraph('', cell_style)
-                for i in range(count)
-            ])
-
-        report_table = Table(
-            table_data,
-            colWidths=widths,
-            repeatRows=1,
-            splitByRow=1,
-            hAlign='LEFT',
-        )
-
-        table_style = [
-            ('BACKGROUND', (0, 0), (-1, 0), BLACK),
-            ('TEXTCOLOR', (0, 0), (-1, 0), WHITE),
-            ('BOX', (0, 0), (-1, -1), 0.5, BORDER),
-            ('LINEBELOW', (0, 0), (-1, 0), 0.7, BLACK),
-            ('LINEBELOW', (0, 1), (-1, -1), 0.25, BORDER),
-            ('LEFTPADDING', (0, 0), (-1, -1), 4),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-            ('TOPPADDING', (0, 0), (-1, -1), 3.5),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]
-
-        # Subtle alternating rows for readability while remaining printer-safe.
-        for row_index in range(1, len(table_data)):
-            if row_index % 2 == 0:
-                table_style.append(
-                    ('BACKGROUND', (0, row_index), (-1, row_index), VERY_LIGHT)
-                )
-
-        report_table.setStyle(TableStyle(table_style))
-        story.append(report_table)
-
-    # ---------- FOOTER ----------
-    def draw_page_footer(canvas, document):
+    def draw_footer(canvas, document):
         canvas.saveState()
-
         canvas.setStrokeColor(BORDER)
-        canvas.setLineWidth(0.45)
-        canvas.line(
-            left_margin,
-            10 * mm,
-            page_width - right_margin,
-            10 * mm,
-        )
-
-        footer_text = shop_name or 'ShopEase POS'
-        if shop_phone:
-            footer_text += f'  |  {shop_phone}'
-        if shop_email:
-            footer_text += f'  |  {shop_email}'
-
-        canvas.setFillColor(GREY)
+        canvas.setLineWidth(.45)
+        canvas.line(left_margin, 10 * mm, page_width - right_margin, 10 * mm)
+        footer = footer_shop
+        if footer_phone:
+            footer += f' | {footer_phone}'
+        canvas.setFillColor(MUTED)
         canvas.setFont('Helvetica', 6.5)
-        canvas.drawString(
-            left_margin,
-            6.2 * mm,
-            footer_text[:150],
-        )
-
+        canvas.drawString(left_margin, 6.2 * mm, footer[:170])
+        canvas.setFillColor(INDIGO)
         canvas.setFont('Helvetica-Bold', 6.5)
-        canvas.drawRightString(
-            page_width - right_margin,
-            6.2 * mm,
-            f'Page {document.page}',
-        )
-
+        canvas.drawRightString(page_width - right_margin, 6.2 * mm, f'Page {document.page}')
         canvas.restoreState()
 
-    doc.build(
-        story,
-        onFirstPage=draw_page_footer,
-        onLaterPages=draw_page_footer,
-    )
-
+    doc.build(story, onFirstPage=draw_footer, onLaterPages=draw_footer)
     buffer.seek(0)
-
-    return _report_response(
-        filename,
-        buffer.getvalue(),
-        'application/pdf',
-    )
+    return _report_response(filename, buffer.getvalue(), 'application/pdf')
 
 
 class LoginView(APIView):
@@ -1243,6 +1103,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             'discount_amount': float(invoice.discount_amount),
             'grand_total': float(invoice.grand_total),
             'notes': invoice.notes or '',
+            'place_of_supply': invoice.place_of_supply or '',
         }
 
         fields_to_update = []
@@ -1270,6 +1131,10 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             invoice.notes = str(request.data['notes'])
             fields_to_update.append('notes')
 
+        if 'place_of_supply' in request.data:
+            invoice.place_of_supply = str(request.data['place_of_supply'])
+            fields_to_update.append('place_of_supply')
+
         if fields_to_update:
             invoice.save(update_fields=list(set(fields_to_update)))
         else:
@@ -1279,6 +1144,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
             'discount_amount': float(invoice.discount_amount),
             'grand_total': float(invoice.grand_total),
             'notes': invoice.notes or '',
+            'place_of_supply': invoice.place_of_supply,
         }
 
         audit_event(
@@ -1397,6 +1263,20 @@ class SettingViewSet(viewsets.ModelViewSet):
                 defaults={'value': str(value)},
             )
 
+        # Synchronize place_of_supply and shop_state if either is updated
+        pos_val = request.data.get('place_of_supply') or request.data.get('shop_state')
+        if pos_val:
+            Setting.objects.update_or_create(
+                business=request.user.business,
+                key='place_of_supply',
+                defaults={'value': str(pos_val)},
+            )
+            Setting.objects.update_or_create(
+                business=request.user.business,
+                key='shop_state',
+                defaults={'value': str(pos_val)},
+            )
+
         reason = request.data.get('reason') or request.data.get('_reason') or 'Settings updated via settings panel'
         audit_event(
             request,
@@ -1509,6 +1389,12 @@ class SettingViewSet(viewsets.ModelViewSet):
         }
         saved = {s.key: s.value for s in self.get_queryset()}
         return Response({**defaults, **saved})
+        merged = {**defaults, **saved}
+        if merged.get('place_of_supply') and not merged.get('shop_state'):
+            merged['shop_state'] = merged['place_of_supply']
+        elif merged.get('shop_state') and not merged.get('place_of_supply'):
+            merged['place_of_supply'] = merged['shop_state']
+        return Response(merged)
 
 
 class DashboardView(APIView):
@@ -1912,7 +1798,9 @@ def _serve_report(request, report_name):
     if report_format == 'xlsx':
         return _export_report_xlsx(
             report.title, report.headers, report.rows,
-            f'{report.filename}.xlsx', summary_rows=report.summary_rows,
+            f'{report.filename}.xlsx',
+            summary_rows=report.summary_rows,
+            request_user=request.user,
         )
     return Response(report.payload)
 
@@ -2201,6 +2089,17 @@ class PublicInvoiceShortLinkView(APIView):
             # Use one response for missing and expired codes to avoid revealing
             # whether an invoice link once existed.
             raise Http404('This invoice link is invalid or has expired.')
+
+        # If accessed from browser or with view=web/html, redirect to digital bill
+        accept = request.META.get('HTTP_ACCEPT', '')
+        if request.query_params.get('download') != '1' and (
+            request.query_params.get('view') == 'web' or 'text/html' in accept
+        ):
+            from django.http import HttpResponseRedirect
+            from decouple import config as env
+            frontend_url = env('FRONTEND_URL', default='http://localhost:3000').rstrip('/')
+            return HttpResponseRedirect(f"{frontend_url}/bill/{link.invoice.public_token}")
+
         return _invoice_pdf_response(
             link.invoice,
             request.query_params.get('printer'),
@@ -3480,4 +3379,449 @@ class NotificationTriggerCheckView(APIView):
             'message': 'Notification checks executed successfully',
             'unread_count': unread,
         })
+
+
+# ─────────────────────────────────────────────────────────────
+# WhatsApp & SMS Communication Actions & History
+# ─────────────────────────────────────────────────────────────
+
+from urllib.parse import quote
+
+
+def _clean_phone(raw_phone):
+    """Normalize Indian and international phone numbers for WhatsApp wa.me links."""
+    p = str(raw_phone or '').strip()
+    digits = ''.join(c for c in p if c.isdigit())
+    if not digits:
+        return ''
+    if len(digits) == 10:
+        return f"91{digits}"
+    if len(digits) > 10 and digits.startswith('0'):
+        return f"91{digits[1:]}"
+    return digits
+
+
+
+def _communication_profile(request_user):
+    """Business identity for all customer/supplier messages."""
+    business = getattr(request_user, 'business', None)
+    shop_name = _report_setting(
+        request_user,
+        'shop_name',
+        getattr(business, 'name', '') or 'Our Store',
+    )
+    return str(shop_name).strip() or 'Our Store'
+
+
+def _message_phone(raw_phone):
+    """Normalize Indian numbers for WhatsApp/SMS providers."""
+    p = str(raw_phone or '').strip()
+    digits = ''.join(c for c in p if c.isdigit())
+    if not digits:
+        return ''
+    if len(digits) == 10:
+        return f'91{digits}'
+    if len(digits) > 10 and digits.startswith('0'):
+        return f'91{digits[1:]}'
+    return digits
+
+
+def _invoice_message_body(shop_name, customer_name, invoice, short_url):
+    status = str(invoice.payment_status or 'pending').replace('_', ' ').title()
+    inv_date = invoice.created_at.strftime('%d %b %Y') if invoice.created_at else ''
+    lines = [
+        f'{shop_name}: Invoice {invoice.invoice_number}',
+        f'Customer: {customer_name}',
+        f'Date: {inv_date}',
+        f'Amount: Rs.{invoice.grand_total:,.2f}',
+        f'Payment: {status}',
+    ]
+    if short_url:
+        lines += [f'View bill: {short_url}']
+    lines += ['Thank you for shopping with us.']
+    return '\n'.join(lines)
+
+
+def _payment_reminder_body(shop_name, customer_name, amount, short_url=''):
+    lines = [
+        f'{shop_name}: Payment reminder',
+        f'Dear {customer_name},',
+        f'Balance due: Rs.{amount:,.2f}.',
+    ]
+    if short_url:
+        lines.append(f'View pending bill: {short_url}')
+    lines.append('Please clear the pending balance at your convenience. Thank you.')
+    return '\n'.join(lines)
+
+
+def _statement_message_body(shop_name, customer_name, total_invoiced, total_paid, outstanding, short_url=''):
+    lines = [
+        f'{shop_name}: Account statement',
+        f'Dear {customer_name},',
+        f'Total billed: Rs.{total_invoiced:,.2f}',
+        f'Total paid: Rs.{total_paid:,.2f}',
+        f'Balance due: Rs.{outstanding:,.2f}',
+    ]
+    if short_url:
+        lines.append(f'View recent bill: {short_url}')
+    lines.append('Thank you for your business.')
+    return '\n'.join(lines)
+
+
+def _purchase_message_body(shop_name, supplier_name, purchase, items_count):
+    po_date = purchase.created_at.strftime('%d %b %Y') if purchase.created_at else ''
+    return '\n'.join([
+        f'{shop_name}: Purchase order {purchase.invoice_number}',
+        f'Supplier: {supplier_name}',
+        f'Date: {po_date}',
+        f'Items: {items_count}',
+        f'Total: Rs.{purchase.total_amount:,.2f}',
+        'Please confirm receipt and expected delivery date.',
+    ])
+
+
+class InvoiceSendWhatsAppView(APIView):
+    """
+    Generate official WhatsApp message for an invoice with canonical 6-character short link
+    and record communication history.
+    """
+    permission_classes = [IsCashierOrAdmin]
+
+    def post(self, request, pk):
+        try:
+            invoice = Invoice.objects.select_related('customer', 'business').prefetch_related('items').get(
+                pk=pk, business=request.user.business
+            )
+        except Invoice.DoesNotExist:
+            raise Http404('Invoice not found')
+
+        phone = request.data.get('phone') or invoice.customer_phone or (invoice.customer.mobile if invoice.customer else '')
+        clean_phone = _clean_phone(phone)
+        customer_name = (invoice.customer.name if invoice.customer else invoice.customer_name) or 'Valued Customer'
+        shop_name = (
+            Setting.objects.filter(business=request.user.business, key='shop_name').first()
+            or getattr(request.user.business, 'name', '')
+            or 'Our Store'
+        )
+        if hasattr(shop_name, 'value'):
+            shop_name = shop_name.value
+
+        # Canonical existing 6-character short link (e.g. https://billing-erp-7ga7.onrender.com/s/x3gIro/)
+        short_url = invoice.get_short_url(request=request)
+        inv_date = invoice.created_at.strftime('%d %b %Y') if invoice.created_at else ''
+
+        body = _invoice_message_body(
+            shop_name,
+            customer_name,
+            invoice,
+            short_url,
+        )
+
+        whatsapp_url = (
+            f"https://wa.me/{clean_phone}?text={quote(body)}"
+            if clean_phone
+            else f"https://wa.me/?text={quote(body)}"
+        )
+
+        log = CommunicationLog.objects.create(
+            business=request.user.business,
+            channel='whatsapp',
+            message_type='invoice',
+            recipient_name=customer_name,
+            recipient_phone=clean_phone or phone,
+            reference_type='invoice',
+            reference_id=str(invoice.pk),
+            short_url=short_url,
+            content=body,
+            status='sent',
+            sent_by=request.user,
+        )
+
+        audit_event(
+            request,
+            'COMMUNICATION_SENT',
+            'Invoice',
+            invoice.id,
+            entity_name=invoice.invoice_number,
+            after={'channel': 'whatsapp', 'recipient': clean_phone, 'short_url': short_url},
+            reason=f'Invoice sent to {customer_name} via WhatsApp',
+        )
+
+        return Response({
+            'status': 'sent',
+            'short_url': short_url,
+            'whatsapp_url': whatsapp_url,
+            'message': body,
+            'log': CommunicationLogSerializer(log).data,
+        })
+
+
+class CustomerSendReminderView(APIView):
+    """
+    Send payment reminder to customer with outstanding balance and short bill link.
+    """
+    permission_classes = [IsCashierOrAdmin]
+
+    def post(self, request, pk):
+        try:
+            customer = Customer.objects.get(pk=pk, business=request.user.business)
+        except Customer.DoesNotExist:
+            raise Http404('Customer not found')
+
+        phone = request.data.get('phone') or customer.mobile
+        clean_phone = _clean_phone(phone)
+        channel = request.data.get('channel', 'whatsapp').lower()
+
+        shop_name = (
+            Setting.objects.filter(business=request.user.business, key='shop_name').first()
+            or getattr(request.user.business, 'name', '')
+            or 'Our Store'
+        )
+        if hasattr(shop_name, 'value'):
+            shop_name = shop_name.value
+
+        latest_inv = Invoice.objects.filter(
+            business=request.user.business,
+            customer=customer,
+            status='completed',
+            balance_due__gt=0,
+        ).order_by('-created_at').first()
+
+        short_url = latest_inv.get_short_url(request=request) if latest_inv else ''
+
+        amount = float(customer.outstanding_amount)
+        bill_clause = f"\nView Pending Bill:\n{short_url}\n" if short_url else ""
+
+        body = _payment_reminder_body(
+            shop_name,
+            customer.name,
+            amount,
+            short_url,
+        )
+
+        whatsapp_url = (
+            f"https://wa.me/{clean_phone}?text={quote(body)}"
+            if clean_phone
+            else f"https://wa.me/?text={quote(body)}"
+        )
+
+        log = CommunicationLog.objects.create(
+            business=request.user.business,
+            channel=channel,
+            message_type='payment_reminder',
+            recipient_name=customer.name,
+            recipient_phone=clean_phone or phone,
+            reference_type='customer',
+            reference_id=str(customer.pk),
+            short_url=short_url,
+            content=body,
+            status='sent',
+            sent_by=request.user,
+        )
+
+        audit_event(
+            request,
+            'COMMUNICATION_SENT',
+            'Customer',
+            customer.id,
+            entity_name=customer.name,
+            after={'channel': channel, 'type': 'payment_reminder', 'amount': amount},
+            reason=f'Payment reminder sent to {customer.name}',
+        )
+
+        return Response({
+            'status': 'sent',
+            'short_url': short_url,
+            'whatsapp_url': whatsapp_url,
+            'message': body,
+            'log': CommunicationLogSerializer(log).data,
+        })
+
+
+class CustomerSendStatementView(APIView):
+    """
+    Send account statement summary to customer via WhatsApp or SMS.
+    """
+    permission_classes = [IsCashierOrAdmin]
+
+    def post(self, request, pk):
+        try:
+            customer = Customer.objects.get(pk=pk, business=request.user.business)
+        except Customer.DoesNotExist:
+            raise Http404('Customer not found')
+
+        phone = request.data.get('phone') or customer.mobile
+        clean_phone = _clean_phone(phone)
+        channel = request.data.get('channel', 'whatsapp').lower()
+
+        shop_name = (
+            Setting.objects.filter(business=request.user.business, key='shop_name').first()
+            or getattr(request.user.business, 'name', '')
+            or 'Our Store'
+        )
+        if hasattr(shop_name, 'value'):
+            shop_name = shop_name.value
+
+        total_invoiced = Decimal(str(
+            Invoice.objects.filter(customer=customer, business=request.user.business, status='completed')
+            .aggregate(Sum('grand_total'))['grand_total__sum'] or '0'
+        ))
+        total_paid = Decimal(str(
+            CustomerPayment.objects.filter(customer=customer, business=request.user.business)
+            .aggregate(Sum('amount'))['amount__sum'] or '0'
+        ))
+
+        recent_inv = Invoice.objects.filter(
+            business=request.user.business,
+            customer=customer,
+            status='completed',
+        ).order_by('-created_at').first()
+        short_url = recent_inv.get_short_url(request=request) if recent_inv else ''
+
+        bill_clause = f"\nView Recent Bill:\n{short_url}\n" if short_url else ""
+
+        body = _statement_message_body(
+            shop_name,
+            customer.name,
+            total_invoiced,
+            total_paid,
+            customer.outstanding_amount,
+            short_url,
+        )
+
+        whatsapp_url = (
+            f"https://wa.me/{clean_phone}?text={quote(body)}"
+            if clean_phone
+            else f"https://wa.me/?text={quote(body)}"
+        )
+
+        log = CommunicationLog.objects.create(
+            business=request.user.business,
+            channel=channel,
+            message_type='statement',
+            recipient_name=customer.name,
+            recipient_phone=clean_phone or phone,
+            reference_type='customer',
+            reference_id=str(customer.pk),
+            short_url=short_url,
+            content=body,
+            status='sent',
+            sent_by=request.user,
+        )
+
+        audit_event(
+            request,
+            'COMMUNICATION_SENT',
+            'Customer',
+            customer.id,
+            entity_name=customer.name,
+            after={'channel': channel, 'type': 'statement', 'outstanding': float(customer.outstanding_amount)},
+            reason=f'Account statement sent to {customer.name}',
+        )
+
+        return Response({
+            'status': 'sent',
+            'short_url': short_url,
+            'whatsapp_url': whatsapp_url,
+            'message': body,
+            'log': CommunicationLogSerializer(log).data,
+        })
+
+
+class PurchaseSendConfirmationView(APIView):
+    """
+    Send purchase order confirmation to supplier.
+    """
+    permission_classes = [IsManagerOrAbove]
+
+    def post(self, request, pk):
+        try:
+            purchase = Purchase.objects.select_related('supplier', 'business').prefetch_related('items').get(
+                pk=pk, business=request.user.business
+            )
+        except Purchase.DoesNotExist:
+            raise Http404('Purchase order not found')
+
+        supplier = purchase.supplier
+        phone = request.data.get('phone') or (supplier.phone if supplier else '')
+        clean_phone = _clean_phone(phone)
+        channel = request.data.get('channel', 'whatsapp').lower()
+        supplier_name = supplier.name if supplier else 'Supplier'
+
+        shop_name = (
+            Setting.objects.filter(business=request.user.business, key='shop_name').first()
+            or getattr(request.user.business, 'name', '')
+            or 'Our Store'
+        )
+        if hasattr(shop_name, 'value'):
+            shop_name = shop_name.value
+
+        items_count = purchase.items.count()
+        po_date = purchase.created_at.strftime('%d %b %Y') if purchase.created_at else ''
+
+        body = _purchase_message_body(
+            shop_name,
+            supplier_name,
+            purchase,
+            items_count,
+        )
+
+        whatsapp_url = (
+            f"https://wa.me/{clean_phone}?text={quote(body)}"
+            if clean_phone
+            else f"https://wa.me/?text={quote(body)}"
+        )
+
+        log = CommunicationLog.objects.create(
+            business=request.user.business,
+            channel=channel,
+            message_type='purchase_confirmation',
+            recipient_name=supplier_name,
+            recipient_phone=clean_phone or phone,
+            reference_type='purchase',
+            reference_id=str(purchase.pk),
+            content=body,
+            status='sent',
+            sent_by=request.user,
+        )
+
+        audit_event(
+            request,
+            'COMMUNICATION_SENT',
+            'Purchase',
+            purchase.id,
+            entity_name=purchase.invoice_number,
+            after={'channel': channel, 'type': 'purchase_confirmation', 'total': float(purchase.total_amount)},
+            reason=f'Purchase confirmation sent to {supplier_name}',
+        )
+
+        return Response({
+            'status': 'sent',
+            'whatsapp_url': whatsapp_url,
+            'message': body,
+            'log': CommunicationLogSerializer(log).data,
+        })
+
+
+class CommunicationLogViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only viewset for communication history."""
+    serializer_class = CommunicationLogSerializer
+    permission_classes = [IsCashierOrAdmin]
+
+    def get_queryset(self):
+        qs = CommunicationLog.objects.select_related('sent_by').filter(business=self.request.user.business)
+        ref_type = self.request.query_params.get('reference_type')
+        ref_id = self.request.query_params.get('reference_id')
+        msg_type = self.request.query_params.get('message_type')
+        channel = self.request.query_params.get('channel')
+
+        if ref_type:
+            qs = qs.filter(reference_type=ref_type)
+        if ref_id:
+            qs = qs.filter(reference_id=str(ref_id))
+        if msg_type:
+            qs = qs.filter(message_type=msg_type)
+        if channel:
+            qs = qs.filter(channel=channel)
+        return qs
 

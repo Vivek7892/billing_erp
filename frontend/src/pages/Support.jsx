@@ -144,17 +144,17 @@ export default function Support() {
         {/* Phone Support */}
         <a
           href="tel:+917892409872"
-          className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none hover:border-indigo-400 transition-all group block"
+          className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none hover:border-[#1E3A5F] transition-all group block"
         >
           <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-[#1E3A5F] border border-[var(--line)] dark:bg-slate-800 dark:text-slate-300">
               <Phone size={16} />
             </div>
             <div className="min-w-0">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Phone Support
               </span>
-              <p className="mt-0.5 text-sm font-bold text-[var(--ink)] group-hover:text-indigo-600 transition-colors">
+              <p className="mt-0.5 text-sm font-bold text-[var(--ink)] group-hover:text-[#1E3A5F] transition-colors">
                 +91 78924 09872
               </p>
               <span className="text-[11px] text-[var(--muted-light)] mt-0.5 block">
@@ -169,17 +169,17 @@ export default function Support() {
           href="https://wa.me/917892409872"
           target="_blank"
           rel="noreferrer"
-          className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none hover:border-teal-400 transition-all group block"
+          className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none hover:border-teal-600 transition-all group block"
         >
           <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-teal-50 text-teal-600 dark:bg-teal-950/50 dark:text-teal-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/40 dark:text-teal-400 dark:border-teal-800/50">
               <MessageCircle size={16} />
             </div>
             <div className="min-w-0">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 WhatsApp Desk
               </span>
-              <p className="mt-0.5 text-sm font-bold text-[var(--ink)] group-hover:text-teal-600 transition-colors">
+              <p className="mt-0.5 text-sm font-bold text-[var(--ink)] group-hover:text-teal-700 dark:group-hover:text-teal-400 transition-colors">
                 Instant Chat Assistance
               </p>
               <span className="text-[11px] text-[var(--muted-light)] mt-0.5 block">
@@ -192,17 +192,17 @@ export default function Support() {
         {/* Email Support */}
         <a
           href="mailto:support@balajistore.com"
-          className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none hover:border-indigo-400 transition-all group block"
+          className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none hover:border-[#1E3A5F] transition-all group block"
         >
           <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-[#1E3A5F] border border-[var(--line)] dark:bg-slate-800 dark:text-slate-300">
               <Mail size={16} />
             </div>
             <div className="min-w-0">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Email Support
               </span>
-              <p className="mt-0.5 text-sm font-bold text-[var(--ink)] group-hover:text-indigo-600 transition-colors truncate">
+              <p className="mt-0.5 text-sm font-bold text-[var(--ink)] group-hover:text-[#1E3A5F] transition-colors truncate">
                 support@balajistore.com
               </p>
               <span className="text-[11px] text-[var(--muted-light)] mt-0.5 block">
@@ -218,7 +218,7 @@ export default function Support() {
       ====================================================== */}
       <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5">
         <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] mb-3 flex items-center gap-2">
-          <Server size={14} className="text-indigo-600" />
+          <Server size={14} className="text-[#1E3A5F] dark:text-slate-300" />
           System &amp; POS Health Status
         </h3>
 
@@ -248,7 +248,7 @@ export default function Support() {
               Local POS Offline Cache
             </span>
             <div className="mt-1 flex items-center gap-1.5 font-semibold text-[var(--ink)]">
-              <CheckCircle2 size={13} className="text-indigo-600" />
+              <CheckCircle2 size={13} className="text-teal-600 dark:text-teal-400" />
               Synchronized
             </div>
           </div>
@@ -269,7 +269,7 @@ export default function Support() {
       ====================================================== */}
       <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5">
         <div className="flex items-center gap-2 mb-3">
-          <Keyboard size={16} className="text-indigo-600" />
+          <Keyboard size={16} className="text-[#1E3A5F] dark:text-slate-300" />
           <h3 className="text-sm font-bold text-[var(--ink)]">
             Billing Workstation Keyboard Shortcuts
           </h3>
@@ -341,7 +341,7 @@ export default function Support() {
                 onClick={() => setActiveCategory(cat)}
                 className={`rounded-md px-3 py-1.5 font-semibold whitespace-nowrap transition-colors ${
                   activeCategory === cat
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-[#1E3A5F] text-white'
                     : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
                 }`}
               >
@@ -360,7 +360,7 @@ export default function Support() {
           ) : (
             filteredFaqs.map((section, catIdx) => (
               <div key={section.category} className="space-y-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 block pt-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#1E3A5F] dark:text-slate-300 block pt-1">
                   {section.category}
                 </span>
 
@@ -382,7 +382,7 @@ export default function Support() {
                         {isOpen ? (
                           <ChevronUp
                             size={16}
-                            className="text-indigo-600 shrink-0"
+                            className="text-[#1E3A5F] dark:text-slate-300 shrink-0"
                           />
                         ) : (
                           <ChevronDown

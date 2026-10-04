@@ -99,6 +99,11 @@ class InvoiceService:
                         )
 
             now = timezone.now()
+            if not attributes.get('place_of_supply'):
+                pos_setting = Setting.objects.filter(business=business, key='place_of_supply').first()
+                if pos_setting and pos_setting.value:
+                    attributes['place_of_supply'] = pos_setting.value
+
             invoice = Invoice.objects.create(
                 invoice_number=get_next_invoice_number(business),
                 business=business,

@@ -60,12 +60,20 @@ export default function Users() {
                     <td className="font-medium">{u.first_name} {u.last_name}</td>
                     <td className="font-mono text-sm">{u.username}</td>
                     <td className="text-sm">{u.email}</td>
-                    <td><span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider ${u.role === 'admin' ? 'bg-violet-50 text-violet-700 border border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-800/60' : 'bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800/60'}`}>{u.role}</span></td>
+                    <td>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${
+                        u.role === 'admin'
+                          ? 'bg-slate-100 text-[#1E3A5F] border border-[var(--line)] dark:bg-slate-800 dark:text-slate-200'
+                          : 'bg-slate-100 text-slate-700 border border-[var(--line)] dark:bg-slate-800 dark:text-slate-300'
+                      }`}>
+                        {u.role}
+                      </span>
+                    </td>
                     <td><Badge status={u.is_active ? 'active' : 'inactive'} /></td>
                     <td>
                       <div className="flex gap-1">
-                        <button onClick={() => openEdit(u)} className="icon-btn"><Edit2 size={14} /></button>
-                        <button onClick={() => setDeleteId(u.id)} className="icon-btn text-red-400"><Trash2 size={14} /></button>
+                        <button onClick={() => openEdit(u)} className="icon-btn" title="Edit"><Edit2 size={14} /></button>
+                        <button onClick={() => setDeleteId(u.id)} className="icon-btn text-rose-600 hover:text-rose-700" title="Delete"><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>

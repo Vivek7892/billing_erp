@@ -9,6 +9,7 @@ import {
   EmptyState,
 } from '../components/UI'
 import toast from 'react-hot-toast'
+import CommunicationHistory from '../components/CommunicationHistory'
 import {
   Plus,
   Search,
@@ -56,11 +57,10 @@ const getInitials = name =>
     .join('')
 
 const avatarColors = [
-  'bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300',
-  'bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300',
-  'bg-cyan-100 text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300',
-  'bg-violet-100 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300',
-  'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300',
+  'bg-slate-100 text-[#1E3A5F] border border-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700',
+  'bg-teal-50 text-teal-800 border border-teal-200 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-800/40',
+  'bg-slate-200 text-slate-800 border border-slate-300 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700',
+  'bg-sky-50 text-[#1E3A5F] border border-sky-200 dark:bg-slate-900 dark:text-sky-300 dark:border-slate-700',
 ]
 
 const CustomerAvatar = ({ customer, size = 'md' }) => {
@@ -72,7 +72,7 @@ const CustomerAvatar = ({ customer, size = 'md' }) => {
     <img
       src={customer.profile_picture || customer.profile_image || customer.avatar}
       alt={customer?.name || 'Customer'}
-      className={`${dimensions} rounded-full object-cover ring-2 ring-[var(--surface)] shadow-sm shrink-0`}
+      className={`${dimensions} rounded-full object-cover shrink-0`}
     />
   ) : (
     <div className={`${dimensions} ${color} rounded-full flex items-center justify-center font-bold ring-2 ring-[var(--surface)] shadow-sm shrink-0`}>
@@ -113,6 +113,7 @@ export default function Customers() {
 
   const [reminderCustomer, setReminderCustomer] = useState(null)
   const [sending, setSending] = useState(false)
+  const [commsKey, setCommsKey] = useState(0)
 
   const load = useCallback(
     async (query = search) => {
@@ -236,16 +237,22 @@ export default function Customers() {
     }
   }
 
-  const sendReminder = async channel => {
+  const sendReminder = async (channel = 'whatsapp') => {
     if (!reminderCustomer) return
 
     setSending(channel)
+    const popup = channel === 'whatsapp' ? window.open('', '_blank') : null
 
     try {
-      await api.post(
+      const res = await api.post(
         `/customers/${reminderCustomer.id}/send-reminder/`,
         { channel }
       )
+
+      if (res.data?.whatsapp_url && channel === 'whatsapp') {
+        if (popup) popup.location.href = res.data.whatsapp_url
+        else window.location.href = res.data.whatsapp_url
+      }
 
       toast.success(
         `${channel === 'whatsapp' ? 'WhatsApp' : 'SMS'} reminder sent to ${
@@ -253,11 +260,46 @@ export default function Customers() {
         }`
       )
 
+      setCommsKey(k => k + 1)
       setModal(null)
     } catch (error) {
+      popup?.close()
       toast.error(
         error?.response?.data?.error ||
           'Failed to send payment reminder'
+      )
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const sendStatement = async (customer, channel = 'whatsapp') => {
+    if (!customer) return
+
+    setSending('statement')
+    const popup = channel === 'whatsapp' ? window.open('', '_blank') : null
+
+    try {
+      const res = await api.post(
+        `/customers/${customer.id}/send-statement/`,
+        { channel }
+      )
+
+      if (res.data?.whatsapp_url && channel === 'whatsapp') {
+        if (popup) popup.location.href = res.data.whatsapp_url
+        else window.location.href = res.data.whatsapp_url
+      }
+
+      toast.success(
+        `Statement sent via WhatsApp to ${customer.name}`
+      )
+
+      setCommsKey(k => k + 1)
+    } catch (error) {
+      popup?.close()
+      toast.error(
+        error?.response?.data?.error ||
+          'Failed to send customer statement'
       )
     } finally {
       setSending(false)
@@ -430,21 +472,6 @@ export default function Customers() {
             )}
           </div>
 
-          {/* Refresh */}
-          <button
-            type="button"
-            onClick={() => load()}
-            disabled={loading}
-            className="icon-btn shrink-0"
-            title="Refresh customers"
-            aria-label="Refresh customers"
-          >
-            <RefreshCw
-              size={15}
-              className={loading ? 'animate-spin' : ''}
-            />
-          </button>
-
           {/* Credit filter */}
           <label className="form-check shrink-0 cursor-pointer whitespace-nowrap">
             <input
@@ -461,13 +488,13 @@ export default function Customers() {
         </div>
 
         {(hasSearch || onlyCredit) && (
-          <div className="flex items-center gap-2 mt-3 text-xs text-slate-600">
+          <div className="flex items-center gap-2 mt-3 text-xs text-[var(--muted)]">
             <span>
               Showing {displayed.length} result(s)
             </span>
 
             {onlyCredit && (
-              <span className="px-2 py-1 rounded-full bg-rose-50 text-red-600 dark:text-red-400 font-medium">
+              <span className="px-2 py-0.5 rounded-full bg-rose-950/40 text-rose-300 border border-rose-800/40 font-medium">
                 Credit due
               </span>
             )}
@@ -560,13 +587,13 @@ export default function Customers() {
 
                           <div className="flex items-center gap-3 min-w-[190px]">
 
-                            <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                              <UserRound size={16} />
+                            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-[var(--line)] flex items-center justify-center shrink-0 text-[#1E3A5F] dark:text-slate-300">
+                              <UserRound size={15} />
                             </div>
 
                             <div className="min-w-0">
 
-                              <p className="font-semibold text-slate-900 truncate">
+                              <p className="font-semibold text-[var(--ink)] truncate">
                                 {customer.name}
                               </p>
 
@@ -687,14 +714,20 @@ export default function Customers() {
                                 onClick={() =>
                                   openReminder(customer)
                                 }
-                                className="icon-btn text-orange-500"
-                                title="Send payment reminder"
+                                className="icon-btn text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/60"
+                                title="Send Payment Reminder"
                               >
-                                <MessageSquare
-                                  size={14}
-                                />
+                                <Send size={14} />
                               </button>
                             )}
+
+                            <button
+                              onClick={() => sendStatement(customer)}
+                              className="icon-btn text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-950/60"
+                              title="Send Customer Statement"
+                            >
+                              <FileText size={14} />
+                            </button>
 
                             <button
                               onClick={() =>
@@ -746,8 +779,8 @@ export default function Customers() {
 
                       {/* Avatar */}
 
-                      <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                        <UserRound size={14} />
+                      <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 border border-[var(--line)] flex items-center justify-center shrink-0 text-[#1E3A5F] dark:text-slate-300">
+                        <UserRound size={13} />
                       </div>
 
                       {/* Customer */}
@@ -756,23 +789,23 @@ export default function Customers() {
 
                         <div className="flex items-center gap-2 min-w-0">
 
-                          <p className="font-semibold text-[13px] text-slate-900 truncate">
+                          <p className="font-semibold text-[13px] text-[var(--ink)] truncate">
                             {customer.name}
                           </p>
 
                           {outstanding > 0 ? (
-                            <span className="shrink-0 text-[9px] leading-4 px-1.5 rounded-full bg-rose-50 text-red-600 dark:text-red-400 font-semibold">
+                            <span className="shrink-0 text-[10px] text-red-700 dark:text-red-400 font-semibold">
                               Due
                             </span>
                           ) : (
-                            <span className="shrink-0 text-[9px] leading-4 px-1.5 rounded-full bg-emerald-50 text-green-600 dark:text-green-400 font-semibold">
+                            <span className="shrink-0 text-[10px] text-teal-700 dark:text-teal-400 font-semibold">
                               Paid
                             </span>
                           )}
 
                         </div>
 
-                        <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-500 min-w-0">
+                        <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-[var(--muted)] min-w-0">
 
                           {customer.mobile ? (
                             <a
@@ -850,13 +883,22 @@ export default function Customers() {
                             onClick={() =>
                               openReminder(customer)
                             }
-                            className="icon-btn !w-7 !h-7 !p-0 text-orange-500"
+                            className="icon-btn !w-7 !h-7 !p-0 text-amber-600 dark:text-amber-400"
                             title="Send payment reminder"
                             aria-label="Send payment reminder"
                           >
-                            <MessageSquare size={13} />
+                            <Send size={13} />
                           </button>
                         )}
+
+                        <button
+                          onClick={() => sendStatement(customer)}
+                          className="icon-btn !w-7 !h-7 !p-0 text-teal-600 dark:text-teal-400"
+                          title="Send customer statement"
+                          aria-label="Send customer statement"
+                        >
+                          <FileText size={13} />
+                        </button>
 
                         <button
                           onClick={() =>
@@ -897,26 +939,24 @@ export default function Customers() {
         {reminderCustomer && (
           <div className="space-y-4">
 
-            <div className="rounded-xl border border-orange-200 bg-amber-50 p-4">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-800/40 dark:bg-amber-950/30 p-4">
 
               <div className="flex items-center gap-3">
 
-                <div className="w-10 h-10 rounded-full bg-white text-orange-600 dark:text-orange-400 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-300 flex items-center justify-center">
                   <WalletCards size={18} />
                 </div>
 
                 <div>
 
-                  <p className="text-sm font-semibold text-orange-900">
+                  <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
                     {reminderCustomer.name}
                   </p>
 
-                  <p className="text-xs text-orange-700 mt-1">
+                  <p className="text-xs text-amber-700 dark:text-amber-300/80 mt-1">
                     Outstanding:{' '}
                     <span className="font-bold">
-                      {currency(
-                        reminderCustomer.outstanding_amount
-                      )}
+                      {currency(reminderCustomer.outstanding_amount)}
                     </span>
                   </p>
 
@@ -925,16 +965,15 @@ export default function Customers() {
               </div>
 
               {reminderCustomer.mobile && (
-                <p className="text-xs text-slate-600 mt-3">
+                <p className="text-xs text-[var(--muted)] mt-3">
                   Mobile: {reminderCustomer.mobile}
                 </p>
               )}
 
             </div>
 
-            <p className="text-sm text-slate-600">
-              Choose how you want to send the payment
-              reminder.
+            <p className="text-sm text-[var(--muted)]">
+              Choose how you want to send the payment reminder.
             </p>
 
             <div className="grid grid-cols-2 gap-3">
@@ -942,15 +981,15 @@ export default function Customers() {
               <button
                 onClick={() => sendReminder('sms')}
                 disabled={!!sending}
-                className="flex flex-col items-center gap-2 border-2 border-blue-200 rounded-xl p-4 hover:bg-blue-50 transition disabled:opacity-50"
+                className="flex flex-col items-center gap-2 border border-[var(--line)] bg-[var(--surface)] rounded-md p-3.5 hover:border-[#1E3A5F] hover:bg-[var(--surface-hover)] transition disabled:opacity-50"
               >
 
                 <MessageSquare
-                  size={22}
-                  className="text-blue-600 dark:text-blue-400"
+                  size={20}
+                  className="text-[#1E3A5F] dark:text-slate-300"
                 />
 
-                <span className="text-sm font-semibold text-blue-700">
+                <span className="text-xs font-semibold text-[var(--ink)]">
                   {sending === 'sms'
                     ? 'Sending…'
                     : 'SMS'}
@@ -963,15 +1002,15 @@ export default function Customers() {
                   sendReminder('whatsapp')
                 }
                 disabled={!!sending}
-                className="flex flex-col items-center gap-2 border-2 border-green-200 rounded-xl p-4 hover:bg-emerald-50 transition disabled:opacity-50"
+                className="flex flex-col items-center gap-2 border border-[var(--line)] bg-[var(--surface)] rounded-md p-3.5 hover:border-teal-600 hover:bg-[var(--surface-hover)] transition disabled:opacity-50"
               >
 
                 <Send
-                  size={22}
-                  className="text-green-600 dark:text-green-400"
+                  size={20}
+                  className="text-teal-700 dark:text-teal-400"
                 />
 
-                <span className="text-sm font-semibold text-green-700">
+                <span className="text-xs font-semibold text-[var(--ink)]">
                   {sending === 'whatsapp'
                     ? 'Sending…'
                     : 'WhatsApp'}
@@ -984,16 +1023,25 @@ export default function Customers() {
             {reminderCustomer.mobile && (
               <a
                 href={`tel:${reminderCustomer.mobile}`}
-                className="flex items-center justify-center gap-2 w-full border-2 border-blue-100 rounded-xl p-3 hover:bg-white transition text-sm font-semibold text-slate-700"
+                className="flex items-center justify-center gap-2 w-full border border-[var(--line)] rounded-md p-2.5 hover:bg-[var(--surface-hover)] transition text-xs font-semibold text-[var(--ink)]"
               >
                 <Phone
-                  size={16}
-                  className="text-slate-600"
+                  size={15}
+                  className="text-[var(--muted)]"
                 />
 
                 Call {reminderCustomer.mobile}
               </a>
             )}
+
+            <div className="pt-3 border-t border-[var(--line)]">
+              <CommunicationHistory
+                referenceType="customer"
+                referenceId={reminderCustomer.id}
+                key={commsKey}
+                compact
+              />
+            </div>
 
           </div>
         )}
@@ -1017,29 +1065,28 @@ export default function Customers() {
 
         <div className="space-y-5">
 
-          <div className="flex items-center gap-3 rounded-xl bg-blue-50 border border-blue-100 p-4">
+          <div className="flex items-center gap-3 rounded-md bg-[var(--surface-elevated)] border border-[var(--line)] p-3.5">
 
-            <div className="w-10 h-10 rounded-lg bg-white text-blue-600 dark:text-blue-400 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-md bg-[var(--surface)] border border-[var(--line)] text-[#1E3A5F] dark:text-slate-300 flex items-center justify-center">
 
               {editId ? (
-                <Edit2 size={18} />
+                <Edit2 size={16} />
               ) : (
-                <UserRound size={18} />
+                <UserRound size={16} />
               )}
 
             </div>
 
             <div>
 
-              <p className="font-semibold text-blue-900">
+              <p className="font-semibold text-xs text-[var(--ink)]">
                 {editId
                   ? 'Update customer details'
                   : 'Create a new customer'}
               </p>
 
-              <p className="text-xs text-blue-700 mt-0.5">
-                Keep contact and credit information
-                accurate.
+              <p className="text-[11px] text-[var(--muted)] mt-0.5">
+                Keep contact and credit information accurate.
               </p>
 
             </div>
@@ -1236,21 +1283,21 @@ export default function Customers() {
         {viewCustomer && (
           <div className="space-y-5">
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-blue-100 bg-white p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4">
 
               <div className="flex items-center gap-3">
 
-                <div className="w-11 h-11 rounded-full bg-blue-100 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                  <UserRound size={19} />
+                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 text-[#1E3A5F] dark:text-slate-300 border border-[var(--line)] flex items-center justify-center">
+                  <UserRound size={18} />
                 </div>
 
                 <div>
 
-                  <h3 className="font-bold text-slate-900">
+                  <h3 className="font-bold text-[var(--ink)]">
                     {viewCustomer.name}
                   </h3>
 
-                  <p className="text-xs text-slate-600 mt-0.5">
+                  <p className="text-xs text-[var(--muted)] mt-0.5">
                     Customer ID: #{viewCustomer.id}
                   </p>
 
@@ -1258,20 +1305,42 @@ export default function Customers() {
 
               </div>
 
-              {viewCustomer.gstin && (
-                <div className="flex items-center gap-2 text-xs">
+              <div className="flex flex-wrap items-center gap-2">
+                {viewCustomer.gstin && (
+                  <div className="flex items-center gap-1.5 text-xs mr-2">
+                    <Building2
+                      size={14}
+                      className="text-[var(--muted)]"
+                    />
+                    <span className="font-mono text-[var(--muted)]">
+                      {viewCustomer.gstin}
+                    </span>
+                  </div>
+                )}
 
-                  <Building2
-                    size={14}
-                    className="text-slate-500"
-                  />
+                {Number(viewCustomer.outstanding_amount || 0) > 0 && (
+                  <button
+                    onClick={() => {
+                      setReminderCustomer(viewCustomer)
+                      sendReminder('whatsapp')
+                    }}
+                    disabled={sending === 'whatsapp'}
+                    className="btn-secondary text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-800/50 px-3 py-1.5 text-xs font-semibold hover:bg-amber-50 dark:hover:bg-amber-950/40 transition inline-flex items-center gap-1.5 rounded-md"
+                  >
+                    <Send size={13} />
+                    <span>Send Reminder</span>
+                  </button>
+                )}
 
-                  <span className="font-mono text-slate-600">
-                    {viewCustomer.gstin}
-                  </span>
-
-                </div>
-              )}
+                <button
+                  onClick={() => sendStatement(viewCustomer)}
+                  disabled={sending === 'statement'}
+                  className="btn-secondary px-3 py-1.5 text-xs font-semibold transition inline-flex items-center gap-1.5 rounded-md"
+                >
+                  <FileText size={13} />
+                  <span>Send Statement</span>
+                </button>
+              </div>
 
             </div>
 
@@ -1279,25 +1348,25 @@ export default function Customers() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
 
-              <div className="bg-blue-50 rounded-xl p-4">
+              <div className="bg-[var(--surface-elevated)] border border-[var(--line)] rounded-md p-4">
 
-                <div className="text-xs text-slate-600">
+                <div className="text-xs text-[var(--muted)]">
                   Total Bills
                 </div>
 
-                <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mt-1">
+                <div className="text-xl font-bold font-mono text-[#1E3A5F] dark:text-slate-200 mt-1">
                   {viewCustomer.total_bills ?? 0}
                 </div>
 
               </div>
 
-              <div className="bg-emerald-50 rounded-xl p-4">
+              <div className="bg-[var(--surface-elevated)] border border-[var(--line)] rounded-xl p-4">
 
-                <div className="text-xs text-slate-600">
+                <div className="text-xs text-[var(--muted)]">
                   Total Purchases
                 </div>
 
-                <div className="text-xl font-bold text-green-600 dark:text-green-400 mt-1">
+                <div className="text-xl font-bold text-emerald-400 mt-1">
                   {currency(
                     viewCustomer.total_purchases
                   )}
@@ -1305,13 +1374,13 @@ export default function Customers() {
 
               </div>
 
-              <div className="bg-rose-50 rounded-xl p-4">
+              <div className="bg-[var(--surface-elevated)] border border-[var(--line)] rounded-xl p-4">
 
-                <div className="text-xs text-slate-600">
+                <div className="text-xs text-[var(--muted)]">
                   Outstanding
                 </div>
 
-                <div className="text-xl font-bold text-red-600 dark:text-red-400 mt-1">
+                <div className="text-xl font-bold text-rose-400 mt-1">
                   {currency(
                     viewCustomer.outstanding_amount
                   )}
@@ -1492,8 +1561,8 @@ export default function Customers() {
                                   bill.payment_status
                                 ).toLowerCase() ===
                                 'paid'
-                                  ? 'bg-emerald-50 text-green-600 dark:text-green-400'
-                                  : 'bg-amber-50 text-orange-600 dark:text-orange-400'
+                                  ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-800/40'
+                                  : 'bg-amber-950/40 text-amber-300 border border-amber-800/40'
                               }`}
                             >
                               {bill.payment_status ||
@@ -1513,6 +1582,15 @@ export default function Customers() {
                 </div>
               )}
 
+            </div>
+
+            {/* Communication History */}
+            <div className="pt-2 border-t border-[var(--line)]">
+              <CommunicationHistory
+                referenceType="customer"
+                referenceId={viewCustomer.id}
+                key={commsKey}
+              />
             </div>
 
           </div>

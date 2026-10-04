@@ -4,19 +4,14 @@ import {
   AlertTriangle,
   ArrowUpRight,
   BarChart3,
-  Boxes,
   CheckCircle2,
   Clock3,
   CreditCard,
   Eye,
   FileText,
-  IndianRupee,
   Package,
   Plus,
   RefreshCw,
-  ShoppingCart,
-  TrendingUp,
-  Users,
 } from 'lucide-react'
 import {
   Area,
@@ -28,7 +23,7 @@ import {
   YAxis,
 } from 'recharts'
 import api from '../api'
-import { Badge, KpiCard } from '../components/UI'
+import { Badge } from '../components/UI'
 import { useShop } from '../components/Layout'
 
 const EMPTY = {
@@ -62,15 +57,10 @@ const EMPTY = {
   action_required: [],
   low_stock_products: [],
   recent_bills: [],
+  top_products: [],
 }
 
 const fmtCurrency = value =>
-  `₹${Number(value || 0).toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
-
-const fmtCompact = value =>
   `₹${Number(value || 0).toLocaleString('en-IN', {
     maximumFractionDigits: 0,
   })}`
@@ -79,7 +69,8 @@ const percentChange = (current, previous) => {
   if (!Number(previous)) return 0
   return Math.round(
     ((Number(current) - Number(previous)) / Number(previous)) * 100
-  )
+  * 10
+  ) / 10
 }
 
 function formatDateShort(dateString) {
@@ -161,17 +152,18 @@ export default function Dashboard() {
   const payments = data.payment_distribution || []
   const lowStock = data.low_stock_products || []
   const recentBills = data.recent_bills || []
+  const topProducts = data.top_products || []
   const actionRequired = data.action_required || []
-
-  const totalSales = useMemo(
-    () => salesData.reduce((sum, item) => sum + Number(item.sales || 0), 0),
-    [salesData]
-  )
 
   const creditDueCount = useMemo(() => {
     const item = actionRequired.find(a => a.key === 'credit')
     return item ? item.count : 0
   }, [actionRequired])
+
+  const totalSales = useMemo(
+    () => salesData.reduce((sum, item) => sum + Number(item.sales || 0), 0),
+    [salesData]
+  )
 
   const summaryRows = useMemo(
     () => [
@@ -219,8 +211,8 @@ export default function Dashboard() {
     return (
       <div className="min-w-0 space-y-4 pb-6 animate-pulse">
         <div className="h-16 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)]" />
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-          {[...Array(6)].map((_, i) => (
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+          {[...Array(8)].map((_, i) => (
             <div key={i} className="h-24 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)]" />
           ))}
         </div>
@@ -234,21 +226,16 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-w-0 space-y-4 pb-6">
+    <div className="dashboard-page min-w-0 space-y-6 pb-6">
       {/* -------------------------------------------------------------
           TOP BAR: Store Name, Current Date, Action Controls
       -------------------------------------------------------------- */}
-      <header className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
+      <header className="dashboard-header border-b border-[var(--line)] bg-[var(--surface)] pb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-[var(--primary)]" />
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                ERP Management Station
-              </p>
-            </div>
+            
             <h1 className="mt-0.5 truncate text-lg sm:text-xl font-bold text-[var(--ink)]">
-              {shopName || 'Balaji ERP'}
+              {shopName || 'Dreamwithtech ERP'}
             </h1>
             <p className="mt-1 flex items-center gap-1.5 text-xs text-[var(--muted)]">
               <Clock3 size={13} className="shrink-0" />
@@ -263,26 +250,28 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={loadDashboard}
-              disabled={refreshing}
-              className="btn-secondary h-9 text-xs px-3"
-              title="Refresh Dashboard"
-            >
-              <RefreshCw
-                size={14}
-                className={refreshing ? 'animate-spin' : ''}
-              />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
-
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => navigate('/billing/new')}
               className="btn-primary h-9 text-xs px-4"
             >
               <Plus size={15} />
               <span>New Bill</span>
+            </button>
+            <button
+              onClick={loadDashboard}
+              disabled={refreshing}
+              className="btn-secondary h-9 text-xs px-3"
+            >
+              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+              <span>Refresh</span>
+            </button>
+            <button
+              onClick={() => navigate('/reports')}
+              className="btn-secondary h-9 text-xs px-3"
+            >
+              <FileText size={14} />
+              <span>Reports</span>
             </button>
           </div>
         </div>
@@ -304,69 +293,148 @@ export default function Dashboard() {
       )}
 
       {/* -------------------------------------------------------------
-          SECTION 1: 4–6 PRIMARY KPI CARDS (Exact Theme Palette)
+          SECTION 1: ERP METRICS SUMMARY (Table-Based KPI Strip)
       -------------------------------------------------------------- */}
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {/* KPI 1: Sales */}
-        <KpiCard
-          type="sales"
-          label="Today's Sales"
-          value={fmtCurrency(data.today_sales)}
-          sub={`${data.today_bills || 0} bills today`}
-          icon={TrendingUp}
-          trend={salesTrend}
-          onClick={() => navigate('/sales/invoices')}
-        />
+      <section className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] shadow-none">
+        {/* Row 1: Today's Metrics */}
+        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
+          <div
+            onClick={() => navigate('/sales/invoices')}
+            className="p-3 sm:p-3.5 cursor-pointer hover:bg-[var(--surface-elevated)] transition"
+          >
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Total Sales
+            </span>
+            <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+              {fmtCurrency(data.today_sales)}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">
+              {data.today_bills || 0} orders today {salesTrend !== 0 && `(${salesTrend >= 0 ? '+' : ''}${salesTrend}%)`}
+            </p>
+          </div>
 
-        {/* KPI 2: Revenue / Collections */}
-        <KpiCard
-          type="revenue"
-          label="Collections"
-          value={fmtCurrency(data.today_collection || data.today_payments_total)}
-          sub={`Tax: ${fmtCurrency(data.today_tax)}`}
-          icon={CreditCard}
-          onClick={() => navigate('/sales/payments')}
-        />
+          <div
+            onClick={() => navigate('/sales/payments')}
+            className="p-3 sm:p-3.5 cursor-pointer hover:bg-[var(--surface-elevated)] transition"
+          >
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Collected
+            </span>
+            <p className="mt-1 font-mono text-lg font-bold text-teal-600 dark:text-teal-400">
+              {fmtCurrency(data.today_collection || data.today_payments_total)}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">
+              Tax: {fmtCurrency(data.today_tax)}
+            </p>
+          </div>
 
-        {/* KPI 3: Profit */}
-        <KpiCard
-          type="profit"
-          label="Gross Profit"
-          value={fmtCurrency(data.today_profit)}
-          sub={`Margin: ${data.profit_margin || 0}%`}
-          icon={BarChart3}
-          onClick={() => navigate('/reports')}
-        />
+          <div
+            onClick={() => navigate('/reports')}
+            className="p-3 sm:p-3.5 cursor-pointer hover:bg-[var(--surface-elevated)] transition"
+          >
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Net Profit
+            </span>
+            <p
+              className={`mt-1 font-mono text-lg font-bold ${
+                data.today_profit >= 0
+                  ? 'text-teal-600 dark:text-teal-400'
+                  : 'text-red-500'
+              }`}
+            >
+              {fmtCurrency(data.today_profit)}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">
+              Margin {Number(data.profit_margin || 0).toFixed(1)}%
+            </p>
+          </div>
 
-        {/* KPI 4: Outstanding Receivables */}
-        <KpiCard
-          type="outstanding"
-          label="Outstanding"
-          value={fmtCurrency(data.pending_credit)}
-          sub={`${creditDueCount} customers due`}
-          icon={IndianRupee}
-          onClick={() => navigate('/parties/customers?credit_due=1')}
-        />
+          <div
+            onClick={() => navigate('/sales/invoices')}
+            className="p-3 sm:p-3.5 cursor-pointer hover:bg-[var(--surface-elevated)] transition"
+          >
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Average Bill
+            </span>
+            <p className="mt-1 font-mono text-lg font-bold text-[#1E3A5F] dark:text-slate-200">
+              {fmtCurrency(data.avg_bill_today)}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">
+              Average per sale
+            </p>
+          </div>
+        </div>
 
-        {/* KPI 5: Low Stock */}
-        <KpiCard
-          type="low_stock"
-          label="Stock Alerts"
-          value={`${(data.low_stock_count || 0) + (data.out_of_stock || 0)} Items`}
-          sub={`${data.out_of_stock || 0} out of stock`}
-          icon={Package}
-          onClick={() => navigate('/inventory/stock')}
-        />
+        {/* Row 2: Monthly Position, Receivables & Supply */}
+        <div className="grid grid-cols-2 divide-y divide-[var(--line)] border-t border-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
+          <div
+            onClick={() => navigate('/sales/invoices')}
+            className="p-3 sm:p-3.5 cursor-pointer hover:bg-[var(--surface-elevated)] transition"
+          >
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              This Month Sales
+            </span>
+            <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+              {fmtCurrency(data.month_sales)}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">
+              {data.month_bills || 0} bills this month
+            </p>
+          </div>
 
-        {/* KPI 6: Expenses */}
-        <KpiCard
-          type="expenses"
-          label="Expenses Today"
-          value={fmtCurrency(data.today_expenses)}
-          sub={`Month: ${fmtCompact(data.month_expenses)}`}
-          icon={AlertTriangle}
-          onClick={() => navigate('/expenses')}
-        />
+          <div
+            onClick={() => navigate('/parties/customers?credit_due=1')}
+            className="p-3 sm:p-3.5 cursor-pointer hover:bg-[var(--surface-elevated)] transition"
+          >
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Outstanding Dues
+            </span>
+            <p className="mt-1 font-mono text-lg font-bold text-amber-700 dark:text-amber-400">
+              {fmtCurrency(data.pending_credit)}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">
+              {creditDueCount} customer{creditDueCount === 1 ? '' : 's'} pending
+            </p>
+          </div>
+
+          <div
+            onClick={() => navigate('/inventory/stock')}
+            className="p-3 sm:p-3.5 cursor-pointer hover:bg-[var(--surface-elevated)] transition"
+          >
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Stock Alerts
+            </span>
+            <p
+              className={`mt-1 font-mono text-lg font-bold ${
+                data.out_of_stock > 0
+                  ? 'text-red-500'
+                  : data.low_stock_count > 0
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-teal-600 dark:text-teal-400'
+              }`}
+            >
+              {data.out_of_stock || 0} Out · {data.low_stock_count || 0} Low
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">
+              {Number(data.total_products || data.product_count || 0)} total products
+            </p>
+          </div>
+
+          <div
+            onClick={() => navigate('/purchases')}
+            className="p-3 sm:p-3.5 cursor-pointer hover:bg-[var(--surface-elevated)] transition"
+          >
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Purchases
+            </span>
+            <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+              {fmtCurrency(data.today_purchases)}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">
+              Month: {fmtCurrency(data.month_purchases)}
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* -------------------------------------------------------------
@@ -455,8 +523,8 @@ export default function Dashboard() {
                 >
                   <defs>
                     <linearGradient id="primarySalesFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.22} />
-                      <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.01} />
+                      <stop offset="0%" stopColor="#1E3A5F" stopOpacity={0.2} />
+                      <stop offset="100%" stopColor="#1E3A5F" stopOpacity={0.01} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid vertical={false} stroke="var(--line)" strokeDasharray="3 3" />
@@ -482,7 +550,7 @@ export default function Dashboard() {
                   <Area
                     type="monotone"
                     dataKey="sales"
-                    stroke="#4f46e5"
+                    stroke="#1E3A5F"
                     strokeWidth={2}
                     fill="url(#primarySalesFill)"
                   />
@@ -632,90 +700,152 @@ export default function Dashboard() {
       </section>
 
       {/* -------------------------------------------------------------
-          SECTION 5: LOW-STOCK ALERTS TABLE
+          SECTION 5: TOP SELLING PRODUCTS & LOW-STOCK ALERTS (2-Column Grid)
       -------------------------------------------------------------- */}
-      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
-        <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5">
-          <div>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-              Low-Stock Inventory Alerts
-            </h2>
-            <p className="text-[11px] text-[var(--muted)]">
-              {data.out_of_stock || 0} out of stock · {data.low_stock_count || 0} below minimum threshold
-            </p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Top Selling Products */}
+        <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
+          <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5">
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+                Top Selling Products
+              </h2>
+              <p className="text-[11px] text-[var(--muted)]">
+                Highest revenue generating items
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/reports')}
+              className="text-xs font-semibold text-[var(--primary)] hover:underline flex items-center gap-1"
+            >
+              <span>Sales Report</span>
+              <ArrowUpRight size={13} />
+            </button>
           </div>
-          <button
-            onClick={() => navigate('/inventory/stock')}
-            className="text-xs font-semibold text-[var(--primary)] hover:underline flex items-center gap-1"
-          >
-            <span>Manage Stock</span>
-            <ArrowUpRight size={13} />
-          </button>
-        </div>
 
-        {lowStock.length ? (
-          <div className="overflow-x-auto">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Product Name</th>
-                  <th>SKU</th>
-                  <th className="num-col">Current Stock</th>
-                  <th className="num-col">Min Stock</th>
-                  <th>Status</th>
-                  <th className="text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lowStock.slice(0, 6).map(prod => (
-                  <tr key={prod.id} className="row-low-stock">
-                    <td className="font-semibold text-[var(--ink)]">
-                      {prod.name}
-                    </td>
-                    <td className="font-mono text-xs text-[var(--muted)]">
-                      {prod.sku || '—'}
-                    </td>
-                    <td
-                      className={`num-col font-bold font-mono ${
-                        Number(prod.current_stock) <= 0
-                          ? 'text-red-600'
-                          : 'text-amber-600'
-                      }`}
-                    >
-                      {prod.current_stock}
-                    </td>
-                    <td className="num-col text-xs text-[var(--muted)] font-mono">
-                      {prod.minimum_stock}
-                    </td>
-                    <td>
-                      <Badge
-                        status={
-                          Number(prod.current_stock) <= 0
-                            ? 'out_of_stock'
-                            : 'low_stock'
-                        }
-                      />
-                    </td>
-                    <td className="text-right">
-                      <button
-                        onClick={() => navigate('/inventory/products')}
-                        className="btn-secondary btn-sm text-xs"
-                      >
-                        Adjust
-                      </button>
-                    </td>
+          {topProducts.length ? (
+            <div className="overflow-x-auto">
+              <table className="table table-compact">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Product</th>
+                    <th className="num-col">Qty Sold</th>
+                    <th className="num-col">Revenue</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {topProducts.slice(0, 6).map((prod, idx) => (
+                    <tr key={idx}>
+                      <td className="w-8 font-mono text-xs font-bold text-[var(--muted)]">
+                        {idx + 1}
+                      </td>
+                      <td className="font-semibold text-[var(--ink)]">
+                        <span className="truncate block max-w-[200px]" title={prod.product_name}>
+                          {prod.product_name}
+                        </span>
+                      </td>
+                      <td className="num-col font-mono text-xs text-[var(--ink-secondary)]">
+                        {prod.total_qty} units
+                      </td>
+                      <td className="num-col font-mono font-bold text-[var(--ink)]">
+                        {fmtCurrency(prod.total_revenue)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyState
+              icon={Package}
+              text="No product sales recorded yet."
+            />
+          )}
+        </section>
+
+        {/* Low-Stock Inventory Alerts */}
+        <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
+          <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5">
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+                Low-Stock Inventory Alerts
+              </h2>
+              <p className="text-[11px] text-[var(--muted)]">
+                {data.out_of_stock || 0} out of stock · {data.low_stock_count || 0} below threshold
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/inventory/stock')}
+              className="text-xs font-semibold text-[var(--primary)] hover:underline flex items-center gap-1"
+            >
+              <span>Manage Stock</span>
+              <ArrowUpRight size={13} />
+            </button>
           </div>
-        ) : (
-          <EmptyState
-            icon={CheckCircle2}
-            text="All inventory items are sufficiently stocked."
-          />
-        )}
-      </section>
+
+          {lowStock.length ? (
+            <div className="overflow-x-auto">
+              <table className="table table-compact">
+                <thead>
+                  <tr>
+                    <th>Product Name</th>
+                    <th className="num-col">Stock</th>
+                    <th className="num-col">Min</th>
+                    <th>Status</th>
+                    <th className="text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lowStock.slice(0, 6).map(prod => (
+                    <tr key={prod.id} className="row-low-stock">
+                      <td className="font-semibold text-[var(--ink)]">
+                        <span className="truncate block max-w-[160px]" title={prod.name}>
+                          {prod.name}
+                        </span>
+                      </td>
+                      <td
+                        className={`num-col font-bold font-mono ${
+                          Number(prod.current_stock) <= 0
+                            ? 'text-red-600'
+                            : 'text-amber-600'
+                        }`}
+                      >
+                        {prod.current_stock}
+                      </td>
+                      <td className="num-col text-xs text-[var(--muted)] font-mono">
+                        {prod.minimum_stock}
+                      </td>
+                      <td>
+                        <Badge
+                          status={
+                            Number(prod.current_stock) <= 0
+                              ? 'out_of_stock'
+                              : 'low_stock'
+                          }
+                        />
+                      </td>
+                      <td className="text-right">
+                        <button
+                          onClick={() => navigate('/inventory/products')}
+                          className="btn-secondary btn-sm text-xs"
+                        >
+                          Adjust
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyState
+              icon={CheckCircle2}
+              text="All inventory items are sufficiently stocked."
+            />
+          )}
+        </section>
+      </div>
 
       {/* -------------------------------------------------------------
           SECTION 6: OUTSTANDING PAYMENTS / ACTION REQUIRED TABLE

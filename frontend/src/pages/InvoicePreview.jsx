@@ -14,10 +14,12 @@ import {
   AlertCircle,
   ChevronDown,
   Copy,
+  MessageCircle,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import invoiceService from '../features/billing/api/invoiceService'
 import { API_BASE_URL } from '../api'
+import CommunicationHistory from '../components/CommunicationHistory'
 
 function getPdfUrl(id, thermal) {
   const token = localStorage.getItem('access_token') || ''
@@ -46,8 +48,10 @@ export default function InvoicePreview() {
 
   const isMobile = isMobileDevice()
 
+  const [invoice, setInvoice] = useState(null)
   const [invoiceNumber, setInvoiceNumber] = useState('')
   const [publicToken, setPublicToken] = useState('')
+  const [shortUrl, setShortUrl] = useState('')
   const [thermal, setThermal] = useState(false)
   const [pdfUrl, setPdfUrl] = useState('')
   const [loading, setLoading] = useState(true)
@@ -55,6 +59,8 @@ export default function InvoicePreview() {
   const [downloading, setDownloading] = useState(false)
   const [sharing, setSharing] = useState(false)
   const [showMore, setShowMore] = useState(false)
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false)
+  const [historyKey, setHistoryKey] = useState(0)
 
   // --------------------------------------------------
   // FETCH INVOICE DETAILS
@@ -67,10 +73,14 @@ export default function InvoicePreview() {
 
     invoiceService
       .getInvoice(id)
-      .then((invoice) => {
+      .then((inv) => {
         if (active) {
-          setInvoiceNumber(invoice?.invoice_number || `#${id}`)
-          setPublicToken(invoice?.public_token || '')
+          setInvoice(inv)
+          setInvoiceNumber(inv?.invoice_number || `#${id}`)
+          setPublicToken(inv?.public_token || '')
+          if (inv?.short_url) {
+            setShortUrl(inv.short_url)
+          }
         }
       })
       .catch(() => {
@@ -82,15 +92,52 @@ export default function InvoicePreview() {
     }
   }, [id])
 
-  const viewDigitalBill = () => {
-    const url = `${window.location.origin}/bill/${publicToken || id}`
+  const getCanonicalShortUrl = async () => {
+    if (shortUrl) return shortUrl
+    if (invoice?.short_url) return invoice.short_url
+    try {
+      const link = await invoiceService.createShortLink(id)
+      if (link?.url) {
+        setShortUrl(link.url)
+        return link.url
+      }
+    } catch {}
+    return `${window.location.origin}/s/${publicToken || id}/`
+    return `http://127.0.0.1:8000/s/${publicToken ? publicToken.slice(0, 6) : id}/`
+  }
+
+  const viewDigitalBill = async () => {
+    const url = await getCanonicalShortUrl()
     window.open(url, '_blank')
   }
 
-  const copyBillLink = () => {
-    const url = `${window.location.origin}/bill/${publicToken || id}`
+  const copyBillLink = async () => {
+    const url = await getCanonicalShortUrl()
     navigator.clipboard.writeText(url)
     toast.success('Bill link copied to clipboard!')
+  }
+
+  const handleSendWhatsApp = async () => {
+    setSendingWhatsApp(true)
+    const phone = (invoice?.customer_phone || '').replace(/\D/g, '')
+    const popup = window.open('', '_blank')
+    try {
+      const res = await invoiceService.sendWhatsApp(id, phone)
+      if (res?.whatsapp_url) {
+        if (popup) popup.location.href = res.whatsapp_url
+        else window.location.href = res.whatsapp_url
+        toast.success('WhatsApp opened & communication logged!')
+        setHistoryKey(k => k + 1)
+      } else {
+        popup?.close()
+        toast.error('Could not open WhatsApp')
+      }
+    } catch {
+      popup?.close()
+      toast.error('Failed to initiate WhatsApp')
+    } finally {
+      setSendingWhatsApp(false)
+    }
   }
 
   // --------------------------------------------------
@@ -438,7 +485,7 @@ export default function InvoicePreview() {
                   Invoice {invoiceNumber || `#${id}`}
                 </h1>
 
-                <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
+                <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-emerald-950/40 px-2 py-1 text-[10px] font-bold text-emerald-300 border border-emerald-800/50">
                   <CheckCircle2 size={11} />
                   Invoice
                 </span>
@@ -450,10 +497,18 @@ export default function InvoicePreview() {
             </div>
 
             {/* Desktop actions */}
+            {/* Desktop actions: Essential, clean, no redundant buttons */}
             <div className="hidden lg:flex items-center gap-2">
               <FormatSelector
                 thermal={thermal}
                 setThermal={setThermal}
+              />
+
+              <ActionButton
+                icon={<MessageCircle size={15} />}
+                label={sendingWhatsApp ? 'Sending…' : 'Send WhatsApp'}
+                onClick={handleSendWhatsApp}
+                loading={sendingWhatsApp}
               />
 
               <ActionButton
@@ -471,6 +526,7 @@ export default function InvoicePreview() {
               <ActionButton
                 icon={<Printer size={15} />}
                 label="Open"
+                label="Print / Open"
                 onClick={openPdf}
               />
 
@@ -486,6 +542,16 @@ export default function InvoicePreview() {
                 label="Share"
                 onClick={shareInvoice}
                 loading={sharing}
+                icon={<MessageCircle size={15} />}
+                label={sendingWhatsApp ? 'Sending…' : 'WhatsApp'}
+                onClick={handleSendWhatsApp}
+                loading={sendingWhatsApp}
+              />
+
+              <ActionButton
+                icon={<Copy size={15} />}
+                label="Copy Link"
+                onClick={copyBillLink}
               />
             </div>
 
@@ -507,10 +573,10 @@ export default function InvoicePreview() {
                     onClick={() => setShowMore(false)}
                   />
 
-                  <div className="absolute right-0 top-12 z-50 w-56 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-xl">
+                  <div className="absolute right-0 top-12 z-50 w-52 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-xl">
                     <div className="mb-2 px-3 py-2">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                        Invoice Format
+                        Format
                       </p>
 
                       <FormatSelector
@@ -520,29 +586,11 @@ export default function InvoicePreview() {
                       />
                     </div>
 
-                    <div className="h-px bg-[var(--line)]" />
+                    <div className="h-px bg-[var(--line)] my-1" />
 
                     <MenuAction
-                      icon={<ExternalLink size={16} />}
-                      label="View Digital Bill"
-                      onClick={() => {
-                        setShowMore(false)
-                        viewDigitalBill()
-                      }}
-                    />
-
-                    <MenuAction
-                      icon={<Copy size={16} />}
-                      label="Copy Bill Link"
-                      onClick={() => {
-                        setShowMore(false)
-                        copyBillLink()
-                      }}
-                    />
-
-                    <MenuAction
-                      icon={<Printer size={16} />}
-                      label="Open Invoice"
+                      icon={<Printer size={15} />}
+                      label="Print / Open"
                       onClick={() => {
                         setShowMore(false)
                         openPdf()
@@ -550,7 +598,7 @@ export default function InvoicePreview() {
                     />
 
                     <MenuAction
-                      icon={<Download size={16} />}
+                      icon={<Download size={15} />}
                       label="Download PDF"
                       onClick={() => {
                         setShowMore(false)
@@ -559,11 +607,20 @@ export default function InvoicePreview() {
                     />
 
                     <MenuAction
-                      icon={<Share2 size={16} />}
-                      label="Share Invoice"
+                      icon={<MessageCircle size={15} />}
+                      label={sendingWhatsApp ? 'Sending…' : 'Send WhatsApp'}
                       onClick={() => {
                         setShowMore(false)
-                        shareInvoice()
+                        handleSendWhatsApp()
+                      }}
+                    />
+
+                    <MenuAction
+                      icon={<Copy size={15} />}
+                      label="Copy Link"
+                      onClick={() => {
+                        setShowMore(false)
+                        copyBillLink()
                       }}
                     />
                   </div>
@@ -575,10 +632,17 @@ export default function InvoicePreview() {
 
         {/* Mobile quick action bar */}
         <div className="lg:hidden border-t border-[var(--line)] px-3 py-2">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
+            <QuickAction
+              icon={<MessageCircle size={16} />}
+              label="WhatsApp"
+              onClick={handleSendWhatsApp}
+              loading={sendingWhatsApp}
+            />
+
             <QuickAction
               icon={<Printer size={16} />}
-              label="Open"
+              label="Print"
               onClick={openPdf}
             />
 
@@ -590,10 +654,9 @@ export default function InvoicePreview() {
             />
 
             <QuickAction
-              icon={<Share2 size={16} />}
-              label="Share"
-              onClick={shareInvoice}
-              loading={sharing}
+              icon={<Copy size={16} />}
+              label="Copy Link"
+              onClick={copyBillLink}
             />
           </div>
         </div>
@@ -661,6 +724,17 @@ export default function InvoicePreview() {
           </div>
         )}
       </main>
+
+      <div className="border-t border-[var(--line)] bg-[var(--surface)] p-4 sm:p-6">
+        <div className="mx-auto max-w-[1500px]">
+          <CommunicationHistory
+            referenceType="invoice"
+            referenceId={id}
+            initialLogs={invoice?.communication_history}
+            key={historyKey}
+          />
+        </div>
+      </div>
     </div>
   )
 }
@@ -680,7 +754,7 @@ function FormatSelector({ thermal, setThermal, fullWidth = false }) {
         onClick={() => setThermal(false)}
         className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
           !thermal
-            ? 'bg-indigo-600 text-white shadow-xs'
+            ? 'bg-[#1E3A5F] text-white shadow-xs'
             : 'text-[var(--muted)] hover:text-[var(--ink)]'
         }`}
       >
@@ -692,7 +766,7 @@ function FormatSelector({ thermal, setThermal, fullWidth = false }) {
         onClick={() => setThermal(true)}
         className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
           thermal
-            ? 'bg-indigo-600 text-white shadow-xs'
+            ? 'bg-[#1E3A5F] text-white shadow-xs'
             : 'text-[var(--muted)] hover:text-[var(--ink)]'
         }`}
       >
@@ -712,7 +786,7 @@ function ActionButton({ icon, label, onClick, loading = false }) {
     <button
       onClick={onClick}
       disabled={loading}
-      className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink-secondary)] transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-300"
+      className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] disabled:cursor-not-allowed disabled:opacity-60"
     >
       {loading ? (
         <RefreshCw size={14} className="animate-spin" />
@@ -770,7 +844,7 @@ function LoadingState({ thermal }) {
   return (
     <div className="flex min-h-[500px] items-center justify-center p-6">
       <div className="w-full max-w-sm rounded-lg border border-[var(--line)] bg-[var(--surface)] p-8 text-center shadow-none">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-[var(--surface-elevated)] text-[#1E3A5F] dark:text-slate-300 border border-[var(--line)]">
           <RefreshCw size={22} className="animate-spin" />
         </div>
 
@@ -784,7 +858,7 @@ function LoadingState({ thermal }) {
         </p>
 
         <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-[var(--surface-elevated)]">
-          <div className="h-full w-1/2 animate-pulse rounded-full bg-indigo-600" />
+          <div className="h-full w-1/2 animate-pulse rounded-full bg-[#1E3A5F]" />
         </div>
       </div>
     </div>
@@ -799,7 +873,7 @@ function ErrorState({ onRetry }) {
   return (
     <div className="flex min-h-[500px] items-center justify-center p-6">
       <div className="w-full max-w-sm rounded-lg border border-[var(--line)] bg-[var(--surface)] p-8 text-center shadow-none">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-rose-950/40 text-rose-300 border border-rose-800/40">
           <AlertCircle size={24} />
         </div>
 
@@ -840,7 +914,7 @@ function MobilePdfState({
       <div className="w-full max-w-md overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-none">
         {/* Top visual */}
         <div className="flex h-28 items-center justify-center bg-[var(--surface-elevated)] border-b border-[var(--line)]">
-          <div className="flex h-12 w-12 items-center justify-center rounded-md bg-indigo-50 text-indigo-600 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800">
+          <div className="flex h-12 w-12 items-center justify-center rounded-md bg-[var(--surface-elevated)] text-[#1E3A5F] dark:text-slate-300 border border-[var(--line)]">
             <FileText size={24} />
           </div>
         </div>
@@ -848,7 +922,7 @@ function MobilePdfState({
         {/* Content */}
         <div className="p-5 sm:p-6">
           <div className="text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-indigo-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-[var(--surface-elevated)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] border border-[var(--line)]">
               <Smartphone size={12} />
               Mobile PDF Viewer
             </span>

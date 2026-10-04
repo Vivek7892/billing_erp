@@ -112,7 +112,7 @@ export default function Login() {
             LEFT INFORMATION PANEL
         ====================================================== */}
 
-        <section className="hidden bg-[var(--surface-elevated)] border-r border-[var(--line)] lg:flex">
+        <section className="hidden bg-slate-50 border-r border-[var(--line)] lg:flex">
 
           <div className="flex min-h-screen w-full flex-col px-12 py-10 xl:px-20">
 
@@ -135,15 +135,8 @@ export default function Login() {
 
                 <div className="mb-5 flex items-center gap-3">
 
-                  <span className="h-0.5 w-8 rounded-full bg-blue-600 dark:bg-blue-400" />
-
-                  <span className="
-                    text-xs
-                    font-semibold
-                    uppercase
-                    tracking-[0.16em]
-                    text-blue-600 dark:text-blue-400
-                  ">
+                  <span className="h-0.5 w-8 rounded-full bg-[#1E3A5F]" />
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#1E3A5F] dark:text-slate-300">
                     ERP Billing & Business Management
                   </span>
 
@@ -333,25 +326,12 @@ export default function Login() {
             ================================================== */}
 
             {errors.form && (
-
               <div
                 role="alert"
-                className="
-                  mb-5
-                  rounded-md
-                  border
-                  border-red-200
-                  bg-red-50
-                  px-4
-                  py-3
-                  text-sm
-                  font-medium
-                  text-red-700
-                "
+                className="mb-5 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-400"
               >
                 {errors.form}
               </div>
-
             )}
 
 
@@ -459,8 +439,8 @@ export default function Login() {
                           `
                           : `
                             border-[var(--line)]
-                            focus:border-indigo-600
-                            focus:ring-indigo-500/15
+                            focus:border-[#1E3A5F]
+                            focus:ring-[#1E3A5F]/15
                           `
                       }
                     `}
@@ -557,8 +537,8 @@ export default function Login() {
                       w-4
                       rounded
                       border-[var(--line)]
-                      text-indigo-600
-                      focus:ring-indigo-500/20
+                      text-[#1E3A5F]
+                      focus:ring-[#1E3A5F]/20
                     "
                   />
 
@@ -579,7 +559,7 @@ export default function Login() {
                     font-medium
                     text-[var(--muted)]
                     transition
-                    hover:text-indigo-600 dark:hover:text-indigo-400
+                    hover:text-[#1E3A5F] dark:hover:text-slate-200
                   "
                 >
                   Forgot password?
@@ -602,16 +582,16 @@ export default function Login() {
                   items-center
                   justify-center
                   rounded-md
-                  bg-indigo-600
+                  bg-[#1E3A5F]
                   text-sm
                   font-semibold
                   text-white
                   shadow-xs
                   transition-all
-                  hover:bg-indigo-700
+                  hover:bg-[#162F4D]
                   focus:outline-none
                   focus:ring-2
-                  focus:ring-indigo-500/25
+                  focus:ring-[#1E3A5F]/25
                   active:scale-[0.99]
                   disabled:cursor-not-allowed
                   disabled:opacity-60
@@ -888,8 +868,8 @@ function Field({
               `
               : `
                 border-[var(--line)]
-                focus:border-indigo-600
-                focus:ring-indigo-500/15
+                focus:border-[#1E3A5F]
+                focus:ring-[#1E3A5F]/15
               `
           }
         `}

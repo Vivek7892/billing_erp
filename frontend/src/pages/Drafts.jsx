@@ -141,7 +141,7 @@ export default function Drafts() {
                 <td className="font-mono font-semibold text-sm text-[var(--ink)]">
                   {drafts.reduce((sum, draft) => sum + (draft.cart?.length || 0), 0)} items
                 </td>
-                <td className="font-mono font-bold text-sm text-indigo-600 dark:text-indigo-400">
+                <td className="font-mono font-bold text-sm text-[#1E3A5F] dark:text-slate-100">
                   {fmt(
                     drafts.reduce(
                       (sum, draft) =>

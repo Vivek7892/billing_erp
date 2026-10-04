@@ -278,6 +278,7 @@ class Invoice(models.Model):
     payment_method = models.CharField(max_length=20, default='cash')
     payment_status = models.CharField(max_length=12, choices=PAYMENT_STATUS_CHOICES, default='paid')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='completed')
+    place_of_supply = models.CharField(max_length=100, blank=True, default='')
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -311,6 +312,34 @@ class Invoice(models.Model):
         from django.conf import settings
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
         return f"{frontend_url}/bill/{self.public_token}"
+        return self.get_short_url(request=request)
+
+    def get_short_url(self, request=None):
+        """Return the canonical 6-character short link URL for this invoice (e.g. /s/x3gIro/)."""
+        """Return the canonical short link URL for this invoice (e.g. http://127.0.0.1:8000/s/ofVp17/)."""
+        link = self.short_links.filter(expires_at__gt=timezone.now()).first()
+        if not link:
+            for _ in range(5):
+                try:
+                    link = ShortLink.objects.create(invoice=self)
+                    break
+                except Exception:
+                    link = None
+        if not link:
+            return self.get_public_url(request)
+        code = link.code if link else (self.public_token[:6] if self.public_token else 'bill')
+        if request:
+            try:
+                from django.urls import reverse
+                return request.build_absolute_uri(reverse('invoice-short-link', kwargs={'code': link.code}))
+                return request.build_absolute_uri(reverse('invoice-short-link', kwargs={'code': code}))
+            except Exception:
+                pass
+        from decouple import config as env
+        base_url = env('BACKEND_URL', default='https://billing-erp-7ga7.onrender.com').rstrip('/')
+        return f"{base_url}/s/{link.code}/"
+        base_url = env('BACKEND_URL', default='http://127.0.0.1:8000').rstrip('/')
+        return f"{base_url}/s/{code}/"
 
     def __str__(self):
         return self.invoice_number
@@ -687,3 +716,48 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"[{self.notification_type}] {self.title}"
+
+
+class CommunicationLog(models.Model):
+    CHANNEL_CHOICES = [
+        ('whatsapp', 'WhatsApp'),
+        ('sms', 'SMS'),
+        ('email', 'Email'),
+    ]
+    MESSAGE_TYPE_CHOICES = [
+        ('invoice', 'Invoice'),
+        ('payment_reminder', 'Payment Reminder'),
+        ('statement', 'Customer Statement'),
+        ('purchase_confirmation', 'Purchase Confirmation'),
+    ]
+    STATUS_CHOICES = [
+        ('sent', 'Sent'),
+        ('delivered', 'Delivered'),
+        ('failed', 'Failed'),
+    ]
+
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, null=True, blank=True)
+    channel = models.CharField(max_length=20, choices=CHANNEL_CHOICES, default='whatsapp')
+    message_type = models.CharField(max_length=30, choices=MESSAGE_TYPE_CHOICES)
+    recipient_name = models.CharField(max_length=200, blank=True)
+    recipient_phone = models.CharField(max_length=30, blank=True)
+    recipient_email = models.EmailField(blank=True)
+    reference_type = models.CharField(max_length=30, blank=True)  # 'invoice', 'customer', 'purchase'
+    reference_id = models.CharField(max_length=100, blank=True)
+    short_url = models.URLField(max_length=500, blank=True)
+    content = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='sent')
+    sent_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    sent_at = models.DateTimeField(auto_now_add=True)
+    error_message = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-sent_at']
+        indexes = [
+            models.Index(fields=['business', 'reference_type', 'reference_id']),
+            models.Index(fields=['sent_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.channel.upper()} | {self.message_type} -> {self.recipient_name} ({self.status})"
+

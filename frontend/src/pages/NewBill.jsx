@@ -977,6 +977,7 @@ export default function NewBill() {
         customer: customer?.id || null,
         customer_name: customer?.name || 'Walk-in Customer',
         customer_phone: customer?.mobile || '',
+        place_of_supply: customer?.place_of_supply || customer?.state || settings.place_of_supply || settings.shop_state || 'Tamil Nadu (33)',
         payment_method: payment.method,
         payment_status: effectivePaymentStatus,
         bill_discount: billDiscount,

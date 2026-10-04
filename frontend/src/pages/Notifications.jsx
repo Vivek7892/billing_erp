@@ -458,7 +458,7 @@ export default function Notifications() {
                         ? 'row-pending'
                         : item.severity === 'success'
                           ? 'row-paid'
-                          : ''
+                          : 'row-info'
 
                   return (
                     <tr

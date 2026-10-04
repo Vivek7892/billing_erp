@@ -147,6 +147,8 @@ class InvoiceSerializer(serializers.ModelSerializer):
     customer_name_display = serializers.SerializerMethodField()
     created_by_name = serializers.SerializerMethodField()
     cancelled_by_name = serializers.SerializerMethodField()
+    short_url = serializers.SerializerMethodField()
+    communication_history = serializers.SerializerMethodField()
 
     class Meta:
         model = Invoice
@@ -158,6 +160,17 @@ class InvoiceSerializer(serializers.ModelSerializer):
             'confirmed_at', 'posted_at', 'cancelled_by', 'cancelled_at', 'cancel_reason',
             'public_token',
         ]
+
+    def get_short_url(self, obj):
+        request = self.context.get('request')
+        return obj.get_short_url(request=request)
+
+    def get_communication_history(self, obj):
+        logs = obj.communication_logs.all()[:10] if hasattr(obj, 'communication_logs') else []
+        if not logs:
+            from .models import CommunicationLog
+            logs = CommunicationLog.objects.filter(reference_type='invoice', reference_id=str(obj.pk)).order_by('-sent_at')[:10]
+        return CommunicationLogSerializer(logs, many=True).data
 
     def get_customer_name_display(self, obj):
         return obj.customer.name if obj.customer else obj.customer_name
@@ -180,7 +193,8 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Invoice
-        fields = ['customer', 'customer_name', 'customer_phone', 'notes', 'items', 'payments',
+        fields = ['customer', 'customer_name', 'customer_phone', 'notes', 'items', 'payments']
+        fields = ['customer', 'customer_name', 'customer_phone', 'notes', 'place_of_supply', 'items', 'payments',
                   'payment_method', 'payment_status', 'bill_discount']
 
     def validate(self, attrs):
@@ -353,7 +367,14 @@ class NotificationSerializer(serializers.ModelSerializer):
             'actioned_by', 'actioned_by_name', 'actioned_at', 'action_notes',
             'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+class CommunicationLogSerializer(serializers.ModelSerializer):
+    sent_by_name = serializers.CharField(source='sent_by.username', read_only=True)
 
-
-
+    class Meta:
+        model = CommunicationLog
+        fields = [
+            'id', 'channel', 'message_type', 'recipient_name', 'recipient_phone',
+            'recipient_email', 'reference_type', 'reference_id', 'short_url',
+            'content', 'status', 'sent_by', 'sent_by_name', 'sent_at', 'error_message',
+        ]
+        read_only_fields = ['id', 'sent_at']

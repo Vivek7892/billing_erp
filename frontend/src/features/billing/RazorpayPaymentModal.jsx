@@ -124,44 +124,41 @@ export default function RazorpayPaymentModal({ open, onClose, invoice, onSuccess
       <div className="space-y-4">
 
         {/* Amount banner */}
-   <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 shadow-sm">
-  <div className="flex items-center justify-between gap-3">
-    <div className="min-w-0 text-left">
-      <div className="mb-1 text-xs font-semibold text-green-700">
-        Invoice {invoice?.invoice_number}
-      </div>
-
-      <div className="text-xs text-slate-600">
-        Amount to pay via Razorpay
-      </div>
-    </div>
-
-    <div className="shrink-0 rounded-lg border border-amber-200 bg-white px-4 py-2 text-right shadow-sm">
-      <div className="text-xl font-extrabold text-amber-700">
-        {fmt(invoice?.grand_total)}
-      </div>
-    </div>
-  </div>
-</div>
+        <div className="rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] p-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0 text-left">
+              <div className="mb-1 text-xs font-semibold text-[#1E3A5F] dark:text-slate-200">
+                Invoice {invoice?.invoice_number}
+              </div>
+              <div className="text-xs text-[var(--muted)]">
+                Amount to pay via Razorpay
+              </div>
+            </div>
+            <div className="shrink-0 rounded-md border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-right">
+              <div className="text-xl font-mono font-bold text-[#1E3A5F] dark:text-slate-100">
+                {fmt(invoice?.grand_total)}
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* IDLE */}
         {phase === 'idle' && (
           <div className="space-y-3">
-            <div className="rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)] p-3 text-xs text-[var(--muted)] space-y-1">
+            <div className="rounded-md bg-[var(--surface-elevated)] border border-[var(--line)] p-3 text-xs text-[var(--muted)] space-y-1">
               <div>• A Razorpay checkout popup will open to complete payment.</div>
               <div>• Supports UPI, cards, net banking, and wallets.</div>
               <div>• Invoice will be marked paid only after backend verification.</div>
             </div>
             <button
               onClick={initiatePayment}
-              className="w-full h-12 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2"
-              style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)' }}
+              className="btn-primary w-full h-10 rounded-md font-semibold text-sm flex items-center justify-center gap-2"
             >
               Pay {fmt(invoice?.grand_total)} with Razorpay
             </button>
             <button
               onClick={handleClose}
-              className="w-full h-10 rounded-xl border border-[var(--line)] text-sm text-[var(--muted)] hover:bg-[var(--surface-elevated)]"
+              className="btn-secondary w-full h-10 rounded-md text-sm"
             >
               Cancel
             </button>
@@ -171,7 +168,7 @@ export default function RazorpayPaymentModal({ open, onClose, invoice, onSuccess
         {/* CREATING */}
         {phase === 'creating' && (
           <div className="flex flex-col items-center gap-3 py-4">
-            <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+            <div className="w-10 h-10 border-4 border-slate-200 border-t-[#1E3A5F] rounded-full animate-spin" />
             <p className="text-sm text-[var(--muted)]">Opening Razorpay checkout…</p>
           </div>
         )}
@@ -180,15 +177,15 @@ export default function RazorpayPaymentModal({ open, onClose, invoice, onSuccess
         {phase === 'success' && (
           <div className="space-y-3">
             <div className="flex flex-col items-center gap-2 py-2">
-              <CheckCircle2 size={44} className="text-emerald-500" />
-              <p className="text-lg font-bold text-emerald-700">Payment Successful!</p>
+              <CheckCircle2 size={44} className="text-[#15803D]" />
+              <p className="text-lg font-bold text-[#15803D]">Payment Successful!</p>
               <p className="text-sm text-[var(--muted)] text-center">
                 {fmt(invoice?.grand_total)} received via Razorpay. Invoice marked as paid.
               </p>
             </div>
             <button
               onClick={handleClose}
-              className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm"
+              className="btn-primary w-full h-10 rounded-md font-semibold text-sm"
             >
               Done — View Receipt
             </button>
@@ -199,20 +196,19 @@ export default function RazorpayPaymentModal({ open, onClose, invoice, onSuccess
         {phase === 'failed' && (
           <div className="space-y-3">
             <div className="flex flex-col items-center gap-2 py-2">
-              <XCircle size={44} className="text-rose-500" />
-              <p className="text-lg font-bold text-rose-700">Payment Failed</p>
+              <XCircle size={44} className="text-[#B91C1C]" />
+              <p className="text-lg font-bold text-[#B91C1C]">Payment Failed</p>
               <p className="text-sm text-[var(--muted)] text-center">{errorMsg || 'The payment could not be completed.'}</p>
             </div>
             <button
               onClick={() => { setPhase('idle'); setErrorMsg('') }}
-              className="w-full h-11 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2"
-              style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)' }}
+              className="btn-primary w-full h-10 rounded-md font-semibold text-sm flex items-center justify-center gap-2"
             >
               <RefreshCw size={15} /> Try Again
             </button>
             <button
               onClick={handleClose}
-              className="w-full h-10 rounded-xl border border-[var(--line)] text-sm text-[var(--muted)] hover:bg-[var(--surface-elevated)]"
+              className="btn-secondary w-full h-10 rounded-md text-sm"
             >
               Cancel
             </button>

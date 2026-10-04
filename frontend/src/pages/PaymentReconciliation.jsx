@@ -38,25 +38,25 @@ import toast from 'react-hot-toast'
 // --------------------------------------------------
 
 const STATUS_COLORS = {
-  created: 'bg-white text-slate-700 border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-800',
-  initiated: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800',
-  pending: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
-  success: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
-  captured: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
-  failed: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800',
-  expired: 'bg-white text-slate-600 border-slate-200 dark:bg-slate-900/40 dark:text-slate-400 dark:border-slate-700',
-  refunded: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800',
+  created: 'bg-transparent text-[#475569] dark:text-slate-400 border border-[var(--line)]',
+  initiated: 'bg-transparent text-[#2563EB] dark:text-blue-400 border border-[var(--line)]',
+  pending: 'bg-transparent text-[#B45309] dark:text-amber-400 border border-[var(--line)]',
+  success: 'bg-transparent text-[#15803D] dark:text-green-400 border border-[var(--line)]',
+  captured: 'bg-transparent text-[#15803D] dark:text-green-400 border border-[var(--line)]',
+  failed: 'bg-transparent text-[#B91C1C] dark:text-red-400 border border-[var(--line)]',
+  expired: 'bg-transparent text-[#475569] dark:text-slate-400 border border-[var(--line)]',
+  refunded: 'bg-transparent text-[#C2410C] dark:text-orange-400 border border-[var(--line)]',
 }
 
 const STATUS_DOT_COLORS = {
-  success: 'bg-emerald-500',
-  captured: 'bg-emerald-500',
-  failed: 'bg-rose-500',
-  pending: 'bg-amber-500',
-  initiated: 'bg-blue-500',
-  created: 'bg-slate-400',
-  expired: 'bg-slate-400',
-  refunded: 'bg-purple-500',
+  success: 'bg-[#15803D]',
+  captured: 'bg-[#15803D]',
+  failed: 'bg-[#B91C1C]',
+  pending: 'bg-[#B45309]',
+  initiated: 'bg-[#2563EB]',
+  created: 'bg-[#64748B]',
+  expired: 'bg-[#64748B]',
+  refunded: 'bg-[#C2410C]',
 }
 
 const STATUS_ICONS = {
@@ -711,7 +711,7 @@ export default function PaymentReconciliation() {
           <div className="grid grid-cols-2 divide-y divide-[var(--line-subtle)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x sm:divide-[var(--line)]">
             <div className="p-3.5 sm:p-4">
               <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                <ReceiptText size={13} className="text-blue-600" /> Total Volume
+                <ReceiptText size={13} className="text-[#1E3A5F] dark:text-slate-300" /> Total Volume
               </span>
               <div className="mt-1 flex items-baseline gap-2">
                 <span className="font-mono text-xl sm:text-2xl font-black tracking-tight text-[var(--ink)]">
@@ -723,13 +723,13 @@ export default function PaymentReconciliation() {
 
             <div className="p-3.5 sm:p-4">
               <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                <CheckCircle2 size={13} className="text-emerald-600" /> Successful
+                <CheckCircle2 size={13} className="text-[#15803D]" /> Successful
               </span>
               <div className="mt-1 flex items-baseline gap-2">
-                <span className="font-mono text-xl sm:text-2xl font-black tracking-tight text-emerald-600">
+                <span className="font-mono text-xl sm:text-2xl font-black tracking-tight text-[#15803D]">
                   {summary.success.toLocaleString('en-IN')}
                 </span>
-                <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <span className="inline-flex items-center rounded border border-[var(--line)] bg-[var(--surface-elevated)] px-2 py-0.5 text-[10px] font-bold text-[#15803D]">
                   {summary.successRate.toFixed(1)}% rate
                 </span>
               </div>
@@ -737,10 +737,10 @@ export default function PaymentReconciliation() {
 
             <div className="p-3.5 sm:p-4">
               <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                <Clock3 size={13} className="text-amber-600" /> Pending / In-Flight
+                <Clock3 size={13} className="text-[#B45309]" /> Pending / In-Flight
               </span>
               <div className="mt-1 flex items-baseline gap-2">
-                <span className="font-mono text-xl sm:text-2xl font-black tracking-tight text-amber-600">
+                <span className="font-mono text-xl sm:text-2xl font-black tracking-tight text-[#B45309]">
                   {summary.pending.toLocaleString('en-IN')}
                 </span>
                 <span className="text-xs text-[var(--muted)]">awaiting</span>
@@ -749,10 +749,10 @@ export default function PaymentReconciliation() {
 
             <div className="p-3.5 sm:p-4">
               <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                <XCircle size={13} className="text-rose-600" /> Failed Payments
+                <XCircle size={13} className="text-[#B91C1C]" /> Failed Payments
               </span>
               <div className="mt-1 flex items-baseline gap-2">
-                <span className="font-mono text-xl sm:text-2xl font-black tracking-tight text-rose-600">
+                <span className="font-mono text-xl sm:text-2xl font-black tracking-tight text-[#B91C1C]">
                   {summary.failed.toLocaleString('en-IN')}
                 </span>
                 <span className="text-xs text-[var(--muted)]">unsuccessful</span>
@@ -766,7 +766,7 @@ export default function PaymentReconciliation() {
               <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Gross Collected
               </div>
-              <div className="mt-0.5 font-mono text-base sm:text-lg font-black text-blue-600">
+              <div className="mt-0.5 font-mono text-base sm:text-lg font-black text-[#1E3A5F] dark:text-slate-100">
                 {fmt(summary.amount)}
               </div>
             </div>
@@ -793,7 +793,7 @@ export default function PaymentReconciliation() {
               <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Refunds ({summary.refunded})
               </div>
-              <div className="mt-0.5 font-mono text-base sm:text-lg font-bold text-purple-600">
+              <div className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[#C2410C]">
                 {fmt(summary.refunds)}
               </div>
             </div>
@@ -802,7 +802,7 @@ export default function PaymentReconciliation() {
               <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Net Settled Amount
               </div>
-              <div className="mt-0.5 font-mono text-base sm:text-lg font-black text-emerald-700 dark:text-emerald-300">
+              <div className="mt-0.5 font-mono text-base sm:text-lg font-black text-[#15803D] dark:text-emerald-400">
                 {fmt(summary.net)}
               </div>
             </div>
@@ -877,6 +877,7 @@ export default function PaymentReconciliation() {
                     setDateFilter('')
                   }}
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold text-rose-400 hover:bg-rose-950/30"
                 >
                   <X size={15} />
                   Clear
@@ -970,7 +971,7 @@ export default function PaymentReconciliation() {
                     <td colSpan={8} className="px-4 py-16 text-center">
                       <RefreshCw
                         size={24}
-                        className="mx-auto mb-3 animate-spin text-blue-600"
+                        className="mx-auto mb-3 animate-spin text-[#1E3A5F]"
                       />
 
                       <p className="text-sm font-semibold text-[var(--ink)]">
@@ -1019,17 +1020,17 @@ export default function PaymentReconciliation() {
                     return (
                       <tr
                         key={row.id || paymentId || orderId || index}
-                        className="group transition-colors hover:bg-blue-50/40 dark:hover:bg-slate-800/40"
+                        className="group transition-colors hover:bg-[var(--surface-hover)]"
                       >
                         {/* TRANSACTION */}
                         <td className="px-4 py-3.5">
                           <div className="flex items-start gap-2.5">
-                            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-blue-600">
+                            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[#1E3A5F] dark:text-slate-300">
                               <ReceiptText size={15} />
                             </div>
 
                             <div className="min-w-0">
-                              <p className="font-semibold text-blue-600 dark:text-blue-400 font-mono text-xs">
+                              <p className="font-semibold text-[#1E3A5F] dark:text-slate-200 font-mono text-xs">
                                 {invoice || 'Unlinked Txn'}
                               </p>
 
@@ -1153,7 +1154,7 @@ export default function PaymentReconciliation() {
                           <button
                             type="button"
                             onClick={() => setSelectedRow(row)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 transition-all hover:bg-blue-600 hover:text-white hover:border-blue-600 active:scale-95"
+                            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
                           >
                             <Eye size={13} />
                             View
@@ -1170,7 +1171,7 @@ export default function PaymentReconciliation() {
           <div className="md:hidden divide-y divide-[var(--line-subtle)] p-3 space-y-3">
             {loading && (
               <div className="py-12 text-center">
-                <RefreshCw size={24} className="mx-auto mb-2 animate-spin text-blue-600" />
+                <RefreshCw size={24} className="mx-auto mb-2 animate-spin text-[#1E3A5F]" />
                 <p className="text-xs font-semibold text-[var(--ink)]">Loading transactions...</p>
               </div>
             )}
@@ -1199,7 +1200,7 @@ export default function PaymentReconciliation() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="font-semibold text-blue-600 dark:text-blue-400 font-mono text-sm break-all">
+                        <p className="font-semibold text-[#1E3A5F] dark:text-slate-200 font-mono text-sm break-all">
                           {invoice || `Txn #${row.id || index + 1}`}
                         </p>
                         <p className="text-xs text-[var(--muted)] mt-0.5 truncate">
@@ -1227,7 +1228,7 @@ export default function PaymentReconciliation() {
                       <button
                         type="button"
                         onClick={() => setSelectedRow(row)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-all hover:bg-blue-600 hover:text-white"
+                        className="inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
                       >
                         <Eye size={12} />
                         View Details
@@ -1533,8 +1534,8 @@ function TransactionDrawer({ row, onClose }) {
                 Failure Information
               </SectionTitle>
 
-              <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 dark:border-rose-900/50 dark:bg-rose-950/20">
-                <p className="text-sm leading-relaxed text-rose-700 dark:text-rose-300">
+              <div className="rounded-xl border border-rose-800/50 bg-rose-950/30 p-3">
+                <p className="text-sm leading-relaxed text-rose-300">
                   {failureReason}
                 </p>
               </div>

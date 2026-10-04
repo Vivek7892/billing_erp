@@ -18,25 +18,25 @@ const CAT_ICON = {
   Maintenance: MoreHorizontal, Other: IndianRupee,
 }
 const CAT_ICON_CLS = {
-  Rent: 'border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400',
-  Utilities: 'border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400',
-  Salaries: 'border-violet-200 dark:border-violet-800 text-violet-600 dark:text-violet-400',
-  Transport: 'border-cyan-200 dark:border-cyan-800 text-cyan-600 dark:text-cyan-400',
-  Supplies: 'border-teal-200 dark:border-teal-800 text-teal-600 dark:text-teal-400',
-  Marketing: 'border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400',
-  Maintenance: 'border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400',
-  Other: 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400',
+  Rent: 'border-[var(--line)] text-[#1E3A5F] dark:text-slate-300',
+  Utilities: 'border-[var(--line)] text-amber-600 dark:text-amber-400',
+  Salaries: 'border-[var(--line)] text-slate-700 dark:text-slate-300',
+  Transport: 'border-[var(--line)] text-slate-600 dark:text-slate-400',
+  Supplies: 'border-[var(--line)] text-teal-700 dark:text-teal-400',
+  Marketing: 'border-[var(--line)] text-rose-600 dark:text-rose-400',
+  Maintenance: 'border-[var(--line)] text-amber-700 dark:text-amber-400',
+  Other: 'border-[var(--line)] text-slate-500 dark:text-slate-400',
 }
 
 const CAT_BADGE = {
-  Rent: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800/60',
-  Utilities: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60',
-  Salaries: 'bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-800/60',
-  Transport: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300 dark:border-cyan-800/60',
-  Supplies: 'bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800/60',
-  Marketing: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60',
-  Maintenance: 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800/60',
-  Other: 'bg-white text-slate-700 border border-slate-200 dark:bg-slate-900/40 dark:text-slate-300 dark:border-slate-800',
+  Rent: 'bg-slate-100 text-[#1E3A5F] border border-[var(--line)] dark:bg-slate-800 dark:text-slate-300',
+  Utilities: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60',
+  Salaries: 'bg-slate-100 text-slate-700 border border-[var(--line)] dark:bg-slate-800 dark:text-slate-300',
+  Transport: 'bg-slate-100 text-slate-700 border border-[var(--line)] dark:bg-slate-800 dark:text-slate-300',
+  Supplies: 'bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800/60',
+  Marketing: 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/60',
+  Maintenance: 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60',
+  Other: 'bg-slate-50 text-slate-700 border border-[var(--line)] dark:bg-slate-800/80 dark:text-slate-300',
 }
 
 const CAT_COLOR = CAT_BADGE
@@ -214,21 +214,6 @@ export default function Expenses() {
                 />
               </div>
 
-              {/* Refresh */}
-              <button
-                type="button"
-                onClick={load}
-                disabled={loading}
-                className="btn-secondary h-8 w-8 p-0 shrink-0 inline-flex items-center justify-center rounded-md"
-                title="Refresh expenses"
-                aria-label="Refresh expenses"
-              >
-                <RefreshCw
-                  size={13}
-                  className={loading ? 'animate-spin' : ''}
-                />
-              </button>
-
               {/* Add */}
               <button
                 type="button"
@@ -333,7 +318,7 @@ export default function Expenses() {
                           type="button"
                           onClick={() => del(e.id)}
                           disabled={deleting === e.id}
-                          className="icon-btn !h-8 !w-8 text-red-400 hover:bg-red-50 dark:bg-red-950/60 hover:text-red-600 dark:text-red-400"
+                          className="icon-btn !h-8 !w-8 text-rose-600 hover:text-rose-700"
                           title="Delete expense"
                           aria-label="Delete expense"
                         >
@@ -421,7 +406,7 @@ export default function Expenses() {
                               type="button"
                               onClick={() => del(e.id)}
                               disabled={deleting === e.id}
-                              className="icon-btn text-red-400 hover:bg-red-50 dark:bg-red-950/60 hover:text-red-600 dark:text-red-400"
+                              className="icon-btn text-rose-600 hover:text-rose-700"
                               title="Delete expense"
                               aria-label="Delete expense"
                             >

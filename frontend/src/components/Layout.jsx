@@ -27,14 +27,13 @@ export const useShop = () => useContext(ShopContext)
 
 const NAV_GROUPS = [
   {
-    label: 'Overview',
+    label: 'Dashboard',
     items: [
       { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-      
-  ]
+    ]
   },
   {
-    label: 'Sales',
+    label: 'Billing',
     items: [
       { to: '/billing/new', icon: ShoppingCart, label: 'New Bill' },
       { to: '/sales/invoices', icon: FileText, label: 'Invoices' },
@@ -136,17 +135,17 @@ function NavGroupItems({ items, collapsed, groupLabel, open, setOpen, onNav }) {
             onClick={onNav}
             title={label}
             className={({ isActive }) =>
-              `relative flex items-center justify-center w-10 h-10 rounded-xl mb-1 transition-all duration-150 group ${
+              `relative flex items-center justify-center w-10 h-10 rounded-lg mb-1 transition-all duration-150 group ${
                 isActive
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-semibold'
-                  : 'text-slate-400 hover:bg-white/[0.08] hover:text-white'
+                  ? 'bg-[#1E3A5F] text-white shadow-xs font-semibold'
+                  : 'text-slate-400 hover:bg-[#1E293B] hover:text-white'
               }`
             }
           >
             {({ isActive }) => (
               <>
-                <Icon size={17} />
-                <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-slate-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-[100] shadow-xl border border-slate-700">
+                <Icon size={17} className={isActive ? 'text-white' : 'text-slate-400'} />
+                <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-[#0F172A] text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-[100] shadow-lg border border-[#1E293B]">
                   {label}
                 </span>
               </>
@@ -180,16 +179,16 @@ function NavGroupItems({ items, collapsed, groupLabel, open, setOpen, onNav }) {
               end={to === '/'}
               onClick={onNav}
               className={({ isActive }) =>
-                `relative flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-medium transition-all duration-150 ${
+                `relative flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ${
                   isActive
-                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/25 font-semibold'
-                    : 'text-slate-300 hover:bg-white/[0.08] hover:text-white'
+                    ? 'bg-[#1E3A5F] text-white shadow-xs font-semibold'
+                    : 'text-slate-300 hover:bg-[#1E293B] hover:text-white'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  <Icon size={16} className={`flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <Icon size={16} className={`flex-shrink-0 ${isActive ? 'text-teal-400' : 'text-slate-400'}`} />
                   <span className="truncate">{label}</span>
                 </>
               )}
@@ -209,14 +208,14 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
       className={`flex flex-col h-full transition-all duration-300 ease-in-out select-none ${
         mobile ? 'w-64' : collapsed ? 'w-[62px]' : 'w-[220px]'
       }`}
-      style={{ background: '#0f172a' }}
+      style={{ background: '#0F172A' }}
     >
       {/* Brand Header */}
       <div
         onMouseEnter={() => setHeaderHovered(true)}
         onMouseLeave={() => setHeaderHovered(false)}
         onClick={collapsed && !mobile ? onToggle : undefined}
-        className={`flex items-center flex-shrink-0 border-b border-white/[0.08] transition-all duration-300 cursor-pointer ${
+        className={`flex items-center flex-shrink-0 border-b border-[#1E293B] transition-all duration-300 cursor-pointer ${
           collapsed && !mobile ? 'justify-center px-2 py-4' : 'gap-3 px-4 py-3.5'
         }`}
       >
@@ -273,18 +272,18 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
       </nav>
 
       {/* User / Sign Out Footer */}
-      <div className={`border-t border-white/[0.08] flex-shrink-0 ${collapsed && !mobile ? 'px-2 py-3' : 'px-3 py-3'}`}>
+      <div className={`border-t border-[#1E293B] flex-shrink-0 ${collapsed && !mobile ? 'px-2 py-3' : 'px-3 py-3'}`}>
         {collapsed && !mobile ? (
           <button
             onClick={onLogout}
             title="Sign Out"
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-white/[0.08] transition-all mx-auto"
+            className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-[#1E293B] transition-all mx-auto"
           >
             <LogOut size={16} />
           </button>
         ) : (
           <div className="flex items-center gap-2.5 px-1">
-            <div className="w-8 h-8 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 shadow-sm">
+            <div className="w-8 h-8 rounded-full bg-[#1E3A5F] border border-slate-700 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 shadow-xs">
               {((user?.first_name?.[0] || '') + (user?.last_name?.[0] || '')) || user?.username?.[0]?.toUpperCase() || 'U'}
             </div>
             <div className="min-w-0 flex-1">
@@ -296,7 +295,7 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
             <button
               onClick={onLogout}
               title="Sign Out"
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-white/[0.08] transition-all flex-shrink-0"
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-[#1F2937] transition-all flex-shrink-0"
             >
               <LogOut size={15} />
             </button>
@@ -472,14 +471,12 @@ function NotificationBell() {
       <button
         onClick={() => setOpen(v => !v)}
         aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
-        className="relative flex items-center justify-center w-9 h-9 rounded-xl text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-all"
+        className="relative flex items-center justify-center w-9 h-9 rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-all"
       >
         <Bell size={17} />
         {unreadCount > 0 && (
           <span
-            className={`absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white ${
-              criticalCount > 0 ? 'bg-red-500 animate-pulse' : 'bg-[var(--primary)]'
-            }`}
+            className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white bg-[#DC2626]"
           >
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
@@ -487,12 +484,12 @@ function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-[var(--surface)] rounded-xl shadow-[var(--shadow-lg)] border border-[var(--line)] z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-[var(--surface)] rounded-[12px] shadow-[var(--shadow-lg)] border border-[var(--line)] z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--line)] bg-[var(--surface-elevated)]">
             <div className="flex items-center gap-2">
               <span className="font-bold text-[var(--ink)] text-xs uppercase tracking-wider">Alerts</span>
               {unreadCount > 0 && (
-                <span className="text-[10px] font-bold bg-[var(--primary-light)] text-[var(--primary-text)] px-1.5 py-0.2 rounded-full">
+                <span className="text-[10px] font-bold bg-slate-100 text-[#1E3A5F] border border-[#D7DEE7] px-1.5 py-0.5 rounded">
                   {unreadCount} unread
                 </span>
               )}
@@ -500,7 +497,7 @@ function NotificationBell() {
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="text-[11px] font-medium text-[var(--primary)] hover:underline"
+                className="text-[11px] font-medium text-[#1E3A5F] hover:underline"
               >
                 Mark all read
               </button>
@@ -514,18 +511,18 @@ function NotificationBell() {
                   key={n.id}
                   onClick={() => handleNotificationClick(n)}
                   className={`w-full flex items-start gap-2.5 px-3.5 py-2.5 hover:bg-[var(--surface-hover)] cursor-pointer transition-colors text-left ${
-                    !n.is_read ? 'bg-indigo-50/20 dark:bg-indigo-950/20' : ''
+                    !n.is_read ? 'bg-slate-50 dark:bg-slate-800/40' : ''
                   }`}
                 >
                   <div
                     className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${
                       n.severity === 'danger'
-                        ? 'bg-red-500'
+                        ? 'bg-[#B91C1C]'
                         : n.severity === 'warning'
-                          ? 'bg-amber-500'
+                          ? 'bg-[#B45309]'
                           : n.severity === 'success'
-                            ? 'bg-teal-500'
-                            : 'bg-indigo-500'
+                            ? 'bg-[#15803D]'
+                            : 'bg-[#1E3A5F]'
                     }`}
                   />
                   <div className="flex-1 min-w-0">
@@ -556,7 +553,7 @@ function NotificationBell() {
                 setOpen(false)
                 navigate('/notifications')
               }}
-              className="w-full py-1.5 text-center text-xs font-semibold text-[var(--primary)] hover:underline flex items-center justify-center gap-1"
+              className="w-full py-1.5 text-center text-xs font-semibold text-[#1E3A5F] hover:underline flex items-center justify-center gap-1"
             >
               <span>Open Notification Center</span>
               <ArrowRight size={12} />
@@ -586,9 +583,9 @@ function ProfileMenu({ user, onLogout }) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-2 hover:bg-[var(--surface-hover)] rounded-xl px-2 py-1.5 transition-all border border-transparent hover:border-[var(--line)]"
+        className="flex items-center gap-2 hover:bg-[var(--surface-hover)] rounded-lg px-2 py-1.5 transition-all border border-transparent hover:border-[var(--line)]"
       >
-        <div className="w-8 h-8 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 shadow-xs">
+        <div className="w-8 h-8 rounded-full bg-[#1E3A5F] border border-[#D7DEE7] text-white text-xs font-bold flex items-center justify-center flex-shrink-0 shadow-xs">
           {initials}
         </div>
         <div className="text-left hidden md:block">
@@ -599,10 +596,10 @@ function ProfileMenu({ user, onLogout }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-56 bg-[var(--surface)] rounded-2xl shadow-[var(--shadow-lg)] border border-[var(--line)] z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-56 bg-[var(--surface)] rounded-[12px] shadow-[var(--shadow-lg)] border border-[var(--line)] z-50 overflow-hidden">
           <div className="px-4 py-3 bg-[var(--surface-elevated)] border-b border-[var(--line)]">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-indigo-600 text-white text-sm font-bold flex items-center justify-center">
+              <div className="w-9 h-9 rounded-full bg-[#1E3A5F] border border-[#D7DEE7] text-white text-sm font-bold flex items-center justify-center">
                 {initials}
               </div>
               <div className="min-w-0">
@@ -702,6 +699,7 @@ export default function Layout({ children }) {
   const mainRef = useRef()
 
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const [shopName, setShopName] = useState('Dreamwithtech')
   const [shopLogo, setShopLogo] = useState('')
@@ -723,6 +721,7 @@ export default function Layout({ children }) {
   useEffect(() => {
     if (mainRef.current) mainRef.current.scrollTop = 0
     setMobileOpen(false)
+    setMobileSearchOpen(false)
   }, [location.pathname])
 
   const handleLogout = () => { logout(); navigate('/login') }
@@ -785,10 +784,24 @@ export default function Layout({ children }) {
 
               <div className="flex-1 min-w-2" />
 
-              {/* Global Search */}
+              {/* Global Search (Desktop) */}
               <div className="hidden lg:block">
                 <GlobalSearch />
               </div>
+
+              {/* Mobile Search Toggle */}
+              <button
+                onClick={() => setMobileSearchOpen(v => !v)}
+                title="Search"
+                aria-label="Search"
+                className={`lg:hidden w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-150 ${
+                  mobileSearchOpen
+                    ? 'bg-slate-100 text-[#1E3A5F] dark:bg-slate-800 dark:text-slate-200'
+                    : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
+                }`}
+              >
+                <Search size={18} />
+              </button>
 
               <div className="hidden lg:block w-px h-5 bg-[var(--line)]" />
 
@@ -805,6 +818,13 @@ export default function Layout({ children }) {
               {/* Profile Menu */}
               <ProfileMenu user={user} onLogout={handleLogout} />
             </div>
+
+            {/* Mobile Search Bar Expansion */}
+            {mobileSearchOpen && (
+              <div className="lg:hidden px-3 py-2.5 bg-[var(--surface-elevated)] border-t border-[var(--line)]">
+                <GlobalSearch />
+              </div>
+            )}
           </header>
 
           {/* Page Body */}
