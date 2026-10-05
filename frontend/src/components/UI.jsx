@@ -595,43 +595,13 @@ export function ConfirmDialog({
 }
 
 /* ============================================================
-   SPINNER
+   LOADING PLACEHOLDER
 ============================================================ */
 
 export function Spinner({
-  size = 'md',
-  label = 'Loading…',
+  label = 'Loading data',
 }) {
-  const spinnerSize =
-    size === 'sm'
-      ? 'h-5 w-5 border-2'
-      : size === 'lg'
-        ? 'h-10 w-10 border-4'
-        : 'h-8 w-8 border-[3px]'
-
-  return (
-    <div
-      className="flex flex-col items-center justify-center px-4 py-14 text-center"
-      role="status"
-      aria-label={label}
-    >
-      <div className="relative mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-        <div
-          className={[
-            spinnerSize,
-            'animate-spin rounded-full border-[var(--line)] border-t-[var(--primary)]',
-          ].join(' ')}
-        />
-        <div className="absolute h-2.5 w-2.5 rounded-full bg-[var(--primary)] shadow-[0_0_0_5px_var(--primary-light)]" />
-      </div>
-      <p className="text-sm font-semibold text-[var(--ink)]">{label}</p>
-      <div className="mt-3 flex items-center gap-1.5" aria-hidden="true">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--primary)]" />
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--primary)] [animation-delay:150ms]" />
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--primary)] [animation-delay:300ms]" />
-      </div>
-    </div>
-  )
+  return <TableSkeleton rows={5} columns={4} label={label} />
 }
 
 /* ============================================================
@@ -722,11 +692,12 @@ export function Skeleton({ className = '' }) {
 export function TableSkeleton({
   rows = 5,
   columns = 5,
+  label = 'Loading data',
 }) {
   return (
     <div
       className="divide-y divide-[var(--line-subtle)]"
-      aria-label="Loading data"
+      aria-label={label}
       role="status"
     >
       {Array.from({ length: rows }, (_, row) => (
@@ -773,6 +744,55 @@ export function CardSkeleton({ count = 4 }) {
           <Skeleton className="mt-3 h-3 w-20" />
         </div>
       ))}
+    </div>
+  )
+}
+
+/* ============================================================
+   PAGE SKELETON
+============================================================ */
+
+export function PageSkeleton() {
+  return (
+    <div
+      className="grid min-h-screen grid-cols-1 bg-[var(--app-bg)] lg:grid-cols-[220px_minmax(0,1fr)]"
+      aria-hidden="true"
+    >
+      <aside className="hidden border-r border-[var(--line)] bg-[var(--sidebar-bg)] p-5 lg:block">
+        <Skeleton className="mb-10 h-9 w-32 bg-white/10" />
+        <div className="space-y-5">
+          {Array.from({ length: 5 }, (_, group) => (
+            <div key={group} className="space-y-2">
+              <Skeleton className="h-2.5 w-20 bg-white/10" />
+              <Skeleton className="h-9 w-full bg-white/10" />
+              <Skeleton className="h-9 w-11/12 bg-white/10" />
+            </div>
+          ))}
+        </div>
+      </aside>
+
+      <main className="min-w-0">
+        <header className="flex h-16 items-center justify-between border-b border-[var(--line)] bg-[var(--surface)] px-4 sm:px-6">
+          <Skeleton className="h-8 w-32 sm:w-48" />
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-9 w-9 rounded-full" />
+            <Skeleton className="hidden h-3 w-24 sm:block" />
+          </div>
+        </header>
+
+        <div className="space-y-5 p-4 sm:p-6">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-44" />
+            <Skeleton className="h-3 w-64 max-w-full" />
+          </div>
+          <CardSkeleton count={4} />
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+            <Skeleton className="h-72 w-full rounded-xl" />
+            <Skeleton className="h-72 w-full rounded-xl" />
+          </div>
+          <Skeleton className="h-48 w-full rounded-xl" />
+        </div>
+      </main>
     </div>
   )
 }

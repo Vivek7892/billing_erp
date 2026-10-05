@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './AuthContext'
 import { ThemeProvider } from './ThemeContext'
 
 import Layout from './components/Layout'
+import { PageSkeleton } from './components/UI'
 
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -35,90 +36,17 @@ import RecycleBin from './pages/RecycleBin'
 
 function LoadingScreen() {
   return (
-    <div
-      className="
-        min-h-screen
-        flex
-        items-center
-        justify-center
-        px-6
-        transition-colors
-        duration-300
-      "
-      style={{
-        background: 'var(--app-bg)',
-        color: 'var(--ink)',
-      }}
-    >
-      <div className="flex w-full max-w-sm flex-col items-center text-center">
-        <div
-          className="
-            mb-6
-            flex
-            h-16
-            w-16
-            items-center
-            justify-center
-            rounded-2xl
-            border
-            shadow-sm
-          "
-          style={{
-            background: 'var(--surface)',
-            borderColor: 'var(--line)',
-          }}
-        >
-          <div className="relative flex h-10 w-10 items-center justify-center">
-            <div
-              className="h-10 w-10 animate-spin rounded-full border-4 border-transparent"
-              style={{
-                borderTopColor: 'var(--primary)',
-                borderRightColor: 'var(--primary)',
-              }}
-            />
-            <div
-              className="absolute h-3 w-3 rounded-full"
-              style={{
-                background: 'var(--primary)',
-                boxShadow: '0 0 0 6px var(--primary-light)',
-              }}
-            />
-          </div>
-        </div>
-
-        <h1
-          className="text-lg font-bold tracking-tight"
-          style={{ color: 'var(--ink)' }}
-        >
+    <div className="relative min-h-screen overflow-hidden">
+      <PageSkeleton />
+      <div
+        className="absolute inset-x-0 bottom-6 flex justify-center px-6"
+        role="status"
+        aria-live="polite"
+        aria-label="Loading your billing space"
+      >
+        <p className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-xs font-medium text-[var(--muted)] shadow-sm">
           Loading your billing space...
-        </h1>
-
-        <p
-          className="mt-2 text-sm"
-          style={{ color: 'var(--muted)' }}
-        >
-          Please wait while we securely load your account.
         </p>
-
-        <div
-          className="mt-6 h-1.5 w-48 overflow-hidden rounded-full"
-          style={{ background: 'var(--line)' }}
-        >
-          <div
-            className="
-              h-full
-              w-1/2
-              animate-[loading-sweep_1.4s_ease-in-out_infinite]
-              rounded-full
-            "
-            style={{ background: 'var(--primary)' }}
-          />
-        </div>
-        <div className="mt-3 flex items-center gap-1.5" aria-hidden="true">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: 'var(--primary)' }} />
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full [animation-delay:150ms]" style={{ background: 'var(--primary)' }} />
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full [animation-delay:300ms]" style={{ background: 'var(--primary)' }} />
-        </div>
       </div>
     </div>
   )
