@@ -733,6 +733,142 @@ header button {
     min-height: 42px;
   }
 
+  .notifications-page {
+    padding-bottom: 1rem;
+  }
+
+  .notifications-page .notifications-header-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .notifications-page .notifications-header-actions button {
+    justify-content: center;
+    min-width: 0;
+    padding-inline: 0.5rem;
+  }
+
+  .notifications-page .notifications-header-actions button:first-child:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .notifications-page .notifications-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-inline: -0.25rem;
+    padding-inline: 0.25rem;
+    scrollbar-width: none;
+  }
+
+  .notifications-page .notifications-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .notifications-page .notifications-tabs button {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .notifications-page .notifications-toolbar > .relative,
+  .notifications-page .notifications-toolbar select {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .notifications-page .notifications-toolbar > span {
+    margin-left: 0;
+  }
+
+  .notifications-page .notifications-table {
+    display: block;
+    border-collapse: separate;
+  }
+
+  .notifications-page .notifications-table tbody {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .notifications-page .notifications-table thead {
+    display: none;
+  }
+
+  .notifications-page .notifications-table tr {
+    display: block;
+    position: relative;
+    width: 100%;
+    padding: 0.875rem 0.875rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 0.625rem;
+    background: var(--surface-elevated);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+  }
+
+  .notifications-page .notifications-table td {
+    display: block;
+    width: 100%;
+    max-width: none;
+    padding: 0.25rem 0;
+    text-align: left !important;
+    white-space: normal;
+  }
+
+  .notifications-page .notifications-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.2rem;
+    color: var(--muted);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .notifications-page .notifications-table td[data-label="Status"] {
+    position: absolute;
+    top: 1rem;
+    right: 0.875rem;
+    width: auto;
+    padding: 0;
+  }
+
+  .notifications-page .notifications-table td[data-label="Status"]::before {
+    display: none;
+  }
+
+  .notifications-page .notifications-table td[data-label="Category"] {
+    padding-right: 1.5rem;
+  }
+
+  .notifications-page .notifications-table td[data-label="Alert details"] {
+    padding-top: 0.55rem;
+  }
+
+  .notifications-page .notifications-table td[data-label="Actions"] {
+    margin-top: 0.55rem;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--line-subtle);
+  }
+
+  .notifications-page .notifications-table td[data-label="Actions"] > div {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .notifications-page .notifications-table td[data-label="Actions"] button {
+    min-height: 2rem;
+  }
+
+  .notifications-page .notifications-table td[data-label="Recommended action"] button {
+    min-height: 2rem;
+  }
+
   .page-actions {
     width: 100%;
   }

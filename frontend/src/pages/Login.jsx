@@ -1,7 +1,9 @@
 import { useId, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
+import { useTheme } from '../ThemeContext'
 import toast from 'react-hot-toast'
+import { Moon, Sun } from 'lucide-react'
 
 export default function Login() {
   const [form, setForm] = useState({
@@ -14,6 +16,7 @@ export default function Login() {
   const [errors, setErrors] = useState({})
 
   const { login } = useAuth()
+  const { isDark, toggleTheme } = useTheme()
   const navigate = useNavigate()
 
   // ============================================================
@@ -104,7 +107,7 @@ export default function Login() {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--app-bg)] text-[var(--ink)]">
+    <main className="min-h-screen bg-[var(--app-bg)] text-[var(--ink)] transition-colors duration-200">
 
       <div className="grid min-h-screen lg:grid-cols-[1.1fr_0.9fr]">
 
@@ -112,7 +115,7 @@ export default function Login() {
             LEFT INFORMATION PANEL
         ====================================================== */}
 
-        <section className="hidden bg-slate-50 border-r border-[var(--line)] lg:flex">
+        <section className="hidden border-r border-[var(--line)] bg-[var(--surface-elevated)] lg:flex">
 
           <div className="flex min-h-screen w-full flex-col px-12 py-10 xl:px-20">
 
@@ -120,7 +123,10 @@ export default function Login() {
                 BRAND
             ================================================== */}
 
-            <Brand />
+            <div className="flex items-start justify-between gap-4">
+              <Brand />
+              <ThemeToggle isDark={isDark} toggleTheme={toggleTheme} />
+            </div>
 
 
             {/* ==================================================
@@ -136,7 +142,7 @@ export default function Login() {
                 <div className="mb-5 flex items-center gap-3">
 
                   <span className="h-0.5 w-8 rounded-full bg-[#1E3A5F]" />
-                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#1E3A5F] dark:text-slate-300">
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--accent)]">
                     ERP Billing & Business Management
                   </span>
 
@@ -269,8 +275,9 @@ export default function Login() {
                 MOBILE BRAND
             ================================================== */}
 
-            <div className="mb-12 lg:hidden">
+            <div className="mb-10 flex items-start justify-between gap-4 lg:hidden">
               <Brand />
+              <ThemeToggle isDark={isDark} toggleTheme={toggleTheme} />
             </div>
 
 
@@ -293,7 +300,7 @@ export default function Login() {
                 border
                 border-[var(--line)]
                 bg-[var(--surface-elevated)]
-                text-blue-600 dark:text-blue-400
+                text-[var(--accent)]
               ">
                 <LockIcon />
               </div>
@@ -631,7 +638,7 @@ export default function Login() {
               justify-center
               gap-2
               text-xs
-              text-slate-400
+              text-[var(--muted-light)]
             ">
 
               <LockIcon small />
@@ -650,7 +657,7 @@ export default function Login() {
             <div className="
               mt-10
               border-t
-              border-slate-200
+              border-[var(--line)]
               pt-6
               text-center
               lg:hidden
@@ -659,7 +666,7 @@ export default function Login() {
               <p className="
                 text-xs
                 leading-5
-                text-slate-500
+                text-[var(--muted)]
               ">
                 ERP Billing & Business Management
                 <br />
@@ -732,6 +739,21 @@ function Brand() {
       </div>
 
     </div>
+  )
+}
+
+function ThemeToggle({ isDark, toggleTheme }) {
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink-secondary)] shadow-sm transition hover:border-[var(--accent)] hover:text-[var(--ink)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/25"
+      aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+      title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
+    >
+      {isDark ? <Sun size={15} /> : <Moon size={15} />}
+      <span className="hidden sm:inline">{isDark ? 'Light' : 'Dark'}</span>
+    </button>
   )
 }
 

@@ -250,7 +250,7 @@ export default function Notifications() {
   ]
 
   return (
-    <div className="min-w-0 space-y-4 pb-6">
+    <div className="notifications-page min-w-0 space-y-4 pb-6">
       {/* -------------------------------------------------------------
           TOP BAR: Title & Actions
       -------------------------------------------------------------- */}
@@ -271,7 +271,7 @@ export default function Notifications() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="notifications-header-actions flex items-center gap-2">
             <button
               onClick={handleRunChecks}
               disabled={refreshing}
@@ -347,7 +347,7 @@ export default function Notifications() {
           FILTER TABS & TOOLBAR
       -------------------------------------------------------------- */}
       <section className="space-y-2.5">
-        <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--line)] pb-2">
+        <div className="notifications-tabs flex flex-wrap items-center gap-1.5 border-b border-[var(--line)] pb-2">
           {tabList.map(tab => {
             const active = activeTab === tab.key
             return (
@@ -377,7 +377,7 @@ export default function Notifications() {
           })}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="notifications-toolbar flex flex-wrap items-center gap-2">
           {/* Search Box */}
           <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search
@@ -431,7 +431,7 @@ export default function Notifications() {
           </div>
         ) : filteredNotifications.length ? (
           <div className="overflow-x-auto">
-            <table className="table">
+            <table className="table notifications-table">
               <thead>
                 <tr>
                   <th className="w-10 text-center">Status</th>
@@ -469,7 +469,7 @@ export default function Notifications() {
                       ].join(' ')}
                     >
                       {/* Read indicator */}
-                      <td className="text-center">
+                      <td data-label="Status" className="text-center">
                         <span
                           className={`inline-block h-2 w-2 rounded-full ${
                             item.is_read
@@ -481,7 +481,7 @@ export default function Notifications() {
                       </td>
 
                       {/* Notification Type & Badge */}
-                      <td>
+                      <td data-label="Category">
                         <span
                           className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold ${cfg.badgeClass}`}
                         >
@@ -491,7 +491,7 @@ export default function Notifications() {
                       </td>
 
                       {/* Content */}
-                      <td className="max-w-md">
+                      <td data-label="Alert details" className="max-w-md">
                         <div className="font-bold text-xs text-[var(--ink)]">
                           {item.title}
                         </div>
@@ -521,12 +521,12 @@ export default function Notifications() {
                       </td>
 
                       {/* Timestamp */}
-                      <td className="whitespace-nowrap text-xs font-mono text-[var(--muted)]">
+                      <td data-label="Created" className="whitespace-nowrap text-xs font-mono text-[var(--muted)]">
                         {formatTime(item.created_at)}
                       </td>
 
                       {/* Action URL link */}
-                      <td>
+                      <td data-label="Recommended action">
                         {item.action_url ? (
                           <button
                             onClick={() => {
@@ -544,7 +544,7 @@ export default function Notifications() {
                       </td>
 
                       {/* Inline Actions */}
-                      <td className="text-right">
+                      <td data-label="Actions" className="text-right">
                         <div className="inline-flex items-center justify-end gap-1.5">
                           {item.requires_approval && item.status === 'active' ? (
                             <>
