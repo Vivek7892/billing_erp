@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import api from '../api'
-import { PageHeader, Spinner, Modal } from '../components/UI'
+import { PageHeader, Spinner, Modal, Pagination } from '../components/UI'
 import toast from 'react-hot-toast'
 import {
   ShieldCheck,
@@ -41,6 +41,16 @@ export default function AuditTrail() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [selectedLog, setSelectedLog] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 20
+
+  const resetFilters = () => {
+    setSearch('')
+    setActionFilter('ALL')
+    setResultFilter('ALL')
+    setDateFrom('')
+    setDateTo('')
+  }
 
   const fetchLogs = async () => {
     setLoading(true)
@@ -96,11 +106,20 @@ export default function AuditTrail() {
     })
   }, [logs, actionFilter, resultFilter, search])
 
+  useEffect(() => setCurrentPage(1), [actionFilter, resultFilter, search, dateFrom, dateTo])
+  const pagedLogs = filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const auditStats = useMemo(() => ({
+    total: logs.length,
+    visible: filteredLogs.length,
+    success: logs.filter(log => log.result !== 'failure').length,
+    failures: logs.filter(log => log.result === 'failure').length,
+  }), [logs, filteredLogs])
+
   const getActionBadge = (action, result) => {
     const isFail = result === 'failure'
     if (isFail) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-transparent text-[#B91C1C] dark:text-red-400 border border-[var(--line)]">
+        <span className="audit-badge inline-flex items-center gap-1 text-[11px] font-semibold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-200 border-rose-300 dark:border-rose-700">
           <XCircle size={12} /> {action}
         </span>
       )
@@ -108,7 +127,7 @@ export default function AuditTrail() {
 
     if (action.includes('PRICE')) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-transparent text-[#B45309] dark:text-amber-400 border border-[var(--line)]">
+        <span className="audit-badge inline-flex items-center gap-1 text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-200 border-amber-300 dark:border-amber-700">
           <Tag size={12} /> {action}
         </span>
       )
@@ -116,7 +135,7 @@ export default function AuditTrail() {
 
     if (action.includes('INVOICE') || action.includes('PAYMENT')) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-transparent text-[#1E3A5F] dark:text-slate-300 border border-[var(--line)]">
+        <span className="audit-badge inline-flex items-center gap-1 text-[11px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-200 border-blue-300 dark:border-blue-700">
           <FileText size={12} /> {action}
         </span>
       )
@@ -124,14 +143,14 @@ export default function AuditTrail() {
 
     if (action.includes('STOCK')) {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-transparent text-[#0F766E] dark:text-teal-400 border border-[var(--line)]">
+        <span className="audit-badge inline-flex items-center gap-1 text-[11px] font-semibold bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-200 border-teal-300 dark:border-teal-700">
           <Layers size={12} /> {action}
         </span>
       )
     }
 
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-transparent text-[#15803D] dark:text-green-400 border border-[var(--line)]">
+      <span className="audit-badge inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700">
         <CheckCircle2 size={12} /> {action}
       </span>
     )
@@ -162,17 +181,40 @@ export default function AuditTrail() {
   }
 
   return (
-    <div className="w-full min-w-0 space-y-4 pb-16 text-[var(--ink)]">
+    <div className="audit-trail-page w-full min-w-0 space-y-4 pb-16 text-[var(--ink)]">
+      <style>{`
+        .audit-trail-page .audit-action {
+          transition: transform .15s ease, box-shadow .15s ease, background-color .15s ease;
+        }
+        .audit-trail-page .audit-action:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 3px 8px rgba(15, 23, 42, .14);
+        }
+        .audit-trail-page .audit-badge {
+          border-width: 1px;
+          border-radius: 9999px;
+          padding: 4px 8px;
+        }
+      `}</style>
       {/* Header */}
       <PageHeader
         title="Statutory Audit Trail"
         subtitle="Immutable ERP chronological log tracking who, what, when, where, before, after, reason, and IP address for all operations."
         action={
-          <div className="flex items-center gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+            <button
+              type="button"
+              onClick={fetchLogs}
+              disabled={loading}
+              className="audit-action btn-base flex items-center justify-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-3 text-xs font-semibold text-sky-700 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-700 dark:bg-sky-950/50 dark:text-sky-200 dark:hover:bg-sky-900/60"
+              title="Refresh audit logs"
+            >
+              <RotateCcw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+            </button>
             <button
               onClick={exportCsv}
               disabled={!filteredLogs.length}
-              className="btn-secondary btn-base flex items-center gap-1.5 text-xs font-semibold px-3"
+              className="audit-action btn-base flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
               title="Export filtered audit logs to CSV"
             >
               <Download size={14} /> Export CSV
@@ -183,7 +225,7 @@ export default function AuditTrail() {
 
       {/* Filter Toolbar */}
       <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 shadow-xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
           {/* Search */}
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
@@ -215,6 +257,20 @@ export default function AuditTrail() {
             </select>
           </div>
 
+          <div className="flex items-center gap-1.5">
+            <CheckCircle2 size={14} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <select
+              className="input h-9 w-full text-xs"
+              value={resultFilter}
+              onChange={e => setResultFilter(e.target.value)}
+              aria-label="Filter audit result"
+            >
+              <option value="ALL">All Results</option>
+              <option value="success">Successful Events</option>
+              <option value="failure">Failed Events</option>
+            </select>
+          </div>
+
           {/* Date From */}
           <div className="flex items-center gap-1.5">
             <Calendar size={14} className="text-[var(--muted)] shrink-0" />
@@ -239,6 +295,24 @@ export default function AuditTrail() {
             />
           </div>
         </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--line-subtle)] pt-3">
+          <p className="text-[11px] text-[var(--muted)]">
+            Showing <span className="font-semibold text-[var(--ink)]">{auditStats.visible}</span> of {auditStats.total} events
+            <span className="mx-1.5">·</span>
+            <span className="text-emerald-700 dark:text-emerald-300">{auditStats.success} successful</span>
+            <span className="mx-1.5">·</span>
+            <span className="text-rose-700 dark:text-rose-300">{auditStats.failures} failed</span>
+          </p>
+          {(search || actionFilter !== 'ALL' || resultFilter !== 'ALL' || dateFrom || dateTo) && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="audit-action inline-flex h-8 items-center gap-1.5 rounded-md border border-rose-300 bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-700 dark:bg-rose-950/50 dark:text-rose-200 dark:hover:bg-rose-900/60"
+            >
+              <RotateCcw size={12} /> Clear filters
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Audit Log Table & Mobile Cards */}
@@ -257,7 +331,7 @@ export default function AuditTrail() {
           <>
             {/* Mobile Cards (sm:hidden) */}
             <div className="divide-y divide-[var(--line-subtle)] sm:hidden">
-              {filteredLogs.map(log => {
+              {pagedLogs.map(log => {
                 const prevObj = parseJsonSafe(log.previous_value)
                 const newObj = parseJsonSafe(log.new_value)
 
@@ -285,7 +359,7 @@ export default function AuditTrail() {
                           e.stopPropagation()
                           setSelectedLog(log)
                         }}
-                        className="btn-secondary h-8 px-2.5 text-xs inline-flex items-center gap-1 font-medium"
+                        className="inline-flex h-8 items-center gap-1 rounded-lg bg-sky-600 px-2.5 text-xs font-medium text-white hover:bg-sky-700"
                       >
                         <Eye size={12} />
                         View
@@ -350,7 +424,7 @@ export default function AuditTrail() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--line-subtle)]">
-                  {filteredLogs.map(log => {
+                  {pagedLogs.map(log => {
                     const prevObj = parseJsonSafe(log.previous_value)
                     const newObj = parseJsonSafe(log.new_value)
 
@@ -473,6 +547,13 @@ export default function AuditTrail() {
                   })}
                 </tbody>
               </table>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={Math.max(1, Math.ceil(filteredLogs.length / pageSize))}
+                totalItems={filteredLogs.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+              />
             </div>
           </>
         )}
@@ -481,7 +562,7 @@ export default function AuditTrail() {
       {/* Detailed Audit Modal */}
       {selectedLog && (
         <Modal
-          isOpen={Boolean(selectedLog)}
+          open={Boolean(selectedLog)}
           onClose={() => setSelectedLog(null)}
           title={`Audit Log #${selectedLog.id} — ${selectedLog.action}`}
         >
@@ -552,7 +633,7 @@ export default function AuditTrail() {
               <button
                 type="button"
                 onClick={() => setSelectedLog(null)}
-                className="btn-secondary btn-base text-xs font-semibold px-4"
+                className="btn-base rounded-lg bg-slate-700 px-4 text-xs font-semibold text-white hover:bg-slate-800"
               >
                 Close
               </button>

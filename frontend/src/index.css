@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@keyframes loading-sweep {
+  0% { transform: translateX(-120%); opacity: 0.45; }
+  50% { opacity: 1; }
+  100% { transform: translateX(220%); opacity: 0.45; }
+}
+
 @theme {
   --color-indigo-50: #F1F5F9;
   --color-indigo-100: #E2E8F0;
@@ -925,17 +931,17 @@ select.input {
 
 .table thead tr {
   border-bottom: 1px solid #E2E8F0;
-  background: #F8FAFC;
+  background: linear-gradient(135deg, #1e3a8a, #2563eb);
 }
 
 .dark .table thead tr {
   border-bottom: 1px solid #263244;
-  background: #172033;
+  background: linear-gradient(135deg, #1e3a8a, #2563eb);
 }
 
 .table th {
   padding: 0.625rem 0.875rem;
-  color: #64748B;
+  color: #EFF6FF;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -945,7 +951,7 @@ select.input {
 }
 
 .dark .table th {
-  color: #94A3B8;
+  color: #EFF6FF;
 }
 
 .table th.num-col {
@@ -1000,11 +1006,11 @@ select.input {
 }
 
 .table tbody tr:hover {
-  background: #F8F9FC;
+  background: #F0FDFA;
 }
 
 .dark .table tbody tr:hover {
-  background: #1F2937;
+  background: rgba(15, 118, 110, 0.16);
 }
 
 .table tbody tr.selected {
@@ -1103,6 +1109,72 @@ tr.row-info {
   border-radius: 8px;
   background: var(--surface);
   overflow-x: auto;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+/* Shared responsive data table used across list and register pages. */
+.erp-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  color: var(--ink);
+}
+
+.erp-table th {
+  padding: 0.7rem 0.8rem;
+  background: linear-gradient(135deg, #1e3a8a, #2563eb);
+  border-bottom: 1px solid #1d4ed8;
+  color: #eff6ff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.erp-table td {
+  padding: 0.7rem 0.8rem;
+  border-bottom: 1px solid var(--line-subtle);
+  font-size: 0.8125rem;
+  vertical-align: middle;
+}
+
+.erp-table tbody tr {
+  transition: background-color 150ms ease;
+}
+
+.erp-table tbody tr:hover {
+  background: #f0fdfa;
+}
+
+.dark .erp-table tbody tr:hover {
+  background: rgba(15, 118, 110, 0.16);
+}
+
+.erp-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.erp-table tfoot td {
+  background: #ecfdf5;
+  border-top: 2px solid var(--line);
+  font-weight: 700;
+}
+
+.dark .erp-table tfoot td {
+  background: rgba(6, 78, 59, 0.35);
+}
+
+@media (max-width: 640px) {
+  .erp-table-container {
+    border-radius: 10px;
+  }
+
+  .erp-table th,
+  .erp-table td {
+    padding: 0.6rem 0.65rem;
+  }
 }
 
 /* ERP Summary Table (Metric comparison table) */
@@ -2171,4 +2243,67 @@ header {
   color: var(--muted);
 }
 
+/* Small-screen defaults shared by every page. Individual pages can opt out
+   with their existing responsive utility classes when a denser layout is needed. */
+@media (max-width: 640px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
 
+  body {
+    font-size: 0.8125rem;
+  }
+
+  button,
+  [role='button'],
+  .btn-base,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-success,
+  .btn-warning,
+  .btn-ghost {
+    touch-action: manipulation;
+  }
+
+  .btn-base,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-success,
+  .btn-warning,
+  .btn-ghost {
+    min-height: 2.625rem;
+  }
+
+  .input,
+  select.input,
+  textarea.input {
+    font-size: 1rem;
+  }
+
+  .erp-table-container,
+  .table-wrap {
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .erp-table {
+    min-width: 600px;
+  }
+
+  .erp-table th,
+  .erp-table td {
+    padding: 0.65rem 0.7rem;
+  }
+
+  .modal-content,
+  [role='dialog'] {
+    max-width: calc(100vw - 1rem);
+  }
+
+  .page-enter {
+    min-width: 0;
+  }
+}

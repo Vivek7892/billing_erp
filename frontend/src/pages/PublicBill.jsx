@@ -201,11 +201,13 @@ export default function PublicBill() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--app-bg,#0B1120)] p-4">
-        <div className="flex flex-col items-center max-w-sm text-center">
+      <div className="min-h-screen bg-[var(--app-bg,#0B1120)] p-4 text-[var(--ink,#F8FAFC)]">
+        <div className="flex min-h-[70vh] items-center justify-center">
+          <div className="flex max-w-sm flex-col items-center text-center">
           <div className="h-10 w-10 animate-spin rounded-full border-2 border-[#1E3A5F] border-t-transparent mb-4" />
           <h2 className="text-base font-bold text-[var(--ink,#F8FAFC)]">Loading your digital bill...</h2>
           <p className="text-xs text-[var(--muted,#64748B)] mt-1">Please wait while we verify and load invoice details.</p>
+          </div>
         </div>
       </div>
     )
@@ -213,13 +215,15 @@ export default function PublicBill() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--app-bg,#0B1120)] p-4">
-        <div className="w-full max-w-md bg-[var(--surface,#111827)] border border-[var(--line,#263244)] rounded-xl p-6 text-center shadow-sm">
+      <div className="min-h-screen bg-[var(--app-bg,#0B1120)] p-4 text-[var(--ink,#F8FAFC)]">
+        <div className="flex min-h-[70vh] items-center justify-center">
+          <div className="w-full max-w-md rounded-xl border border-[var(--line,#263244)] bg-[var(--surface,#111827)] p-6 text-center shadow-sm">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-rose-950/40 text-rose-400 border border-rose-800/40 mb-3">
             <AlertCircle size={24} />
           </div>
           <h2 className="text-lg font-bold text-[var(--ink,#F8FAFC)]">Bill Not Available</h2>
           <p className="text-sm text-[var(--muted,#64748B)] mt-2">{error || 'Could not locate this digital bill.'}</p>
+          </div>
         </div>
       </div>
     )
@@ -353,7 +357,7 @@ export default function PublicBill() {
                   isCancelled
                     ? 'bg-rose-950/40 text-rose-300 border border-rose-800/50'
                     : isPaid
-                    ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-800/50'
+                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700'
                     : 'bg-amber-950/40 text-amber-300 border border-amber-800/50'
                 }`}
               >

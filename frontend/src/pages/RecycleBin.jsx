@@ -63,25 +63,52 @@ export default function RecycleBin() {
   }
 
   return (
-    <div className="w-full min-w-0 space-y-4 pb-16 text-[var(--ink)]">
+    <div className="recycle-bin-page w-full min-w-0 space-y-4 pb-16 text-[var(--ink)]">
+      <style>{`
+        .recycle-bin-page .recycle-tab {
+          transition: transform .15s ease, background-color .15s ease, box-shadow .15s ease;
+        }
+        .recycle-bin-page .recycle-tab:hover {
+          transform: translateY(-1px);
+        }
+        .recycle-bin-page .recycle-table th {
+          background: linear-gradient(135deg, #1e3a8a, #2563eb);
+          color: #eff6ff;
+        }
+        .recycle-bin-page .recycle-table td,
+        .recycle-bin-page .recycle-table th {
+          white-space: nowrap;
+        }
+      `}</style>
       {/* Header */}
       <PageHeader
         title="Recycle Bin & Reversal Register"
         subtitle="Manage soft-deleted catalog items and audit all cancelled statutory financial transactions."
+        action={
+          <button
+            type="button"
+            onClick={fetchData}
+            disabled={loading}
+            className="recycle-tab btn-base flex w-full items-center justify-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-3 text-xs font-semibold text-sky-700 hover:bg-sky-100 disabled:opacity-60 dark:border-sky-700 dark:bg-sky-950/50 dark:text-sky-200 dark:hover:bg-sky-900/60 sm:w-auto"
+          >
+            <RotateCcw size={14} className={loading ? 'animate-spin' : ''} />
+            Refresh register
+          </button>
+        }
       />
 
       {/* Statutory Notice Banner — Clean Light Amber Alert */}
       {/* Statutory Notice Banner — Dark Muted Amber Alert */}
-      <div className="rounded-xl border border-amber-800/50  p-3.5 sm:p-4 text-xs text-amber-200">
+      <div className="rounded-xl border border-amber-300 bg-amber-50 p-3.5 text-xs text-amber-800 shadow-sm dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200 sm:p-4">
         <div className="flex items-start gap-3">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-900/50 text-amber-300 border border-amber-800/40 mt-0.5">
+          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-800/40 dark:bg-amber-900/50 dark:text-amber-300">
             <ShieldAlert size={16} />
           </div>
           <div className="space-y-1">
             <span className="font-semibold text-[var(--ink)]">
               Statutory Transaction Immutability (GST / ERP Accounting Rule)
             </span>
-            <p className="leading-relaxed text-amber-300/90">
+            <p className="leading-relaxed text-amber-700 dark:text-amber-300/90">
               {data.statutory_notice ||
                 'Under statutory GST and ERP audit regulations, confirmed financial documents (invoices, payments, purchases) cannot be permanently deleted. Cancelled transactions are permanently recorded in this register for statutory audit. Master catalog items (such as archived products) can be restored.'}
             </p>
@@ -90,13 +117,13 @@ export default function RecycleBin() {
       </div>
 
       {/* Clean Tabs */}
-      <div className="flex items-center gap-2 border-b border-[var(--line)] overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-sm no-scrollbar">
         <button
           onClick={() => setTab('invoices')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 whitespace-nowrap transition-colors ${
+          className={`recycle-tab flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors ${
             tab === 'invoices'
-              ? 'border-[#1E3A5F] text-[#1E3A5F] dark:text-slate-200'
-              : 'border-transparent text-[var(--muted)] hover:text-[var(--ink)]'
+              ? 'bg-rose-100 text-rose-800 shadow-sm dark:bg-rose-950/60 dark:text-rose-200'
+              : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
           }`}
         >
           <FileText size={14} />
@@ -108,10 +135,10 @@ export default function RecycleBin() {
 
         <button
           onClick={() => setTab('products')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 whitespace-nowrap transition-colors ${
+          className={`recycle-tab flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors ${
             tab === 'products'
-              ? 'border-[#1E3A5F] text-[#1E3A5F] dark:text-slate-200'
-              : 'border-transparent text-[var(--muted)] hover:text-[var(--ink)]'
+              ? 'bg-emerald-100 text-emerald-800 shadow-sm dark:bg-emerald-950/60 dark:text-emerald-200'
+              : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
           }`}
         >
           <Package size={14} />
@@ -123,10 +150,10 @@ export default function RecycleBin() {
 
         <button
           onClick={() => setTab('purchases')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 whitespace-nowrap transition-colors ${
+          className={`recycle-tab flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors ${
             tab === 'purchases'
-              ? 'border-[#1E3A5F] text-[#1E3A5F] dark:text-slate-200'
-              : 'border-transparent text-[var(--muted)] hover:text-[var(--ink)]'
+              ? 'bg-amber-100 text-amber-800 shadow-sm dark:bg-amber-950/60 dark:text-amber-200'
+              : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
           }`}
         >
           <ShoppingBag size={14} />
@@ -187,7 +214,7 @@ export default function RecycleBin() {
 
           {/* Desktop Table (hidden sm:block) */}
           <div className="hidden sm:block overflow-x-auto">
-            <table className="erp-table w-full text-left text-xs min-w-[680px]">
+            <table className="recycle-table erp-table w-full text-left text-xs min-w-[680px]">
               <thead>
                 <tr className=" border-b border-[var(--line)] bg-[var(--surface-elevated)] font-semibold text-[var(--ink-secondary)]">
                   <th className="py-2.5 px-3">Invoice #</th>
@@ -288,7 +315,7 @@ export default function RecycleBin() {
 
           {/* Desktop Table (hidden sm:block) */}
           <div className="hidden sm:block overflow-x-auto">
-            <table className="erp-table w-full text-left text-xs min-w-[680px]">
+            <table className="recycle-table erp-table w-full text-left text-xs min-w-[680px]">
               <thead>
                 <tr className="border-b border-[var(--line)] bg-[var(--surface-elevated)] font-semibold text-[var(--ink-secondary)]">
                   <th className="py-2.5 px-3">Product Name</th>
@@ -394,7 +421,7 @@ export default function RecycleBin() {
 
           {/* Desktop Table (hidden sm:block) */}
           <div className="hidden sm:block overflow-x-auto">
-            <table className="erp-table w-full text-left text-xs min-w-[640px]">
+            <table className="recycle-table erp-table w-full text-left text-xs min-w-[640px]">
               <thead>
                 <tr className="border-b border-[var(--line)] bg-[var(--surface-elevated)] font-semibold text-[var(--ink-secondary)]">
                   <th className="py-2.5 px-3">Purchase #</th>
@@ -454,7 +481,7 @@ export default function RecycleBin() {
       {/* Restore Modal */}
       {restoreModal.open && (
         <Modal
-          isOpen={restoreModal.open}
+          open={restoreModal.open}
           onClose={() => setRestoreModal({ open: false, item: null, reason: '' })}
           title={`Restore Product: ${restoreModal.item?.name}`}
         >

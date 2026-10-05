@@ -356,12 +356,12 @@ function StatusPill({ bill }) {
     paid: {
       label: 'Paid',
       icon: CheckCircle2,
-      className: 'bg-emerald-50 text-[#15803D] border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/40',
+      className: 'bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm dark:bg-emerald-900/70 dark:text-emerald-200 dark:border-emerald-600',
     },
     completed: {
       label: 'Paid',
       icon: CheckCircle2,
-      className: 'bg-emerald-50 text-[#15803D] border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/40',
+      className: 'bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm dark:bg-emerald-900/70 dark:text-emerald-200 dark:border-emerald-600',
     },
     partial: {
       label: 'Partial',
@@ -376,7 +376,7 @@ function StatusPill({ bill }) {
     cancelled: {
       label: 'Cancelled',
       icon: Ban,
-      className: 'bg-red-50 text-[#B91C1C] border border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800/40',
+      className: 'bg-rose-100 text-rose-800 border border-rose-300 shadow-sm dark:bg-rose-900/70 dark:text-rose-200 dark:border-rose-600',
     },
     refunded: {
       label: 'Refunded',
@@ -1293,38 +1293,38 @@ export default function Bills() {
 
               {/* Desktop/tablet table */}
               <div className="hidden overflow-x-auto sm:block">
-                <table className="w-full min-w-[1050px]">
-                <thead className="bg-[var(--surface-elevated)]/80">
-                  <tr className="border-b border-[var(--line-subtle)] text-left text-[10px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
-                    <th className="px-5 py-3.5">
+                <table className="erp-table w-full text-left text-xs min-w-[1050px]">
+                <thead>
+                  <tr>
+                    <th className="px-3 py-2.5">
                       Invoice
                     </th>
 
-                    <th className="px-3 py-3.5">
+                    <th className="px-3 py-2.5">
                       Customer
                     </th>
 
-                    <th className="px-3 py-3.5">
+                    <th className="px-3 py-2.5">
                       Date
                     </th>
 
-                    <th className="px-3 py-3.5 text-center">
+                    <th className="px-3 py-2.5 text-center">
                       Items
                     </th>
 
-                    <th className="px-3 py-3.5 text-right">
+                    <th className="px-3 py-2.5 text-right">
                       Total
                     </th>
 
-                    <th className="px-3 py-3.5">
+                    <th className="px-3 py-2.5">
                       Payment
                     </th>
 
-                    <th className="px-3 py-3.5">
+                    <th className="px-3 py-2.5">
                       Status
                     </th>
 
-                    <th className="px-5 py-3.5 text-right">
+                    <th className="px-3 py-2.5 text-right">
                       Actions
                     </th>
                   </tr>
@@ -1345,10 +1345,10 @@ export default function Bills() {
                     return (
                     <tr
                       key={bill.id}
-                      className={`group transition ${statusClass}`}
+                      className={`group transition-colors ${statusClass}`}
                     >
                       {/* Invoice */}
-                      <td className="px-5 py-3.5">
+                      <td className="px-3 py-2.5">
                         <button
                           onClick={() =>
                             navigate(`/invoice/${bill.id}`)
@@ -1364,7 +1364,7 @@ export default function Bills() {
                       </td>
 
                       {/* Customer */}
-                      <td className="px-3 py-3.5">
+                      <td className="px-3 py-2.5">
                         <div className="max-w-[190px] truncate text-sm font-semibold text-[var(--ink)]">
                           {bill.customer_name ||
                             'Walk-in customer'}
@@ -1379,7 +1379,7 @@ export default function Bills() {
                       </td>
 
                       {/* Date */}
-                      <td className="px-3 py-3.5">
+                      <td className="px-3 py-2.5">
                         <div className="text-xs font-semibold text-[var(--ink-secondary)]">
                           {formatDate(
                             bill.created_at
@@ -1394,7 +1394,7 @@ export default function Bills() {
                       </td>
 
                       {/* Items */}
-                      <td className="px-3 py-3.5 text-center">
+                      <td className="px-3 py-2.5 text-center">
                         <span className="inline-flex items-center gap-1 rounded-sm bg-[var(--surface-elevated)] border border-[var(--line)] px-2 py-1 text-[10px] font-bold text-[var(--muted)]">
                           <ShoppingBag size={11} />
                           {bill.items?.length || 0}
@@ -1402,7 +1402,7 @@ export default function Bills() {
                       </td>
 
                       {/* Total */}
-                      <td className="px-3 py-3.5 text-right">
+                      <td className="px-3 py-2.5 text-right">
                         <div className="font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
                           {fmt(bill.grand_total)}
                         </div>
@@ -1421,7 +1421,7 @@ export default function Bills() {
                       </td>
 
                       {/* Payment */}
-                      <td className="px-3 py-3.5">
+                      <td className="px-3 py-2.5">
                         <PaymentBadge
                           method={
                             bill.payment_method
@@ -1430,12 +1430,12 @@ export default function Bills() {
                       </td>
 
                       {/* Status */}
-                      <td className="px-3 py-3.5">
+                      <td className="px-3 py-2.5">
                         <StatusPill bill={bill} />
                       </td>
 
                       {/* Actions */}
-                      <td className="px-5 py-3.5">
+                      <td className="px-3 py-2.5 text-right">
                         <InvoiceActions
                           bill={bill}
                           shopName={shopName}

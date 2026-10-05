@@ -39,6 +39,76 @@ const fmtCurrency = v =>
 const fmtShort = v =>
   `₹${Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
 
+const formatDateInput = value => {
+  if (!value) return ''
+  const [year, month, day] = value.split('-')
+  return year && month && day ? `${day}/${month}/${year}` : value
+}
+
+const parseDateInput = value => {
+  const digits = value.replace(/\D/g, '').slice(0, 8)
+  if (digits.length !== 8) return null
+  const day = digits.slice(0, 2)
+  const month = digits.slice(2, 4)
+  const year = digits.slice(4, 8)
+  const date = new Date(Number(year), Number(month) - 1, Number(day))
+  if (
+    date.getFullYear() !== Number(year) ||
+    date.getMonth() !== Number(month) - 1 ||
+    date.getDate() !== Number(day)
+  ) {
+    return null
+  }
+  return `${year}-${month}-${day}`
+}
+
+function ReportDateField({ label, value, min, max, onChange }) {
+  const [draft, setDraft] = useState(formatDateInput(value))
+
+  useEffect(() => {
+    setDraft(formatDateInput(value))
+  }, [value])
+
+  const commit = nextValue => {
+    const formatted = nextValue.replace(/\D/g, '').slice(0, 8)
+    const display =
+      formatted.length > 4
+        ? `${formatted.slice(0, 2)}/${formatted.slice(2, 4)}/${formatted.slice(4)}`
+        : formatted.length > 2
+          ? `${formatted.slice(0, 2)}/${formatted.slice(2)}`
+          : formatted
+    setDraft(display)
+    if (formatted.length === 8) {
+      const parsed = parseDateInput(display)
+      if (parsed && (!min || parsed >= min) && (!max || parsed <= max)) onChange(parsed)
+    }
+  }
+
+  return (
+    <label className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-none">
+      <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--muted)]">
+        {label}
+      </span>
+      <div className="relative">
+        <input
+          type="text"
+          inputMode="numeric"
+          value={draft}
+          onChange={event => commit(event.target.value)}
+          onBlur={() => setDraft(formatDateInput(value))}
+          placeholder="DD/MM/YYYY"
+          aria-label={`${label} date in DD/MM/YYYY format`}
+          className="input h-10 w-full min-w-0 pr-9 text-sm font-mono font-semibold tracking-wide sm:w-36"
+        />
+        <Calendar
+          size={15}
+          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)]"
+        />
+      </div>
+    </label>
+  )
+}
+
 const today = new Date().toISOString().slice(0, 10)
 const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
   .toISOString()
@@ -165,16 +235,36 @@ export default function Reports() {
       <style>{`
         .reports-page .erp-report-table {
           width: 100%;
+          min-width: 620px;
           border-collapse: collapse;
+        }
+
+        .reports-page .erp-table-container,
+        .reports-page .rounded-lg {
+          box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+        }
+
+        .reports-page .erp-summary-table {
+          min-width: 760px;
+        }
+
+        .reports-page .erp-summary-table th {
+          background: linear-gradient(135deg, #eef4ff, #f8fafc);
+          color: #475569;
+        }
+
+        .dark .reports-page .erp-summary-table th {
+          background: linear-gradient(135deg, #172554, #172033);
+          color: #cbd5e1;
         }
 
         .reports-page .erp-report-table th {
           padding: 11px 14px;
           text-align: left;
           white-space: nowrap;
-          background: var(--surface-elevated);
+          background: linear-gradient(135deg, #1e3a8a, #2563eb);
           border-bottom: 1px solid var(--line);
-          color: var(--muted-light);
+          color: #eff6ff;
           font-size: 11px;
           font-weight: 700;
           letter-spacing: .05em;
@@ -189,15 +279,37 @@ export default function Reports() {
         }
 
         .reports-page .erp-report-table tbody tr:hover {
-          background: var(--surface-elevated);
+          background: #f0fdfa;
+        }
+
+        .dark .reports-page .erp-report-table tbody tr:hover {
+          background: rgba(15, 118, 110, .16);
         }
 
         .reports-page .erp-report-table tfoot td {
           padding: 13px 14px;
           border-top: 2px solid var(--line);
           border-bottom: 2px solid var(--line);
-          background: var(--surface-elevated);
+          background: #ecfdf5;
           font-weight: 700;
+        }
+
+        .dark .reports-page .erp-report-table tfoot td {
+          background: rgba(6, 78, 59, .35);
+        }
+
+        @media (max-width: 640px) {
+          .reports-page .erp-table-container,
+          .reports-page .rounded-lg {
+            border-radius: 10px;
+          }
+
+          .reports-page .erp-report-table th,
+          .reports-page .erp-report-table td,
+          .reports-page .erp-summary-table th,
+          .reports-page .erp-summary-table td {
+            padding: 10px 11px;
+          }
         }
       `}</style>
 
@@ -208,12 +320,12 @@ export default function Reports() {
         title="Business Intelligence & Reports"
         subtitle="Comprehensive financial, tax, inventory, and customer receivables analysis."
         action={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             <button
               type="button"
               onClick={() => downloadReport('pdf')}
               disabled={Boolean(exporting)}
-              className="btn-secondary btn-base text-xs flex items-center gap-1.5"
+              className="btn-secondary btn-base flex w-full items-center justify-center gap-1.5 text-xs"
               title="Download formal A4 PDF Report"
             >
               <FileText size={14} className="text-rose-600" />
@@ -224,7 +336,7 @@ export default function Reports() {
               type="button"
               onClick={() => downloadReport('xlsx')}
               disabled={Boolean(exporting)}
-              className="btn-secondary btn-base text-xs flex items-center gap-1.5"
+              className="btn-secondary btn-base flex w-full items-center justify-center gap-1.5 text-xs"
               title="Download formatted Excel workbook"
             >
               <FileSpreadsheet size={14} className="text-teal-600" />
@@ -237,7 +349,8 @@ export default function Reports() {
       {/* =====================================================
           REPORT MODULE TABS
       ====================================================== */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+      <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1.5">
+        <div className="scrollbar-none flex snap-x items-center gap-1.5 overflow-x-auto pb-1">
         {TABS.map(t => {
           const Icon = t.icon
           const isActive = tab === t.key
@@ -257,16 +370,17 @@ export default function Reports() {
             </button>
           )
         })}
+        </div>
       </div>
 
       {/* =====================================================
           DATE CONTROLS & PRESETS WORKBENCH
       ====================================================== */}
       {tab !== 'customers' && (
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-3.5">
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 shadow-sm sm:p-3.5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             {/* Quick date presets */}
-            <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+            <div className="scrollbar-none flex items-center gap-1.5 overflow-x-auto text-xs">
               <Calendar size={13} className="text-[var(--muted)] mr-1 shrink-0" />
               {[
                 ['Today', today, today],
@@ -301,33 +415,13 @@ export default function Reports() {
             </div>
 
             {/* From - To date inputs */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 text-xs">
-                <span className="text-[var(--muted)]">From:</span>
-                <input
-                  type="date"
-                  value={start}
-                  max={end}
-                  onChange={e => setStart(e.target.value)}
-                  className="input h-9 px-2 text-xs font-mono font-medium"
-                />
-              </div>
-
-              <div className="flex items-center gap-1 text-xs">
-                <span className="text-[var(--muted)]">To:</span>
-                <input
-                  type="date"
-                  value={end}
-                  min={start}
-                  onChange={e => setEnd(e.target.value)}
-                  className="input h-9 px-2 text-xs font-mono font-medium"
-                />
-              </div>
-
+            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-end">
+              <ReportDateField label="From" value={start} max={end} onChange={setStart} />
+              <ReportDateField label="To" value={end} min={start} onChange={setEnd} />
               <button
                 type="button"
                 onClick={load}
-                className="btn-primary h-9 px-3.5 text-xs font-semibold"
+                className="btn-primary col-span-2 h-10 w-full px-3.5 text-xs font-semibold sm:w-auto"
               >
                 Apply
               </button>

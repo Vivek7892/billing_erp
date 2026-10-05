@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
 import api, { API_BASE_URL } from '../api'
 import productService from '../features/inventory/api/productService'
-import { Badge, PageHeader, Modal, Spinner, EmptyState } from '../components/UI'
+import { Badge, PageHeader, Modal, Spinner, EmptyState, Pagination } from '../components/UI'
 import toast from 'react-hot-toast'
 import BarcodePrintModal from '../components/BarcodePrintModal'
 import {
@@ -38,25 +38,25 @@ const STATUS_META = {
   in_stock: {
     label: 'In Stock',
     icon: CheckCircle,
-    text: 'text-emerald-300 font-semibold',
-    soft: 'bg-emerald-950/40',
-    border: 'border-emerald-800/60',
+    text: 'text-emerald-700 dark:text-emerald-300 font-semibold',
+    soft: 'bg-emerald-100 dark:bg-emerald-950/60',
+    border: 'border-emerald-300 dark:border-emerald-700',
     bar: 'bg-emerald-500',
   },
   low_stock: {
     label: 'Low Stock',
     icon: AlertTriangle,
-    text: 'text-amber-300 font-bold',
-    soft: 'bg-amber-950/40',
-    border: 'border-amber-800/60',
+    text: 'text-amber-700 dark:text-amber-300 font-bold',
+    soft: 'bg-amber-100 dark:bg-amber-950/60',
+    border: 'border-amber-300 dark:border-amber-700',
     bar: 'bg-amber-500',
   },
   out_of_stock: {
     label: 'Out of Stock',
     icon: XCircle,
-    text: 'text-rose-300 font-bold',
-    soft: 'bg-rose-950/40',
-    border: 'border-rose-800/60',
+    text: 'text-rose-700 dark:text-rose-300 font-bold',
+    soft: 'bg-rose-100 dark:bg-rose-950/60',
+    border: 'border-rose-300 dark:border-rose-700',
     bar: 'bg-rose-500',
   },
 }
@@ -80,6 +80,8 @@ export default function Stock() {
   const [selectedSup, setSelectedSup] = useState('')
   const [sortBy, setSortBy] = useState('stock')
   const [sortDir, setSortDir] = useState('asc')
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 20
 
   // Modals
   const [adjustModal, setAdjustModal] = useState(false)
@@ -201,6 +203,9 @@ export default function Stock() {
         return sortDir === 'asc' ? valA - valB : valB - valA
       })
   }, [products, filter, selectedCat, selectedSup, q, sortBy, sortDir])
+
+  useEffect(() => setCurrentPage(1), [filter, selectedCat, selectedSup, q])
+  const pagedProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   const handleSort = col => {
     if (sortBy === col) {
@@ -355,13 +360,25 @@ export default function Stock() {
           border-collapse: collapse;
         }
 
+        .stock-page .btn-secondary {
+          border-color: #99f6e4;
+          background: #f0fdfa;
+          color: #0f766e;
+        }
+
+        .dark .stock-page .btn-secondary {
+          border-color: #115e59;
+          background: rgba(15, 118, 110, .24);
+          color: #99f6e4;
+        }
+
         .stock-page .erp-table th {
           padding: 12px 14px;
           text-align: left;
           white-space: nowrap;
-          background: var(--surface-elevated);
+          background: linear-gradient(135deg, #1e3a8a, #2563eb);
           border-bottom: 1px solid var(--line);
-          color: var(--muted-light);
+          color: #eff6ff;
           font-size: 11px;
           font-weight: 700;
           letter-spacing: .05em;
@@ -386,11 +403,11 @@ export default function Stock() {
         title="Stock & Inventory Control"
         subtitle={`Track real-time inventory balances, stock valuation, low-stock reorder thresholds, and ledger movements.`}
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex w-full items-center gap-2 sm:w-auto">
             <button
               type="button"
               onClick={exportStockCSV}
-              className="btn-secondary btn-base text-xs flex items-center gap-1.5"
+              className="btn-secondary btn-base flex w-full items-center justify-center gap-1.5 text-xs sm:w-auto"
               title="Download Stock CSV"
             >
               <Download size={14} />
@@ -612,7 +629,13 @@ export default function Stock() {
               onClick={() => setFilter(tab.key)}
               className={`rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors ${
                 filter === tab.key
-                  ? 'bg-[#1E3A5F] text-white font-semibold'
+                  ? tab.key === 'low_stock'
+                    ? 'bg-amber-500 text-white font-semibold shadow-sm'
+                    : tab.key === 'out_of_stock'
+                      ? 'bg-rose-500 text-white font-semibold shadow-sm'
+                      : tab.key === 'in_stock'
+                        ? 'bg-emerald-500 text-white font-semibold shadow-sm'
+                        : 'bg-[#1E3A5F] text-white font-semibold'
                   : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
               }`}
             >
@@ -682,7 +705,7 @@ export default function Stock() {
           <>
             {/* Mobile View */}
             <div className="divide-y divide-[var(--line-subtle)] md:hidden">
-              {filteredProducts.map(p => {
+              {pagedProducts.map(p => {
                 const st = getStatus(p)
                 const meta = STATUS_META[st]
                 const Icon = meta.icon
@@ -827,7 +850,7 @@ export default function Stock() {
                 </thead>
 
                 <tbody>
-                  {filteredProducts.map(p => {
+                  {pagedProducts.map(p => {
                     const st = getStatus(p)
                     const meta = STATUS_META[st]
                     const Icon = meta.icon
@@ -948,6 +971,16 @@ export default function Stock() {
               </table>
             </div>
           </>
+        )}
+
+        {!loading && filteredProducts.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.max(1, Math.ceil(filteredProducts.length / pageSize))}
+            totalItems={filteredProducts.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+          />
         )}
 
         {/* Footer summary */}

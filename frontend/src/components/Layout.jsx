@@ -769,7 +769,7 @@ export default function Layout({ children }) {
 
           {/* Top Menu Bar / Header */}
           <header className="flex-shrink-0 z-10 bg-[var(--surface)] border-b border-[var(--line)] shadow-xs">
-            <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 h-14">
+            <div className="flex min-w-0 items-center gap-1.5 px-2.5 sm:gap-3 sm:px-5 h-14">
               <button
                 onClick={() => setMobileOpen(true)}
                 title="Open menu"
@@ -829,7 +829,7 @@ export default function Layout({ children }) {
 
           {/* Page Body */}
           <main ref={mainRef} className={`flex-1 flex flex-col ${location.pathname.startsWith('/billing/new') ? 'overflow-y-auto md:overflow-hidden' : 'overflow-y-auto'} bg-[var(--app-bg)]`}>
-            <div className={location.pathname.startsWith('/billing/new') ? 'flex-1 flex flex-col p-2 sm:p-3 w-full max-w-none min-h-0' : 'flex-1 p-3 sm:p-4 md:p-6 max-w-[1600px] w-full mx-auto page-enter'}>
+            <div className={location.pathname.startsWith('/billing/new') ? 'flex-1 flex flex-col p-1.5 sm:p-3 w-full max-w-none min-h-0' : 'flex-1 p-2.5 sm:p-4 md:p-6 max-w-[1600px] w-full mx-auto page-enter'}>
               {children}
             </div>
             {!location.pathname.startsWith('/billing/new') && <AppFooter shopName={shopName} />}

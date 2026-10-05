@@ -134,6 +134,25 @@ def _format_report_money(value):
     except Exception:
         return str(value)
 
+def _report_period_label(params):
+    start = params.get('start_date')
+    end = params.get('end_date')
+    if not start or not end:
+        return 'All available records'
+    try:
+        from datetime import datetime
+        start_date = datetime.strptime(str(start), '%Y-%m-%d')
+        end_date = datetime.strptime(str(end), '%Y-%m-%d')
+        return f'{start_date:%d/%b/%Y} - {end_date:%d/%b/%Y}'
+    except (TypeError, ValueError):
+        return f'{start} - {end}'
+
+def _format_report_summary_value(label, value):
+    label_text = str(label or '').lower()
+    if any(token in label_text for token in ('count', 'qty', 'quantity', '%', 'margin')):
+        return _report_value(value)
+    return _format_report_money(value)
+
 
 def _export_report_xlsx(
     title,
@@ -142,6 +161,7 @@ def _export_report_xlsx(
     filename,
     summary_rows=None,
     request_user=None,
+    period_label='',
 ):
     """
     Branded Excel report exporter.
@@ -219,7 +239,12 @@ def _export_report_xlsx(
     generated_cell = sheet.cell(
         row=4,
         column=1,
-        value=f"Generated: {timezone.localtime(timezone.now()).strftime('%d-%m-%Y %I:%M %p')}",
+        value=(
+            f"Period: {period_label} | "
+            f"Generated: {timezone.localtime(timezone.now()).strftime('%d/%b/%Y %I:%M %p')}"
+            if period_label else
+            f"Generated: {timezone.localtime(timezone.now()).strftime('%d/%b/%Y %I:%M %p')}"
+        ),
     )
     generated_cell.font = Font(name='Calibri', italic=True, size=9, color=MUTED)
     generated_cell.alignment = Alignment(horizontal='left', vertical='center')
@@ -258,7 +283,7 @@ def _export_report_xlsx(
                 value_cell = sheet.cell(
                     row=row_index + 1,
                     column=col,
-                    value=_format_report_money(value),
+                    value=_format_report_summary_value(label, value),
                 )
                 value_cell.font = Font(bold=True, size=12, color=INDIGO)
                 value_cell.fill = PatternFill('solid', fgColor=WHITE)
@@ -366,6 +391,7 @@ def _export_report_pdf(
     filename,
     summary_rows=None,
     request_user=None,
+    period_label='',
 ):
     """Simple business report PDF with optional shop logo and clean table layout."""
     from reportlab.lib.pagesizes import A4, landscape
@@ -409,7 +435,7 @@ def _export_report_pdf(
 
     title_plain = plain_text(title) or 'Report'
     shop_name = plain_text(profile.get('shop_name') or 'ShopEase POS')
-    generated_at = timezone.localtime(timezone.now()).strftime('%d %b %Y, %I:%M %p')
+    generated_at = timezone.localtime(timezone.now()).strftime('%d/%b/%Y, %I:%M %p')
 
     headers = list(headers or [])
     normalized_rows = []
@@ -505,6 +531,8 @@ def _export_report_pdf(
     report_block = [
         Paragraph(safe_text(title_plain.upper()), styles['title']),
         Spacer(1, 1 * mm),
+        Paragraph(safe_text(period_label or 'All available records'), styles['meta']),
+        Spacer(1, 0.5 * mm),
         Paragraph(safe_text(generated_at), styles['date']),
     ]
 
@@ -544,7 +572,10 @@ def _export_report_pdf(
         for item in summary_rows:
             try:
                 label, value = item
-                summary.append(f"{plain_text(label)}: {money_text(value)}")
+                summary.append(
+                    f"{plain_text(label)}: "
+                    f"{plain_text(_format_report_summary_value(label, value))}"
+                )
             except Exception:
                 continue
         if summary:
@@ -1787,12 +1818,14 @@ class GlobalSearchView(APIView):
 
 def _serve_report(request, report_name):
     report = ReportService.build(report_name, request.user.business, request.query_params)
+    period_label = _report_period_label(request.query_params)
     report_format = request.query_params.get('export', '').lower()
     if report_format == 'pdf':
         return _export_report_pdf(
             report.title, report.headers, report.rows,
             f'{report.filename}.pdf', summary_rows=report.summary_rows,
             request_user=request.user,
+            period_label=period_label,
         )
     if report_format == 'xlsx':
         return _export_report_xlsx(
@@ -1800,6 +1833,7 @@ def _serve_report(request, report_name):
             f'{report.filename}.xlsx',
             summary_rows=report.summary_rows,
             request_user=request.user,
+            period_label=period_label,
         )
     return Response(report.payload)
 
@@ -2995,6 +3029,18 @@ def _generate_barcode_label_pdf(product, copies, options=None):
                 c.setFont('Helvetica-Bold', 7.5 if is_compact else 9.5)
                 c.setFillColor(rl_colors.HexColor('#0F172A'))
                 c.drawRightString(x + LABEL_W - 3 * mm, bottom_y, price_text)
+                if show_mrp and product.mrp and float(product.mrp or 0) > 0:
+                    mrp_text = f'Rs.{product.mrp}'
+                    mrp_width = c.stringWidth(mrp_text, 'Helvetica', 5.5 if is_compact else 6.5)
+                    price_width = c.stringWidth(price_text, 'Helvetica-Bold', 7.5 if is_compact else 9.5)
+                    mrp_x = x + LABEL_W - 3 * mm - price_width - 2 * mm - mrp_width
+                    mrp_y = bottom_y + (1.2 * mm)
+                    c.setFont('Helvetica', 5.5 if is_compact else 6.5)
+                    c.setFillColor(rl_colors.HexColor('#94A3B8'))
+                    c.drawString(mrp_x, mrp_y, mrp_text)
+                    c.setStrokeColor(rl_colors.HexColor('#94A3B8'))
+                    c.setLineWidth(0.35)
+                    c.line(mrp_x, mrp_y + 1.2 * mm, mrp_x + mrp_width, mrp_y + 1.2 * mm)
 
     c.save()
 

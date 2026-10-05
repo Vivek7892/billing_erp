@@ -611,19 +611,25 @@ export function Spinner({
 
   return (
     <div
-      className="flex flex-col items-center justify-center gap-3 py-12"
+      className="flex flex-col items-center justify-center px-4 py-14 text-center"
       role="status"
       aria-label={label}
     >
-      <div
-        className={[
-          spinnerSize,
-          'animate-spin rounded-full',
-          'border-[var(--line)] border-t-[var(--primary)]',
-        ].join(' ')}
-      />
-
-      <span className="sr-only">{label}</span>
+      <div className="relative mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
+        <div
+          className={[
+            spinnerSize,
+            'animate-spin rounded-full border-[var(--line)] border-t-[var(--primary)]',
+          ].join(' ')}
+        />
+        <div className="absolute h-2.5 w-2.5 rounded-full bg-[var(--primary)] shadow-[0_0_0_5px_var(--primary-light)]" />
+      </div>
+      <p className="text-sm font-semibold text-[var(--ink)]">{label}</p>
+      <div className="mt-3 flex items-center gap-1.5" aria-hidden="true">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--primary)]" />
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--primary)] [animation-delay:150ms]" />
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--primary)] [animation-delay:300ms]" />
+      </div>
     </div>
   )
 }
@@ -892,7 +898,7 @@ export function PageHeader({
   return (
     <div
       className={[
-        'mb-5 flex flex-col gap-4',
+        'mb-4 flex min-w-0 flex-col gap-3',
         'sm:flex-row sm:items-start sm:justify-between',
         className,
       ].join(' ')}
@@ -910,7 +916,7 @@ export function PageHeader({
       </div>
 
       {action && (
-        <div className="w-full shrink-0 sm:w-auto">
+        <div className="flex w-full min-w-0 flex-wrap gap-2 shrink-0 sm:w-auto sm:justify-end">
           {action}
         </div>
       )}

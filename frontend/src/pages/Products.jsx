@@ -8,6 +8,7 @@ import {
   ConfirmDialog,
   Spinner,
   EmptyState,
+  Pagination,
 } from '../components/UI'
 import toast from 'react-hot-toast'
 import BarcodePrintModal from '../components/BarcodePrintModal'
@@ -136,7 +137,7 @@ function getStockAlertState(product) {
   return {
     type: 'in_stock',
     label: 'In Stock',
-    badgeClass: 'bg-emerald-950/40 text-emerald-300 border border-emerald-800/40',
+    badgeClass: 'bg-emerald-100 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700',
     dotClass: 'bg-emerald-500',
     textClass: 'text-emerald-300 font-bold',
     icon: CheckCircle2,
@@ -224,6 +225,8 @@ export default function Products() {
   // Sorting
   const [sortBy, setSortBy] = useState('name')
   const [sortDir, setSortDir] = useState('asc')
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 20
 
   // Modals
   const [modal, setModal] = useState(null) // 'add' | 'edit' | 'details' | 'adjust' | 'barcode' | 'import'
@@ -366,6 +369,9 @@ export default function Products() {
         return sortDir === 'asc' ? valA - valB : valB - valA
       })
   }, [products, brandFilter, stockFilter, gstFilter, statusFilter, sortBy, sortDir])
+
+  useEffect(() => setCurrentPage(1), [brandFilter, stockFilter, gstFilter, statusFilter, search])
+  const pagedProducts = visibleProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   // Product KPIs
   const stats = useMemo(() => {
@@ -999,6 +1005,18 @@ export default function Products() {
           --success-border: #065f46;
         }
 
+        .products-module .btn-secondary {
+          border-color: #93c5fd;
+          background: #eff6ff;
+          color: #1d4ed8;
+        }
+
+        .dark .products-module .btn-secondary {
+          border-color: #1e40af;
+          background: rgba(30, 64, 175, .24);
+          color: #bfdbfe;
+        }
+
         .products-module .erp-table {
           width: 100%;
           border-collapse: collapse;
@@ -1008,9 +1026,9 @@ export default function Products() {
           padding: 12px 14px;
           text-align: left;
           white-space: nowrap;
-          background: var(--surface-elevated);
+          background: linear-gradient(135deg, #1e3a8a, #2563eb);
           border-bottom: 1px solid var(--line);
-          color: var(--muted-light);
+          color: #eff6ff;
           font-size: 11px;
           font-weight: 700;
           letter-spacing: .05em;
@@ -1039,7 +1057,7 @@ export default function Products() {
         title="Products & Inventory"
         subtitle={`${stats.total} total items • ${stats.active} active • ${formatCurrency(stats.stockValue)} total stock valuation`}
         action={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             <button
               type="button"
               onClick={exportToCSV}
@@ -1398,7 +1416,7 @@ export default function Products() {
           <>
             {/* Mobile Cards View (< 768px) */}
             <div className="divide-y divide-[var(--line-subtle)] md:hidden">
-              {visibleProducts.map(product => {
+              {pagedProducts.map(product => {
                 const stockAlert = getStockAlertState(product)
                 const StockIcon = stockAlert.icon
                 return (
@@ -1572,7 +1590,7 @@ export default function Products() {
                 </thead>
 
                 <tbody>
-                  {visibleProducts.map(product => {
+                  {pagedProducts.map(product => {
                     const stockAlert = getStockAlertState(product)
                     const StockIcon = stockAlert.icon
                     const margin =
@@ -1826,6 +1844,16 @@ export default function Products() {
               </table>
             </div>
           </>
+        )}
+
+        {!loading && visibleProducts.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.max(1, Math.ceil(visibleProducts.length / pageSize))}
+            totalItems={visibleProducts.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+          />
         )}
 
         {/* Footer pagination info */}

@@ -364,34 +364,49 @@ export default function BarcodePrintModal({ open, onClose, product, shopName = '
             </div>
 
             {/* Right Live Tag Preview (5 cols) */}
-            <div className="lg:col-span-5 flex flex-col justify-between rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4">
+            <div className="lg:col-span-5 flex flex-col justify-between rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] p-3.5 shadow-sm sm:p-4">
               <div>
-                <div className="flex items-center justify-between mb-3 border-b border-[var(--line)] pb-2">
-                  <span className="text-xs font-bold text-[var(--ink)] flex items-center gap-1.5">
-                    <Eye size={13} className="text-[#1E3A5F] dark:text-slate-300" />
-                    Live Label Preview
+                <div className="mb-3 flex items-start justify-between gap-2 border-b border-[var(--line)] pb-3">
+                  <div>
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-[var(--ink)]">
+                      <Eye size={14} className="text-[#1E3A5F] dark:text-slate-300" />
+                      Live label preview
+                    </span>
+                    <p className="mt-1 text-[10px] leading-4 text-[var(--muted-light)]">
+                      Updates instantly with your selected fields.
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-blue-700 dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-200">
+                    Live
                   </span>
-                  <span className="text-[10px] font-mono text-[var(--muted)]">
-                    {selectedSizeObj.title}
+                </div>
+
+                <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-[11px] font-bold text-[var(--ink)]">{selectedSizeObj.title}</p>
+                    <p className="truncate text-[10px] text-[var(--muted-light)]">{selectedSizeObj.description}</p>
+                  </div>
+                  <span className="shrink-0 font-mono text-[10px] font-bold text-[var(--primary)]">
+                    {selectedSizeObj.perSheet ? `${selectedSizeObj.perSheet}/page` : `${customCols * customRows}/page`}
                   </span>
                 </div>
 
                 {/* Simulated Label Card */}
                 <div
-                  className={`mx-auto rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-3.5 shadow-sm text-center transition-all ${
-                    size === 'a4_4x8' ? 'max-w-[200px]' : 'max-w-[240px]'
+                  className={`mx-auto rounded-xl border-2 border-slate-300 bg-white p-4 text-center shadow-[0_8px_24px_rgba(15,23,42,0.12)] transition-all dark:border-slate-600 dark:bg-slate-900 ${
+                    size === 'a4_4x8' ? 'max-w-[205px]' : 'max-w-[255px]'
                   }`}
                 >
                   {/* Store Name */}
                   {fields.storeName && (
-                    <p className="text-[10px] font-bold tracking-wider text-[#1E3A5F] dark:text-slate-300 uppercase truncate">
+                    <p className="truncate text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#1E3A5F] dark:text-slate-300">
                       {shopName}
                     </p>
                   )}
 
                   {/* Product Name */}
                   {fields.productName && (
-                    <p className="mt-1 text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                    <p className="mt-1 truncate text-sm font-extrabold text-slate-900 dark:text-slate-100">
                       {product.name}
                     </p>
                   )}
@@ -399,16 +414,16 @@ export default function BarcodePrintModal({ open, onClose, product, shopName = '
                   {/* Barcode Graphic */}
                   {fields.barcode && (
                     <div className="my-2.5 flex items-center justify-center">
-                      <div className="flex items-center justify-center gap-[2px] h-11 w-full bg-white px-2 py-1.5 border border-slate-200 rounded">
-                        {Array.from({ length: 30 }).map((_, i) => (
+                      <div className="flex h-16 w-full items-stretch justify-center gap-px rounded-md border border-slate-200 bg-white px-2.5 py-2.5">
+                        {Array.from({ length: 38 }).map((_, i) => (
                           <div
                             key={i}
-                            className={`h-full bg-slate-900 ${
-                              (i * 7) % 5 === 0
+                            className={`bg-slate-950 ${
+                              (i * 7) % 9 === 0
                                 ? 'w-[3px]'
-                                : (i * 3) % 2 === 0
+                                : (i * 5) % 3 === 0
                                   ? 'w-[2px]'
-                                  : 'w-[1px]'
+                                  : 'w-px'
                             }`}
                           />
                         ))}
@@ -418,7 +433,7 @@ export default function BarcodePrintModal({ open, onClose, product, shopName = '
 
                   {/* Barcode Number */}
                   {fields.barcodeNumber && (
-                    <p className="font-mono text-[10px] font-bold tracking-widest text-slate-600 dark:text-slate-400">
+                    <p className="break-all font-mono text-[10px] font-extrabold tracking-[0.16em] text-slate-700 dark:text-slate-300">
                       {barcodeValue}
                     </p>
                   )}
@@ -430,35 +445,35 @@ export default function BarcodePrintModal({ open, onClose, product, shopName = '
 
                   {/* Bottom Line */}
                   <div className="flex items-center justify-between text-[10px]">
-                    <div className="text-left font-mono text-slate-500 truncate space-x-1">
-                      {fields.sku && <span>SKU: {product.sku}</span>}
-                      {fields.unit && product.unit && <span>({product.unit})</span>}
+                    <div className="min-w-0 text-left font-mono text-[9px] text-slate-500">
+                      {fields.sku && <span className="block truncate">SKU: {product.sku || '—'}</span>}
+                      {fields.unit && product.unit && <span className="block">Unit: {product.unit}</span>}
                       {fields.mrp && product.mrp && Number(product.mrp) > 0 && (
-                        <span className="line-through text-slate-400">MRP: ₹{product.mrp}</span>
+                        <span className="block line-through text-slate-400">MRP: ₹{Number(product.mrp).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                       )}
                     </div>
                     {fields.sellingPrice && (
-                      <span className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs shrink-0">
+                      <span className="shrink-0 font-mono text-sm font-extrabold text-slate-900 dark:text-slate-100">
                         {formattedPrice}
                       </span>
                     )}
                   </div>
                 </div>
 
-                <p className="mt-3 text-center text-[10px] text-[var(--muted-light)]">
-                  Matches your selected size &amp; field checkboxes in real-time.
+                <p className="mt-3 text-center text-[10px] leading-4 text-[var(--muted-light)]">
+                  This preview reflects the fields that will be sent to the PDF generator.
                 </p>
               </div>
 
               {/* Total info badge */}
-              <div className="mt-4 rounded-xl bg-[var(--surface)] border border-[var(--line)] p-2.5 text-center text-xs">
-                <span className="text-[var(--muted)]">Total Labels to Print: </span>
-                <span className="font-mono font-bold text-[#1E3A5F] dark:text-slate-100 text-sm">
+              <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-center text-xs">
+                <span className="text-[var(--muted)]">Ready to print </span>
+                <span className="font-mono text-sm font-extrabold text-[#1E3A5F] dark:text-slate-100">
                   {copies} {copies === 1 ? 'Label' : 'Labels'}
                 </span>
                 {selectedSizeObj.perSheet && (
-                  <span className="text-[11px] text-[var(--muted-light)] block mt-0.5">
-                    (~{Math.ceil(copies / selectedSizeObj.perSheet)} sheet{Math.ceil(copies / selectedSizeObj.perSheet) !== 1 ? 's' : ''})
+                  <span className="mt-1 block text-[10px] text-[var(--muted-light)]">
+                    {Math.ceil(copies / selectedSizeObj.perSheet)} sheet{Math.ceil(copies / selectedSizeObj.perSheet) !== 1 ? 's' : ''} estimated
                   </span>
                 )}
               </div>
@@ -483,7 +498,7 @@ export default function BarcodePrintModal({ open, onClose, product, shopName = '
                 title="Preview labels in new tab"
               >
                 <Eye size={14} />
-                Preview
+                Open PDF Preview
               </button>
 
               <button
@@ -493,7 +508,7 @@ export default function BarcodePrintModal({ open, onClose, product, shopName = '
                 title="Print labels"
               >
                 <Printer size={14} />
-                Print
+                Print Labels
               </button>
 
               <button

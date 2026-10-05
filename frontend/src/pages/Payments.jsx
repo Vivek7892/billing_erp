@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import api from '../api'
-import { Badge, Spinner } from '../components/UI'
+import { Badge, Spinner, Modal } from '../components/UI'
+import toast from 'react-hot-toast'
 import {
   Banknote,
   CreditCard,
@@ -13,6 +14,11 @@ import {
   Receipt,
   CircleDollarSign,
   SlidersHorizontal,
+  Eye,
+  UserRound,
+  ReceiptText,
+  Printer,
+  Download,
 } from 'lucide-react'
 
 const formatCurrency = value =>
@@ -217,6 +223,73 @@ export default function Payments() {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
+  const [selectedBill, setSelectedBill] = useState(null)
+  const [invoiceAction, setInvoiceAction] = useState(null)
+
+  const handleInvoiceAction = useCallback(async (bill, action) => {
+    if (!bill?.id || invoiceAction) return
+
+    setInvoiceAction(`${bill.id}:${action}`)
+    try {
+      const response = await api.get(`/invoices/${bill.id}/pdf/`, {
+        responseType: 'blob',
+      })
+      const blobUrl = URL.createObjectURL(
+        new Blob([response.data], { type: 'application/pdf' }),
+      )
+
+      if (action === 'download') {
+        const link = document.createElement('a')
+        link.href = blobUrl
+        link.download = `invoice-${bill.invoice_number || bill.id}.pdf`
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        toast.success('Invoice downloaded')
+      } else {
+        const printWindow = window.open(blobUrl, '_blank', 'noopener,noreferrer')
+        if (!printWindow) {
+          toast.error('Allow pop-ups to print the invoice')
+        } else {
+          toast.success('Invoice opened for printing')
+        }
+      }
+
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
+    } catch (error) {
+      console.error('Failed to generate invoice PDF:', error)
+      toast.error(error.response?.data?.detail || 'Could not generate the invoice')
+    } finally {
+      setInvoiceAction(null)
+    }
+  }, [invoiceAction])
+
+  const InvoiceActions = ({ bill, compact = false }) => {
+    const isBusy = invoiceAction?.startsWith(`${bill.id}:`)
+    return (
+      <div className={`flex items-center gap-1.5 ${compact ? 'w-full' : ''}`}>
+        <button
+          type="button"
+          disabled={isBusy}
+          onClick={() => handleInvoiceAction(bill, 'print')}
+          title="Open invoice for printing"
+          className={`inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--primary)] px-2.5 py-2 text-[11px] font-bold text-white shadow-sm transition hover:brightness-110 disabled:cursor-wait disabled:opacity-60 ${compact ? 'flex-1' : ''}`}
+        >
+          <Printer size={13} />
+          <span>{isBusy ? 'Preparing...' : 'Invoice'}</span>
+        </button>
+        <button
+          type="button"
+          disabled={isBusy}
+          onClick={() => handleInvoiceAction(bill, 'download')}
+          title="Download invoice PDF"
+          className="inline-flex items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)] disabled:cursor-wait disabled:opacity-60"
+        >
+          <Download size={13} />
+        </button>
+      </div>
+    )
+  }
 
   const loadPayments = useCallback(async () => {
     setLoading(true)
@@ -253,7 +326,13 @@ export default function Payments() {
           ...meta,
           count: transactions.length,
           total: transactions.reduce(
-            (sum, bill) => sum + Number(bill.grand_total || 0),
+            (sum, bill) =>
+              sum +
+              Number(
+                bill.paid_amount ??
+                  (bill.payment_method === 'credit' ? 0 : bill.grand_total) ??
+                  0,
+              ),
             0,
           ),
         }
@@ -266,7 +345,13 @@ export default function Payments() {
       bills
         .filter(bill => bill.payment_method !== 'credit')
         .reduce(
-          (sum, bill) => sum + Number(bill.grand_total || 0),
+          (sum, bill) =>
+            sum +
+            Number(
+              bill.paid_amount ??
+                bill.grand_total ??
+                0,
+            ),
           0,
         ),
     [bills],
@@ -277,13 +362,23 @@ export default function Payments() {
       bills
         .filter(bill => bill.payment_method === 'credit')
         .reduce(
-          (sum, bill) => sum + Number(bill.grand_total || 0),
+          (sum, bill) => sum + Number(bill.balance_due ?? bill.grand_total ?? 0),
           0,
         ),
     [bills],
   )
 
   const totalTransactions = bills.length
+
+  const paymentMetrics = useMemo(() => ({
+    paid: bills.filter(bill => ['paid', 'completed'].includes(bill.payment_status)).length,
+    partial: bills.filter(bill => bill.payment_status === 'partial').length,
+    pending: bills.filter(bill => bill.payment_status === 'pending').length,
+    refunded: bills.filter(bill => bill.payment_status === 'refunded').length,
+    outstanding: bills.reduce((sum, bill) => sum + Number(bill.balance_due || 0), 0),
+    discounts: bills.reduce((sum, bill) => sum + Number(bill.discount_amount || 0), 0),
+    tax: bills.reduce((sum, bill) => sum + Number(bill.tax_amount || 0), 0),
+  }), [bills])
 
   const normalizedSearch = search.trim().toLowerCase()
 
@@ -394,8 +489,8 @@ export default function Payments() {
           font-weight: 800;
           letter-spacing: .1em;
           text-transform: uppercase;
-          color: var(--muted-light);
-          background: var(--surface-elevated);
+          color: #eff6ff;
+          background: linear-gradient(135deg, #1e3a8a, #2563eb);
           border-bottom: 1px solid var(--line);
           white-space: nowrap;
         }
@@ -499,6 +594,20 @@ export default function Payments() {
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {[
+          ['Paid bills', paymentMetrics.paid, 'text-emerald-700 dark:text-emerald-300'],
+          ['Partial', paymentMetrics.partial, 'text-amber-700 dark:text-amber-300'],
+          ['Pending', paymentMetrics.pending, 'text-orange-700 dark:text-orange-300'],
+          ['Refunded', paymentMetrics.refunded, 'text-rose-700 dark:text-rose-300'],
+        ].map(([label, value, color]) => (
+          <div key={label} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">{label}</p>
+            <p className={`mt-1 font-mono text-xl font-bold ${color}`}>{value}</p>
+          </div>
+        ))}
       </section>
 
       <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
@@ -619,7 +728,13 @@ export default function Payments() {
                 <article key={bill.id} className="p-3 sm:p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate font-mono text-xs font-bold text-[var(--primary)]">
+                      <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--muted-light)]">
+                        Invoice number
+                      </p>
+                      <p
+                        className="max-w-[calc(100vw-9rem)] break-all font-mono text-sm font-extrabold leading-5 text-[var(--primary)]"
+                        title={bill.invoice_number || 'No invoice number'}
+                      >
                         {bill.invoice_number || 'No invoice number'}
                       </p>
 
@@ -664,10 +779,16 @@ export default function Payments() {
                   <div className="mt-3 flex items-center justify-between">
                     <PaymentStatus status={bill.payment_status} />
 
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--muted-light)]">
-                      View record
-                      <ArrowUpRight size={12} />
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBill(bill)}
+                      className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950/60 dark:text-blue-200 dark:hover:bg-blue-900/70"
+                    >
+                      <Eye size={12} /> View details
+                    </button>
+                  </div>
+                  <div className="mt-3">
+                    <InvoiceActions bill={bill} compact />
                   </div>
                 </article>
               ))}
@@ -683,6 +804,7 @@ export default function Payments() {
                     <th>Method</th>
                     <th className="num-col">Amount</th>
                     <th>Status</th>
+                    <th className="text-right">Actions</th>
                   </tr>
                 </thead>
 
@@ -690,7 +812,10 @@ export default function Payments() {
                   {filteredBills.map(bill => (
                     <tr key={bill.id}>
                       <td>
-                        <span className="font-mono text-xs font-bold text-[#1E3A5F] dark:text-slate-200">
+                        <span
+                          className="inline-flex max-w-44 break-all rounded-md border border-blue-200 bg-blue-50 px-2 py-1 font-mono text-xs font-extrabold leading-4 text-[#1E3A5F] dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-100"
+                          title={bill.invoice_number || 'Invoice number unavailable'}
+                        >
                           {bill.invoice_number || '—'}
                         </span>
                       </td>
@@ -726,6 +851,19 @@ export default function Payments() {
                       <td>
                         <PaymentStatus status={bill.payment_status} />
                       </td>
+
+                      <td className="text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedBill(bill)}
+                            className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1.5 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950/60 dark:text-blue-200 dark:hover:bg-blue-900/70"
+                          >
+                            <Eye size={12} /> Details
+                          </button>
+                          <InvoiceActions bill={bill} />
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -734,6 +872,99 @@ export default function Payments() {
           </>
         )}
       </section>
+
+      {selectedBill && (
+        <Modal
+          open={Boolean(selectedBill)}
+          onClose={() => setSelectedBill(null)}
+          title={`Payment details — ${selectedBill.invoice_number || 'Invoice'}`}
+          size="lg"
+        >
+          <div className="space-y-4 text-xs">
+            <div className="grid grid-cols-2 gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-3 sm:grid-cols-4">
+              <div className="min-w-0">
+                <span className="text-[10px] font-bold uppercase text-[var(--muted)]">Invoice number</span>
+                <p
+                  className="mt-1 break-all font-mono text-sm font-extrabold leading-5 text-[var(--primary)]"
+                  title={selectedBill.invoice_number || 'Invoice number unavailable'}
+                >
+                  {selectedBill.invoice_number || '—'}
+                </p>
+              </div>
+              <div><span className="text-[10px] font-bold uppercase text-[var(--muted)]">Date</span><p className="mt-1 font-semibold text-[var(--ink)]">{formatDate(selectedBill.created_at)}</p></div>
+              <div><span className="text-[10px] font-bold uppercase text-[var(--muted)]">Payment status</span><div className="mt-1"><PaymentStatus status={selectedBill.payment_status} /></div></div>
+              <div><span className="text-[10px] font-bold uppercase text-[var(--muted)]">Method</span><div className="mt-1"><PaymentBadge method={selectedBill.payment_method} /></div></div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                ['Subtotal', selectedBill.subtotal],
+                ['Discount', selectedBill.discount_amount],
+                ['Tax', selectedBill.tax_amount],
+                ['Grand total', selectedBill.grand_total],
+                ['Paid amount', selectedBill.paid_amount],
+                ['Balance due', selectedBill.balance_due],
+                ['Round off', selectedBill.round_off],
+                ['Items', selectedBill.items?.length || 0],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-lg border border-[var(--line)] p-2.5">
+                  <p className="text-[10px] font-bold uppercase text-[var(--muted)]">{label}</p>
+                  <p className="mt-1 font-mono font-bold text-[var(--ink)]">
+                    {label === 'Items' ? value : formatCurrency(value)}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-xl border border-[var(--line)] p-3">
+                <h3 className="mb-2 flex items-center gap-1.5 font-bold text-[var(--ink)]"><UserRound size={14} /> Customer</h3>
+                <p className="font-semibold">{selectedBill.customer_name || 'Walk-in customer'}</p>
+                <p className="mt-1 text-[var(--muted)]">{selectedBill.customer_phone || 'No phone number'}</p>
+                <p className="mt-1 text-[var(--muted)]">{selectedBill.customer_email || 'No email address'}</p>
+              </div>
+              <div className="rounded-xl border border-[var(--line)] p-3">
+                <h3 className="mb-2 flex items-center gap-1.5 font-bold text-[var(--ink)]"><ReceiptText size={14} /> Notes & operator</h3>
+                <p className="text-[var(--muted)]">{selectedBill.notes || 'No notes recorded'}</p>
+                <p className="mt-2 text-[11px] text-[var(--muted)]">Created by: <span className="font-semibold text-[var(--ink)]">{selectedBill.created_by_name || 'System'}</span></p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
+              <table className="erp-table min-w-[560px] text-xs">
+                <thead><tr><th>Item</th><th>SKU</th><th className="text-right">Qty</th><th className="text-right">Unit price</th><th className="text-right">Total</th></tr></thead>
+                <tbody>
+                  {(selectedBill.items || []).map((item, index) => (
+                    <tr key={item.id || index}>
+                      <td className="font-semibold">{item.product_name || item.name || 'Item'}</td>
+                      <td className="font-mono text-[var(--muted)]">{item.sku || '—'}</td>
+                      <td className="text-right font-mono">{item.quantity || 0}</td>
+                      <td className="text-right font-mono">{formatCurrency(item.unit_price)}</td>
+                      <td className="text-right font-mono font-bold">{formatCurrency(item.total)}</td>
+                    </tr>
+                  ))}
+                  {!selectedBill.items?.length && <tr><td colSpan={5} className="py-6 text-center text-[var(--muted)]">No item details available.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="rounded-xl border border-[var(--line)] p-3">
+              <h3 className="mb-2 flex items-center gap-1.5 font-bold text-[var(--ink)]"><Banknote size={14} /> Payment entries</h3>
+              <div className="space-y-2">
+                {(selectedBill.payments || []).map((payment, index) => (
+                  <div key={payment.id || index} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--surface-elevated)] p-2.5">
+                    <span className="font-semibold">{payment.method || selectedBill.payment_method || 'Payment'}</span>
+                    <span className="font-mono font-bold">{formatCurrency(payment.amount)}</span>
+                    <span className="text-[var(--muted)]">{formatDate(payment.created_at)}</span>
+                    <span className="text-[var(--muted)]">{payment.reference || payment.transaction_id || 'No reference'}</span>
+                  </div>
+                ))}
+                {!selectedBill.payments?.length && <p className="text-[var(--muted)]">No separate payment entries available.</p>}
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }

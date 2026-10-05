@@ -31,6 +31,7 @@ import {
   Building2,
   CheckCircle2,
   AlertCircle,
+  MoreHorizontal,
 } from 'lucide-react'
 
 const emptyForm = {
@@ -98,6 +99,7 @@ export default function Customers() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [onlyCredit, setOnlyCredit] = useState(false)
+  const [mobileActionId, setMobileActionId] = useState(null)
 
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState(emptyForm)
@@ -379,7 +381,7 @@ export default function Customers() {
         action={
           <button
             onClick={openAdd}
-            className="mt-2 btn-primary btn-base"
+            className="btn-primary btn-base w-full sm:w-auto"
           >
             <Plus size={16} />
             <span>Add Customer</span>
@@ -443,7 +445,7 @@ export default function Customers() {
       ====================================================== */}
 
       <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3.5">
-        <div className="flex w-full items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
 
           {/* Search */}
           <div className="relative min-w-0 flex-1">
@@ -454,7 +456,7 @@ export default function Customers() {
 
             <input
               className="input w-full pl-9 pr-9 text-sm"
-              placeholder="       Search by customer name, mobile, email..."
+              placeholder="Search name, mobile, or email..."
               value={search}
               onChange={event => setSearch(event.target.value)}
             />
@@ -473,7 +475,7 @@ export default function Customers() {
           </div>
 
           {/* Credit filter */}
-          <label className="form-check shrink-0 cursor-pointer whitespace-nowrap">
+          <label className="form-check w-full shrink-0 cursor-pointer whitespace-nowrap sm:w-auto">
             <input
               type="checkbox"
               checked={onlyCredit}
@@ -772,10 +774,10 @@ export default function Customers() {
                 return (
                   <div
                     key={customer.id}
-                    className="px-2.5 py-2.5 sm:px-4 sm:py-3"
+                    className="px-3 py-3 sm:px-4 sm:py-3.5"
                   >
 
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex min-w-0 items-start gap-2.5">
 
                       {/* Avatar */}
 
@@ -785,11 +787,11 @@ export default function Customers() {
 
                       {/* Customer */}
 
-                      <div className="flex-1 min-w-0">
+                      <div className="min-w-0 flex-1">
 
-                        <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex min-w-0 items-start gap-2">
 
-                          <p className="font-semibold text-[13px] text-[var(--ink)] truncate">
+                          <p className="min-w-0 flex-1 truncate text-[13px] font-bold text-[var(--ink)]">
                             {customer.name}
                           </p>
 
@@ -805,7 +807,7 @@ export default function Customers() {
 
                         </div>
 
-                        <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-[var(--muted)] min-w-0">
+                        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] text-[var(--muted)]">
 
                           {customer.mobile ? (
                             <a
@@ -826,11 +828,26 @@ export default function Customers() {
 
                         </div>
 
+                        <div className="mt-2 grid grid-cols-2 gap-1.5 text-[10px]">
+                          <div className="min-w-0 rounded-lg bg-[var(--surface-elevated)] px-2 py-1.5">
+                            <span className="block uppercase tracking-wide text-[var(--muted-light)]">Credit limit</span>
+                            <span className="font-mono font-semibold text-[var(--ink-secondary)]">
+                              {currency(customer.credit_limit || 0)}
+                            </span>
+                          </div>
+                          <div className="min-w-0 rounded-lg bg-[var(--surface-elevated)] px-2 py-1.5">
+                            <span className="block uppercase tracking-wide text-[var(--muted-light)]">GSTIN</span>
+                            <span className="block truncate font-mono font-semibold text-[var(--ink-secondary)]">
+                              {customer.gstin || 'Not added'}
+                            </span>
+                          </div>
+                        </div>
+
                       </div>
 
                       {/* Amount */}
 
-                      <div className="text-right shrink-0 mr-0.5">
+                      <div className="mr-0.5 shrink-0 text-right">
 
                         <p
                           className={`text-[11px] font-semibold ${
@@ -852,68 +869,80 @@ export default function Customers() {
 
                       </div>
 
-                      {/* Actions */}
+                    </div>
 
-                      <div className="flex items-center gap-0.5 shrink-0">
+                    {/* Actions */}
+                    <div className="mt-3 flex items-center gap-1.5 border-t border-[var(--line-subtle)] pt-2.5 sm:justify-end">
 
                         <button
                           onClick={() =>
                             openView(customer)
                           }
-                          className="icon-btn !w-7 !h-7 !p-0"
+                          className="icon-btn flex !h-9 flex-1 !p-0 sm:!w-9 sm:flex-none"
                           title="View customer"
                           aria-label="View customer"
                         >
-                          <Eye size={13} />
+                          <Eye size={13} /><span className="ml-1 text-[10px] sm:hidden">View</span>
                         </button>
 
                         <button
                           onClick={() =>
                             openEdit(customer)
                           }
-                          className="icon-btn !w-7 !h-7 !p-0"
+                          className="icon-btn flex !h-9 flex-1 !p-0 sm:!w-9 sm:flex-none"
                           title="Edit customer"
                           aria-label="Edit customer"
                         >
-                          <Edit2 size={13} />
-                        </button>
-
-                        {outstanding > 0 && (
-                          <button
-                            onClick={() =>
-                              openReminder(customer)
-                            }
-                            className="icon-btn !w-7 !h-7 !p-0 text-amber-600 dark:text-amber-400"
-                            title="Send payment reminder"
-                            aria-label="Send payment reminder"
-                          >
-                            <Send size={13} />
-                          </button>
-                        )}
-
-                        <button
-                          onClick={() => sendStatement(customer)}
-                          className="icon-btn !w-7 !h-7 !p-0 text-teal-600 dark:text-teal-400"
-                          title="Send customer statement"
-                          aria-label="Send customer statement"
-                        >
-                          <FileText size={13} />
+                          <Edit2 size={13} /><span className="ml-1 text-[10px] sm:hidden">Edit</span>
                         </button>
 
                         <button
-                          onClick={() =>
-                            setDeleteId(customer.id)
-                          }
-                          className="icon-btn !w-7 !h-7 !p-0 text-red-500"
-                          title="Delete customer"
-                          aria-label="Delete customer"
+                          type="button"
+                          onClick={() => setMobileActionId(current => current === customer.id ? null : customer.id)}
+                          className={`icon-btn flex !h-9 flex-1 !p-0 sm:!w-9 sm:flex-none ${
+                            mobileActionId === customer.id ? 'bg-[var(--surface-active)] text-[var(--ink)]' : ''
+                          }`}
+                          title="More customer actions"
+                          aria-label="More customer actions"
                         >
-                          <Trash2 size={13} />
+                          <MoreHorizontal size={15} /><span className="ml-1 text-[10px] sm:hidden">More</span>
                         </button>
-
-                      </div>
 
                     </div>
+
+                    {mobileActionId === customer.id && (
+                      <div className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-lg bg-[var(--surface-elevated)] p-1.5 sm:hidden">
+                        {outstanding > 0 && (
+                          <button
+                            onClick={() => {
+                              setMobileActionId(null)
+                              openReminder(customer)
+                            }}
+                            className="flex h-9 items-center justify-center gap-1 rounded-md px-2 text-[10px] font-semibold text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-950/50"
+                          >
+                            <Send size={13} /> Remind
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            setMobileActionId(null)
+                            sendStatement(customer)
+                          }}
+                          className="flex h-9 items-center justify-center gap-1 rounded-md px-2 text-[10px] font-semibold text-teal-700 hover:bg-teal-100 dark:text-teal-300 dark:hover:bg-teal-950/50"
+                        >
+                          <FileText size={13} /> Statement
+                        </button>
+                        <button
+                          onClick={() => {
+                            setMobileActionId(null)
+                            setDeleteId(customer.id)
+                          }}
+                          className="flex h-9 items-center justify-center gap-1 rounded-md px-2 text-[10px] font-semibold text-red-600 hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-950/50"
+                        >
+                          <Trash2 size={13} /> Delete
+                        </button>
+                      </div>
+                    )}
 
                   </div>
                 )

@@ -124,18 +124,21 @@ export default function RazorpayPaymentModal({ open, onClose, invoice, onSuccess
       <div className="space-y-4">
 
         {/* Amount banner */}
-        <div className="rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] p-3.5">
-          <div className="flex items-center justify-between gap-3">
+        <div className="rounded-xl border border-violet-200 bg-violet-50 p-3.5 dark:border-violet-800/60 dark:bg-violet-950/30">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 text-left">
-              <div className="mb-1 text-xs font-semibold text-[#1E3A5F] dark:text-slate-200">
+              <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-violet-700 dark:text-violet-300">
+                Razorpay payment
+              </div>
+              <div className="break-all font-mono text-sm font-extrabold text-[var(--ink)]">
                 Invoice {invoice?.invoice_number}
               </div>
-              <div className="text-xs text-[var(--muted)]">
+              <div className="mt-1 text-xs text-[var(--muted)]">
                 Amount to pay via Razorpay
               </div>
             </div>
-            <div className="shrink-0 rounded-md border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-right">
-              <div className="text-xl font-mono font-bold text-[#1E3A5F] dark:text-slate-100">
+            <div className="shrink-0 rounded-xl border border-violet-200 bg-white px-3 py-2 text-right shadow-sm dark:border-violet-800 dark:bg-slate-900">
+              <div className="text-xl font-mono font-extrabold text-violet-800 dark:text-violet-200">
                 {fmt(invoice?.grand_total)}
               </div>
             </div>
@@ -151,14 +154,17 @@ export default function RazorpayPaymentModal({ open, onClose, invoice, onSuccess
               <div>• Invoice will be marked paid only after backend verification.</div>
             </div>
             <button
+              type="button"
               onClick={initiatePayment}
-              className="btn-primary w-full h-10 rounded-md font-semibold text-sm flex items-center justify-center gap-2"
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-violet-700 px-4 text-sm font-extrabold text-white shadow-md shadow-violet-700/20 transition hover:bg-violet-800 disabled:opacity-60"
             >
-              Pay {fmt(invoice?.grand_total)} with Razorpay
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15">₹</span>
+              Pay {fmt(invoice?.grand_total)} securely
             </button>
             <button
+              type="button"
               onClick={handleClose}
-              className="btn-secondary w-full h-10 rounded-md text-sm"
+              className="min-h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] text-sm font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
             >
               Cancel
             </button>
@@ -184,10 +190,11 @@ export default function RazorpayPaymentModal({ open, onClose, invoice, onSuccess
               </p>
             </div>
             <button
+              type="button"
               onClick={handleClose}
-              className="btn-primary w-full h-10 rounded-md font-semibold text-sm"
+              className="min-h-12 w-full rounded-xl bg-emerald-700 text-sm font-extrabold text-white shadow-md shadow-emerald-700/20 transition hover:bg-emerald-800"
             >
-              Done — View Receipt
+              Payment confirmed — View receipt
             </button>
           </div>
         )}
@@ -201,14 +208,16 @@ export default function RazorpayPaymentModal({ open, onClose, invoice, onSuccess
               <p className="text-sm text-[var(--muted)] text-center">{errorMsg || 'The payment could not be completed.'}</p>
             </div>
             <button
+              type="button"
               onClick={() => { setPhase('idle'); setErrorMsg('') }}
-              className="btn-primary w-full h-10 rounded-md font-semibold text-sm flex items-center justify-center gap-2"
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-rose-700 text-sm font-extrabold text-white transition hover:bg-rose-800"
             >
               <RefreshCw size={15} /> Try Again
             </button>
             <button
+              type="button"
               onClick={handleClose}
-              className="btn-secondary w-full h-10 rounded-md text-sm"
+              className="min-h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] text-sm font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
             >
               Cancel
             </button>

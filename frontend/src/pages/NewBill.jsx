@@ -35,7 +35,7 @@ import './NewBill.css'
 import {
   Search, Plus, Minus, Trash2, Printer, Download, RefreshCw, QrCode, Clock,
   Keyboard, CheckCircle2, Share2, X, AlertTriangle, FileText,
-  Maximize2, Minimize2, Layers,
+  Maximize2, Minimize2, Layers, Receipt,
   Package, Banknote, Smartphone, CreditCard, BookOpen, Wallet,
   User, UserPlus, ShoppingCart,
 } from 'lucide-react'
@@ -726,7 +726,7 @@ export default function NewBill() {
       errs.push('Enter payment amount')
     }
     return errs
-  }, [cart, productMap, payment, customer, cashShort])
+  }, [cart, productMap, payment, customer, cashShort, grandTotal])
 
   // Quick Pay can be opened with or without a cart — it only requires the
   // shop's UPI ID. The modal itself handles amount entry.
@@ -738,10 +738,11 @@ export default function NewBill() {
     setShowQr(true)
   }
 
-  const resetBill = () => {
+  const resetBill = ({ closeSuccess = true } = {}) => {
     setCart([]); setCustomer(null); setCustomerSearch('')
     setPayment(INITIAL_PAYMENT)
-    setBillDiscountInput(''); setNotes(''); setLastAddedId(null); setShowSuccess(false)
+    setBillDiscountInput(''); setNotes(''); setLastAddedId(null)
+    if (closeSuccess) setShowSuccess(false)
     setSearchActive(false); setActiveIdx(-1); setCustomerOpen(false)
     searchRef.current?.focus()
   }
@@ -850,41 +851,10 @@ export default function NewBill() {
     }
 
     const mode = thermal ? 'Thermal Bill' : 'Invoice'
-    win.document.open()
-    win.document.write(`
-      <!doctype html>
-      <html>
-        <head>
-          <title>${mode}</title>
-          <style>
-            body{margin:0;font-family:Arial,sans-serif;background:#fff;color:#334155}
-            .loading{display:flex;min-height:100vh;align-items:center;justify-content:center;font-size:16px}
-          </style>
-        </head>
-        <body><div class="loading">Preparing ${mode} for printing…</div></body>
-      </html>
-    `)
-    win.document.close()
-    win.focus()
+    const pdfUrl = getInvoicePdfUrl(invoiceId, thermal)
 
     try {
-      const token = localStorage.getItem('access_token') || ''
-      const params = new URLSearchParams()
-      if (token) params.set('token', token)
-      if (thermal) params.set('printer', 'thermal')
-
-      const response = await api.get(
-        `/invoices/${invoiceId}/pdf/${params.toString() ? `?${params.toString()}` : ''}`,
-        { responseType: 'blob' }
-      )
-
-      const blob = new Blob([response.data], { type: 'application/pdf' })
-      const blobUrl = URL.createObjectURL(blob)
-
-      // Navigate the already-approved popup to the authenticated PDF.
-      win.location.href = blobUrl
-
-      // Chrome/Edge PDF viewer needs a little time before print().
+      win.location.href = pdfUrl
       const trigger = () => {
         try {
           win.focus()
@@ -892,18 +862,13 @@ export default function NewBill() {
         } catch {
           toast.error(`Could not open ${mode} print dialog`)
         }
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000)
       }
-
       setTimeout(trigger, thermal ? 1400 : 1200)
-    } catch (err) {
+    } catch {
       try {
         win.close()
       } catch { /* ignore */ }
-      toast.error(
-        err.response?.data?.detail ||
-        `Could not print ${thermal ? 'thermal bill' : 'bill'}`
-      )
+      toast.error(`Could not print ${thermal ? 'thermal bill' : 'bill'}`)
     }
   }
 
@@ -1008,6 +973,9 @@ export default function NewBill() {
       }
 
       const data = await invoiceService.createInvoice(payload)
+      if (!data || typeof data !== 'object' || Array.isArray(data) || !data.id) {
+        throw new Error('The sale was saved, but the invoice response was incomplete. Please refresh and check Bills before retrying.')
+      }
 
       // Preserve customer contact/payment information for Share after
       // resetBill() clears the current billing form.
@@ -1020,7 +988,6 @@ export default function NewBill() {
         amount_received: receivedAmount,
       }
 
-      setLastInvoice(savedInvoice)
       toast.success(`Sale completed — invoice ${data.invoice_number}`)
 
       if (print) {
@@ -1029,11 +996,9 @@ export default function NewBill() {
       }
 
       const usedRazorpay = payment.method === 'razorpay'
-      resetBill()
+      resetBill({ closeSuccess: false })
+      setLastInvoice(savedInvoice)
       if (usedRazorpay) {
-        // resetBill() clears the cart but not lastInvoice, so the Razorpay
-        // modal can use the saved invoice.
-        setLastInvoice(savedInvoice)
         setShowRazorpay(true)
       } else {
         setShowSuccess(true)
@@ -1243,12 +1208,14 @@ export default function NewBill() {
   }
 
   const billIssues = cart.length > 0 ? validationErrors : []
-  const canComplete = !saving && validationErrors.length === 0 && grandTotal > 0 && cart.length > 0
+  // Keep the action available for a populated bill so validation feedback is
+  // delivered by saveBill instead of presenting a button that appears broken.
+  const canAttemptComplete = !saving && grandTotal > 0 && cart.length > 0
   const completeTitle = !cart.length
     ? 'Add products to current bill to complete sale'
     : grandTotal <= 0
     ? 'Bill total must be greater than ₹0'
-    : canComplete
+    : validationErrors.length === 0
     ? 'Complete sale (F8)'
     : (validationErrors[0] || '')
 
@@ -1351,6 +1318,31 @@ export default function NewBill() {
         <section className={`pb-panel pb-products-col ${mobileTab === 'cart' ? 'pb-col-hidden-mobile' : ''}`} aria-label="Products Catalog">
           {/* Prominent Search and Scan Area */}
           <div className="pb-search-area">
+            {lastInvoice && (
+              <div className="pb-last-bill-strip" aria-label="Last completed bill">
+                <div className="pb-last-bill-track">
+                  <div className="pb-last-bill-icon">
+                    <Receipt size={14} />
+                  </div>
+                  <div className="pb-last-bill-info">
+                    <span className="pb-last-bill-label">Last completed bill</span>
+                    <strong>{lastInvoice.invoice_number || `INV-${lastInvoice.id}`}</strong>
+                    <span>{fmt(lastInvoice.grand_total)} · {lastInvoice.customer_name || 'Walk-in customer'}</span>
+                  </div>
+                  <div className="pb-last-bill-actions">
+                    <button type="button" onClick={() => printInvoiceDocument(lastInvoice.id, false)} title="Print last bill">
+                      <Printer size={12} /> <span>Print</span>
+                    </button>
+                    <button type="button" onClick={() => printInvoiceDocument(lastInvoice.id, true)} title="Print thermal last bill">
+                      <span>Thermal</span>
+                    </button>
+                    <button type="button" onClick={shareInvoice} title="Share last bill">
+                      <Share2 size={12} /> <span>Share</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="pb-search-field">
               <Search size={18} className="pb-field-icon" />
               <input
@@ -1424,23 +1416,61 @@ export default function NewBill() {
                       <div>
                         <div className="pb-dd-head">Recent products</div>
                         {recentProducts.length ? recentProducts.map(p => (
-                          <button type="button" key={p.id} onMouseDown={e => e.preventDefault()} onClick={() => addToCart(p)} className="pb-result">
-                            <span className="pb-strong">{p.name}</span>
-                            <span className="pb-result-side pb-strong">{fmt(p.selling_price)}</span>
-                            <span className="pb-sub">{p.sku || p.barcode || '—'}</span>
-                            <span className="pb-result-side pb-sub">Stock: {stockLabel(p)}</span>
-                          </button>
+                          <div key={p.id} className="pb-result pb-suggestion">
+                            <button
+                              type="button"
+                              onMouseDown={e => e.preventDefault()}
+                              onClick={() => { addToCart(p); setSearchActive(false) }}
+                              className="pb-suggestion-main"
+                              disabled={isOut(p)}
+                            >
+                              <span className="pb-strong">{p.name}</span>
+                              <span className="pb-sub">{p.sku || p.barcode || '—'}</span>
+                              <span className="pb-sub">Stock: {stockLabel(p)}</span>
+                            </button>
+                            <div className="pb-suggestion-side">
+                              <span className="pb-strong">{fmt(p.selling_price)}</span>
+                              <button
+                                type="button"
+                                className="pb-suggestion-add"
+                                disabled={isOut(p)}
+                                onMouseDown={e => e.preventDefault()}
+                                onClick={() => { addToCart(p); setSearchActive(false) }}
+                              >
+                                <Plus size={12} /> {isOut(p) ? 'Out' : 'Add'}
+                              </button>
+                            </div>
+                          </div>
                         )) : <div className="pb-dd-empty">Recently billed products will appear here.</div>}
                       </div>
                       <div>
                         <div className="pb-dd-head">Recommended products</div>
                         {recommendedProducts.length ? recommendedProducts.map(p => (
-                          <button type="button" key={p.id} onMouseDown={e => e.preventDefault()} onClick={() => addToCart(p)} className="pb-result">
-                            <span className="pb-strong">{p.name}</span>
-                            <span className="pb-result-side pb-strong">{fmt(p.selling_price)}</span>
-                            <span className="pb-sub">{p.sku || p.barcode || '—'}</span>
-                            <span className="pb-result-side pb-sub">Stock: {stockLabel(p)}</span>
-                          </button>
+                          <div key={p.id} className="pb-result pb-suggestion">
+                            <button
+                              type="button"
+                              onMouseDown={e => e.preventDefault()}
+                              onClick={() => { addToCart(p); setSearchActive(false) }}
+                              className="pb-suggestion-main"
+                              disabled={isOut(p)}
+                            >
+                              <span className="pb-strong">{p.name}</span>
+                              <span className="pb-sub">{p.sku || p.barcode || '—'}</span>
+                              <span className="pb-sub">Stock: {stockLabel(p)}</span>
+                            </button>
+                            <div className="pb-suggestion-side">
+                              <span className="pb-strong">{fmt(p.selling_price)}</span>
+                              <button
+                                type="button"
+                                className="pb-suggestion-add"
+                                disabled={isOut(p)}
+                                onMouseDown={e => e.preventDefault()}
+                                onClick={() => { addToCart(p); setSearchActive(false) }}
+                              >
+                                <Plus size={12} /> {isOut(p) ? 'Out' : 'Add'}
+                              </button>
+                            </div>
+                          </div>
                         )) : <div className="pb-dd-empty">No recommendations available.</div>}
                       </div>
                     </div>
@@ -1831,27 +1861,6 @@ export default function NewBill() {
               />
             </div>
 
-            {/* Compact strip for last invoice actions if present */}
-            {lastInvoice && (
-              <div className="mt-1 pt-1 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
-                <span className="text-slate-500">
-                  Last: <b>{lastInvoice.invoice_number || `INV-${lastInvoice.id}`}</b> ({fmt(lastInvoice.grand_total)})
-                </span>
-                <div className="flex items-center gap-1">
-                  <button type="button" className="pb-link text-xs" onClick={() => printInvoiceDocument(lastInvoice.id, false)}>
-                    <Printer size={12} className="inline mr-1" />Print
-                  </button>
-                  <span className="text-slate-300">·</span>
-                  <button type="button" className="pb-link text-xs" onClick={() => printInvoiceDocument(lastInvoice.id, true)}>
-                    Thermal
-                  </button>
-                  <span className="text-slate-300">·</span>
-                  <button type="button" className="pb-link text-xs" onClick={shareInvoice}>
-                    Share
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </section>
       </main>
@@ -2110,7 +2119,7 @@ export default function NewBill() {
                 className="pb-btn-dock"
                 title="Complete Sale &amp; Print Bill (Ctrl+P / F7)"
                 onClick={() => saveBill(true)}
-                disabled={!canComplete}
+                disabled={!canAttemptComplete}
               >
                 <Printer size={14} />
                 <span>Complete &amp; Print</span>
@@ -2143,7 +2152,7 @@ export default function NewBill() {
               className="pb-btn-complete-sale"
               title={completeTitle}
               onClick={() => saveBill(false)}
-              disabled={!canComplete}
+              disabled={!canAttemptComplete}
             >
               <CheckCircle2 size={18} />
               <span>{saving ? 'Processing…' : `✓ COMPLETE SALE · ${fmt(grandTotal)}`}</span>
@@ -2231,12 +2240,17 @@ export default function NewBill() {
         </div>
       </Modal>
 
-      <Modal open={showSuccess && Boolean(lastInvoice)} onClose={() => setShowSuccess(false)} title="Sale completed" size="sm">
+      <Modal open={showSuccess && Boolean(lastInvoice?.id)} onClose={() => setShowSuccess(false)} title="Sale completed" size="sm">
         <div className="pb-modal pb-stack">
-          <div className="pb-c">
-            <CheckCircle2 size={30} color="#15803d" />
-            <div className="pb-qr-amount">{fmt(lastInvoice?.grand_total)}</div>
-            <div className="pb-sub">Invoice {lastInvoice?.invoice_number}</div>
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center dark:border-emerald-800/60 dark:bg-emerald-950/30">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-600/25">
+              <CheckCircle2 size={32} />
+            </div>
+            <p className="mt-3 text-lg font-extrabold text-emerald-800 dark:text-emerald-200">Sale completed successfully</p>
+            <div className="mt-1 font-mono text-2xl font-extrabold text-[var(--ink)]">{fmt(lastInvoice?.grand_total)}</div>
+            <div className="mt-2 break-all font-mono text-xs font-bold text-emerald-700 dark:text-emerald-300">
+              Invoice {lastInvoice?.invoice_number || '—'}
+            </div>
           </div>
           <dl className="pb-dl" style={{ borderTop: '1px solid var(--pb-border)', paddingTop: 8 }}>
             <dt>Invoice number</dt><dd>{lastInvoice?.invoice_number || '—'}</dd>
@@ -2250,13 +2264,13 @@ export default function NewBill() {
               </>
             )}
           </dl>
-          <div className="pb-grid2">
-            <button type="button" className="pb-btn" onClick={() => printInvoiceDocument(lastInvoice?.id)}><Printer size={14} /> Print Bill</button>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" className="pb-btn pb-btn-primary" onClick={() => printInvoiceDocument(lastInvoice?.id)}><Printer size={14} /> Print invoice</button>
             <button type="button" className="pb-btn" onClick={() => downloadInvoiceDocument(lastInvoice?.id)}><Download size={14} /> Download</button>
             <button type="button" className="pb-btn" onClick={shareInvoice}><Share2 size={14} /> Share</button>
-            <button type="button" className="pb-btn" onClick={() => navigate(`/invoice/${lastInvoice?.id}`)}><FileText size={14} /> View Invoice</button>
+            <button type="button" className="pb-btn" onClick={() => navigate(`/invoice/${lastInvoice?.id}`)}><FileText size={14} /> View invoice</button>
           </div>
-          <button type="button" className="pb-btn pb-btn-primary pb-btn-lg" onClick={() => { setShowSuccess(false); startNewBill() }}>
+          <button type="button" className="pb-btn pb-btn-primary pb-btn-lg w-full" onClick={() => { setShowSuccess(false); startNewBill() }}>
             <RefreshCw size={14} /> Start New Bill
           </button>
         </div>

@@ -38,14 +38,14 @@ import toast from 'react-hot-toast'
 // --------------------------------------------------
 
 const STATUS_COLORS = {
-  created: 'bg-transparent text-[#475569] dark:text-slate-400 border border-[var(--line)]',
-  initiated: 'bg-transparent text-[#2563EB] dark:text-blue-400 border border-[var(--line)]',
-  pending: 'bg-transparent text-[#B45309] dark:text-amber-400 border border-[var(--line)]',
-  success: 'bg-transparent text-[#15803D] dark:text-green-400 border border-[var(--line)]',
-  captured: 'bg-transparent text-[#15803D] dark:text-green-400 border border-[var(--line)]',
-  failed: 'bg-transparent text-[#B91C1C] dark:text-red-400 border border-[var(--line)]',
-  expired: 'bg-transparent text-[#475569] dark:text-slate-400 border border-[var(--line)]',
-  refunded: 'bg-transparent text-[#C2410C] dark:text-orange-400 border border-[var(--line)]',
+  created: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-700',
+  initiated: 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/60 dark:text-blue-200 dark:border-blue-700',
+  pending: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-700',
+  success: 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-200 dark:border-emerald-700',
+  captured: 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-200 dark:border-emerald-700',
+  failed: 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/60 dark:text-rose-200 dark:border-rose-700',
+  expired: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-900/60 dark:text-slate-300 dark:border-slate-700',
+  refunded: 'bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950/60 dark:text-orange-200 dark:border-orange-700',
 }
 
 const STATUS_DOT_COLORS = {
@@ -645,11 +645,27 @@ export default function PaymentReconciliation() {
   // --------------------------------------------------
 
   return (
-    <div className="min-h-full bg-[var(--surface)] p-4 sm:p-6">
+    <div className="reconciliation-page min-h-full w-full min-w-0 bg-[var(--surface)] p-3 sm:p-5 lg:p-6">
+      <style>{`
+        .reconciliation-page .reconciliation-card {
+          border: 1px solid var(--line);
+          background: var(--surface);
+          border-radius: 12px;
+          box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+        }
+        .reconciliation-page .reconciliation-card:hover {
+          border-color: #93c5fd;
+        }
+        @media (max-width: 640px) {
+          .reconciliation-page .reconciliation-card {
+            border-radius: 10px;
+          }
+        }
+      `}</style>
       <div className="mx-auto max-w-[1600px] space-y-6">
 
         {/* HEADER */}
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+        <div className="flex flex-col justify-between gap-4 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm lg:flex-row lg:items-center">
           <div className="flex items-start gap-3">
             <div className="hidden rounded-2xl bg-[var(--primary)]/10 p-3 text-[var(--primary)] sm:block">
               <ReceiptText size={24} />
@@ -679,12 +695,12 @@ export default function PaymentReconciliation() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
             <button
               type="button"
               onClick={exportCSV}
               disabled={loading || !visibleRows.length}
-              className="btn-secondary inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold shadow-xs"
+              className="btn-secondary inline-flex w-full items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold shadow-xs sm:w-auto"
             >
               <Download size={14} />
               Export CSV
@@ -694,7 +710,7 @@ export default function PaymentReconciliation() {
               type="button"
               onClick={load}
               disabled={loading}
-              className="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold shadow-xs"
+              className="btn-primary inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold shadow-xs sm:w-auto"
             >
               <RefreshCw
                 size={14}
@@ -706,7 +722,7 @@ export default function PaymentReconciliation() {
         </div>
 
         {/* ERP RECONCILIATION SUMMARY MATRIX */}
-        <div className="erp-table-container">
+        <div className="reconciliation-card overflow-hidden">
           {/* TIER 1: Transaction Volume & Reliability */}
           <div className="grid grid-cols-2 divide-y divide-[var(--line-subtle)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x sm:divide-[var(--line)]">
             <div className="p-3.5 sm:p-4">
@@ -810,7 +826,7 @@ export default function PaymentReconciliation() {
         </div>
 
         {/* FILTERS */}
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 shadow-xs sm:p-3.5">
+        <div className="reconciliation-card p-3 sm:p-3.5">
           <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center">
             <div className="relative min-w-0 flex-1">
               <Search
@@ -876,7 +892,6 @@ export default function PaymentReconciliation() {
                     setMethod('')
                     setDateFilter('')
                   }}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20"
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold text-rose-400 hover:bg-rose-950/30"
                 >
                   <X size={15} />
@@ -932,7 +947,7 @@ export default function PaymentReconciliation() {
         </div>
 
         {/* TRANSACTION TABLE */}
-        <div className="erp-table-container">
+        <div className="reconciliation-card overflow-hidden">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--line)] px-4 sm:px-6 py-3.5 bg-[var(--surface)]">
             <div>
               <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
@@ -951,9 +966,9 @@ export default function PaymentReconciliation() {
 
           {/* DESKTOP TABLE VIEW */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="erp-table w-full text-xs">
               <thead>
-                <tr className="border-b border-[var(--line)] bg-[var(--surface-elevated)] text-left text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                <tr className="text-left text-[11px] font-bold uppercase tracking-wider">
                   <th className="px-4 py-3">Transaction</th>
                   <th className="px-4 py-3 text-right">Amount</th>
                   <th className="px-4 py-3">Payment Method</th>

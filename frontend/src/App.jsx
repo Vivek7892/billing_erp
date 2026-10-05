@@ -68,20 +68,22 @@ function LoadingScreen() {
             borderColor: 'var(--line)',
           }}
         >
-          <div
-            className="
-              h-8
-              w-8
-              animate-spin
-              rounded-full
-              border-[3px]
-              border-transparent
-            "
-            style={{
-              borderTopColor: 'var(--primary)',
-              borderRightColor: 'var(--primary)',
-            }}
-          />
+          <div className="relative flex h-10 w-10 items-center justify-center">
+            <div
+              className="h-10 w-10 animate-spin rounded-full border-4 border-transparent"
+              style={{
+                borderTopColor: 'var(--primary)',
+                borderRightColor: 'var(--primary)',
+              }}
+            />
+            <div
+              className="absolute h-3 w-3 rounded-full"
+              style={{
+                background: 'var(--primary)',
+                boxShadow: '0 0 0 6px var(--primary-light)',
+              }}
+            />
+          </div>
         </div>
 
         <h1
@@ -99,18 +101,23 @@ function LoadingScreen() {
         </p>
 
         <div
-          className="mt-6 h-1.5 w-40 overflow-hidden rounded-full"
+          className="mt-6 h-1.5 w-48 overflow-hidden rounded-full"
           style={{ background: 'var(--line)' }}
         >
           <div
             className="
               h-full
               w-1/2
-              animate-pulse
+              animate-[loading-sweep_1.4s_ease-in-out_infinite]
               rounded-full
             "
             style={{ background: 'var(--primary)' }}
           />
+        </div>
+        <div className="mt-3 flex items-center gap-1.5" aria-hidden="true">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full" style={{ background: 'var(--primary)' }} />
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full [animation-delay:150ms]" style={{ background: 'var(--primary)' }} />
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full [animation-delay:300ms]" style={{ background: 'var(--primary)' }} />
         </div>
       </div>
     </div>

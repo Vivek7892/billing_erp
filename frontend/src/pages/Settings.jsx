@@ -199,6 +199,7 @@ const TABS = [
 export default function Settings() {
   const [tab, setTab] = useState('business')
   const [s, setS] = useState({})
+  const [previewMode, setPreviewMode] = useState('a4')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -207,7 +208,11 @@ export default function Settings() {
   useEffect(() => {
     api
       .get('/settings/all/')
-      .then(r => setS(r.data || {}))
+      .then(r => {
+        const next = r.data || {}
+        setS(next)
+        setPreviewMode(next.invoice_template === 'thermal_80' ? 'thermal' : 'a4')
+      })
       .catch(() => setS({}))
       .finally(() => setLoading(false))
   }, [])
@@ -1055,7 +1060,8 @@ export default function Settings() {
                   terms: s.invoice_terms,
                 }}
                 settings={s}
-                mode={s.invoice_template === 'thermal_80' ? 'thermal' : 'a4'}
+                mode={previewMode}
+                onModeChange={setPreviewMode}
                 showModePicker={true}
               />
             </div>
