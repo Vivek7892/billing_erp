@@ -1388,7 +1388,6 @@ class SettingViewSet(viewsets.ModelViewSet):
             'return_url': '', 'shipping_url': '',
         }
         saved = {s.key: s.value for s in self.get_queryset()}
-        return Response({**defaults, **saved})
         merged = {**defaults, **saved}
         if merged.get('place_of_supply') and not merged.get('shop_state'):
             merged['shop_state'] = merged['place_of_supply']
@@ -2044,7 +2043,7 @@ def _invoice_pdf_response(invoice, printer=None, download=False):
 
 
 class InvoiceShortLinkView(APIView):
-    """Create or return the current public, expiring PDF link for an invoice."""
+    """Create or return the current canonical public bill link for an invoice."""
     permission_classes = [IsCashierOrAdmin]
 
     def post(self, request, pk):
@@ -2069,13 +2068,13 @@ class InvoiceShortLinkView(APIView):
         short_url = request.build_absolute_uri(reverse('invoice-short-link', kwargs={'code': link.code}))
         return Response({
             'code': link.code,
-            'url': short_url,
+            'short_url': short_url,
             'expires_at': link.expires_at,
         })
 
 
 class PublicInvoiceShortLinkView(APIView):
-    """Serve a PDF without authentication only when its public link is valid."""
+    """Redirect a valid short link to the customer-facing digital bill."""
     authentication_classes = []
     permission_classes = []
     throttle_classes = [AnonRateThrottle]
@@ -2090,21 +2089,10 @@ class PublicInvoiceShortLinkView(APIView):
             # whether an invoice link once existed.
             raise Http404('This invoice link is invalid or has expired.')
 
-        # If accessed from browser or with view=web/html, redirect to digital bill
-        accept = request.META.get('HTTP_ACCEPT', '')
-        if request.query_params.get('download') != '1' and (
-            request.query_params.get('view') == 'web' or 'text/html' in accept
-        ):
-            from django.http import HttpResponseRedirect
-            from decouple import config as env
-            frontend_url = env('FRONTEND_URL', default='http://localhost:3000').rstrip('/')
-            return HttpResponseRedirect(f"{frontend_url}/bill/{link.invoice.public_token}")
-
-        return _invoice_pdf_response(
-            link.invoice,
-            request.query_params.get('printer'),
-            request.query_params.get('download') == '1',
-        )
+        from django.http import HttpResponseRedirect
+        from decouple import config as env
+        frontend_url = env('FRONTEND_URL', default='http://localhost:3000').rstrip('/')
+        return HttpResponseRedirect(f"{frontend_url}/bill/{link.invoice.public_token}")
 
 
 class PublicBillDetailView(APIView):
@@ -2166,13 +2154,17 @@ class PublicBillDetailView(APIView):
             'gstin': (business.gstin if business else None) or business_settings.get('shop_gstin', ''),
             'pan': (business.pan if business else None) or business_settings.get('shop_pan', ''),
             'currency': business.currency if business else '₹',
-            'logo': business.logo.url if (business and business.logo) else business_settings.get('shop_logo', ''),
+            'logo': business_settings.get('shop_logo', '') or (
+                request.build_absolute_uri(business.logo.url)
+                if (business and business.logo) else ''
+            ),
         }
 
         invoice_data = {
             'id': invoice.id,
             'invoice_number': invoice.invoice_number,
             'public_token': invoice.public_token,
+            'short_url': invoice.get_short_url(request=request),
             'created_at': invoice.created_at,
             'customer_name': invoice.customer.name if invoice.customer else invoice.customer_name,
             'customer_phone': invoice.customer.mobile if invoice.customer else invoice.customer_phone,
@@ -2201,11 +2193,37 @@ class PublicBillDetailView(APIView):
             'shop_gstin': business_data['gstin'],
             'shop_pan': business_data['pan'],
             'shop_upi_id': business_settings.get('shop_upi_id', ''),
+            'shop_bank_details': business_settings.get('shop_bank_details', ''),
+            'shop_bank_name': business_settings.get('shop_bank_name', ''),
+            'shop_bank_branch': business_settings.get('shop_bank_branch', ''),
+            'shop_bank_account': business_settings.get('shop_bank_account', ''),
+            'shop_bank_ifsc': business_settings.get('shop_bank_ifsc', ''),
             'currency': business_settings.get('currency', '₹'),
             'invoice_terms': business_settings.get('invoice_terms', ''),
+            'invoice_notes': business_settings.get('invoice_notes', ''),
             'invoice_footer': business_settings.get('invoice_footer', 'Thank you for shopping with us! Visit again.'),
             'invoice_template': business_settings.get('invoice_template', 'gst_a4'),
+            'printer_type': business_settings.get('printer_type', 'a4'),
             'enable_invoice_qr': business_settings.get('enable_invoice_qr', 'true'),
+            'shop_logo': business_settings.get('shop_logo', ''),
+            'show_business_logo': business_settings.get('show_business_logo', 'true'),
+            'show_business_address': business_settings.get('show_business_address', 'true'),
+            'show_business_phone': business_settings.get('show_business_phone', 'true'),
+            'show_business_email': business_settings.get('show_business_email', 'true'),
+            'show_business_gstin': business_settings.get('show_business_gstin', 'true'),
+            'show_business_pan': business_settings.get('show_business_pan', 'true'),
+            'show_customer_address': business_settings.get('show_customer_address', 'true'),
+            'show_customer_phone': business_settings.get('show_customer_phone', 'true'),
+            'show_customer_gstin': business_settings.get('show_customer_gstin', 'true'),
+            'show_notes': business_settings.get('show_notes', 'true'),
+            'show_terms': business_settings.get('show_terms', 'true'),
+            'show_bank_details': business_settings.get('show_bank_details', 'true'),
+            'show_upi_qr_on_invoice': business_settings.get('show_upi_qr_on_invoice', 'true'),
+            'show_upi_qr_on_thermal': business_settings.get('show_upi_qr_on_thermal', 'true'),
+            'show_payment_summary': business_settings.get('show_payment_summary', 'true'),
+            'show_balance_due': business_settings.get('show_balance_due', 'true'),
+            'invoice_paper_size': business_settings.get('invoice_paper_size', 'a4'),
+            'invoice_header_layout': business_settings.get('invoice_header_layout', 'logo_left'),
         }
 
         return Response({
@@ -2215,8 +2233,8 @@ class PublicBillDetailView(APIView):
         })
 
 
-class PublicBillPDFView(APIView):
-    """Public endpoint to download/stream the PDF for a bill token without auth."""
+class PublicBillDocumentView(APIView):
+    """Render the configured A4 or thermal document for the public bill page."""
     authentication_classes = []
     permission_classes = []
     throttle_classes = [AnonRateThrottle]
@@ -3430,15 +3448,15 @@ def _invoice_message_body(shop_name, customer_name, invoice, short_url):
     status = str(invoice.payment_status or 'pending').replace('_', ' ').title()
     inv_date = invoice.created_at.strftime('%d %b %Y') if invoice.created_at else ''
     lines = [
-        f'{shop_name}: Invoice {invoice.invoice_number}',
+        f'{shop_name} - Bill {invoice.invoice_number}',
         f'Customer: {customer_name}',
         f'Date: {inv_date}',
         f'Amount: Rs.{invoice.grand_total:,.2f}',
         f'Payment: {status}',
     ]
     if short_url:
-        lines += [f'View bill: {short_url}']
-    lines += ['Thank you for shopping with us.']
+        lines += ['', 'View your bill:', short_url]
+    lines += ['', 'Thank you for shopping with us.']
     return '\n'.join(lines)
 
 
@@ -3456,7 +3474,7 @@ def _payment_reminder_body(shop_name, customer_name, amount, short_url=''):
 
 def _statement_message_body(shop_name, customer_name, total_invoiced, total_paid, outstanding, short_url=''):
     lines = [
-        f'{shop_name}: Account statement',
+        f'{shop_name}: Statement of Account',
         f'Dear {customer_name},',
         f'Total billed: Rs.{total_invoiced:,.2f}',
         f'Total paid: Rs.{total_paid:,.2f}',
@@ -3824,4 +3842,3 @@ class CommunicationLogViewSet(viewsets.ReadOnlyModelViewSet):
         if channel:
             qs = qs.filter(channel=channel)
         return qs
-

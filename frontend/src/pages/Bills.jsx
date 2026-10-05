@@ -74,17 +74,18 @@ const STATUS_FILTERS = [
 ]
 
 function buildShareText(bill, shopName) {
-  return `*${shopName || 'Dreamwithtech'} — Invoice ${
-    bill.invoice_number
-  }*\nCustomer: ${
-    bill.customer_name || 'Walk-in customer'
-  }\nDate: ${new Date(bill.created_at).toLocaleDateString(
-    'en-IN'
-  )}\nTotal: ${fmt(
-    bill.grand_total
-  )}\nPayment: ${bill.payment_method?.toUpperCase() || '—'} — ${
-    bill.payment_status?.toUpperCase() || bill.status?.toUpperCase() || '—'
-  }\n\nThank you for shopping with us!`
+  const date = bill.created_at
+    ? new Date(bill.created_at).toLocaleDateString('en-IN')
+    : '—'
+  return [
+    `${shopName || 'Dreamwithtech'} — Invoice ${bill.invoice_number}`,
+    `Customer: ${bill.customer_name || 'Walk-in customer'}`,
+    `Date: ${date}`,
+    `Total: ${fmt(bill.grand_total)}`,
+    `Payment: ${bill.payment_method?.toUpperCase() || '—'} — ${
+      bill.payment_status?.toUpperCase() || bill.status?.toUpperCase() || '—'
+    }`,
+  ].join('\n')
 }
 
 function paymentLabel(method) {
@@ -144,10 +145,10 @@ async function fetchPdfBlob(billId) {
   return res.blob()
 }
 
-async function getShortPdfUrl(billId) {
+async function getShortUrl(billId) {
   const link = await invoiceService.createShortLink(billId)
-  if (!link?.url) throw new Error('Short-link response did not contain a URL')
-  return link.url
+  if (!link?.short_url) throw new Error('Short-link response did not contain a URL')
+  return link.short_url
 }
 
 function ShareMenu({ bill, shopName, onClose }) {
@@ -155,8 +156,11 @@ function ShareMenu({ bill, shopName, onClose }) {
   const phone = bill.customer_phone || ''
 
   const shareTextWithLink = async () => {
-    const pdfUrl = await getShortPdfUrl(bill.id)
-    return { pdfUrl, text: `${text}\n\nDownload PDF: ${pdfUrl}` }
+    const shortUrl = bill.short_url || await getShortUrl(bill.id)
+    return {
+      shortUrl,
+      text: `${text}\n\nView your bill:\n${shortUrl}\n\nThank you for shopping with us.`,
+    }
   }
 
   const actions = [
@@ -200,7 +204,8 @@ function ShareMenu({ bill, shopName, onClose }) {
         }
         try {
           const { text: message } = await shareTextWithLink()
-          window.location.href = `sms:${phone}?body=${encodeURIComponent(message)}`
+          const smsPhone = phone.replace(/\D/g, '')
+          window.location.href = `sms:${smsPhone}?body=${encodeURIComponent(message)}`
         } catch {
           toast.error('Could not create a share link')
         }
@@ -223,7 +228,7 @@ function ShareMenu({ bill, shopName, onClose }) {
       },
     },
     {
-      label: 'Share PDF',
+      label: 'Share Bill',
       icon: <FileText size={16} className="text-rose-600 dark:text-rose-400" />,
       hover: 'hover:bg-rose-50 dark:bg-rose-950/60',
       icon: <FileText size={16} className="text-rose-400" />,
@@ -232,13 +237,14 @@ function ShareMenu({ bill, shopName, onClose }) {
         try {
           const [blob, shortUrl] = await Promise.all([
             fetchPdfBlob(bill.id),
-            getShortPdfUrl(bill.id),
+            getShortUrl(bill.id),
           ])
           const file = new File([blob], `invoice-${bill.invoice_number}.pdf`, { type: 'application/pdf' })
           if (navigator.canShare?.({ files: [file] })) {
             await navigator.share({ files: [file], title: `Invoice ${bill.invoice_number}` })
           } else if (navigator.share) {
-            await navigator.share({ title: `Invoice ${bill.invoice_number}`, text, url: shortUrl })
+            const message = `${text}\n\nView your bill:\n${shortUrl}`
+            await navigator.share({ title: `Invoice ${bill.invoice_number}`, text: message })
           } else {
             const a = document.createElement('a')
             a.href = URL.createObjectURL(blob)
@@ -253,14 +259,14 @@ function ShareMenu({ bill, shopName, onClose }) {
       },
     },
     {
-      label: 'Copy PDF link',
+      label: 'Copy Bill Link',
       icon: <Share2 size={16} className="text-[var(--muted)]" />,
       hover: 'hover:bg-[var(--surface-elevated)]',
       action: async () => {
         try {
-          const pdfUrl = await getShortPdfUrl(bill.id)
-          await navigator.clipboard.writeText(pdfUrl)
-          toast.success('PDF link copied')
+          const shortUrl = bill.short_url || await getShortUrl(bill.id)
+          await navigator.clipboard.writeText(shortUrl)
+          toast.success('Bill link copied')
         } catch {
           toast.error('Could not create a share link')
         }
@@ -447,49 +453,6 @@ function InvoiceActions({
         <Eye size={15} />
       </button>
 
-      <button
-        onClick={async e => {
-          e.stopPropagation()
-          const cleanPhone = (bill.customer_phone || '').replace(/\D/g, '')
-          const popup = window.open('', '_blank')
-          try {
-            const res = await invoiceService.sendWhatsApp(bill.id, cleanPhone)
-            if (res?.whatsapp_url) {
-              if (popup) popup.location.href = res.whatsapp_url
-              else window.location.href = res.whatsapp_url
-              toast.success('WhatsApp opened & logged!')
-            } else {
-              popup?.close()
-              toast.error('Could not open WhatsApp')
-            }
-          } catch {
-            popup?.close()
-            toast.error('Failed to initiate WhatsApp')
-          }
-        }}
-        className="icon-btn text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/60"
-        className="icon-btn text-emerald-400 hover:bg-emerald-950/60"
-        title="Send WhatsApp"
-      >
-        <MessageCircle size={15} />
-      </button>
-
-      <button
-        onClick={() => openPdf(bill.id, false)}
-        className="icon-btn"
-        title="Download PDF"
-      >
-        <Download size={15} />
-      </button>
-
-      <button
-        onClick={() => openPdf(bill.id, true)}
-        className="icon-btn"
-        title="Thermal print"
-      >
-        <Printer size={15} />
-      </button>
-
       <div className="relative">
         <button
           onClick={e => {
@@ -536,7 +499,7 @@ function InvoiceActions({
                 onClick={async () => {
                   setMenuOpen(false)
                   try {
-                    const url = bill.short_url || await getShortPdfUrl(bill.id)
+                    const url = bill.short_url || await getShortUrl(bill.id)
                     window.open(url, '_blank')
                   } catch {
                     toast.error('Could not get bill link')
@@ -552,7 +515,7 @@ function InvoiceActions({
                 onClick={async () => {
                   setMenuOpen(false)
                   try {
-                    const url = bill.short_url || await getShortPdfUrl(bill.id)
+                    const url = bill.short_url || await getShortUrl(bill.id)
                     await navigator.clipboard.writeText(url)
                     toast.success('Bill link copied!')
                   } catch {
@@ -683,7 +646,7 @@ function InvoiceModal({
               <button
                 onClick={async () => {
                   try {
-                    const url = selected.short_url || await getShortPdfUrl(selected.id)
+                    const url = selected.short_url || await getShortUrl(selected.id)
                     window.open(url, '_blank')
                   } catch {
                     toast.error('Could not get bill link')
@@ -699,7 +662,7 @@ function InvoiceModal({
               <button
                 onClick={async () => {
                   try {
-                    const url = selected.short_url || await getShortPdfUrl(selected.id)
+                    const url = selected.short_url || await getShortUrl(selected.id)
                     await navigator.clipboard.writeText(url)
                     toast.success('Bill link copied!')
                   } catch {
@@ -879,19 +842,8 @@ function MobileInvoiceCard({ bill, shopName, onView, onRefresh }) {
         </p>
       )}
 
-      <button
-        type="button"
-        onClick={e => {
-          e.stopPropagation()
-          navigate(`/invoice/${bill.id}`)
-        }}
-        className="btn-primary mt-3 w-full sm:hidden"
-      >
-        <Eye size={15} /> Open bill
-      </button>
-
       <div
-        className="mt-3 border-t border-[var(--line-subtle)] pt-2.5"
+        className="mt-3 flex justify-end border-t border-[var(--line-subtle)] pt-2.5"
         onClick={e => e.stopPropagation()}
       >
         <InvoiceActions

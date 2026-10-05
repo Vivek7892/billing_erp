@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { QRCodeSVG } from 'qrcode.react'
+
+import invoiceService from '../features/billing/api/invoiceService'
+import { API_BASE_URL } from '../api'
 import {
   Download,
   Printer,
@@ -14,35 +18,79 @@ import {
   MapPin,
 } from 'lucide-react'
 
-// API base URL for public calls
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace(/\/+$/, '')
-
 export default function PublicBill() {
-  const { token } = useParams()
+  const { token, id } = useParams()
+  const [resolvedToken, setResolvedToken] = useState(token || '')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
+  const [selectedPrinter, setSelectedPrinter] = useState('a4')
 
   useEffect(() => {
-    if (!token) {
-      setError('Invalid bill link.')
-      setLoading(false)
-      return
+    let active = true
+
+    if (token) {
+      setResolvedToken(token)
+      return () => {
+        active = false
+      }
     }
 
-    axios
-      .get(`${API_BASE_URL}/public/bill/${token}/`)
-      .then(res => {
-        setData(res.data)
-        setLoading(false)
+    if (!id) {
+      setError('Invalid bill link.')
+      setLoading(false)
+      return () => {
+        active = false
+      }
+    }
+
+    invoiceService
+      .getInvoice(id)
+      .then(invoice => {
+        if (!active) return
+        if (!invoice?.public_token) {
+          throw new Error('This invoice does not have a public bill token.')
+        }
+        setResolvedToken(invoice.public_token)
       })
       .catch(err => {
+        if (!active) return
         const msg = err.response?.data?.detail || 'This digital bill was not found or the link has expired.'
         setError(msg)
         setLoading(false)
       })
-  }, [token])
+
+    return () => {
+      active = false
+    }
+  }, [id, token])
+
+  useEffect(() => {
+    if (!resolvedToken) return
+
+    let active = true
+    setLoading(true)
+    setError('')
+
+    axios
+      .get(`${API_BASE_URL}/public/bill/${resolvedToken}/`)
+      .then(res => {
+        if (!active) return
+        setData(res.data)
+        setLoading(false)
+      })
+      .catch(err => {
+        if (!active) return
+        const msg = err.response?.data?.detail || 'This digital bill was not found or the link has expired.'
+        setError(msg)
+        setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [resolvedToken])
 
   const copyBillLink = () => {
     const url = window.location.href
@@ -58,18 +106,77 @@ export default function PublicBill() {
       })
   }
 
-  const downloadPdf = (printer = false) => {
-    const url = `${API_BASE_URL}/public/bill/${token}/pdf/?download=1${printer ? '&printer=thermal' : ''}`
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `Invoice-${data?.invoice?.invoice_number || token}${printer ? '-thermal' : ''}.pdf`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const configuredPrinter = (
+    s => {
+      const template = String(s?.invoice_template || '').toLowerCase()
+      const printer = String(s?.printer_type || '').toLowerCase()
+      return template.startsWith('thermal') || printer.startsWith('thermal') ? 'thermal' : 'a4'
+    }
+  )(data?.settings)
+
+  useEffect(() => {
+    setSelectedPrinter(configuredPrinter)
+  }, [configuredPrinter])
+
+  const fetchDocument = async (printer, download = false) => {
+    const response = await axios.get(
+      `${API_BASE_URL}/public/bill/${resolvedToken}/document/`,
+      {
+        params: { printer, download: download ? '1' : '0' },
+        responseType: 'blob',
+      }
+    )
+    if (!response.data || response.data.size === 0) {
+      throw new Error('The bill document was empty.')
+    }
+    return URL.createObjectURL(response.data)
   }
 
-  const printBill = () => {
-    window.print()
+  const downloadPdf = async (printer = selectedPrinter) => {
+    try {
+      const url = await fetchDocument(printer, true)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Invoice-${data.invoice.invoice_number}-${printer}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+      toast.success(`${printer === 'thermal' ? 'Thermal' : 'A4'} PDF downloaded.`)
+    } catch (err) {
+      console.error('Public bill PDF download failed:', err)
+      toast.error('Could not generate the bill PDF.')
+    }
+  }
+
+  const printBill = async (printer = selectedPrinter) => {
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      toast.error('Popup blocked. Allow popups to print the bill.')
+      return
+    }
+
+    try {
+      const url = await fetchDocument(printer)
+      let printed = false
+      const printDocument = () => {
+        if (printed) return
+        printed = true
+        printWindow.focus()
+        printWindow.print()
+      }
+      // Navigate the approved popup directly to the generated blob URL. This
+      // keeps the browser's PDF viewer as the print target instead of an
+      // empty about:blank wrapper document.
+      printWindow.location.href = url
+      window.setTimeout(printDocument, 3000)
+      toast.success(`${printer === 'thermal' ? 'Thermal' : 'A4'} bill opened for printing.`)
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    } catch (err) {
+      printWindow.close()
+      console.error('Public bill PDF print failed:', err)
+      toast.error('Could not generate the bill PDF.')
+    }
   }
 
   const fmt = val => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -119,6 +226,15 @@ export default function PublicBill() {
   }
 
   const { invoice: inv, business: biz, settings: s } = data
+  const settingEnabled = key => String(s?.[key] ?? 'true').toLowerCase() !== 'false'
+  const bankDetails = s?.shop_bank_details || [
+    s?.shop_bank_name && `Bank: ${s.shop_bank_name}`,
+    s?.shop_bank_branch && `Branch: ${s.shop_bank_branch}`,
+    s?.shop_bank_account && `A/C: ${s.shop_bank_account}`,
+    s?.shop_bank_ifsc && `IFSC: ${s.shop_bank_ifsc}`,
+  ].filter(Boolean).join(' | ')
+  const showPaymentQr = settingEnabled('show_upi_qr_on_invoice') && Boolean(s?.shop_upi_id)
+  const showBillQr = settingEnabled('enable_invoice_qr') && Boolean(inv.short_url)
   const isPaid = (inv.payment_status || '').toLowerCase() === 'paid'
   const isCancelled = (inv.status || '').toLowerCase() === 'cancelled'
 
@@ -138,22 +254,43 @@ export default function PublicBill() {
           </div>
 
           <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center rounded-lg border border-[var(--line,#263244)] bg-[var(--surface-elevated,#172033)] p-0.5">
+              {[
+                ['a4', 'A4'],
+                ['thermal', 'Thermal'],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setSelectedPrinter(value)}
+                  className={`rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                    selectedPrinter === value
+                      ? 'bg-[#1E3A5F] text-white'
+                      : 'text-[var(--muted,#64748B)] hover:text-[var(--ink,#F8FAFC)]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <button
-              onClick={() => downloadPdf(false)}
+              onClick={() => downloadPdf(selectedPrinter)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#1E3A5F] text-white text-xs font-semibold hover:bg-[#162F4D] transition"
               title="Download official PDF copy"
             >
               <Download size={13} />
-              <span>Download PDF</span>
+              <span>Download {selectedPrinter === 'thermal' ? 'Thermal' : 'A4'}</span>
             </button>
 
             <button
-              onClick={printBill}
+              onClick={() => printBill(selectedPrinter)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--line,#263244)] bg-[var(--surface-elevated,#172033)] text-[var(--ink,#F8FAFC)] text-xs font-semibold hover:bg-[var(--line,#263244)] transition"
               title="Print bill"
             >
               <Printer size={13} />
-              <span className="hidden sm:inline">Print</span>
+              <span className="hidden sm:inline">
+                Print {selectedPrinter === 'thermal' ? 'Thermal' : 'A4'}
+              </span>
             </button>
 
             <button
@@ -174,27 +311,34 @@ export default function PublicBill() {
         <div className="border-b border-[var(--line,#263244)] bg-[var(--surface-elevated,#172033)] p-5 sm:p-7 print:bg-white">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div className="space-y-1">
+              {(settingEnabled('show_business_logo') && (s.shop_logo || biz.logo)) && (
+                <img
+                  src={s.shop_logo || biz.logo}
+                  alt={`${biz.name || 'Business'} logo`}
+                  className="h-14 w-auto max-w-[180px] object-contain object-left"
+                />
+              )}
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--ink,#F8FAFC)] print:text-black">
                 {biz.name || 'Store Invoice'}
               </h1>
-              {biz.address && (
+              {settingEnabled('show_business_address') && biz.address && (
                 <p className="text-xs text-[var(--ink-secondary,#94A3B8)] print:text-gray-700 flex items-start gap-1.5 max-w-sm">
                   <MapPin size={13} className="shrink-0 text-[var(--muted,#64748B)] mt-0.5" />
                   <span>{biz.address}</span>
                 </p>
               )}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-xs text-[var(--muted,#64748B)]">
-                {biz.mobile && (
+                {settingEnabled('show_business_phone') && biz.mobile && (
                   <span className="flex items-center gap-1">
                     <Phone size={12} className="text-[var(--muted,#64748B)]" /> {biz.mobile}
                   </span>
                 )}
-                {biz.email && (
+                {settingEnabled('show_business_email') && biz.email && (
                   <span className="flex items-center gap-1">
                     <Mail size={12} className="text-[var(--muted,#64748B)]" /> {biz.email}
                   </span>
                 )}
-                {biz.gstin && (
+                {settingEnabled('show_business_gstin') && biz.gstin && (
                   <span className="font-mono bg-[var(--surface,#111827)] border border-[var(--line,#263244)] px-1.5 py-0.5 rounded text-[11px] font-semibold text-[var(--ink-secondary,#94A3B8)]">
                     GSTIN: {biz.gstin}
                   </span>
@@ -228,8 +372,8 @@ export default function PublicBill() {
             <div>
               <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted,#64748B)] block">Billed To</span>
               <span className="font-semibold text-[var(--ink,#F8FAFC)] print:text-black block text-sm">{inv.customer_name || 'Walk-in Customer'}</span>
-              {inv.customer_phone && <span className="text-[var(--ink-secondary,#94A3B8)]">{inv.customer_phone}</span>}
-              {inv.customer_address && <p className="text-[var(--muted,#64748B)] mt-0.5 line-clamp-2">{inv.customer_address}</p>}
+              {settingEnabled('show_customer_phone') && inv.customer_phone && <span className="text-[var(--ink-secondary,#94A3B8)]">{inv.customer_phone}</span>}
+              {settingEnabled('show_customer_address') && inv.customer_address && <p className="text-[var(--muted,#64748B)] mt-0.5 line-clamp-2">{inv.customer_address}</p>}
             </div>
 
             <div className="text-right">
@@ -302,7 +446,7 @@ export default function PublicBill() {
                 <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted,#64748B)] block">Payment Method</span>
                 <span className="font-semibold uppercase text-[var(--ink,#F8FAFC)] print:text-black">{inv.payment_method || 'Cash'}</span>
               </div>
-              {inv.notes && (
+              {settingEnabled('show_notes') && inv.notes && (
                 <div>
                   <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted,#64748B)] block">Notes</span>
                   <p className="text-[var(--ink-secondary,#94A3B8)] italic">{inv.notes}</p>
@@ -343,12 +487,14 @@ export default function PublicBill() {
                 <span className="text-base text-[#1E3A5F] dark:text-slate-100 font-mono font-bold">{fmt(inv.grand_total)}</span>
               </div>
 
-              <div className="flex justify-between text-[11px] pt-1 text-[var(--muted,#64748B)]">
-                <span>Paid Amount</span>
-                <span className="font-semibold text-[var(--ink-secondary,#94A3B8)]">{fmt(inv.paid_amount)}</span>
-              </div>
+              {settingEnabled('show_payment_summary') && (
+                <div className="flex justify-between text-[11px] pt-1 text-[var(--muted,#64748B)]">
+                  <span>Paid Amount</span>
+                  <span className="font-semibold text-[var(--ink-secondary,#94A3B8)]">{fmt(inv.paid_amount)}</span>
+                </div>
+              )}
 
-              {inv.balance_due > 0 && (
+              {settingEnabled('show_balance_due') && inv.balance_due > 0 && (
                 <div className="flex justify-between text-[11px] font-bold text-rose-400">
                   <span>Balance Due</span>
                   <span>{fmt(inv.balance_due)}</span>
@@ -358,9 +504,39 @@ export default function PublicBill() {
           </div>
         </div>
 
+        {/* Payment QR and configured bank details */}
+        {(showPaymentQr || showBillQr || (settingEnabled('show_bank_details') && bankDetails)) && (
+          <div className="px-4 sm:px-6 py-4 print:py-3">
+            <div className="flex flex-col sm:flex-row gap-5 items-start">
+              {(showPaymentQr || showBillQr) && (
+                <div className="flex flex-wrap gap-5 items-start">
+                  {showPaymentQr && (
+                    <div className="text-center">
+                      <QRCodeSVG value={`upi://pay?pa=${encodeURIComponent(s.shop_upi_id)}&pn=${encodeURIComponent(biz.name || '')}&am=${Number(inv.grand_total || 0).toFixed(2)}&cu=INR`} size={92} />
+                      <p className="mt-1 text-[9px] font-bold tracking-wide text-teal-700">SCAN TO PAY</p>
+                    </div>
+                  )}
+                  {showBillQr && (
+                    <div className="text-center">
+                      <QRCodeSVG value={inv.short_url} size={92} />
+                      <p className="mt-1 text-[9px] font-bold tracking-wide text-indigo-700">SCAN TO VIEW BILL</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              {settingEnabled('show_bank_details') && bankDetails && (
+                <div className="text-xs text-[var(--ink-secondary,#94A3B8)]">
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted,#64748B)]">Bank Details</p>
+                  <p className="mt-1 whitespace-pre-line">{bankDetails}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Footer & Terms */}
         <div className="border-t border-[var(--line,#263244)] p-5 text-center bg-[var(--surface,#111827)] print:bg-white space-y-2">
-          {s?.invoice_terms && (
+          {settingEnabled('show_terms') && s?.invoice_terms && (
             <div className="text-[10px] text-[var(--muted,#64748B)] text-left max-w-xl mx-auto pb-2 border-b border-[var(--line,#263244)]">
               <span className="font-bold text-[var(--ink-secondary,#94A3B8)] block uppercase tracking-wider mb-0.5">Terms & Conditions</span>
               <p className="whitespace-pre-line leading-relaxed">{s.invoice_terms}</p>
@@ -379,16 +555,16 @@ export default function PublicBill() {
         {/* Bottom Actions Bar on Mobile */}
         <div className="border-t border-[var(--line,#263244)] bg-[var(--surface-elevated,#172033)] p-3 flex sm:hidden items-center justify-around gap-2 print:hidden">
           <button
-            onClick={() => downloadPdf(false)}
+            onClick={() => downloadPdf(selectedPrinter)}
             className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-md bg-[#1E3A5F] text-white text-xs font-semibold hover:bg-[#162F4D] transition"
           >
-            <Download size={14} /> Download PDF
+            <Download size={14} /> Download {selectedPrinter === 'thermal' ? 'Thermal' : 'A4'}
           </button>
           <button
-            onClick={printBill}
+            onClick={() => printBill(selectedPrinter)}
             className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border border-[var(--line,#263244)] bg-[var(--surface,#111827)] text-[var(--ink,#F8FAFC)] text-xs font-semibold"
           >
-            <Printer size={14} /> Print Bill
+            <Printer size={14} /> Print {selectedPrinter === 'thermal' ? 'Thermal' : 'A4'}
           </button>
         </div>
       </div>

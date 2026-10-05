@@ -420,12 +420,19 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
           </div>
         )}
 
-        <div className="pb-c">
+        <section className="pb-quick-qr-preview" aria-label="UPI payment QR">
+          <div className="pb-quick-qr-heading">
+            <div>
+              <p className="pb-label">Scan to pay</p>
+              <p className="pb-sub">Use any UPI app to pay this amount</p>
+            </div>
+            <QrCode size={20} aria-hidden="true" />
+          </div>
           <div ref={qrRef} className="pb-qr-box">
             {numericAmount > 0 ? (
               <QRCodeSVG
                 value={uri}
-                size={240}
+                size={220}
                 level="M"
                 includeMargin
                 bgColor="#ffffff"
@@ -436,16 +443,16 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
               <div className="pb-qr-empty">Enter an amount to generate the QR</div>
             )}
           </div>
-        </div>
+        </section>
 
-        <div className="pb-c">
+        <div className="pb-qr-details">
           <div className="pb-qr-amount">{fmt(numericAmount)}</div>
           <div className="pb-strong">{shopName}</div>
           <div className="pb-sub">{upiId || 'UPI ID not configured'}</div>
           <div className="pb-sub">Invoice: {invoice || 'NEW-BILL'}</div>
         </div>
 
-        <div className="pb-grid2">
+        <div className="pb-grid2 pb-qr-actions">
           <button type="button" onClick={download} disabled={!canAct} className="pb-btn"><Download size={14} /> Download QR</button>
           <button type="button" onClick={print} disabled={!canAct} className="pb-btn"><Printer size={14} /> Print QR</button>
         </div>
@@ -1066,9 +1073,9 @@ export default function NewBill() {
     }
   }
 
-  const getShortPdfUrl = async (invoiceId) => {
+  const getShortUrl = async (invoiceId) => {
     const link = await invoiceService.createShortLink(invoiceId)
-    return link.url
+    return link.short_url
   }
 
   const shareInvoice = async () => {
@@ -1093,11 +1100,11 @@ export default function NewBill() {
           total: item.total,
         }))
 
-    let pdfUrl = ''
+    let shortUrl = ''
     try {
-      pdfUrl = await getShortPdfUrl(lastInvoice.id)
+      shortUrl = lastInvoice.short_url || await getShortUrl(lastInvoice.id)
     } catch {
-      toast.error('Could not prepare the bill PDF')
+      toast.error('Could not prepare the bill link')
       return
     }
 
@@ -1115,19 +1122,9 @@ export default function NewBill() {
       (lastInvoice.notes ? `Notes: ${lastInvoice.notes}\n` : '') +
       `\nThank you for shopping with us! 🙏\n` +
       `We appreciate your business.\n\n` +
-      `Bill PDF: ${pdfUrl}`
+      `View your bill:\n${shortUrl}`
 
-    let pdfFile = null
-    try {
-      const res = await fetch(pdfUrl)
-      if (!res.ok) throw new Error('fetch failed')
-      const blob = await res.blob()
-      pdfFile = new File([blob], `invoice-${invoiceNumber}.pdf`, { type: 'application/pdf' })
-    } catch {
-      // Continue with the shareable bill description/link.
-    }
-
-    // WhatsApp gets the complete bill description and PDF link.
+    // WhatsApp gets the complete bill description and canonical bill link.
     if (phone) {
       const whatsappPhone = phone.length === 10 ? `91${phone}` : phone
       const waUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`
@@ -1136,27 +1133,18 @@ export default function NewBill() {
       return
     }
 
-    // Native share sheet: share both the bill description and PDF file.
+    // Native share sheet shares the same canonical bill link.
     if (navigator.share) {
       try {
-        if (pdfFile && navigator.canShare?.({ files: [pdfFile] })) {
-          await navigator.share({
-            title: `Bill ${invoiceNumber}`,
-            text: message,
-            files: [pdfFile],
-          })
-        } else {
-          await navigator.share({ title: `Bill ${invoiceNumber}`, text: message })
-        }
+        await navigator.share({ title: `Bill ${invoiceNumber}`, text: message })
         return
       } catch (err) {
         if (err?.name === 'AbortError') return
       }
     }
 
-    // No clipboard/copy-link fallback. Open the PDF for manual sharing.
-    const win = window.open(pdfUrl, '_blank', 'noopener,noreferrer')
-    if (!win) toast.error('Could not open the bill PDF')
+    const win = window.open(shortUrl, '_blank', 'noopener,noreferrer')
+    if (!win) toast.error('Could not open the bill link')
   }
 
   const setExactCash = () => setPayment(x => ({

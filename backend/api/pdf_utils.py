@@ -55,7 +55,7 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
-    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable,
+    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer,
 )
 
 from .models import Setting
@@ -305,9 +305,7 @@ def make_bill_qr(invoice, size_mm=22):
         import qrcode
         from reportlab.platypus import Image as RLImage
 
-        bill_url = invoice.get_short_url() if hasattr(invoice, 'get_short_url') else (
-            invoice.get_public_url() if hasattr(invoice, 'get_public_url') else None
-        )
+        bill_url = invoice.get_short_url() if hasattr(invoice, 'get_short_url') else None
         if not bill_url:
             return None
         qr = qrcode.make(bill_url)
@@ -460,19 +458,11 @@ def _tbl(data, widths, style_cmds=None, repeat=0):
 
 
 def _rule(weight=0.55, gap_above=0, gap_below=0):
+    # Section rhythm is carried by whitespace and headings rather than
+    # repeated horizontal rules.
     flow = []
     if gap_above:
         flow.append(Spacer(1, gap_above))
-    flow.append(
-        HRFlowable(
-            width=BODY_W,
-            thickness=weight,
-            color=INK,
-            spaceBefore=0,
-            spaceAfter=0,
-            hAlign="LEFT",
-        )
-    )
     if gap_below:
         flow.append(Spacer(1, gap_below))
     return flow
@@ -539,6 +529,15 @@ def _logo_for_a4(s):
                 img = RLImage(candidate, width=25 * mm, height=25 * mm)
                 img.hAlign = "LEFT"
                 return img
+
+        if raw_text.startswith(("http://", "https://")):
+            from urllib.request import urlopen
+            with urlopen(raw_text, timeout=8) as response:
+                image_data = BytesIO(response.read())
+            if image_data.getbuffer().nbytes:
+                img = RLImage(image_data, width=25 * mm, height=25 * mm)
+                img.hAlign = "LEFT"
+                return img
     except Exception:
         pass
 
@@ -553,9 +552,6 @@ def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
     brand = _fmt_value(s.shop_name, "SRI BALAJI STORE")
 
     identity_rows = []
-    if logo_flowable is not None and s.flag("show_business_logo", True):
-        identity_rows.append([logo_flowable])
-
     identity_rows.append([para(brand.upper(), size=14.5, bold=True, color=colors.HexColor("#0F172A"))])
 
     if has_val(s.shop_address) and s.flag("show_business_address", True):
@@ -583,13 +579,23 @@ def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
     if registrations:
         identity_rows.append([para("  |  ".join(registrations), size=7.0, color=colors.HexColor("#334155"))])
 
-    identity = _tbl(identity_rows, [None], [
+    details = _tbl(identity_rows, [None], [
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
         ("RIGHTPADDING", (0, 0), (-1, -1), 0),
         ("TOPPADDING", (0, 0), (-1, -1), 0.4),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 0.4),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ])
+    if logo_flowable is not None and s.flag("show_business_logo", True):
+        identity = _tbl([[logo_flowable, details]], [28 * mm, BODY_W * 0.60 - 28 * mm], [
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 2 * mm),
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ])
+    else:
+        identity = details
 
     inv_date = _date_text(getattr(invoice, "created_at", None))
     payment_mode = getattr(invoice, "payment_method", None) or s.get("default_payment_method") or "CASH"
@@ -639,7 +645,7 @@ def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
             ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ]),
-        *_rule(0.65, 2.0 * mm, 2.2 * mm),
+        Spacer(1, 2.2 * mm),
     ]
 
 
@@ -670,35 +676,9 @@ def build_bill_to_and_details(s, invoice):
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
     ])
 
-    qr = None
-    if s.flag("show_upi_qr_on_invoice", True) and has_val(s.get("shop_upi_id")):
-        qr = make_upi_qr(s.get("shop_upi_id"), s.get("shop_name", "Sri Balaji Store"), dec(invoice.grand_total),
-                         size_mm=_qr_size_a4(s), invoice_number=_fmt_value(invoice.invoice_number))
-
-    if qr:
-        right = _tbl([
-            [para("UPI PAYMENT", size=6.8, bold=True, align=TA_CENTER, color=colors.HexColor("#475569"))],
-            [qr],
-            [para("SCAN TO PAY", size=6.2, bold=True, align=TA_CENTER, color=colors.HexColor("#64748B"))],
-        ], [None], [
-            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ("TOPPADDING", (0, 0), (-1, -1), 0.3),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0.3),
-        ])
-    else:
-        right = para("", size=1)
-
     return [
-        _tbl([[left, right]], [BODY_W * 0.72, BODY_W * 0.28], [
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ("TOPPADDING", (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-        ]),
-        *_rule(0.45, 1.8 * mm, 2.2 * mm),
+        left,
+        Spacer(1, 2.0 * mm),
     ]
 
 
@@ -874,13 +854,10 @@ def build_totals(s, invoice, show_tax, interstate):
 
     totals_width = 82 * mm
     totals = _tbl(rows, [totals_width * 0.48, totals_width * 0.52], [
-        ("LINEABOVE", (0, grand_index), (-1, grand_index), 0.8, colors.HexColor("#0F172A")),
-        ("LINEBELOW", (0, grand_index), (-1, grand_index), 0.8, colors.HexColor("#0F172A")),
-        ("BACKGROUND", (0, grand_index), (-1, grand_index), colors.HexColor("#F1F5F9")),
         ("TOPPADDING", (0, 0), (-1, grand_index - 1), 2.0),
         ("BOTTOMPADDING", (0, 0), (-1, grand_index - 1), 2.0),
-        ("TOPPADDING", (0, grand_index), (-1, grand_index), 4.5),
-        ("BOTTOMPADDING", (0, grand_index), (-1, grand_index), 4.5),
+        ("TOPPADDING", (0, grand_index), (-1, grand_index), 3.0),
+        ("BOTTOMPADDING", (0, grand_index), (-1, grand_index), 3.0),
         ("LEFTPADDING", (0, 0), (-1, -1), 3),
         ("RIGHTPADDING", (0, 0), (-1, -1), 3),
     ])
@@ -993,9 +970,6 @@ def build_payment_and_bank(s, invoice):
             ])
 
     style_cmds = [
-        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FFFFFF")),
-        ("LINEABOVE", (0, 0), (-1, 0), 0.5, colors.HexColor("#CBD5E1")),
-        ("LINEBELOW", (0, 1), (-1, 1), 0.5, colors.HexColor("#CBD5E1")),
         ("TOPPADDING", (0, 0), (-1, -1), 2.5),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 2.5),
         ("LEFTPADDING", (0, 0), (-1, -1), 3),
@@ -1003,12 +977,66 @@ def build_payment_and_bank(s, invoice):
     ]
     if len(rows) > 2:
         style_cmds.append(("SPAN", (0, 2), (-1, 2)))
-        style_cmds.append(("LINEABOVE", (0, 2), (-1, 2), 0.3, colors.HexColor("#E2E8F0")))
+    payment_table = _tbl(
+        rows,
+        [BODY_W * 0.28, BODY_W * 0.24, BODY_W * 0.24, BODY_W * 0.24],
+        style_cmds,
+    )
 
-    return [
-        _tbl(rows, [BODY_W * 0.28, BODY_W * 0.24, BODY_W * 0.24, BODY_W * 0.24], style_cmds),
-        Spacer(1, 2.0 * mm),
-    ]
+    qr_blocks = []
+    if s.flag("show_upi_qr_on_invoice", True) and has_val(s.get("shop_upi_id")):
+        upi_qr = make_upi_qr(
+            s.get("shop_upi_id"),
+            s.get("shop_name", "Sri Balaji Store"),
+            grand,
+            size_mm=_qr_size_a4(s),
+            invoice_number=_fmt_value(invoice.invoice_number),
+        )
+        if upi_qr:
+            qr_blocks.append(_tbl([
+                [para("SCAN TO PAY", size=6.2, bold=True, align=TA_CENTER,
+                      color=colors.HexColor("#0F766E"))],
+                [upi_qr],
+            ], [None], [
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0.5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0.5),
+            ]))
+    if s.flag("enable_invoice_qr", True):
+        bill_qr = make_bill_qr(invoice, size_mm=18)
+        if bill_qr:
+            qr_blocks.append(_tbl([
+                [para("SCAN TO VIEW BILL", size=6.2, bold=True, align=TA_CENTER,
+                      color=colors.HexColor("#4F46E5"))],
+                [bill_qr],
+            ], [None], [
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0.5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0.5),
+            ]))
+
+    flow = [payment_table]
+    if qr_blocks:
+        qr_table = Table(
+            [qr_blocks],
+            colWidths=[BODY_W / len(qr_blocks)] * len(qr_blocks),
+            hAlign="LEFT",
+        )
+        qr_table.setStyle(TableStyle([
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 1),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+        ]))
+        flow.extend([Spacer(1, 1.5 * mm), qr_table])
+
+    return flow + [Spacer(1, 2.0 * mm)]
 
 
 def build_notes_and_terms(s, invoice):
@@ -1025,7 +1053,7 @@ def build_notes_and_terms(s, invoice):
         if flow:
             flow.append(Spacer(1, 1.0 * mm))
         flow.append(para(f"<b>Terms &amp; Conditions:</b><br/>{str(terms_text).replace(chr(10), '<br/>')}", size=6.6, leading=8.3, color=colors.HexColor("#64748B")))
-    flow.extend(_rule(0.4, 1.4 * mm, 1.4 * mm))
+    flow.extend(_rule(0.4, 1.4 * mm, 1.0 * mm))
     return flow
 
 
@@ -1058,17 +1086,6 @@ def _invoice_datetime(invoice):
 
 def build_footer(s, invoice=None):
     flowables = []
-    if s.flag("enable_invoice_qr", True) and invoice is not None:
-        qr_img = make_bill_qr(invoice, size_mm=20)
-        if qr_img:
-            flowables.extend([
-                Spacer(1, 2.0 * mm),
-                Table([[qr_img]], colWidths=[BODY_W], hAlign="CENTER", style=[("ALIGN", (0, 0), (-1, -1), "CENTER")]),
-                Spacer(1, 0.5 * mm),
-                para("Scan to View Bill", size=6.5, align=TA_CENTER, color=colors.HexColor("#475569")),
-                Spacer(1, 1.0 * mm),
-            ])
-
     if not s.flag("show_footer", True) or str(s.get("invoice_footer_layout", "text_center")).lower() == "none":
         return flowables
 
@@ -1082,7 +1099,7 @@ def build_footer(s, invoice=None):
     align = TA_LEFT if str(s.get("invoice_footer_layout", "text_center")).lower() == "text_left" else TA_CENTER
     footer_text = _clean_footer(s.get("invoice_footer"))
     flowables.extend([
-        *_rule(0.45, 1.2 * mm, 2.0 * mm),
+        Spacer(1, 1.2 * mm),
         para(f"<b>{footer_text}</b>", size=7.5, align=align, color=colors.HexColor("#334155")),
         Spacer(1, 1.0 * mm),
         para("  ·  ".join(meta), size=6.5, align=align, color=colors.HexColor("#64748B")),
@@ -1155,7 +1172,6 @@ def generate_invoice_pdf(invoice, force_a4=False):
     if s.flag("show_signature_area", False):
         sig_rows = [[para("Prepared by", size=7.0), para("Checked by", size=7.0, align=TA_CENTER), para("Authorised Signatory", size=7.0, align=TA_RIGHT)]]
         sig_tbl = _tbl(sig_rows, [BODY_W / 3] * 3, [
-            ("LINEABOVE", (0, 0), (-1, 0), 0.4, INK),
             ("TOPPADDING", (0, 0), (-1, -1), 10 * mm),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 1.5),
             ("LEFTPADDING", (0, 0), (-1, -1), 0),
@@ -1163,7 +1179,7 @@ def generate_invoice_pdf(invoice, force_a4=False):
         ])
         story.append(Spacer(1, 3 * mm))
         story.append(sig_tbl)
-        story.extend(_rule(0.4, 1.5 * mm, 1.5 * mm))
+        story.append(Spacer(1, 1.5 * mm))
 
     story.extend(build_footer(s, invoice))
 
@@ -1199,10 +1215,6 @@ def _tpara(text, size=T_ITEM, align=TA_LEFT, bold=False, color=INK, leading=None
 
 def _tdashed(story, content_w, gap_above=1.0*mm, gap_below=1.0*mm):
     story.append(Spacer(1, gap_above))
-    story.append(HRFlowable(
-        width=content_w, thickness=0.55, color=INK,
-        dash=(2,1), spaceBefore=0, spaceAfter=0, hAlign="CENTER"
-    ))
     story.append(Spacer(1, gap_below))
 
 
@@ -1262,6 +1274,7 @@ def generate_thermal_invoice_pdf(invoice):
         + len([l for l in (shop_address or "").split("\n") if l.strip()]) * 4
         + (4 if shop_phone or shop_email else 0)
         + (4 if shop_gstin else 0)
+        + (24 if s.flag("show_business_logo", True) and has_val(s.get("shop_logo")) else 0)
         + len(items) * 10
         + (45 if show_qr else 0)
         + (38 if show_bill_qr else 0)
@@ -1286,6 +1299,13 @@ def generate_thermal_invoice_pdf(invoice):
     story = []
 
     # 1. Store identity
+    if s.flag("show_business_logo", True):
+        logo = _logo_for_a4(s)
+        if logo is not None:
+            logo.hAlign = "CENTER"
+            logo.drawHeight = 18 * mm
+            logo.drawWidth = 18 * mm
+            story.append(logo)
     story.append(_tpara(shop_name.upper(), size=T_NAME + 1, align=TA_CENTER, bold=True))
     if s.flag("show_business_address", True):
         for line in (shop_address or "").split("\n"):
@@ -1418,8 +1438,6 @@ def generate_thermal_invoice_pdf(invoice):
 
     totals_tbl = Table(totals_rows, colWidths=[36 * mm, 36 * mm], hAlign="CENTER")
     totals_tbl.setStyle(TableStyle([
-        ("LINEABOVE", (0, 0), (-1, 0), 0.6, BORDER),
-        ("LINEABOVE", (0, grand_idx), (-1, grand_idx), 0.9, BORDER),
         ("TOPPADDING", (0, 0), (-1, -1), 1.5),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 1.5),
         ("TOPPADDING", (0, grand_idx), (-1, grand_idx), 2.8),
@@ -1464,6 +1482,18 @@ def generate_thermal_invoice_pdf(invoice):
         story.append(qr_wrap)
         story.append(_tpara(_fmt_value(upi_id), size=T_META, align=TA_CENTER))
 
+    bill_qr_img = make_bill_qr(invoice, size_mm=_qr_size_thermal(s)) if show_bill_qr else None
+    if bill_qr_img:
+        _tdashed(story, content_w, 1.0 * mm, 0.8 * mm)
+        story.append(_tpara("SCAN TO VIEW BILL", size=T_META, align=TA_CENTER, bold=True))
+        qr_wrap = Table([[bill_qr_img]], colWidths=[content_w], hAlign="CENTER")
+        qr_wrap.setStyle(TableStyle([
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ]))
+        story.append(qr_wrap)
+
     # 8. Terms, signature and footer
     has_terms = show_terms and s.flag("show_terms", True)
     if has_terms or show_signature:
@@ -1479,7 +1509,6 @@ def generate_thermal_invoice_pdf(invoice):
             [_tpara("", size=T_META), _tpara("Authorized Sign.", size=T_META, align=TA_RIGHT)]
         ], colWidths=[content_w / 2, content_w / 2])
         sig_tbl.setStyle(TableStyle([
-            ("LINEABOVE", (0, 0), (-1, 0), 0.4, BORDER),
             ("TOPPADDING", (0, 0), (-1, -1), 1.2),
         ]))
         story.append(sig_tbl)
@@ -1497,18 +1526,6 @@ def generate_thermal_invoice_pdf(invoice):
             meta.append(f"Time: {time_text}")
         meta.append(f"Bill Ref: {_bill_reference_token(invoice)}")
         story.append(_tpara(" | ".join(meta), size=5.8, align=TA_CENTER))
-
-    if show_bill_qr:
-        bill_qr_img = make_bill_qr(invoice, size_mm=_qr_size_thermal(s))
-        if bill_qr_img:
-            _tdashed(story, content_w)
-            story.append(Spacer(1, 0.8 * mm))
-            qr_wrap = Table([[bill_qr_img]], colWidths=[content_w], hAlign="CENTER")
-            qr_wrap.setStyle(TableStyle([("ALIGN", (0, 0), (-1, -1), "CENTER")]))
-            story.append(qr_wrap)
-            story.append(Spacer(1, 0.5 * mm))
-            story.append(_tpara("Scan to View Bill", size=T_META, align=TA_CENTER, bold=True))
-            story.append(Spacer(1, 0.8 * mm))
 
     doc.build(story)
     buffer.seek(0)

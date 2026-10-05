@@ -3,7 +3,7 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 from rest_framework import status
 
-from api.models import Business, User, Customer, Product, Invoice, InvoiceItem, Payment, Setting
+from api.models import Business, Customer, Product, Invoice, InvoiceItem, Payment
 from api.pdf_utils import generate_invoice_pdf, generate_thermal_invoice_pdf
 
 
@@ -57,9 +57,11 @@ class PublicBillEndpointTests(APITestCase):
     def test_invoice_has_public_token_and_url(self):
         self.assertIsNotNone(self.invoice.public_token)
         self.assertTrue(len(self.invoice.public_token) >= 20)
-        url = self.invoice.get_public_url()
-        self.assertIn(f"/bill/{self.invoice.public_token}", url)
-        self.assertIn("/s/", url)
+        url = self.invoice.get_short_url()
+        self.assertRegex(url, r'/s/[A-Za-z0-9]{6}/$')
+        self.assertEqual(self.invoice.short_links.count(), 1)
+        self.assertEqual(url, self.invoice.get_short_url())
+        self.assertEqual(self.invoice.short_links.count(), 1)
 
     def test_public_bill_detail_view(self):
         response = self.client.get(f"/api/public/bill/{self.invoice.public_token}/")
@@ -67,6 +69,7 @@ class PublicBillEndpointTests(APITestCase):
         data = response.json()
         self.assertEqual(data['invoice']['invoice_number'], 'INV-TEST-9001')
         self.assertEqual(data['invoice']['grand_total'], 450.0)
+        self.assertRegex(data['invoice']['short_url'], r'/s/[A-Za-z0-9]{6}/$')
         self.assertEqual(len(data['invoice']['items']), 1)
         self.assertEqual(data['invoice']['items'][0]['product_name'], 'Basmati Rice 5kg')
         self.assertEqual(data['business']['name'], 'Test Retailer Hub')
@@ -76,14 +79,19 @@ class PublicBillEndpointTests(APITestCase):
         response = self.client.get("/api/public/bill/invalid-token-12345/")
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_public_bill_pdf_view_a4(self):
-        response = self.client.get(f"/api/public/bill/{self.invoice.public_token}/pdf/")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response['Content-Type'], 'application/pdf')
-        self.assertTrue(len(response.content) > 1000)
+    def test_short_link_redirects_to_frontend_bill(self):
+        link = self.invoice.short_links.filter(expires_at__gt=timezone.now()).first()
+        response = self.client.get(f"/s/{link.code}/")
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertIn(f'/bill/{self.invoice.public_token}', response['Location'])
+        self.assertNotIn('/public/bill/', response['Location'])
 
-    def test_public_bill_pdf_view_thermal(self):
-        response = self.client.get(f"/api/public/bill/{self.invoice.public_token}/pdf/?printer=thermal")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response['Content-Type'], 'application/pdf')
-        self.assertTrue(len(response.content) > 500)
+    def test_public_bill_document_uses_existing_pdf_generators(self):
+        a4 = self.client.get(f"/api/public/bill/{self.invoice.public_token}/document/?printer=a4")
+        thermal = self.client.get(f"/api/public/bill/{self.invoice.public_token}/document/?printer=thermal")
+        self.assertEqual(a4.status_code, status.HTTP_200_OK)
+        self.assertEqual(thermal.status_code, status.HTTP_200_OK)
+        self.assertEqual(a4['Content-Type'], 'application/pdf')
+        self.assertEqual(thermal['Content-Type'], 'application/pdf')
+        self.assertIn('-a4.pdf', a4['Content-Disposition'])
+        self.assertIn('-thermal.pdf', thermal['Content-Disposition'])

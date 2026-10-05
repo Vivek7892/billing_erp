@@ -23,7 +23,6 @@ import Reports from './pages/Reports'
 import Users from './pages/Users'
 import Settings from './pages/Settings'
 import Support from './pages/Support'
-import InvoicePreview from './pages/InvoicePreview'
 import PaymentReconciliation from './pages/PaymentReconciliation'
 import Notifications from './pages/Notifications'
 import PublicBill from './pages/PublicBill'
@@ -374,7 +373,7 @@ function AppRoutes() {
         path="/invoice-preview"
         element={
           <Guard>
-            <InvoicePreview />
+            <PublicBill />
           </Guard>
         }
       />
@@ -383,7 +382,7 @@ function AppRoutes() {
         path="/invoice/:id"
         element={
           <Guard>
-            <InvoicePreview />
+            <PublicBill />
           </Guard>
         }
       />

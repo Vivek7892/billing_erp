@@ -2,7 +2,7 @@ import uuid
 import hashlib
 import secrets
 import string
-from django.db import models
+from django.db import IntegrityError, models
 from django.db.models import Q
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
@@ -304,49 +304,39 @@ class Invoice(models.Model):
         if not self.public_token:
             self.public_token = generate_public_token()
         super().save(*args, **kwargs)
+        self.get_short_url()
 
     def get_public_url(self, request=None):
-        if not self.public_token:
-            self.public_token = generate_public_token()
-            Invoice.objects.filter(pk=self.pk).update(public_token=self.public_token)
-        from django.conf import settings
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000').rstrip('/')
-        return f"{frontend_url}/bill/{self.public_token}"
         return self.get_short_url(request=request)
 
     def get_short_url(self, request=None):
         """Return the canonical 6-character short link URL for this invoice (e.g. /s/x3gIro/)."""
-        """Return the canonical short link URL for this invoice (e.g. http://127.0.0.1:8000/s/ofVp17/)."""
         link = self.short_links.filter(expires_at__gt=timezone.now()).first()
         if not link:
             for _ in range(5):
                 try:
                     link = ShortLink.objects.create(invoice=self)
                     break
-                except Exception:
+                except IntegrityError:
                     link = None
         if not link:
-            return self.get_public_url(request)
-        code = link.code if link else (self.public_token[:6] if self.public_token else 'bill')
+            raise RuntimeError('Could not create a public short link for the invoice.')
         if request:
             try:
                 from django.urls import reverse
                 return request.build_absolute_uri(reverse('invoice-short-link', kwargs={'code': link.code}))
-                return request.build_absolute_uri(reverse('invoice-short-link', kwargs={'code': code}))
             except Exception:
                 pass
         from decouple import config as env
         base_url = env('BACKEND_URL', default='https://billing-erp-7ga7.onrender.com').rstrip('/')
         return f"{base_url}/s/{link.code}/"
-        base_url = env('BACKEND_URL', default='http://127.0.0.1:8000').rstrip('/')
-        return f"{base_url}/s/{code}/"
 
     def __str__(self):
         return self.invoice_number
 
 
 class ShortLink(models.Model):
-    """A time-limited public link to an invoice PDF."""
+    """A time-limited public link to an invoice's digital bill."""
     code = models.CharField(max_length=6, unique=True, default=generate_short_link_code, editable=False)
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='short_links')
     expires_at = models.DateTimeField(default=default_short_link_expiry)
@@ -760,4 +750,3 @@ class CommunicationLog(models.Model):
 
     def __str__(self):
         return f"{self.channel.upper()} | {self.message_type} -> {self.recipient_name} ({self.status})"
-
