@@ -10,6 +10,7 @@ import {
   ChevronRight,
   ReceiptText,
   ArrowLeft,
+  Clock3,
 } from 'lucide-react'
 
 const DRAFT_KEY = 'pos_drafts'
@@ -28,6 +29,7 @@ function saveDrafts(drafts) {
 
 const fmt = v =>
   `₹${Number(v || 0).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`
 
@@ -55,28 +57,40 @@ export default function Drafts() {
     setDrafts([])
   }
 
+  const totalLineItems = drafts.reduce(
+    (sum, draft) => sum + (draft.cart?.length || 0),
+    0
+  )
+
+  const totalDraftValue = drafts.reduce(
+    (sum, draft) =>
+      sum +
+      (draft.cart?.reduce((s, item) => s + (item.total || 0), 0) || 0),
+    0
+  )
+
   if (drafts.length === 0) {
     return (
       <div className="min-h-[calc(100vh-120px)] bg-[var(--app-bg)] flex items-center justify-center px-4">
         <div className="text-center max-w-md">
-          <div className="mx-auto mb-5 w-16 h-16 rounded-2xl bg-[var(--primary-light)] border border-[var(--primary-border)] flex items-center justify-center">
-            <ReceiptText size={27} className="text-[var(--primary)]" />
+          <div className="mx-auto mb-4 w-14 h-14 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)] flex items-center justify-center text-[#1E3A5F] dark:text-slate-200">
+            <ReceiptText size={26} />
           </div>
 
           <h2 className="text-lg font-bold text-[var(--ink)]">
             No Parked Bills
           </h2>
 
-          <p className="mt-2 text-sm text-[var(--muted)] leading-6">
+          <p className="mt-1 text-xs text-[var(--muted)] leading-5">
             Bills saved as drafts will appear here. Resume a parked bill
-            whenever the customer is ready to continue.
+            whenever the customer is ready to continue checkout.
           </p>
 
           <button
             onClick={() => navigate('/billing/new')}
-            className="mt-5 inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-sm font-semibold transition-colors shadow-[var(--shadow-primary)]"
+            className="btn-primary mt-4 inline-flex items-center gap-2 h-9 px-4 rounded-md text-xs font-semibold transition-colors"
           >
-            <ShoppingCart size={15} />
+            <ShoppingCart size={14} />
             Create New Bill
           </button>
         </div>
@@ -85,19 +99,19 @@ export default function Drafts() {
   }
 
   return (
-    <div className="w-full min-h-full bg-[var(--app-bg)]">
+    <div className="w-full min-h-full bg-[var(--app-bg)] pb-8">
       {/* Page header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[var(--primary-light)] border border-[var(--primary-border)] flex items-center justify-center">
-            <Layers size={19} className="text-[var(--primary)]" />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-md bg-[var(--surface-elevated)] border border-[var(--line)] flex items-center justify-center text-[#1E3A5F] dark:text-slate-200 shrink-0">
+            <Layers size={18} />
           </div>
 
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-[var(--ink)]">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[var(--ink)]">
               Parked Bills
-            </h2>
-            <p className="text-xs text-[var(--muted)] mt-0.5 leading-5  ">
+            </h1>
+            <p className="text-xs text-[var(--muted)]">
               {drafts.length} bill{drafts.length !== 1 ? 's' : ''} waiting to be resumed
             </p>
           </div>
@@ -105,8 +119,8 @@ export default function Drafts() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate('/new-bill')}
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] text-xs font-semibold transition-colors"
+            onClick={() => navigate('/billing/new')}
+            className="btn-secondary inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-semibold"
           >
             <ArrowLeft size={13} />
             New Bill
@@ -114,7 +128,7 @@ export default function Drafts() {
 
           <button
             onClick={clearAll}
-            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-[var(--danger-light)] border border-[var(--danger-border)] text-[var(--danger)] hover:bg-[var(--danger-light)] text-xs font-semibold transition-colors"
+            className="btn-danger inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-semibold"
           >
             <Trash2 size={13} />
             Clear All
@@ -122,131 +136,125 @@ export default function Drafts() {
         </div>
       </div>
 
-      {/* Summary strip */}
-      <div className="erp-table-container mb-4">
-        <div className="overflow-x-auto">
-          <table className="erp-summary-table">
-            <thead>
-              <tr>
-                <th>Parked Invoices</th>
-                <th>Total Line Items</th>
-                <th>Estimated Draft Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="font-mono font-bold text-sm text-[var(--ink)]">
-                  {drafts.length} bills
-                </td>
-                <td className="font-mono font-semibold text-sm text-[var(--ink)]">
-                  {drafts.reduce((sum, draft) => sum + (draft.cart?.length || 0), 0)} items
-                </td>
-                <td className="font-mono font-bold text-sm text-[#1E3A5F] dark:text-slate-100">
-                  {fmt(
-                    drafts.reduce(
-                      (sum, draft) =>
-                        sum +
-                        (draft.cart?.reduce((s, item) => s + (item.total || 0), 0) || 0),
-                      0
-                    )
-                  )}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      {/* Summary KPI Strip (Strict ERP Standard) */}
+      <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] mb-4">
+        <div className="grid grid-cols-1 divide-y divide-[var(--line)] sm:grid-cols-3 sm:divide-y-0 sm:divide-x">
+          <div className="p-3 sm:p-3.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Parked Invoices
+            </span>
+            <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+              {drafts.length}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">Awaiting resumption</p>
+          </div>
+
+          <div className="p-3 sm:p-3.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Total Line Items
+            </span>
+            <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+              {totalLineItems}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">Products across drafts</p>
+          </div>
+
+          <div className="p-3 sm:p-3.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Estimated Draft Value
+            </span>
+            <p className="mt-1 font-mono text-lg font-bold text-teal-600 dark:text-teal-400">
+              {fmt(totalDraftValue)}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">Estimated gross total</p>
+          </div>
         </div>
       </div>
 
-      {/* Draft list */}
-      <div className="bg-[var(--surface)] border border-[var(--line)] rounded-md overflow-hidden">
-        {/* Desktop list header */}
-        <div className="hidden md:grid grid-cols-[minmax(220px,1.5fr)_1fr_140px_150px] gap-5 px-5 py-3 bg-[var(--surface-elevated)] border-b border-[var(--line)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--muted)]">
-          <span>Customer</span>
-          <span>Items</span>
-          <span className="text-right">Amount</span>
-          <span className="text-right">Actions</span>
+      {/* Draft List Container with ERP Table */}
+      <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)]">
+        {/* Table topbar */}
+        <div className="flex items-center justify-between border-b border-[var(--line-subtle)] px-3.5 py-3 sm:px-5">
+          <div className="flex items-center gap-2">
+            <h2 className="font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
+              Draft Invoices
+            </h2>
+            <span className="rounded-sm bg-[var(--surface-elevated)] border border-[var(--line)] px-2 py-0.5 text-[10px] font-bold text-[var(--muted)]">
+              {drafts.length}
+            </span>
+          </div>
+
+          <div className="hidden items-center gap-1.5 text-[11px] text-[var(--muted)] sm:flex">
+            <Clock3 size={12} />
+            <span>Saved in browser storage</span>
+          </div>
         </div>
 
-        {drafts.map((draft, index) => {
-          const total =
-            draft.cart?.reduce((s, i) => s + (i.total || 0), 0) || 0
+        {/* Mobile card list (md:hidden) */}
+        <div className="space-y-2.5 p-2.5 md:hidden">
+          {drafts.map(draft => {
+            const total =
+              draft.cart?.reduce((s, i) => s + (i.total || 0), 0) || 0
+            const itemCount = draft.cart?.length || 0
+            const savedAt = draft.savedAt
+              ? new Date(draft.savedAt).toLocaleString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true,
+                })
+              : '—'
+            const preview =
+              draft.cart
+                ?.slice(0, 3)
+                .map(item => `${item.product_name} ×${item.qty}`)
+                .join(', ') || 'No items'
 
-          const itemCount = draft.cart?.length || 0
-
-          const savedAt = draft.savedAt
-            ? new Date(draft.savedAt).toLocaleString('en-IN', {
-                day: '2-digit',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true,
-              })
-            : '—'
-
-          const preview =
-            draft.cart
-              ?.slice(0, 2)
-              .map(item => `${item.product_name} ×${item.qty}`)
-              .join(', ') || 'No items'
-
-          return (
-            <div
-              key={draft.id}
-              className={`group px-4 sm:px-5 py-4 transition-colors hover:bg-[var(--app-bg)] ${
-                index !== drafts.length - 1
-                  ? 'border-b border-[var(--line-subtle)]'
-                  : ''
-              }`}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-[minmax(220px,1.5fr)_1fr_140px_150px] gap-3 md:gap-5 items-center">
-                {/* Customer */}
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 shrink-0 rounded-xl bg-[var(--surface-elevated)] border border-[var(--line-subtle)] flex items-center justify-center">
-                    <User size={16} className="text-[var(--muted)]" />
-                  </div>
-
+            return (
+              <div
+                key={draft.id}
+                className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-3 space-y-2.5"
+              >
+                <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <div className="font-semibold text-sm text-[var(--ink-secondary)] truncate">
+                    <div className="font-bold text-sm text-[var(--ink)] truncate">
                       {draft.customerName || 'Walk-in Customer'}
                     </div>
-
-                    <div className="flex items-center gap-1.5 mt-1 text-[11px] text-[var(--muted)]">
-                      <Clock size={10} />
-                      Parked {savedAt}
+                    {draft.customerPhone && (
+                      <div className="text-[11px] text-[var(--muted)] font-mono">
+                        {draft.customerPhone}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <div className="font-mono text-sm font-bold text-[var(--ink)] tabular-nums">
+                      {fmt(total)}
                     </div>
+                    <div className="text-[10px] text-[var(--muted)]">Draft total</div>
                   </div>
                 </div>
 
-                {/* Items */}
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-[var(--ink-secondary)]">
-                    <ShoppingCart size={13} className="text-[var(--primary)] shrink-0" />
-                    <span>
-                      {itemCount} item{itemCount !== 1 ? 's' : ''}
-                    </span>
+                <div className="flex items-center justify-between text-xs text-[var(--muted)] border-t border-[var(--line-subtle)] pt-2">
+                  <div className="flex items-center gap-1 text-[11px]">
+                    <Clock size={11} />
+                    <span>{savedAt}</span>
                   </div>
-
-                  <div className="text-[11px] text-[var(--muted)] truncate mt-1">
-                    {preview}
-                    {itemCount > 2 && ` +${itemCount - 2} more`}
-                  </div>
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--surface-elevated)] border border-[var(--line)] text-[11px] font-semibold text-[var(--ink)]">
+                    <ShoppingCart size={11} />
+                    {itemCount} item{itemCount !== 1 ? 's' : ''}
+                  </span>
                 </div>
 
-                {/* Amount */}
-                <div className="md:text-right">
-                  <div className="font-bold text-sm text-[var(--ink)]">
-                    {fmt(total)}
-                  </div>
-                  <div className="text-[10px] text-[var(--muted)] mt-0.5">
-                    Draft total
-                  </div>
+                <div className="text-[11px] text-[var(--muted)] truncate">
+                  {preview}
+                  {itemCount > 3 && ` +${itemCount - 3} more`}
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center justify-end gap-2">
+                <div className="flex items-center gap-2 pt-1">
                   <button
                     onClick={() => resume(draft)}
-                    className="flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-lg bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white text-xs font-semibold transition-colors shadow-[var(--shadow-card)]"
+                    className="flex-1 btn-primary h-8 px-3 text-xs flex items-center justify-center gap-1.5 rounded-md"
                   >
                     <RotateCcw size={12} />
                     Resume
@@ -256,20 +264,141 @@ export default function Drafts() {
                   <button
                     onClick={() => discard(draft.id)}
                     title="Discard bill"
-                    className="w-9 h-9 flex items-center justify-center rounded-lg border border-[var(--muted-light)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--danger)] hover:bg-[var(--danger-light)] hover:border-[var(--danger-border)] transition-colors"
+                    className="w-8 h-8 rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-red-600 hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center transition-colors"
                   >
                     <Trash2 size={13} />
                   </button>
                 </div>
               </div>
+            )
+          })}
+        </div>
 
-              {/* Mobile item preview */}
-              <div className="md:hidden mt-2 ml-[52px] text-[11px] text-[var(--muted)] truncate">
-                {preview}
-              </div>
-            </div>
-          )
-        })}
+        {/* Desktop / Tablet Table */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="erp-table w-full text-left text-xs min-w-[760px]">
+            <thead>
+              <tr>
+                <th className="w-12 text-center">#</th>
+                <th className="min-w-[190px]">Customer</th>
+                <th className="min-w-[140px]">Parked At</th>
+                <th className="w-28 text-center">Items</th>
+                <th>Items Preview</th>
+                <th className="w-32 text-right">Draft Total</th>
+                <th className="w-36 text-right">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-[var(--line-subtle)]">
+              {drafts.map((draft, index) => {
+                const total =
+                  draft.cart?.reduce((s, i) => s + (i.total || 0), 0) || 0
+                const itemCount = draft.cart?.length || 0
+                const savedAt = draft.savedAt
+                  ? new Date(draft.savedAt).toLocaleString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true,
+                    })
+                  : '—'
+                const preview =
+                  draft.cart
+                    ?.slice(0, 3)
+                    .map(item => `${item.product_name} ×${item.qty}`)
+                    .join(', ') || 'No items'
+
+                return (
+                  <tr
+                    key={draft.id}
+                    className="hover:bg-[var(--surface-hover)] transition-colors"
+                  >
+                    {/* Index */}
+                    <td className="text-center font-mono text-[11px] text-[var(--muted)]">
+                      {index + 1}
+                    </td>
+
+                    {/* Customer */}
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded bg-[var(--surface-elevated)] border border-[var(--line)] flex items-center justify-center text-[var(--muted)] shrink-0">
+                          <User size={13} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-xs text-[var(--ink)] truncate">
+                            {draft.customerName || 'Walk-in Customer'}
+                          </div>
+                          {draft.customerPhone && (
+                            <div className="text-[10px] text-[var(--muted)] font-mono">
+                              {draft.customerPhone}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Parked At */}
+                    <td>
+                      <div className="flex items-center gap-1.5 text-xs text-[var(--ink-secondary)]">
+                        <Clock size={12} className="text-[var(--muted)] shrink-0" />
+                        <span>{savedAt}</span>
+                      </div>
+                    </td>
+
+                    {/* Items Count */}
+                    <td className="text-center">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--surface-elevated)] border border-[var(--line)] text-xs font-semibold text-[var(--ink)]">
+                        <ShoppingCart size={11} className="text-[#1E3A5F] dark:text-blue-400" />
+                        {itemCount}
+                      </span>
+                    </td>
+
+                    {/* Items Preview */}
+                    <td>
+                      <div className="max-w-[280px] text-xs text-[var(--muted)] truncate">
+                        {preview}
+                        {itemCount > 3 && ` +${itemCount - 3} more`}
+                      </div>
+                    </td>
+
+                    {/* Draft Total */}
+                    <td className="text-right">
+                      <div className="font-mono text-sm font-bold text-[var(--ink)] tabular-nums">
+                        {fmt(total)}
+                      </div>
+                      <div className="text-[10px] text-[var(--muted)]">
+                        Gross total
+                      </div>
+                    </td>
+
+                    {/* Actions */}
+                    <td>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => resume(draft)}
+                          className="btn-primary h-7 px-2.5 rounded text-xs font-semibold inline-flex items-center gap-1 transition-colors"
+                          title="Resume bill in POS"
+                        >
+                          <RotateCcw size={12} />
+                          Resume
+                        </button>
+
+                        <button
+                          onClick={() => discard(draft.id)}
+                          title="Discard draft bill"
+                          className="w-7 h-7 rounded border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-red-600 hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 inline-flex items-center justify-center transition-colors"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

@@ -1,11 +1,13 @@
-import { Fragment, useState, useEffect } from 'react'
+import { Fragment, useState, useEffect, useMemo, useRef } from 'react'
 import api from '../api'
 import { Badge, PageHeader, Modal, Spinner, EmptyState, ConfirmDialog } from '../components/UI'
 import toast from 'react-hot-toast'
 import {
   Plus, Trash2, Printer, Package, ChevronDown, ChevronRight,
   Building2, Phone, Mail, MapPin, Edit2, Search, Save,
-  Wallet, Clock3, ClipboardList, TrendingUp, Filter, MessageCircle
+  Wallet, Clock3, ClipboardList, TrendingUp, Filter, MessageCircle,
+  FileSpreadsheet, Upload, Download, CheckCircle2, AlertCircle, AlertTriangle,
+  RotateCcw, Check, ArrowRight, FileText
 } from 'lucide-react'
 import CommunicationHistory from '../components/CommunicationHistory'
 
@@ -148,24 +150,12 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
     <div className={`group overflow-hidden ${cardCls} ${cardHover}`}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5">
         <div className="flex items-start gap-3.5 min-w-0">
-          <div className="w-10 h-10 rounded-md bg-slate-100 dark:bg-slate-800 border border-[var(--line)] flex items-center justify-center flex-shrink-0 text-[#1E3A5F] dark:text-slate-300">
-            <Building2 size={18} />
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-elevated)] border border-[var(--line)] text-[#1E3A5F] dark:text-slate-200">
+            <Building2 size={20} />
           </div>
           <div className="min-w-0">
-            <div className="font-bold text-base text-[var(--ink)] truncate">{supplier.name}</div>
-            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
-              {supplier.phone && (
-                <span className="text-xs text-[var(--muted)] flex items-center gap-1">
-                  <Phone size={11} className="text-[var(--muted-light)]" />
-                  {supplier.phone}
-                </span>
-              )}
-              {supplier.email && (
-                <span className="text-xs text-[var(--muted)] flex items-center gap-1">
-                  <Mail size={11} className="text-[var(--muted-light)]" />
-                  {supplier.email}
-                </span>
-              )}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-base text-[var(--ink)]">{supplier.name}</span>
               {supplier.gstin && (
                 <span className="text-xs font-mono text-[var(--muted)] bg-[var(--surface-elevated)] border border-[var(--line)] px-2 py-0.5 rounded">
                   GST: {supplier.gstin}
@@ -242,6 +232,972 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
   )
 }
 
+/* ============================================================
+   PURCHASE & SUPPLIER BULK EXCEL IMPORT MODAL
+   Flow:
+   Upload Excel -> Validate -> Preview -> Highlight Errors -> Confirm Import -> Import -> Success / Failure Report
+============================================================ */
+
+function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orders' }) {
+  const [mode, setMode] = useState(initialMode) // 'orders' | 'suppliers'
+  const [step, setStep] = useState('upload') // 'upload' | 'preview' | 'report'
+  const [file, setFile] = useState(null)
+  const [validating, setValidating] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [validationResult, setValidationResult] = useState(null)
+  const [importReport, setImportReport] = useState(null)
+  const [activeTab, setActiveTab] = useState('all') // 'all' | 'valid' | 'errors'
+  const [createMissingSuppliers, setCreateMissingSuppliers] = useState(true)
+  const [updateExistingSuppliers, setUpdateExistingSuppliers] = useState(true)
+  const [skipErrors, setSkipErrors] = useState(true)
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false)
+  const [expandedOrders, setExpandedOrders] = useState(new Set())
+  const fileInputRef = useRef(null)
+
+  useEffect(() => {
+    if (open) {
+      setMode(initialMode)
+      setStep('upload')
+      setFile(null)
+      setValidating(false)
+      setImporting(false)
+      setValidationResult(null)
+      setImportReport(null)
+      setActiveTab('all')
+      setCreateMissingSuppliers(true)
+      setUpdateExistingSuppliers(true)
+      setSkipErrors(true)
+      setExpandedOrders(new Set())
+    }
+  }, [open, initialMode])
+
+  const toggleExpandOrder = (idx) => {
+    setExpandedOrders(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx)
+      else next.add(idx)
+      return next
+    })
+  }
+
+  const handleDownloadTemplate = async (format = 'xlsx') => {
+    setDownloadingTemplate(true)
+    const endpoint = mode === 'orders' ? '/purchases/import-template/' : '/suppliers/import-template/'
+    const filename = mode === 'orders' ? 'Purchase_Import_Template.xlsx' : 'Supplier_Import_Template.xlsx'
+    try {
+      const res = await api.get(endpoint, { responseType: 'blob' })
+      const blob = new Blob([res.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+      toast.success('Template downloaded successfully')
+    } catch {
+      toast.error('Failed to download template')
+    } finally {
+      setDownloadingTemplate(false)
+    }
+  }
+
+  const handleFileChange = e => {
+    const selected = e.target.files?.[0]
+    if (selected) setFile(selected)
+  }
+
+  const handleDrop = e => {
+    e.preventDefault()
+    const dropped = e.dataTransfer.files?.[0]
+    if (dropped) setFile(dropped)
+  }
+
+  const handleValidate = async () => {
+    if (!file) return toast.error('Please select an Excel or CSV file')
+    setValidating(true)
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const endpoint = mode === 'orders' ? '/purchases/validate-import/' : '/suppliers/validate-import/'
+    try {
+      const res = await api.post(endpoint, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setValidationResult(res.data)
+      const errorsCount = mode === 'orders' ? res.data.error_orders_count : res.data.error_rows_count
+      const totalCount = mode === 'orders' ? res.data.total_orders : res.data.total_rows
+      const validCount = mode === 'orders' ? res.data.valid_orders_count : res.data.valid_rows_count
+
+      if (errorsCount > 0) {
+        toast(`Validated ${totalCount} records: ${validCount} valid, ${errorsCount} with errors`, { icon: '⚠️' })
+      } else {
+        toast.success(`All ${totalCount} records are valid and ready to import!`)
+      }
+      setStep('preview')
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to read and validate import file')
+    } finally {
+      setValidating(false)
+    }
+  }
+
+  const handleConfirmImport = async () => {
+    if (!validationResult) return
+
+    setImporting(true)
+    try {
+      if (mode === 'orders') {
+        let ordersToImport = validationResult.orders || []
+        if (skipErrors) {
+          ordersToImport = ordersToImport.filter(o => o.is_valid)
+        } else {
+          const hasErr = ordersToImport.some(o => !o.is_valid)
+          if (hasErr) {
+            toast.error('Please resolve errors or enable "Skip orders with errors"')
+            setImporting(false)
+            return
+          }
+        }
+
+        if (ordersToImport.length === 0) {
+          toast.error('No valid purchase orders available to import')
+          setImporting(false)
+          return
+        }
+
+        const res = await api.post('/purchases/bulk-import/', {
+          orders: ordersToImport,
+          create_missing_suppliers: createMissingSuppliers,
+        })
+        setImportReport(res.data)
+        setStep('report')
+        toast.success(`Successfully imported ${res.data.created_count} purchase orders!`)
+      } else {
+        let rowsToImport = validationResult.rows || []
+        if (skipErrors) {
+          rowsToImport = rowsToImport.filter(r => r.is_valid)
+        } else {
+          const hasErr = rowsToImport.some(r => !r.is_valid)
+          if (hasErr) {
+            toast.error('Please resolve errors or enable "Skip rows with errors"')
+            setImporting(false)
+            return
+          }
+        }
+
+        if (rowsToImport.length === 0) {
+          toast.error('No valid supplier rows available to import')
+          setImporting(false)
+          return
+        }
+
+        const res = await api.post('/suppliers/bulk-import/', {
+          rows: rowsToImport,
+          update_existing: updateExistingSuppliers,
+        })
+        setImportReport(res.data)
+        setStep('report')
+        toast.success(`Successfully imported ${res.data.created_count + res.data.updated_count} suppliers!`)
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to complete import')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const handleDone = () => {
+    onSuccess?.()
+    onClose()
+  }
+
+  // Preview filtering for Orders
+  const displayedOrders = useMemo(() => {
+    if (!validationResult?.orders) return []
+    if (activeTab === 'valid') return validationResult.orders.filter(o => o.is_valid)
+    if (activeTab === 'errors') return validationResult.orders.filter(o => !o.is_valid)
+    return validationResult.orders
+  }, [validationResult, activeTab])
+
+  // Preview filtering for Suppliers
+  const displayedRows = useMemo(() => {
+    if (!validationResult?.rows) return []
+    if (activeTab === 'valid') return validationResult.rows.filter(r => r.is_valid)
+    if (activeTab === 'errors') return validationResult.rows.filter(r => !r.is_valid)
+    return validationResult.rows
+  }, [validationResult, activeTab])
+
+  const validOrdersCount = useMemo(() => {
+    if (mode === 'orders') {
+      if (!validationResult?.orders) return 0
+      return skipErrors
+        ? validationResult.orders.filter(o => o.is_valid).length
+        : validationResult.orders.length
+    } else {
+      if (!validationResult?.rows) return 0
+      return skipErrors
+        ? validationResult.rows.filter(r => r.is_valid).length
+        : validationResult.rows.length
+    }
+  }, [mode, validationResult, skipErrors])
+
+  return (
+    <Modal
+      open={open}
+      onClose={() => !importing && !validating && onClose()}
+      title="Bulk Excel Import"
+      size="xl"
+    >
+      <div className="space-y-4">
+        {/* Top Header: Mode Selector & Step Indicator */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[var(--line)] pb-3">
+          {/* Mode Switcher */}
+          <div className="flex items-center gap-1 border border-[var(--line)] bg-[var(--surface-elevated)] p-1 rounded-md">
+            <button
+              type="button"
+              onClick={() => {
+                setMode('orders')
+                setStep('upload')
+                setFile(null)
+                setValidationResult(null)
+              }}
+              className={`px-3 py-1.5 text-xs font-semibold rounded transition ${
+                mode === 'orders'
+                  ? 'bg-[#1E3A5F] text-white shadow-xs'
+                  : 'text-[var(--muted)] hover:text-[var(--ink)]'
+              }`}
+            >
+              <div className="flex items-center gap-1.5">
+                <Package size={13} />
+                <span>Purchase Orders</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setMode('suppliers')
+                setStep('upload')
+                setFile(null)
+                setValidationResult(null)
+              }}
+              className={`px-3 py-1.5 text-xs font-semibold rounded transition ${
+                mode === 'suppliers'
+                  ? 'bg-[#1E3A5F] text-white shadow-xs'
+                  : 'text-[var(--muted)] hover:text-[var(--ink)]'
+              }`}
+            >
+              <div className="flex items-center gap-1.5">
+                <Building2 size={13} />
+                <span>Suppliers</span>
+              </div>
+            </button>
+          </div>
+
+          {/* Step Indicator */}
+          <div className="flex items-center gap-2 text-xs">
+            <span
+              className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${
+                step === 'upload'
+                  ? 'bg-[#1E3A5F] text-white'
+                  : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+              }`}
+            >
+              {step !== 'upload' ? <Check size={11} /> : '1'}
+            </span>
+            <span className={step === 'upload' ? 'font-bold text-[var(--ink)]' : 'text-[var(--muted)]'}>
+              Upload
+            </span>
+
+            <ArrowRight size={12} className="text-[var(--muted-light)]" />
+
+            <span
+              className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${
+                step === 'preview'
+                  ? 'bg-[#1E3A5F] text-white'
+                  : step === 'report'
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                    : 'bg-[var(--surface-elevated)] border border-[var(--line)] text-[var(--muted)]'
+              }`}
+            >
+              {step === 'report' ? <Check size={11} /> : '2'}
+            </span>
+            <span className={step === 'preview' ? 'font-bold text-[var(--ink)]' : 'text-[var(--muted)]'}>
+              Validate & Preview
+            </span>
+
+            <ArrowRight size={12} className="text-[var(--muted-light)]" />
+
+            <span
+              className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${
+                step === 'report'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-[var(--surface-elevated)] border border-[var(--line)] text-[var(--muted)]'
+              }`}
+            >
+              3
+            </span>
+            <span className={step === 'report' ? 'font-bold text-emerald-600 dark:text-emerald-400' : 'text-[var(--muted)]'}>
+              Report
+            </span>
+          </div>
+        </div>
+
+        {/* ====================================================
+            STEP 1: UPLOAD EXCEL
+        ==================================================== */}
+        {step === 'upload' && (
+          <div className="space-y-4">
+            {/* Download Template Banner */}
+            <div className="rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-md bg-[var(--surface)] border border-[var(--line)] flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0">
+                  <FileSpreadsheet size={20} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-[var(--ink)]">
+                    {mode === 'orders' ? 'Purchase Order Import Template' : 'Supplier Import Template'}
+                  </h4>
+                  <p className="text-[11px] text-[var(--muted)] mt-0.5">
+                    {mode === 'orders'
+                      ? 'Pre-formatted sheet with supplier, invoice, product SKU/name, quantity, and price columns.'
+                      : 'Pre-formatted sheet with company name, phone, email, address, and GSTIN.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleDownloadTemplate('xlsx')}
+                  disabled={downloadingTemplate}
+                  className="btn-secondary h-8 px-3 text-xs flex items-center gap-1.5 rounded-md"
+                >
+                  <Download size={13} />
+                  <span>{downloadingTemplate ? 'Downloading...' : 'Download Template (.xlsx)'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Drag & Drop Upload Zone */}
+            <div
+              onDragOver={e => e.preventDefault()}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-[var(--line)] hover:border-[#1E3A5F] dark:hover:border-blue-400 rounded-lg p-6 sm:p-8 text-center cursor-pointer transition-colors bg-[var(--surface)]"
+            >
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+
+              <div className="w-12 h-12 rounded-full bg-[var(--surface-elevated)] border border-[var(--line)] flex items-center justify-center mx-auto mb-3 text-[#1E3A5F] dark:text-slate-200">
+                <Upload size={22} />
+              </div>
+
+              <h4 className="text-sm font-bold text-[var(--ink)]">
+                {file ? file.name : `Choose an Excel or CSV file to import ${mode === 'orders' ? 'purchases' : 'suppliers'}`}
+              </h4>
+
+              <p className="text-xs text-[var(--muted)] mt-1 max-w-md mx-auto">
+                {file
+                  ? `File size: ${(file.size / 1024).toFixed(1)} KB — Click to change file`
+                  : 'Drag and drop your spreadsheet here, or click to browse. Supports .xlsx, .xls, and .csv up to 5 MB.'}
+              </p>
+
+              {file && (
+                <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 text-xs font-semibold">
+                  <CheckCircle2 size={13} />
+                  File loaded & ready for validation
+                </div>
+              )}
+            </div>
+
+            {/* Guidelines box */}
+            <div className="rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] p-3 space-y-1.5 text-xs">
+              <span className="font-bold text-[var(--ink)] block">
+                {mode === 'orders' ? 'Purchase Order Formatting Rules:' : 'Supplier Column Guidelines:'}
+              </span>
+              {mode === 'orders' ? (
+                <ul className="text-[11px] text-[var(--muted)] space-y-1 list-disc pl-4">
+                  <li>
+                    <strong className="text-[var(--ink)]">Multi-item POs</strong>: Group items under the same purchase order by giving them the same <code>Supplier Name</code> and <code>Invoice Number</code>.
+                  </li>
+                  <li>
+                    <strong className="text-[var(--ink)]">Product SKU or Name*</strong>: Must match an active inventory product in your system.
+                  </li>
+                  <li>
+                    <strong className="text-[var(--ink)]">Quantity* & Price*</strong>: Numeric values greater than zero.
+                  </li>
+                  <li>
+                    <strong className="text-[var(--ink)]">Stock Movement</strong>: Successfully imported purchases automatically increment inventory stock.
+                  </li>
+                </ul>
+              ) : (
+                <ul className="text-[11px] text-[var(--muted)] space-y-1 list-disc pl-4">
+                  <li><strong className="text-[var(--ink)]">Company / Supplier Name*</strong>: Required.</li>
+                  <li><strong className="text-[var(--ink)]">GSTIN</strong>: Optional 15 alphanumeric characters.</li>
+                  <li><strong className="text-[var(--ink)]">Phone</strong>: 10 to 15 digits.</li>
+                </ul>
+              )}
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="flex items-center justify-end gap-2 border-t border-[var(--line)] pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn-secondary h-9 px-4 text-xs"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleValidate}
+                disabled={!file || validating}
+                className="btn-primary h-9 px-4 text-xs flex items-center justify-center gap-1.5"
+              >
+                {validating ? (
+                  <>
+                    <RefreshCw size={13} className="animate-spin" />
+                    <span>Validating File...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Validate & Preview</span>
+                    <ArrowRight size={13} />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ====================================================
+            STEP 2: VALIDATE, PREVIEW & HIGHLIGHT ERRORS
+        ==================================================== */}
+        {step === 'preview' && validationResult && (
+          <div className="space-y-4">
+            {/* KPI Metrics Strip */}
+            <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)]">
+              <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
+                <div className="p-2.5 sm:p-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                    {mode === 'orders' ? 'Total POs' : 'Total Suppliers'}
+                  </span>
+                  <p className="mt-1 font-mono text-base sm:text-lg font-bold text-[var(--ink)]">
+                    {mode === 'orders' ? validationResult.total_orders : validationResult.total_rows}
+                  </p>
+                  <p className="text-[10px] text-[var(--muted)]">
+                    {mode === 'orders' ? `${validationResult.total_rows} line items` : 'In spreadsheet'}
+                  </p>
+                </div>
+
+                <div className="p-2.5 sm:p-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                    Ready to Import
+                  </span>
+                  <p className="mt-1 font-mono text-base sm:text-lg font-bold text-teal-600 dark:text-teal-400">
+                    {mode === 'orders' ? validationResult.valid_orders_count : validationResult.valid_rows_count}
+                  </p>
+                  <p className="text-[10px] text-[var(--muted)]">Valid records</p>
+                </div>
+
+                <div className="p-2.5 sm:p-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                    With Errors
+                  </span>
+                  <p
+                    className={`mt-1 font-mono text-base sm:text-lg font-bold ${
+                      (mode === 'orders' ? validationResult.error_orders_count : validationResult.error_rows_count) > 0
+                        ? 'text-red-600 dark:text-red-400'
+                        : 'text-teal-600 dark:text-teal-400'
+                    }`}
+                  >
+                    {mode === 'orders' ? validationResult.error_orders_count : validationResult.error_rows_count}
+                  </p>
+                  <p className="text-[10px] text-[var(--muted)]">
+                    {(mode === 'orders' ? validationResult.error_orders_count : validationResult.error_rows_count) > 0 ? 'Requires attention' : '0 validation issues'}
+                  </p>
+                </div>
+
+                <div className="p-2.5 sm:p-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                    {mode === 'orders' ? 'Est. Total Value' : 'Will Update'}
+                  </span>
+                  <p className="mt-1 font-mono text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400">
+                    {mode === 'orders'
+                      ? fmt(validationResult.orders?.reduce((s, o) => s + (o.total_amount || 0), 0))
+                      : validationResult.update_count}
+                  </p>
+                  <p className="text-[10px] text-[var(--muted)]">
+                    {mode === 'orders' ? 'Gross procurement' : 'Existing vendor matches'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex items-center gap-1 border border-[var(--line)] bg-[var(--surface)] p-1 rounded-md">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('all')}
+                  className={`px-2.5 py-1 text-xs font-semibold rounded ${
+                    activeTab === 'all'
+                      ? 'bg-[#1E3A5F] text-white'
+                      : 'text-[var(--muted)] hover:text-[var(--ink)]'
+                  }`}
+                >
+                  All ({mode === 'orders' ? validationResult.total_orders : validationResult.total_rows})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('valid')}
+                  className={`px-2.5 py-1 text-xs font-semibold rounded ${
+                    activeTab === 'valid'
+                      ? 'bg-teal-700 text-white'
+                      : 'text-[var(--muted)] hover:text-[var(--ink)]'
+                  }`}
+                >
+                  Valid ({mode === 'orders' ? validationResult.valid_orders_count : validationResult.valid_rows_count})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('errors')}
+                  className={`px-2.5 py-1 text-xs font-semibold rounded ${
+                    activeTab === 'errors'
+                      ? 'bg-red-700 text-white'
+                      : 'text-[var(--muted)] hover:text-[var(--ink)]'
+                  }`}
+                >
+                  Errors ({mode === 'orders' ? validationResult.error_orders_count : validationResult.error_rows_count})
+                </button>
+              </div>
+
+              <div className="text-xs text-[var(--muted)]">
+                Showing{' '}
+                <strong className="text-[var(--ink)]">
+                  {mode === 'orders' ? displayedOrders.length : displayedRows.length}
+                </strong>{' '}
+                records
+              </div>
+            </div>
+
+            {/* Preview Table: Purchase Orders Mode */}
+            {mode === 'orders' ? (
+              <div className="overflow-x-auto max-h-[340px] border border-[var(--line)] rounded-md bg-[var(--surface)]">
+                <table className="erp-table w-full text-xs min-w-[850px]">
+                  <thead className="sticky top-0 z-10 shadow-sm">
+                    <tr>
+                      <th className="w-10 text-center">#</th>
+                      <th className="w-20">Status</th>
+                      <th>Invoice / PO #</th>
+                      <th>Supplier</th>
+                      <th>Date</th>
+                      <th className="text-center">Items</th>
+                      <th className="text-right">Total</th>
+                      <th className="text-right">Paid</th>
+                      <th>Validation Issues</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-[var(--line-subtle)]">
+                    {displayedOrders.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="py-8 text-center text-xs text-[var(--muted)]">
+                          No purchase orders match this filter.
+                        </td>
+                      </tr>
+                    ) : (
+                      displayedOrders.map((ord, idx) => {
+                        const hasErrors = !ord.is_valid
+                        const isExpanded = expandedOrders.has(idx)
+
+                        return (
+                          <Fragment key={idx}>
+                            <tr
+                              className={`transition-colors cursor-pointer ${
+                                hasErrors
+                                  ? 'bg-red-500/10 hover:bg-red-500/15'
+                                  : 'hover:bg-[var(--surface-hover)]'
+                              }`}
+                              onClick={() => toggleExpandOrder(idx)}
+                            >
+                              <td className="text-center">
+                                <div className="flex items-center justify-center gap-1">
+                                  {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                                  <span className="font-mono text-[10px] text-[var(--muted)]">{idx + 1}</span>
+                                </div>
+                              </td>
+
+                              <td>
+                                {hasErrors ? (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300">
+                                    <AlertCircle size={10} /> Error
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300">
+                                    <Check size={10} /> Valid
+                                  </span>
+                                )}
+                              </td>
+
+                              <td className="font-mono font-bold text-[var(--ink)]">
+                                {ord.invoice_number}
+                              </td>
+
+                              <td>
+                                <div className="font-semibold text-[var(--ink)]">{ord.supplier_name || '—'}</div>
+                                {!ord.supplier_exists && ord.supplier_name && (
+                                  <span className="text-[10px] text-amber-600 dark:text-amber-400">
+                                    (New supplier — will create)
+                                  </span>
+                                )}
+                              </td>
+
+                              <td className="text-[var(--ink-secondary)] whitespace-nowrap">
+                                {ord.purchase_date}
+                              </td>
+
+                              <td className="text-center font-mono font-semibold">
+                                {ord.items_count} item{ord.items_count !== 1 ? 's' : ''}
+                              </td>
+
+                              <td className="text-right font-mono font-bold tabular-nums text-[var(--ink)]">
+                                {fmt(ord.total_amount)}
+                              </td>
+
+                              <td className="text-right font-mono tabular-nums text-[var(--ink-secondary)]">
+                                {fmt(ord.paid_amount)}
+                              </td>
+
+                              <td>
+                                {hasErrors ? (
+                                  <div className="space-y-0.5 max-w-[240px]">
+                                    {ord.errors.map((err, eIdx) => (
+                                      <div key={eIdx} className="text-[11px] font-semibold text-red-600 dark:text-red-400 flex items-center gap-1">
+                                        <AlertCircle size={10} className="shrink-0" />
+                                        <span>{err}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-[11px] text-teal-600 dark:text-teal-400 font-semibold flex items-center gap-1">
+                                    <Check size={11} /> Ready to import
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+
+                            {/* Expanded items row */}
+                            {isExpanded && (
+                              <tr>
+                                <td colSpan={9} className="bg-[var(--surface-elevated)] p-3 border-y border-[var(--line)]">
+                                  <div className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2">
+                                    Line items for {ord.invoice_number} ({ord.items.length})
+                                  </div>
+                                  <table className="w-full text-xs border border-[var(--line)] bg-[var(--surface)] rounded">
+                                    <thead>
+                                      <tr className="border-b border-[var(--line)] bg-[var(--surface-elevated)] text-[10px] uppercase font-bold text-[var(--muted)]">
+                                        <th className="p-1.5 text-center">Row</th>
+                                        <th className="p-1.5 text-left">Product</th>
+                                        <th className="p-1.5 text-left">SKU</th>
+                                        <th className="p-1.5 text-right">Qty</th>
+                                        <th className="p-1.5 text-right">Unit Price</th>
+                                        <th className="p-1.5 text-right">GST %</th>
+                                        <th className="p-1.5 text-right">Total</th>
+                                        <th className="p-1.5 text-left">Issues</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[var(--line-subtle)]">
+                                      {ord.items.map((it, itIdx) => (
+                                        <tr key={itIdx} className={it.is_valid ? '' : 'bg-red-500/10'}>
+                                          <td className="p-1.5 text-center font-mono text-[10px] text-[var(--muted)]">{it.row_number}</td>
+                                          <td className="p-1.5 font-semibold text-[var(--ink)]">{it.product_name}</td>
+                                          <td className="p-1.5 font-mono text-[10px] text-[var(--muted)]">{it.product_sku || '—'}</td>
+                                          <td className="p-1.5 text-right font-mono">{it.quantity}</td>
+                                          <td className="p-1.5 text-right font-mono">{fmt(it.purchase_price)}</td>
+                                          <td className="p-1.5 text-right font-mono">{it.gst_percent}%</td>
+                                          <td className="p-1.5 text-right font-mono font-bold">{fmt(it.line_total)}</td>
+                                          <td className="p-1.5 text-red-600 dark:text-red-400 font-semibold text-[10px]">
+                                            {it.errors?.join(', ') || '✓'}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        )
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              /* Preview Table: Suppliers Mode */
+              <div className="overflow-x-auto max-h-[340px] border border-[var(--line)] rounded-md bg-[var(--surface)]">
+                <table className="erp-table w-full text-xs min-w-[760px]">
+                  <thead className="sticky top-0 z-10 shadow-sm">
+                    <tr>
+                      <th className="w-12 text-center">Row</th>
+                      <th className="w-24">Status</th>
+                      <th>Company / Name</th>
+                      <th>Phone</th>
+                      <th>Email</th>
+                      <th>GSTIN</th>
+                      <th>Validation Issues</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--line-subtle)]">
+                    {displayedRows.map(row => {
+                      const hasErrors = !row.is_valid
+                      return (
+                        <tr key={row.row_number} className={hasErrors ? 'bg-red-500/10' : ''}>
+                          <td className="text-center font-mono text-[11px] text-[var(--muted)]">{row.row_number}</td>
+                          <td>
+                            {hasErrors ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300">Error</span>
+                            ) : row.action === 'update' ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">Will Update</span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300">New</span>
+                            )}
+                          </td>
+                          <td className="font-semibold text-[var(--ink)]">{row.name || 'Missing Name'}</td>
+                          <td className="font-mono text-[11px]">{row.phone || '—'}</td>
+                          <td className="text-[11px]">{row.email || '—'}</td>
+                          <td className="font-mono text-[11px]">{row.gstin || '—'}</td>
+                          <td>
+                            {hasErrors ? (
+                              <span className="text-red-600 dark:text-red-400 font-semibold text-[11px]">
+                                {row.errors?.join(', ')}
+                              </span>
+                            ) : (
+                              <span className="text-teal-600 dark:text-teal-400 font-semibold text-[11px] flex items-center gap-1">
+                                <Check size={11} /> Ready
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Options Flags */}
+            <div className="rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] p-3 space-y-2">
+              {mode === 'orders' ? (
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-[var(--ink)]">
+                  <input
+                    type="checkbox"
+                    checked={createMissingSuppliers}
+                    onChange={e => setCreateMissingSuppliers(e.target.checked)}
+                    className="rounded border-[var(--line)] text-[#1E3A5F] focus:ring-0"
+                  />
+                  <span>Create missing suppliers automatically if they do not exist yet</span>
+                </label>
+              ) : (
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-[var(--ink)]">
+                  <input
+                    type="checkbox"
+                    checked={updateExistingSuppliers}
+                    onChange={e => setUpdateExistingSuppliers(e.target.checked)}
+                    className="rounded border-[var(--line)] text-[#1E3A5F] focus:ring-0"
+                  />
+                  <span>Update existing suppliers if matching Name or GSTIN is found</span>
+                </label>
+              )}
+
+              {((mode === 'orders' ? validationResult.error_orders_count : validationResult.error_rows_count) > 0) && (
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-[var(--ink)]">
+                  <input
+                    type="checkbox"
+                    checked={skipErrors}
+                    onChange={e => setSkipErrors(e.target.checked)}
+                    className="rounded border-[var(--line)] text-[#1E3A5F] focus:ring-0"
+                  />
+                  <span>
+                    Skip records with errors and import only valid records ({mode === 'orders' ? validationResult.valid_orders_count : validationResult.valid_rows_count})
+                  </span>
+                </label>
+              )}
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="flex items-center justify-between border-t border-[var(--line)] pt-4">
+              <button
+                type="button"
+                onClick={() => setStep('upload')}
+                disabled={importing}
+                className="btn-secondary h-9 px-3.5 text-xs flex items-center gap-1.5"
+              >
+                <RotateCcw size={13} />
+                Upload Different File
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={importing}
+                  className="btn-secondary h-9 px-4 text-xs"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleConfirmImport}
+                  disabled={validOrdersCount === 0 || importing}
+                  className="btn-primary h-9 px-4 text-xs flex items-center gap-1.5"
+                >
+                  {importing ? (
+                    <>
+                      <RefreshCw size={13} className="animate-spin" />
+                      <span>Importing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={14} />
+                      <span>Confirm & Import ({validOrdersCount} {mode === 'orders' ? 'Orders' : 'Suppliers'})</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ====================================================
+            STEP 3: SUCCESS / FAILURE REPORT
+        ==================================================== */}
+        {step === 'report' && importReport && (
+          <div className="space-y-4">
+            <div
+              className={`p-4 rounded-md border ${
+                importReport.failed_count === 0
+                  ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100'
+                  : 'border-amber-500/20 bg-amber-500/10 text-amber-900 dark:text-amber-100'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                {importReport.failed_count === 0 ? (
+                  <CheckCircle2 size={24} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertTriangle size={24} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                )}
+
+                <div>
+                  <h4 className="text-sm font-bold">
+                    {importReport.failed_count === 0
+                      ? `Bulk ${mode === 'orders' ? 'Purchase Order' : 'Supplier'} Import Completed Successfully!`
+                      : 'Bulk Import Completed with Warnings'}
+                  </h4>
+                  <p className="text-xs mt-0.5 opacity-90">
+                    Processed {importReport.total_processed} records from your spreadsheet.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Metrics Breakdown */}
+            <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)]">
+              <div className="grid grid-cols-3 divide-x divide-[var(--line)]">
+                <div className="p-3 text-center">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Processed</span>
+                  <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">{importReport.total_processed}</p>
+                </div>
+                <div className="p-3 text-center">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Successful</span>
+                  <p className="mt-1 font-mono text-lg font-bold text-teal-600 dark:text-teal-400">
+                    {mode === 'orders' ? importReport.created_count : (importReport.created_count + importReport.updated_count)}
+                  </p>
+                </div>
+                <div className="p-3 text-center">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Failed / Skipped</span>
+                  <p className={`mt-1 font-mono text-lg font-bold ${importReport.failed_count > 0 ? 'text-red-600 dark:text-red-400' : 'text-teal-600 dark:text-teal-400'}`}>
+                    {importReport.failed_count}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Failed Rows Detail */}
+            {importReport.failed_orders?.length > 0 && (
+              <div className="space-y-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-400 block">
+                  Failed Records Breakdown ({importReport.failed_orders.length})
+                </span>
+                <div className="overflow-x-auto max-h-[200px] border border-red-500/20 rounded-md bg-red-500/5">
+                  <table className="erp-table w-full text-xs">
+                    <thead>
+                      <tr>
+                        <th>Invoice / PO #</th>
+                        <th>Supplier</th>
+                        <th>Error Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--line-subtle)]">
+                      {importReport.failed_orders.map((f, i) => (
+                        <tr key={i}>
+                          <td className="font-mono font-bold text-[var(--ink)]">{f.invoice_number}</td>
+                          <td>{f.supplier_name || '—'}</td>
+                          <td className="text-red-600 dark:text-red-400 font-semibold">{f.error}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Footer Buttons */}
+            <div className="flex items-center justify-between border-t border-[var(--line)] pt-4">
+              <button
+                type="button"
+                onClick={() => setStep('upload')}
+                className="btn-secondary h-9 px-3.5 text-xs flex items-center gap-1.5"
+              >
+                <RotateCcw size={13} />
+                Import Another File
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDone}
+                className="btn-primary h-9 px-5 text-xs flex items-center gap-1.5"
+              >
+                <Check size={14} />
+                <span>Done (View Purchases)</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
+/* ============================================================
+   MAIN PURCHASES PAGE
+============================================================ */
+
 export default function Purchases() {
   const [tab, setTab] = useState('orders')
   const [purchases, setPurchases] = useState([])
@@ -249,6 +1205,8 @@ export default function Purchases() {
   const [suppliers, setSuppliers] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
+  const [importModal, setImportModal] = useState(false)
+  const [importMode, setImportMode] = useState('orders')
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [supModal, setSupModal] = useState(false)
@@ -298,7 +1256,6 @@ export default function Purchases() {
       const gst = parseFloat(items[i].gst_percent) || 0
       items[i].total = (qty * price * (1 + gst / 100)).toFixed(2)
     }
-    // auto-fill purchase price from product
     if (key === 'product') {
       const prod = products.find(p => String(p.id) === String(val))
       if (prod) {
@@ -318,98 +1275,134 @@ export default function Purchases() {
     : form.payment_status === 'partial' ? (parseFloat(form.paid_amount) || 0) : 0
   const balanceDue = Math.max(0, grandTotal - paidNow)
   const paymentError =
-    form.payment_status !== 'partial' ? ''
-    : paidNow <= 0 ? 'Enter the amount paid so far'
-    : paidNow >= grandTotal ? 'Must be less than the total — choose "Paid" instead'
-    : ''
+    form.payment_status === 'partial' &&
+    (paidNow <= 0 || paidNow >= grandTotal)
+
+  const addItem = () =>
+    setForm(p => ({
+      ...p,
+      items: [
+        ...p.items,
+        { product: '', quantity: 1, purchase_price: '', gst_percent: 0, total: 0 }
+      ]
+    }))
+
+  const removeItem = i => {
+    if (form.items.length <= 1) return toast.error('At least one item required')
+    setForm(p => ({ ...p, items: p.items.filter((_, idx) => idx !== i) }))
+  }
 
   const save = async () => {
-    if (!form.supplier) return toast.error('Select a supplier')
-    if (form.items.some(i => !i.product || !i.purchase_price)) return toast.error('Fill all item details')
-    if (form.items.some(i => !(parseFloat(i.quantity) > 0))) return toast.error('Quantity must be greater than zero')
-    if (grandTotal <= 0) return toast.error('Purchase total must be greater than zero')
-    if (paymentError) return toast.error(paymentError)
+    if (!form.supplier) return toast.error('Please select a supplier')
+    if (form.items.some(i => !i.product)) return toast.error('All items must have a product selected')
+    if (form.items.some(i => !i.quantity || Number(i.quantity) <= 0))
+      return toast.error('Quantity must be greater than zero')
+    if (form.items.some(i => i.purchase_price === '' || Number(i.purchase_price) < 0))
+      return toast.error('Purchase price cannot be negative')
+    if (paymentError) {
+      return toast.error(
+        paidNow <= 0
+          ? 'Enter paid amount greater than 0 for partial payment'
+          : 'Paid amount cannot equal or exceed total (mark as Paid instead)'
+      )
+    }
+
     setSaving(true)
+    const payload = {
+      supplier: parseInt(form.supplier),
+      invoice_number: form.invoice_number,
+      purchase_date: form.purchase_date,
+      payment_status: form.payment_status,
+      paid_amount: paidNow,
+      notes: form.notes,
+      items: form.items.map(i => ({
+        product: parseInt(i.product),
+        quantity: parseFloat(i.quantity),
+        purchase_price: parseFloat(i.purchase_price),
+        gst_percent: parseFloat(i.gst_percent) || 0,
+      }))
+    }
+
     try {
-      const payload = {
-        ...form,
-        paid_amount: Number(paidNow.toFixed(2)),
-        items: form.items.map(i => ({
-          product: parseInt(i.product),
-          quantity: parseFloat(i.quantity),
-          purchase_price: parseFloat(i.purchase_price),
-          gst_percent: parseFloat(i.gst_percent),
-          total: parseFloat(i.total),
-        }))
-      }
       await api.post('/purchases/', payload)
-      toast.success('Purchase saved & stock updated')
-      setModal(false); setForm(emptyForm); load()
-    } catch (e) { toast.error(JSON.stringify(e.response?.data) || 'Error saving purchase') }
-    finally { setSaving(false) }
+      toast.success('Purchase recorded & stock updated!')
+      setModal(false)
+      setForm(emptyForm)
+      load()
+    } catch (e) {
+      toast.error(e.response?.data?.detail || e.response?.data?.non_field_errors?.[0] || 'Failed to save purchase')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const deleteSupplier = async () => {
     try {
       await api.delete(`/suppliers/${deleteConfirm.id}/`)
       toast.success('Supplier deleted')
-      setSuppliers(s => s.filter(x => x.id !== deleteConfirm.id))
-    } catch { toast.error('Cannot delete — supplier may have linked purchases') }
-    finally { setDeleteConfirm(null) }
+      setSuppliers(prev => prev.filter(s => s.id !== deleteConfirm.id))
+      setDeleteConfirm(null)
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Failed to delete supplier')
+    }
   }
 
-  const filteredSuppliers = suppliers.filter(s =>
-    s.name.toLowerCase().includes(supSearch.toLowerCase()) ||
-    (s.phone || '').includes(supSearch) ||
-    (s.email || '').toLowerCase().includes(supSearch.toLowerCase())
-  )
-  const filteredPOs = purchases.filter(p =>
-    (p.supplier_name || '').toLowerCase().includes(poSearch.toLowerCase()) ||
-    (p.invoice_number || '').toLowerCase().includes(poSearch.toLowerCase())
-  )
-
-  const supplierProducts = form.supplier
-    ? products.filter(p => String(p.supplier) === String(form.supplier))
-    : products
-
-  const purchaseSummary = {
-    total: purchases.reduce((sum, p) => sum + Number(p.total_amount || 0), 0),
-    paid: purchases.reduce((sum, p) => sum + Number(p.paid_amount || 0), 0),
-    due: purchases.reduce((sum, p) => sum + dueOf(p), 0),
-    orders: purchases.length,
-  }
+  /* ── KPI Metrics ── */
+  const totalSpend = purchases.reduce((s, p) => s + Number(p.total_amount || 0), 0)
+  const totalDue = purchases.reduce((s, p) => s + dueOf(p), 0)
+  const totalPaid = totalSpend - totalDue
 
   const summaryCards = [
-  
     {
-      label: 'Total Purchases',
-      value: fmt(purchaseSummary.total),
-      hint: 'Across all purchase orders',
+      label: 'Total Spend',
+      value: fmt(totalSpend),
+      hint: `${purchases.length} total orders`,
       icon: TrendingUp,
-      accent: 'border-l-4 border-l-[#1E3A5F]',
+      iconClass: 'bg-indigo-50 dark:bg-indigo-950/50 text-[#1E3A5F] dark:text-slate-200',
     },
     {
       label: 'Amount Paid',
-      value: fmt(purchaseSummary.paid),
-      hint: 'Settled with suppliers',
+      value: fmt(totalPaid),
+      hint: 'Supplier settlements',
       icon: Wallet,
-      accent: 'border-l-4 border-l-emerald-500',
+      iconClass: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400',
     },
     {
-      label: 'Amount Due',
-      value: fmt(purchaseSummary.due),
-      hint: purchaseSummary.due > 0 ? 'Requires payment attention' : 'No outstanding balance',
+      label: 'Balance Due',
+      value: fmt(totalDue),
+      hint: 'Outstanding payable',
       icon: Clock3,
-      accent: 'border-l-4 border-l-amber-500',
+      iconClass: 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400',
     },
     {
-      label: 'Purchase Orders',
-      value: purchaseSummary.orders,
-      hint: `${suppliers.length} registered suppliers`,
-      icon: ClipboardList,
-      accent: 'border-l-4 border-l-sky-500',
+      label: 'Active Suppliers',
+      value: String(suppliers.length),
+      hint: 'Registered vendors',
+      icon: Building2,
+      iconClass: 'bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400',
     },
   ]
+
+  const filteredPOs = purchases.filter(p => {
+    if (!poSearch.trim()) return true
+    const q = poSearch.toLowerCase()
+    return (
+      (p.supplier_name || '').toLowerCase().includes(q) ||
+      (p.invoice_number || '').toLowerCase().includes(q) ||
+      `po-${p.id}`.toLowerCase().includes(q)
+    )
+  })
+
+  const filteredSuppliers = suppliers.filter(s => {
+    if (!supSearch.trim()) return true
+    const q = supSearch.toLowerCase()
+    return (
+      s.name.toLowerCase().includes(q) ||
+      (s.phone || '').includes(q) ||
+      (s.email || '').toLowerCase().includes(q) ||
+      (s.gstin || '').toLowerCase().includes(q)
+    )
+  })
 
   return (
     <div className="min-h-screen space-y-6 bg-[var(--app-bg)] px-3 pb-20 pt-4 text-[var(--ink)] sm:px-5 lg:px-6">
@@ -418,6 +1411,16 @@ export default function Purchases() {
         subtitle="Manage purchase orders, suppliers, payments and stock-in"
         action={
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <button
+              onClick={() => {
+                setImportMode(tab === 'suppliers' ? 'suppliers' : 'orders')
+                setImportModal(true)
+              }}
+              className="btn-secondary flex items-center justify-center gap-2 text-sm"
+              title="Bulk import from Excel"
+            >
+              <FileSpreadsheet size={15} /> Import Excel
+            </button>
             <button onClick={() => { setEditSupplier(null); setSupModal(true) }} className="btn-secondary flex items-center justify-center gap-2 text-sm">
               <Building2 size={15} /> Add Supplier
             </button>
@@ -499,9 +1502,24 @@ export default function Purchases() {
                     onChange={e => setPoSearch(e.target.value)}
                   />
                 </div>
-                <div className="flex shrink-0 items-center gap-2 text-xs font-medium text-[var(--muted)] px-1">
-                  <Filter size={14} className="text-[var(--muted-light)]" />
-                  <span>{filteredPOs.length} result{filteredPOs.length !== 1 ? 's' : ''}</span>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setImportMode('orders')
+                      setImportModal(true)
+                    }}
+                    className="btn-secondary h-11 px-3 text-xs flex items-center justify-center gap-1.5 rounded-xl shrink-0"
+                    title="Import purchase orders from Excel"
+                  >
+                    <FileSpreadsheet size={14} />
+                    <span>Import Excel</span>
+                  </button>
+
+                  <div className="flex shrink-0 items-center gap-2 text-xs font-medium text-[var(--muted)] px-1">
+                    <Filter size={14} className="text-[var(--muted-light)]" />
+                    <span>{filteredPOs.length} result{filteredPOs.length !== 1 ? 's' : ''}</span>
+                  </div>
                 </div>
               </div>
 
@@ -580,20 +1598,20 @@ export default function Purchases() {
                                           <th>#</th>
                                           <th>Product</th>
                                           <th>Qty</th>
-                                          <th>Price</th>
-                                          <th>GST</th>
-                                          <th>Total</th>
+                                          <th>Purchase Price</th>
+                                          <th>GST %</th>
+                                          <th>Line Total</th>
                                         </tr>
                                       </thead>
                                       <tbody>
                                         {(p.items || []).map((it, idx) => (
-                                          <tr key={idx} className="hover:bg-[var(--surface-hover)]">
-                                            <td className="text-[var(--muted)]">{idx + 1}</td>
+                                          <tr key={it.id || idx}>
+                                            <td className="font-mono text-[var(--muted)]">{idx + 1}</td>
                                             <td className="font-semibold text-[var(--ink)]">{it.product_name || it.product}</td>
-                                            <td className="tabular-nums text-[var(--ink-secondary)]">{it.quantity}</td>
-                                            <td className="tabular-nums text-[var(--ink-secondary)]">{fmt(it.purchase_price)}</td>
-                                            <td className="tabular-nums text-[var(--muted)]">{it.gst_percent}%</td>
-                                            <td className="font-bold tabular-nums text-[var(--ink)]">{fmt(it.total)}</td>
+                                            <td className="font-mono tabular-nums">{it.quantity}</td>
+                                            <td className="font-mono tabular-nums">{fmt(it.purchase_price)}</td>
+                                            <td className="font-mono tabular-nums">{it.gst_percent}%</td>
+                                            <td className="font-mono font-bold tabular-nums text-[var(--ink)]">{fmt(it.total)}</td>
                                           </tr>
                                         ))}
                                       </tbody>
@@ -638,9 +1656,24 @@ export default function Purchases() {
                     onChange={e => setSupSearch(e.target.value)}
                   />
                 </div>
-                <button onClick={() => { setEditSupplier(null); setSupModal(true) }} className="btn-primary w-full justify-center flex items-center gap-2 text-sm sm:w-auto">
-                  <Plus size={14} /> Add Supplier
-                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setImportMode('suppliers')
+                      setImportModal(true)
+                    }}
+                    className="btn-secondary h-11 px-3 text-xs flex items-center justify-center gap-1.5 rounded-xl shrink-0"
+                    title="Import suppliers from Excel"
+                  >
+                    <FileSpreadsheet size={14} />
+                    <span>Import Excel</span>
+                  </button>
+
+                  <button onClick={() => { setEditSupplier(null); setSupModal(true) }} className="btn-primary h-11 px-4 justify-center flex items-center gap-2 text-sm rounded-xl shrink-0">
+                    <Plus size={14} /> Add Supplier
+                  </button>
+                </div>
               </div>
 
               {filteredSuppliers.length === 0 ? <EmptyState message="No suppliers found" /> : (
@@ -728,143 +1761,127 @@ export default function Purchases() {
                   value={form.paid_amount}
                   onChange={e => setForm(p => ({ ...p, paid_amount: e.target.value }))}
                 />
-                {paymentError
-                  ? <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{paymentError}</p>
-                  : <p className="mt-1 text-xs text-[var(--muted)]">Balance due: ₹{fmt2(balanceDue)}</p>}
+                {paymentError && (
+                  <p className="mt-1 text-xs text-rose-500">
+                    {paidNow <= 0
+                      ? 'Paid amount must be > 0'
+                      : 'Paid amount cannot equal or exceed total'}
+                  </p>
+                )}
               </div>
             )}
           </section>
 
           {/* Items */}
-          <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] overflow-hidden shadow-sm">
-            <div className="flex items-center justify-between px-4 py-3 sm:px-5 border-b border-[var(--line)]">
+          <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4 sm:p-5 shadow-sm">
+            <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-bold text-[var(--ink)]">Items</h3>
-              <button
-                onClick={() => setForm(p => ({ ...p, items: [...p.items, { product: '', quantity: 1, purchase_price: '', gst_percent: 0, total: 0 }] }))}
-                className="text-xs font-semibold text-[#1E3A5F] dark:text-slate-300 hover:underline flex items-center gap-1.5"
-              >
-                <Plus size={13} /> Add Item
+              <button onClick={addItem} className="btn-secondary h-8 px-3 text-xs flex items-center gap-1">
+                <Plus size={14} /> Add item
               </button>
             </div>
-            <div className="w-full max-w-full overflow-x-auto">
-              <table className={`table min-w-[800px] ${tableCls} bg-[var(--surface)]`}>
-                <thead>
-                  <tr>
-                    <th>Product</th>
-                    <th>Qty</th>
-                    <th>Purchase Price</th>
-                    <th>GST%</th>
-                    <th>Total</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {form.items.map((item, i) => (
-                    <tr key={i} className="hover:bg-[var(--surface-hover)]">
-                      <td className="min-w-48">
-                        <select
-                          className={`${inputCls} h-9 text-xs`}
-                          value={item.product}
-                          onChange={e => updateItem(i, 'product', e.target.value)}
-                        >
-                          <option className="bg-[var(--surface)] text-[var(--ink)]" value="">Select product</option>
-                          {(form.supplier && supplierProducts.length > 0 ? supplierProducts : products).map(p => (
-                            <option className="bg-[var(--surface)] text-[var(--ink)]" key={p.id} value={p.id}>
-                              {p.name} (Stock: {p.current_stock})
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          className={`${inputCls} h-9 text-xs w-20 tabular-nums`}
-                          min="0.01" step="0.01"
-                          value={item.quantity}
-                          onChange={e => updateItem(i, 'quantity', e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          type="number"
-                          className={`${inputCls} h-9 text-xs w-28 tabular-nums`}
-                          min="0" step="0.01"
-                          value={item.purchase_price}
-                          onChange={e => updateItem(i, 'purchase_price', e.target.value)}
-                        />
-                      </td>
-                      <td>
-                        <select
-                          className={`${inputCls} h-9 text-xs w-20`}
-                          value={item.gst_percent}
-                          onChange={e => updateItem(i, 'gst_percent', e.target.value)}
-                        >
-                          {[0, 5, 12, 18, 28].map(g => (
-                            <option className="bg-[var(--surface)] text-[var(--ink)]" key={g} value={g}>{g}%</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="font-bold text-sm text-emerald-600 dark:text-emerald-400 tabular-nums">
-                        ₹{fmt2(item.total)}
-                      </td>
-                      <td>
-                        <button
-                          onClick={() => setForm(p => ({ ...p, items: p.items.filter((_, j) => j !== i) }))}
-                          className="text-rose-400 hover:text-rose-600 p-1 disabled:opacity-30 transition-colors"
-                          disabled={form.items.length === 1}
-                          title="Remove item"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-3">
+              {form.items.map((it, i) => (
+                <div key={i} className="flex flex-col gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 sm:flex-row sm:items-center">
+                  <div className="flex-1 min-w-0">
+                    <label className="text-[10px] font-semibold text-[var(--muted)] block mb-1">Product *</label>
+                    <select
+                      className={`${inputCls} text-xs`}
+                      value={it.product}
+                      onChange={e => updateItem(i, 'product', e.target.value)}
+                    >
+                      <option className="bg-[var(--surface)] text-[var(--ink)]" value="">Select product</option>
+                      {products.map(p => (
+                        <option className="bg-[var(--surface)] text-[var(--ink)]" key={p.id} value={p.id}>
+                          {p.name} {p.sku ? `(${p.sku})` : ''} — Stock: {p.current_stock}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="w-full sm:w-20">
+                    <label className="text-[10px] font-semibold text-[var(--muted)] block mb-1">Qty *</label>
+                    <input
+                      type="number" min="0.01" step="0.01"
+                      className={`${inputCls} text-xs`}
+                      value={it.quantity}
+                      onChange={e => updateItem(i, 'quantity', e.target.value)}
+                    />
+                  </div>
+                  <div className="w-full sm:w-28">
+                    <label className="text-[10px] font-semibold text-[var(--muted)] block mb-1">Price (₹) *</label>
+                    <input
+                      type="number" min="0" step="0.01"
+                      className={`${inputCls} text-xs`}
+                      placeholder="0.00"
+                      value={it.purchase_price}
+                      onChange={e => updateItem(i, 'purchase_price', e.target.value)}
+                    />
+                  </div>
+                  <div className="w-full sm:w-20">
+                    <label className="text-[10px] font-semibold text-[var(--muted)] block mb-1">GST %</label>
+                    <input
+                      type="number" min="0" max="100" step="0.1"
+                      className={`${inputCls} text-xs`}
+                      value={it.gst_percent}
+                      onChange={e => updateItem(i, 'gst_percent', e.target.value)}
+                    />
+                  </div>
+                  <div className="w-full sm:w-28 sm:text-right">
+                    <label className="text-[10px] font-semibold text-[var(--muted)] block mb-1">Total</label>
+                    <span className="font-mono font-bold text-sm text-[var(--ink)] block pt-1">
+                      ₹{it.total || '0.00'}
+                    </span>
+                  </div>
+                  {form.items.length > 1 && (
+                    <button
+                      onClick={() => removeItem(i)}
+                      className="text-rose-500 hover:text-rose-400 p-1 self-end sm:self-center"
+                      title="Remove item"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           </section>
 
-          {/* Notes + payment summary */}
-          <div className="flex flex-col items-stretch gap-4 lg:flex-row lg:items-start">
-            <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] flex-1 p-4 sm:p-5 shadow-sm">
+          {/* Notes and summary */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
               <label className="label text-xs font-semibold text-[var(--ink-secondary)]">Notes</label>
               <textarea
-                className={`${inputCls} h-28 py-2`}
-                rows={4}
+                className={`${inputCls} h-24 py-2`}
+                rows={3}
+                placeholder="Optional purchase order notes..."
                 value={form.notes}
                 onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
-                placeholder="Optional supplier notes or order references…"
               />
-            </section>
-
-            <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] w-full p-4 sm:p-5 lg:w-80 shadow-sm">
-              <h3 className="mb-3 text-sm font-bold text-[var(--ink)]">Payment summary</h3>
-              <dl className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <dt className="text-[var(--muted)]">Subtotal</dt>
-                  <dd className="font-semibold text-[var(--ink)] tabular-nums">₹{fmt2(subtotal)}</dd>
+            </div>
+            <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4 space-y-2">
+              <div className="flex justify-between text-xs text-[var(--ink-secondary)]">
+                <span>Subtotal (excl. GST)</span>
+                <span className="font-mono">₹{fmt2(subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-[var(--ink-secondary)]">
+                <span>GST Total</span>
+                <span className="font-mono">₹{fmt2(gstTotal)}</span>
+              </div>
+              <div className="flex justify-between text-base font-bold text-[var(--ink)] border-t border-[var(--line)] pt-2">
+                <span>Grand Total</span>
+                <span className="font-mono text-[#1E3A5F] dark:text-slate-200">₹{fmt2(grandTotal)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-emerald-600 dark:text-emerald-400">
+                <span>Paid Now</span>
+                <span className="font-mono">₹{fmt2(paidNow)}</span>
+              </div>
+              {balanceDue > 0 && (
+                <div className="flex justify-between text-xs font-semibold text-rose-500">
+                  <span>Balance Due</span>
+                  <span className="font-mono">₹{fmt2(balanceDue)}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <dt className="text-[var(--muted)]">GST</dt>
-                  <dd className="font-semibold text-[var(--ink)] tabular-nums">₹{fmt2(gstTotal)}</dd>
-                </div>
-                <div className="flex items-center justify-between border-t border-[var(--line)] pt-3">
-                  <dt className="font-bold text-[var(--ink)]">Grand total</dt>
-                  <dd className="text-xl font-extrabold text-[#1E3A5F] dark:text-slate-200 tabular-nums">₹{fmt2(grandTotal)}</dd>
-                </div>
-                <div className="flex items-center justify-between">
-                  <dt className="text-[var(--muted)]">Paid</dt>
-                  <dd className="font-semibold text-[var(--ink)] tabular-nums">₹{fmt2(paidNow)}</dd>
-                </div>
-                <div className="flex items-center justify-between">
-                  <dt className="text-[var(--muted)]">Balance due</dt>
-                  <dd className={`font-bold tabular-nums ${balanceDue > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                    ₹{fmt2(balanceDue)}
-                  </dd>
-                </div>
-              </dl>
-              <p className="mt-3 text-xs text-[var(--muted-light)]">{form.items.length} line item{form.items.length !== 1 ? 's' : ''}</p>
-            </section>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:gap-3 pt-2">
@@ -877,6 +1894,14 @@ export default function Purchases() {
           </div>
         </div>
       </Modal>
+
+      {/* Bulk Excel Import Modal */}
+      <PurchaseBulkImportModal
+        open={importModal}
+        onClose={() => setImportModal(false)}
+        onSuccess={load}
+        initialMode={importMode}
+      />
 
       {/* Supplier Add/Edit Modal */}
       <SupplierModal

@@ -879,6 +879,362 @@ class SupplierViewSet(viewsets.ModelViewSet):
             reason=reason,
         )
 
+    @action(detail=False, methods=['get'], url_path='import-template')
+    def import_template(self, request):
+        """Generate a downloadable, professionally formatted Excel template for bulk supplier import."""
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Suppliers"
+
+        headers = [
+            ("Company / Supplier Name *", 32),
+            ("Phone / Mobile", 20),
+            ("Email Address", 28),
+            ("Business Address", 38),
+            ("GSTIN", 22),
+        ]
+
+        header_fill = PatternFill(start_color="1E3A5F", end_color="1E3A5F", fill_type="solid")
+        header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+        center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        left_align = Alignment(horizontal="left", vertical="center")
+        thin_border = Border(
+            left=Side(style='thin', color='D7DEE7'),
+            right=Side(style='thin', color='D7DEE7'),
+            top=Side(style='thin', color='D7DEE7'),
+            bottom=Side(style='thin', color='D7DEE7')
+        )
+
+        ws.row_dimensions[1].height = 28
+        for col_idx, (col_name, width) in enumerate(headers, start=1):
+            cell = ws.cell(row=1, column=col_idx, value=col_name)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = center_align
+            cell.border = thin_border
+            ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+        sample_rows = [
+            ("Balaji Traders Pvt Ltd", "9876543210", "sales@balajitraders.com", "123 MG Road, Bangalore, Karnataka - 560001", "29ABCDE1234F1Z5"),
+            ("Sri Krishna Enterprises", "9123456789", "contact@srikrishna.in", "45 Market Yard, Pune, Maharashtra - 411037", "27AABCS1429B1ZB"),
+            ("Ambika Agencies", "8012345678", "info@ambikaagencies.com", "Plot 12, Industrial Area, Chennai, TN - 600001", ""),
+        ]
+
+        sample_font = Font(name="Calibri", size=10, color="172033")
+        for row_idx, sample in enumerate(sample_rows, start=2):
+            ws.row_dimensions[row_idx].height = 20
+            for col_idx, val in enumerate(sample, start=1):
+                cell = ws.cell(row=row_idx, column=col_idx, value=val)
+                cell.font = sample_font
+                cell.alignment = left_align
+                cell.border = thin_border
+
+        note_row_idx = len(sample_rows) + 3
+        ws.cell(row=note_row_idx, column=1, value="Instructions & Guidelines:").font = Font(name="Calibri", size=10, bold=True, color="1E3A5F")
+        notes = [
+            "1. Columns marked with (*) are required. 'Company / Supplier Name' cannot be blank.",
+            "2. If GSTIN is provided, it must be exactly 15 alphanumeric characters.",
+            "3. Phone numbers should be 10-15 digits. Landline or mobile accepted.",
+            "4. Delete or replace the sample rows above with your actual supplier data.",
+            "5. Save the file as .xlsx, .xls, or .csv and upload it in the Suppliers page."
+        ]
+        for idx, note in enumerate(notes, start=note_row_idx + 1):
+            ws.cell(row=idx, column=1, value=note).font = Font(name="Calibri", size=9, italic=True, color="64748B")
+
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response['Content-Disposition'] = 'attachment; filename="Supplier_Import_Template.xlsx"'
+        return response
+
+    def _parse_supplier_file(self, upload):
+        suffix = upload.name.rsplit('.', 1)[-1].lower() if '.' in upload.name else ''
+        if suffix == 'csv':
+            try:
+                decoded = upload.read().decode('utf-8-sig')
+            except UnicodeDecodeError:
+                upload.seek(0)
+                decoded = upload.read().decode('latin-1')
+            reader = list(csv.DictReader(decoded.splitlines()))
+            return reader, None
+        elif suffix in ('xlsx', 'xlsm', 'xls'):
+            try:
+                workbook = load_workbook(upload, read_only=True, data_only=True)
+                sheet = workbook.active
+                values = list(sheet.iter_rows(values_only=True))
+                if not values:
+                    return [], None
+                header_row_idx = 0
+                for idx, r in enumerate(values):
+                    if any(r and any(k in str(v).lower() for k in ['name', 'supplier', 'company', 'phone', 'mobile']) for v in r if v is not None):
+                        header_row_idx = idx
+                        break
+                headers = [str(value).strip() if value is not None else '' for value in values[header_row_idx]]
+                rows = []
+                for values_row in values[header_row_idx + 1:]:
+                    first_val = str(values_row[0] or '').strip().lower() if values_row else ''
+                    if first_val.startswith('instructions') or first_val.startswith('1.') or first_val.startswith('note'):
+                        continue
+                    if any(value is not None and str(value).strip() for value in values_row):
+                        rows.append(dict(zip(headers, values_row)))
+                return rows, None
+            except Exception as exc:
+                return None, f"Could not read spreadsheet: {str(exc)}"
+        else:
+            return None, "Unsupported file format. Please upload a .xlsx, .xls, or .csv file."
+
+    def _normalize_row(self, raw_row):
+        normalized = {}
+        for key, val in raw_row.items():
+            if key is None:
+                continue
+            clean_key = str(key).strip().lower().replace('*', '').replace('-', ' ').replace('_', ' ').strip()
+            clean_val = val
+            if isinstance(clean_val, float) and clean_val.is_integer():
+                clean_val = str(int(clean_val))
+            elif clean_val is not None:
+                clean_val = str(clean_val).strip()
+            else:
+                clean_val = ''
+
+            if any(w in clean_key for w in ['supplier name', 'company name', 'vendor name', 'company', 'supplier', 'name']) and 'name' not in normalized:
+                normalized['name'] = clean_val
+            elif any(w in clean_key for w in ['phone', 'mobile', 'contact', 'cell']) and 'phone' not in normalized:
+                normalized['phone'] = clean_val
+            elif any(w in clean_key for w in ['email', 'mail']) and 'email' not in normalized:
+                normalized['email'] = clean_val
+            elif any(w in clean_key for w in ['address', 'location', 'addr', 'city']) and 'address' not in normalized:
+                normalized['address'] = clean_val
+            elif any(w in clean_key for w in ['gstin', 'gst', 'tax no']) and 'gstin' not in normalized:
+                normalized['gstin'] = clean_val.upper()
+
+        return {
+            'name': normalized.get('name', ''),
+            'phone': normalized.get('phone', ''),
+            'email': normalized.get('email', ''),
+            'address': normalized.get('address', ''),
+            'gstin': normalized.get('gstin', ''),
+        }
+
+    @action(detail=False, methods=['post'], url_path='validate-import')
+    def validate_import(self, request):
+        import re
+        upload = request.FILES.get('file')
+        if not upload:
+            return Response({'detail': 'Choose a CSV or Excel file to upload.'}, status=400)
+        if upload.size > 5 * 1024 * 1024:
+            return Response({'detail': 'The import file must be smaller than 5 MB.'}, status=400)
+
+        raw_rows, parse_err = self._parse_supplier_file(upload)
+        if parse_err:
+            return Response({'detail': parse_err}, status=400)
+        if not raw_rows:
+            return Response({'detail': 'The file contains no data rows.'}, status=400)
+        if len(raw_rows) > 500:
+            return Response({'detail': 'Import up to 500 suppliers at a time.'}, status=400)
+
+        existing = Supplier.objects.filter(business=request.user.business)
+        existing_by_name = {s.name.strip().lower(): s.id for s in existing}
+        existing_by_gstin = {s.gstin.strip().upper(): s.id for s in existing if s.gstin}
+
+        email_regex = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+
+        validated_rows = []
+        seen_names_in_file = {}
+        valid_count = 0
+        error_count = 0
+        create_count = 0
+        update_count = 0
+
+        for idx, raw in enumerate(raw_rows, start=2):
+            data = self._normalize_row(raw)
+            name = data['name'].strip()
+            phone = data['phone'].strip()
+            email = data['email'].strip()
+            address = data['address'].strip()
+            gstin = data['gstin'].strip().upper()
+
+            errors = []
+
+            if not name:
+                errors.append("Supplier name is required")
+            elif len(name) > 200:
+                errors.append("Supplier name exceeds 200 characters")
+
+            if phone:
+                clean_phone = re.sub(r'[\s\-+()]', '', phone)
+                if len(phone) > 15:
+                    errors.append("Phone number exceeds 15 characters")
+                elif not clean_phone.isdigit():
+                    errors.append("Phone number contains invalid characters")
+
+            if email:
+                if len(email) > 254:
+                    errors.append("Email address exceeds maximum length")
+                elif not email_regex.match(email):
+                    errors.append("Invalid email address format")
+
+            if gstin:
+                if len(gstin) != 15:
+                    errors.append("GSTIN must be exactly 15 characters")
+                elif not gstin.isalnum():
+                    errors.append("GSTIN must contain alphanumeric characters only")
+
+            name_lower = name.lower()
+            if name_lower and name_lower in seen_names_in_file:
+                errors.append(f"Duplicate in file: already in row {seen_names_in_file[name_lower]}")
+            elif name_lower:
+                seen_names_in_file[name_lower] = idx
+
+            is_valid = len(errors) == 0
+            action_type = 'create'
+            matched_id = None
+
+            if gstin and gstin in existing_by_gstin:
+                action_type = 'update'
+                matched_id = existing_by_gstin[gstin]
+            elif name_lower and name_lower in existing_by_name:
+                action_type = 'update'
+                matched_id = existing_by_name[name_lower]
+
+            if is_valid:
+                valid_count += 1
+                if action_type == 'update':
+                    update_count += 1
+                else:
+                    create_count += 1
+            else:
+                error_count += 1
+
+            validated_rows.append({
+                'row_number': idx,
+                'name': name,
+                'phone': phone,
+                'email': email,
+                'address': address,
+                'gstin': gstin,
+                'is_valid': is_valid,
+                'errors': errors,
+                'action': action_type,
+                'existing_id': matched_id,
+            })
+
+        return Response({
+            'total_rows': len(validated_rows),
+            'valid_rows_count': valid_count,
+            'error_rows_count': error_count,
+            'create_count': create_count,
+            'update_count': update_count,
+            'rows': validated_rows,
+        })
+
+    @action(detail=False, methods=['post'], url_path='bulk-import')
+    def bulk_import(self, request):
+        from django.db import transaction as db_transaction
+
+        update_existing = request.data.get('update_existing', True)
+        if isinstance(update_existing, str):
+            update_existing = update_existing.lower() in ('true', '1', 'yes')
+
+        rows_to_import = []
+
+        if 'rows' in request.data:
+            rows_data = request.data.get('rows', [])
+            if not isinstance(rows_data, list) or not rows_data:
+                return Response({'detail': 'No supplier rows provided for import.'}, status=400)
+            rows_to_import = rows_data
+        elif 'file' in request.FILES:
+            validation_res = self.validate_import(request)
+            if validation_res.status_code != 200:
+                return validation_res
+            rows_to_import = [r for r in validation_res.data.get('rows', []) if r.get('is_valid')]
+        else:
+            return Response({'detail': 'Provide validated supplier rows or an import file.'}, status=400)
+
+        created_count = 0
+        updated_count = 0
+        failed_count = 0
+        successful_rows = []
+        failed_rows = []
+
+        business = request.user.business
+
+        for row in rows_to_import:
+            row_num = row.get('row_number', '?')
+            name = (row.get('name') or '').strip()
+            phone = (row.get('phone') or '').strip()
+            email = (row.get('email') or '').strip()
+            address = (row.get('address') or '').strip()
+            gstin = (row.get('gstin') or '').strip().upper()
+
+            if not name:
+                failed_count += 1
+                failed_rows.append({'row_number': row_num, 'name': name, 'error': 'Supplier name is required'})
+                continue
+
+            try:
+                with db_transaction.atomic():
+                    existing_supplier = None
+                    if gstin:
+                        existing_supplier = Supplier.objects.filter(business=business, gstin=gstin).first()
+                    if not existing_supplier and name:
+                        existing_supplier = Supplier.objects.filter(business=business, name__iexact=name).first()
+
+                    if existing_supplier and update_existing:
+                        existing_supplier.name = name
+                        if phone:
+                            existing_supplier.phone = phone
+                        if email:
+                            existing_supplier.email = email
+                        if address:
+                            existing_supplier.address = address
+                        if gstin:
+                            existing_supplier.gstin = gstin
+                        existing_supplier.save()
+                        updated_count += 1
+                        successful_rows.append({'row_number': row_num, 'name': name, 'action': 'updated'})
+                    elif existing_supplier and not update_existing:
+                        failed_count += 1
+                        failed_rows.append({'row_number': row_num, 'name': name, 'error': 'Supplier already exists and updating was disabled'})
+                    else:
+                        Supplier.objects.create(
+                            business=business,
+                            name=name,
+                            phone=phone,
+                            email=email,
+                            address=address,
+                            gstin=gstin,
+                        )
+                        created_count += 1
+                        successful_rows.append({'row_number': row_num, 'name': name, 'action': 'created'})
+            except Exception as exc:
+                failed_count += 1
+                failed_rows.append({'row_number': row_num, 'name': name, 'error': str(exc)})
+
+        audit_event(
+            request,
+            'SUPPLIER_BULK_IMPORTED',
+            'Supplier',
+            None,
+            after={'created': created_count, 'updated': updated_count, 'failed': failed_count},
+            reason=f'Bulk imported {created_count + updated_count} suppliers',
+        )
+
+        return Response({
+            'status': 'completed',
+            'total_processed': len(rows_to_import),
+            'created_count': created_count,
+            'updated_count': updated_count,
+            'failed_count': failed_count,
+            'successful_rows': successful_rows,
+            'failed_rows': failed_rows,
+        })
+
 
 class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
@@ -1083,6 +1439,482 @@ class PurchaseViewSet(viewsets.ModelViewSet):
             'detail': 'Financial transactions cannot be permanently deleted. Use a purchase return for reversal.',
             'error': 'financial_document_deletion_forbidden',
         }, status=405)
+
+    @action(detail=False, methods=['get'], url_path='import-template')
+    def import_template(self, request):
+        """Generate a downloadable, professionally formatted Excel template for bulk purchase orders."""
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Purchase Orders"
+
+        headers = [
+            ("Supplier Name *", 28),
+            ("Invoice Number *", 20),
+            ("Purchase Date (YYYY-MM-DD) *", 25),
+            ("Product SKU or Name *", 32),
+            ("Quantity *", 14),
+            ("Purchase Price *", 16),
+            ("GST %", 12),
+            ("Paid Amount", 16),
+            ("Notes", 26),
+        ]
+
+        header_fill = PatternFill(start_color="1E3A5F", end_color="1E3A5F", fill_type="solid")
+        header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+        center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        left_align = Alignment(horizontal="left", vertical="center")
+        right_align = Alignment(horizontal="right", vertical="center")
+        thin_border = Border(
+            left=Side(style='thin', color='D7DEE7'),
+            right=Side(style='thin', color='D7DEE7'),
+            top=Side(style='thin', color='D7DEE7'),
+            bottom=Side(style='thin', color='D7DEE7')
+        )
+
+        ws.row_dimensions[1].height = 28
+        for col_idx, (col_name, width) in enumerate(headers, start=1):
+            cell = ws.cell(row=1, column=col_idx, value=col_name)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = center_align
+            cell.border = thin_border
+            ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+        active_prods = list(Product.objects.filter(business=request.user.business, status='active')[:2])
+        p1_sku = active_prods[0].sku if active_prods else "CLEAN-001"
+        p1_price = float(active_prods[0].purchase_price) if active_prods else 165.00
+        p1_gst = float(active_prods[0].gst_percent) if active_prods else 18.0
+
+        p2_sku = active_prods[1].sku if len(active_prods) > 1 else "CLEAN-002"
+        p2_price = float(active_prods[1].purchase_price) if len(active_prods) > 1 else 85.00
+        p2_gst = float(active_prods[1].gst_percent) if len(active_prods) > 1 else 18.0
+
+        today_str = timezone.now().strftime('%Y-%m-%d')
+
+        sample_rows = [
+            ("Balaji Traders Pvt Ltd", "INV-8001", today_str, p1_sku, 10, p1_price, p1_gst, round(10 * p1_price * (1 + p1_gst / 100), 2), "Monthly stock replenishment"),
+            ("Balaji Traders Pvt Ltd", "INV-8001", today_str, p2_sku, 5, p2_price, p2_gst, round(10 * p1_price * (1 + p1_gst / 100) + 5 * p2_price * (1 + p2_gst / 100), 2), "Monthly stock replenishment"),
+            ("Sri Krishna Enterprises", "PO-9002", today_str, p1_sku, 20, p1_price, p1_gst, 0, "Credit purchase - Net 30"),
+        ]
+
+        sample_font = Font(name="Calibri", size=10, color="172033")
+        for row_idx, sample in enumerate(sample_rows, start=2):
+            ws.row_dimensions[row_idx].height = 20
+            for col_idx, val in enumerate(sample, start=1):
+                cell = ws.cell(row=row_idx, column=col_idx, value=val)
+                cell.font = sample_font
+                cell.alignment = right_align if col_idx in (5, 6, 7, 8) else left_align
+                cell.border = thin_border
+
+        note_row_idx = len(sample_rows) + 3
+        ws.cell(row=note_row_idx, column=1, value="Instructions & Guidelines:").font = Font(name="Calibri", size=10, bold=True, color="1E3A5F")
+        notes = [
+            "1. Columns marked with (*) are required.",
+            "2. Group multiple items under the same purchase order by using the same 'Supplier Name' and 'Invoice Number'.",
+            "3. 'Product SKU or Name' must match an active product in your inventory (matching SKU is recommended).",
+            "4. 'Quantity' and 'Purchase Price' must be numbers greater than zero.",
+            "5. If Paid Amount is 0 or empty, payment status is Pending. If equal to grand total, it is marked as Paid.",
+            "6. Save the file as .xlsx, .xls, or .csv and upload it in the Purchases page."
+        ]
+        for idx, note in enumerate(notes, start=note_row_idx + 1):
+            ws.cell(row=idx, column=1, value=note).font = Font(name="Calibri", size=9, italic=True, color="64748B")
+
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response['Content-Disposition'] = 'attachment; filename="Purchase_Import_Template.xlsx"'
+        return response
+
+    def _parse_purchase_file(self, upload):
+        suffix = upload.name.rsplit('.', 1)[-1].lower() if '.' in upload.name else ''
+        if suffix == 'csv':
+            try:
+                decoded = upload.read().decode('utf-8-sig')
+            except UnicodeDecodeError:
+                upload.seek(0)
+                decoded = upload.read().decode('latin-1')
+            reader = list(csv.DictReader(decoded.splitlines()))
+            return reader, None
+        elif suffix in ('xlsx', 'xlsm', 'xls'):
+            try:
+                workbook = load_workbook(upload, read_only=True, data_only=True)
+                sheet = workbook.active
+                values = list(sheet.iter_rows(values_only=True))
+                if not values:
+                    return [], None
+                header_row_idx = 0
+                for idx, r in enumerate(values):
+                    if any(r and any(k in str(v).lower() for k in ['supplier', 'invoice', 'product', 'sku', 'qty', 'quantity']) for v in r if v is not None):
+                        header_row_idx = idx
+                        break
+                headers = [str(value).strip() if value is not None else '' for value in values[header_row_idx]]
+                rows = []
+                for values_row in values[header_row_idx + 1:]:
+                    first_val = str(values_row[0] or '').strip().lower() if values_row else ''
+                    if first_val.startswith('instructions') or first_val.startswith('1.') or first_val.startswith('note'):
+                        continue
+                    if any(value is not None and str(value).strip() for value in values_row):
+                        rows.append(dict(zip(headers, values_row)))
+                return rows, None
+            except Exception as exc:
+                return None, f"Could not read spreadsheet: {str(exc)}"
+        else:
+            return None, "Unsupported file format. Please upload a .xlsx, .xls, or .csv file."
+
+    def _normalize_purchase_row(self, raw_row):
+        normalized = {}
+        for key, val in raw_row.items():
+            if key is None:
+                continue
+            clean_key = str(key).strip().lower().replace('*', '').replace('-', ' ').replace('_', ' ').strip()
+            clean_val = val
+            if isinstance(clean_val, float) and clean_val.is_integer():
+                clean_val = str(int(clean_val))
+            elif clean_val is not None:
+                clean_val = str(clean_val).strip()
+            else:
+                clean_val = ''
+
+            if any(w in clean_key for w in ['supplier name', 'supplier', 'vendor name', 'vendor']) and 'supplier' not in normalized:
+                normalized['supplier'] = clean_val
+            elif any(w in clean_key for w in ['invoice number', 'invoice no', 'bill no', 'po number', 'invoice']) and 'invoice_number' not in normalized:
+                normalized['invoice_number'] = clean_val
+            elif any(w in clean_key for w in ['purchase date', 'date', 'bill date', 'po date']) and 'purchase_date' not in normalized:
+                normalized['purchase_date'] = clean_val
+            elif any(w in clean_key for w in ['product sku or name', 'product sku', 'product name', 'sku', 'product', 'item']) and 'product' not in normalized:
+                normalized['product'] = clean_val
+            elif any(w in clean_key for w in ['quantity', 'qty', 'units']) and 'quantity' not in normalized:
+                normalized['quantity'] = clean_val
+            elif any(w in clean_key for w in ['purchase price', 'price', 'unit price', 'rate', 'cost']) and 'purchase_price' not in normalized:
+                normalized['purchase_price'] = clean_val
+            elif any(w in clean_key for w in ['gst %', 'gst percent', 'gst', 'tax %', 'tax']) and 'gst_percent' not in normalized:
+                normalized['gst_percent'] = clean_val
+            elif any(w in clean_key for w in ['paid amount', 'paid', 'amount paid']) and 'paid_amount' not in normalized:
+                normalized['paid_amount'] = clean_val
+            elif any(w in clean_key for w in ['notes', 'note', 'remark', 'remarks']) and 'notes' not in normalized:
+                normalized['notes'] = clean_val
+
+        return normalized
+
+    @action(detail=False, methods=['post'], url_path='validate-import')
+    def validate_import(self, request):
+        from datetime import datetime, date
+
+        upload = request.FILES.get('file')
+        if not upload:
+            return Response({'detail': 'Choose a CSV or Excel file to upload.'}, status=400)
+        if upload.size > 5 * 1024 * 1024:
+            return Response({'detail': 'The import file must be smaller than 5 MB.'}, status=400)
+
+        raw_rows, parse_err = self._parse_purchase_file(upload)
+        if parse_err:
+            return Response({'detail': parse_err}, status=400)
+        if not raw_rows:
+            return Response({'detail': 'The file contains no purchase order rows.'}, status=400)
+        if len(raw_rows) > 500:
+            return Response({'detail': 'Import up to 500 purchase rows at a time.'}, status=400)
+
+        business = request.user.business
+        suppliers = Supplier.objects.filter(business=business)
+        suppliers_by_name = {s.name.strip().lower(): s for s in suppliers}
+
+        products = Product.objects.filter(business=business, status='active')
+        products_by_sku = {p.sku.strip().lower(): p for p in products if p.sku}
+        products_by_name = {p.name.strip().lower(): p for p in products if p.name}
+
+        def parse_date_val(val):
+            if isinstance(val, (date, datetime)):
+                return val.strftime('%Y-%m-%d')
+            s = str(val or '').strip()
+            if not s:
+                return None
+            for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%d-%m-%Y', '%Y/%m/%d', '%m/%d/%Y'):
+                try:
+                    return datetime.strptime(s, fmt).strftime('%Y-%m-%d')
+                except ValueError:
+                    pass
+            return None
+
+        grouped_orders = {}
+
+        for row_idx, raw in enumerate(raw_rows, start=2):
+            data = self._normalize_purchase_row(raw)
+            supplier_name = data.get('supplier', '').strip()
+            invoice_num = data.get('invoice_number', '').strip()
+            if not invoice_num:
+                invoice_num = f"PO-IMP-{row_idx}"
+
+            date_parsed = parse_date_val(data.get('purchase_date')) or timezone.now().strftime('%Y-%m-%d')
+            group_key = (supplier_name.lower(), invoice_num.lower(), date_parsed)
+
+            if group_key not in grouped_orders:
+                grouped_orders[group_key] = {
+                    'row_numbers': [row_idx],
+                    'supplier_name': supplier_name,
+                    'invoice_number': invoice_num,
+                    'purchase_date': date_parsed,
+                    'paid_amount_raw': data.get('paid_amount', ''),
+                    'notes': data.get('notes', ''),
+                    'items_raw': [],
+                }
+            else:
+                grouped_orders[group_key]['row_numbers'].append(row_idx)
+
+            grouped_orders[group_key]['items_raw'].append({
+                'row_number': row_idx,
+                'product_identifier': data.get('product', '').strip(),
+                'quantity_raw': data.get('quantity', ''),
+                'price_raw': data.get('purchase_price', ''),
+                'gst_raw': data.get('gst_percent', ''),
+            })
+
+        validated_orders = []
+        valid_orders_count = 0
+        error_orders_count = 0
+
+        for order_key, ord_data in grouped_orders.items():
+            order_errors = []
+            supplier_name = ord_data['supplier_name']
+            invoice_number = ord_data['invoice_number']
+            purchase_date = ord_data['purchase_date']
+
+            supplier_obj = None
+            if not supplier_name:
+                order_errors.append("Supplier name is required")
+            else:
+                supplier_obj = suppliers_by_name.get(supplier_name.lower())
+
+            validated_items = []
+            order_subtotal = Decimal('0')
+            order_tax = Decimal('0')
+            order_total = Decimal('0')
+
+            for item_raw in ord_data['items_raw']:
+                row_num = item_raw['row_number']
+                prod_ident = item_raw['product_identifier']
+                item_errors = []
+
+                prod_obj = None
+                if not prod_ident:
+                    item_errors.append(f"Row {row_num}: Product SKU or Name is required")
+                else:
+                    prod_obj = products_by_sku.get(prod_ident.lower()) or products_by_name.get(prod_ident.lower())
+                    if not prod_obj:
+                        item_errors.append(f"Row {row_num}: Product '{prod_ident}' not found in inventory")
+
+                try:
+                    qty = Decimal(str(item_raw['quantity_raw'] or 0))
+                    if qty <= 0:
+                        item_errors.append(f"Row {row_num}: Quantity must be greater than 0")
+                except Exception:
+                    qty = Decimal('0')
+                    item_errors.append(f"Row {row_num}: Quantity must be a valid number")
+
+                try:
+                    raw_price = item_raw['price_raw']
+                    if raw_price in (None, '') and prod_obj:
+                        price = prod_obj.purchase_price
+                    else:
+                        price = Decimal(str(raw_price))
+                    if price < 0:
+                        item_errors.append(f"Row {row_num}: Purchase price cannot be negative")
+                except Exception:
+                    price = Decimal('0')
+                    item_errors.append(f"Row {row_num}: Purchase price must be a valid number")
+
+                try:
+                    raw_gst = item_raw['gst_raw']
+                    if raw_gst in (None, '') and prod_obj:
+                        gst = prod_obj.gst_percent
+                    elif raw_gst in (None, ''):
+                        gst = Decimal('0')
+                    else:
+                        gst = Decimal(str(raw_gst))
+                    if not (0 <= gst <= 100):
+                        item_errors.append(f"Row {row_num}: GST % must be between 0 and 100")
+                except Exception:
+                    gst = Decimal('0')
+                    item_errors.append(f"Row {row_num}: GST % must be a valid number")
+
+                line_taxable = (qty * price).quantize(Decimal('0.01'))
+                line_tax = (line_taxable * gst / Decimal('100')).quantize(Decimal('0.01'))
+                line_total = line_taxable + line_tax
+
+                order_subtotal += line_taxable
+                order_tax += line_tax
+                order_total += line_total
+
+                if item_errors:
+                    order_errors.extend(item_errors)
+
+                validated_items.append({
+                    'row_number': row_num,
+                    'product_id': prod_obj.id if prod_obj else None,
+                    'product_name': prod_obj.name if prod_obj else prod_ident,
+                    'product_sku': prod_obj.sku if prod_obj else '',
+                    'quantity': float(qty),
+                    'purchase_price': float(price),
+                    'gst_percent': float(gst),
+                    'line_total': float(line_total),
+                    'is_valid': len(item_errors) == 0,
+                    'errors': item_errors,
+                })
+
+            paid_amount_val = Decimal('0')
+            try:
+                raw_paid = ord_data['paid_amount_raw']
+                if raw_paid not in (None, ''):
+                    paid_amount_val = Decimal(str(raw_paid))
+                    if paid_amount_val < 0:
+                        order_errors.append("Paid amount cannot be negative")
+                    elif paid_amount_val > order_total:
+                        order_errors.append("Paid amount cannot exceed total amount")
+                else:
+                    paid_amount_val = order_total
+            except Exception:
+                order_errors.append("Paid amount must be a number")
+
+            payment_status = (
+                'paid' if paid_amount_val == order_total and order_total > 0
+                else 'partial' if paid_amount_val > 0
+                else 'pending'
+            )
+
+            is_valid = len(order_errors) == 0
+            if is_valid:
+                valid_orders_count += 1
+            else:
+                error_orders_count += 1
+
+            validated_orders.append({
+                'row_numbers': ord_data['row_numbers'],
+                'supplier_name': supplier_name,
+                'supplier_id': supplier_obj.id if supplier_obj else None,
+                'supplier_exists': supplier_obj is not None,
+                'invoice_number': invoice_number,
+                'purchase_date': purchase_date,
+                'items_count': len(validated_items),
+                'items': validated_items,
+                'subtotal': float(order_subtotal),
+                'tax_amount': float(order_tax),
+                'total_amount': float(order_total),
+                'paid_amount': float(paid_amount_val),
+                'payment_status': payment_status,
+                'notes': ord_data['notes'],
+                'is_valid': is_valid,
+                'errors': order_errors,
+            })
+
+        return Response({
+            'total_rows': len(raw_rows),
+            'total_orders': len(validated_orders),
+            'valid_orders_count': valid_orders_count,
+            'error_orders_count': error_orders_count,
+            'orders': validated_orders,
+        })
+
+    @action(detail=False, methods=['post'], url_path='bulk-import')
+    def bulk_import(self, request):
+        from .services.purchase_service import PurchaseService
+
+        orders_to_import = []
+        if 'orders' in request.data:
+            orders_to_import = request.data.get('orders', [])
+            if not isinstance(orders_to_import, list) or not orders_to_import:
+                return Response({'detail': 'No purchase order data provided for import.'}, status=400)
+        elif 'file' in request.FILES:
+            val_res = self.validate_import(request)
+            if val_res.status_code != 200:
+                return val_res
+            orders_to_import = [o for o in val_res.data.get('orders', []) if o.get('is_valid')]
+        else:
+            return Response({'detail': 'Provide validated purchase orders or an import file.'}, status=400)
+
+        create_missing_suppliers = request.data.get('create_missing_suppliers', True)
+        business = request.user.business
+
+        successful_orders = []
+        failed_orders = []
+        created_count = 0
+        failed_count = 0
+
+        for ord_data in orders_to_import:
+            inv_num = ord_data.get('invoice_number', 'PO-IMP')
+            sup_name = ord_data.get('supplier_name', '').strip()
+            items_list = ord_data.get('items', [])
+
+            if not items_list:
+                failed_count += 1
+                failed_orders.append({'invoice_number': inv_num, 'supplier_name': sup_name, 'error': 'Order has no items'})
+                continue
+
+            try:
+                supplier = None
+                if sup_name:
+                    supplier = Supplier.objects.filter(business=business, name__iexact=sup_name).first()
+                    if not supplier and create_missing_suppliers:
+                        supplier = Supplier.objects.create(business=business, name=sup_name)
+
+                items_payload = []
+                for it in items_list:
+                    items_payload.append({
+                        'product_id': it['product_id'],
+                        'quantity': it['quantity'],
+                        'purchase_price': it['purchase_price'],
+                        'gst_percent': it.get('gst_percent', 0),
+                    })
+
+                purchase = PurchaseService.create_purchase(
+                    attributes={
+                        'supplier': supplier,
+                        'invoice_number': inv_num,
+                        'purchase_date': ord_data.get('purchase_date') or timezone.now().date(),
+                        'paid_amount': Decimal(str(ord_data.get('paid_amount', 0))),
+                        'notes': ord_data.get('notes', ''),
+                    },
+                    items_data=items_payload,
+                    business=business,
+                    created_by=request.user,
+                )
+
+                created_count += 1
+                successful_orders.append({
+                    'id': purchase.id,
+                    'invoice_number': purchase.invoice_number,
+                    'supplier_name': supplier.name if supplier else '—',
+                    'total_amount': float(purchase.total_amount),
+                    'items_count': len(items_payload),
+                })
+            except Exception as exc:
+                failed_count += 1
+                failed_orders.append({
+                    'invoice_number': inv_num,
+                    'supplier_name': sup_name,
+                    'error': str(exc),
+                })
+
+        audit_event(
+            request,
+            'PURCHASE_BULK_IMPORTED',
+            'Purchase',
+            None,
+            after={'created_orders': created_count, 'failed_orders': failed_count},
+            reason=f'Bulk imported {created_count} purchase orders',
+        )
+
+        return Response({
+            'status': 'completed',
+            'total_processed': len(orders_to_import),
+            'created_count': created_count,
+            'failed_count': failed_count,
+            'successful_orders': successful_orders,
+            'failed_orders': failed_orders,
+        })
 
 
 class InvoiceViewSet(viewsets.ModelViewSet):
