@@ -31,6 +31,12 @@ import productService from '../features/inventory/api/productService'
 import customerService from '../features/customers/api/customerService'
 import settingsService from '../features/settings/api/settingsService'
 import toast from 'react-hot-toast'
+import logoImg from '../assets/logo.png'
+import {
+  UpiBrandStrip,
+  generatePrintStandHtml,
+  getUpiBrandRibbonSvg,
+} from '../components/UpiLogos'
 import './NewBill.css'
 import {
   Search, Plus, Minus, Trash2, Printer, Download, RefreshCw, QrCode, Clock,
@@ -38,7 +44,7 @@ import {
   Maximize2, Minimize2, Layers, Receipt,
   Package, Banknote, Smartphone, CreditCard, BookOpen, Wallet,
   User, UserPlus, ShoppingCart,
-  MoreVertical, ArrowLeft, ArrowRight, Copy,
+  MoreVertical, ArrowLeft, ArrowRight, Copy, Check, Sparkles,
 } from 'lucide-react'
 import { Modal } from '../components/UI'
 import { useNavigate } from 'react-router-dom'
@@ -66,7 +72,15 @@ const fmtSigned = value => {
   return `${n < 0 ? '-' : '+'}₹${Math.abs(n).toFixed(2)}`
 }
 const upiUri = (upiId, name, amount, invoice = 'NEW-BILL') => {
-  const params = new URLSearchParams({ pa: upiId || '', pn: name || 'Dreamwithtech', am: Number(amount || 0).toFixed(2), cu: 'INR', tn: invoice })
+  const params = new URLSearchParams()
+  if (upiId) params.set('pa', upiId)
+  if (name) params.set('pn', name)
+  const num = Number(amount || 0)
+  if (num > 0) {
+    params.set('am', num.toFixed(2))
+  }
+  params.set('cu', 'INR')
+  if (invoice) params.set('tn', invoice)
   return `upi://pay?${params.toString()}`
 }
 
@@ -258,25 +272,62 @@ function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, on
 }
 
 // ---------------------------------------------------------------------------
-// QR payment modal (Quick Pay) — Mobile-Optimized & Seamless Flow
+// QR payment modal (Quick Pay) — Mobile-Optimized, Center Logo & Seamless Flow
 // ---------------------------------------------------------------------------
-function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, hasCart, onPaid, onCompleteSale }) {
+function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, hasCart, onPaid, onCompleteSale, logoSrc }) {
   const qrRef = useRef(null)
   const [amount, setAmount] = useState('')
   const [isEditingAmount, setIsEditingAmount] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [logoDataUrl, setLogoDataUrl] = useState('')
+  const [downloading, setDownloading] = useState(false)
+
+  // Convert logo to offline base64 data URL for embedded QR and standalone print/download
+  useEffect(() => {
+    const targetLogo = logoSrc || '/logo.png'
+    if (!targetLogo) return
+
+    if (targetLogo.startsWith('data:')) {
+      setLogoDataUrl(targetLogo)
+      return
+    }
+
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth || 80
+        canvas.height = img.naturalHeight || 80
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0)
+        const data = canvas.toDataURL('image/png')
+        setLogoDataUrl(data)
+      } catch {
+        setLogoDataUrl(targetLogo)
+      }
+    }
+    img.onerror = () => {
+      setLogoDataUrl(targetLogo)
+    }
+    img.src = targetLogo
+  }, [logoSrc])
 
   // Reset amount and editing toggle when modal opens
   useEffect(() => {
     if (open) {
       setAmount(billTotal > 0 ? billTotal.toFixed(2) : '')
       setIsEditingAmount(!hasCart || billTotal <= 0)
+      setCopied(false)
+      setDownloading(false)
     }
   }, [open, billTotal, hasCart])
 
   const numericAmount = Number(amount) || 0
   const uri = upiUri(upiId, shopName, numericAmount, invoice)
   const differsFromBill = hasCart && billTotal > 0 && Math.abs(numericAmount - billTotal) > 0.004
-  const canAct = !!upiId && numericAmount > 0
+  const canAct = !!upiId
+  const canComplete = !!upiId && numericAmount > 0
 
   const applyPreset = v => setAmount(v.toFixed(2))
   const applyBillTotal = () => {
@@ -286,16 +337,16 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
 
   const copyUpiId = async () => {
     if (!upiId) return
-    let copied = false
+    let done = false
     try {
       if (navigator?.clipboard?.writeText) {
         await navigator.clipboard.writeText(upiId)
-        copied = true
+        done = true
       }
     } catch {
-      // Fallback below
+      // Fallback
     }
-    if (!copied) {
+    if (!done) {
       try {
         const el = document.createElement('textarea')
         el.value = upiId
@@ -303,33 +354,238 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
         el.style.left = '-9999px'
         document.body.appendChild(el)
         el.select()
-        copied = document.execCommand('copy')
+        done = document.execCommand('copy')
         document.body.removeChild(el)
       } catch {
         // ignore
       }
     }
-    if (copied) {
+    if (done) {
+      setCopied(true)
       toast.success('UPI ID copied to clipboard')
+      setTimeout(() => setCopied(false), 2000)
     } else {
       toast.error('Could not copy UPI ID')
     }
   }
 
-  const download = () => {
-    const svg = qrRef.current?.querySelector('svg')
-    if (!svg) return
+  // High-Resolution Scannable Standee PNG Downloader matching tabletop standee design
+  const downloadPng = async () => {
+    if (!upiId) {
+      toast.error('Configure shop UPI ID in Settings first')
+      return
+    }
 
-    const svgData = new XMLSerializer().serializeToString(svg)
-    const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `payment-qr-${invoice || 'new-bill'}.svg`
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    const svg = qrRef.current?.querySelector('svg')
+    if (!svg) {
+      toast.error('QR code not available')
+      return
+    }
+
+    setDownloading(true)
+    try {
+      // 1. Clone SVG with crisp 500x500 dimensions
+      const svgClone = svg.cloneNode(true)
+      svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+      svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+      svgClone.setAttribute('width', '500')
+      svgClone.setAttribute('height', '500')
+
+      const svgData = new XMLSerializer().serializeToString(svgClone)
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+      const svgUrl = URL.createObjectURL(svgBlob)
+
+      const qrImg = new Image()
+      qrImg.crossOrigin = 'anonymous'
+
+      await new Promise((resolve, reject) => {
+        qrImg.onload = resolve
+        qrImg.onerror = reject
+        qrImg.src = svgUrl
+      })
+
+      // 2. Load composite brand ribbon SVG (Google Pay, PhonePe, Paytm, UPI - no borders/cards)
+      const ribbonSvg = getUpiBrandRibbonSvg({ width: 440, height: 26 })
+      const ribbonBlob = new Blob([ribbonSvg], { type: 'image/svg+xml;charset=utf-8' })
+      const ribbonUrl = URL.createObjectURL(ribbonBlob)
+      const ribbonImg = new Image()
+      ribbonImg.crossOrigin = 'anonymous'
+      await new Promise((resolve) => {
+        ribbonImg.onload = resolve
+        ribbonImg.onerror = resolve
+        ribbonImg.src = ribbonUrl
+      })
+
+      // 3. Optional store logo image
+      let storeLogoImg = null
+      if (logoDataUrl) {
+        storeLogoImg = new Image()
+        storeLogoImg.crossOrigin = 'anonymous'
+        await new Promise((resolve) => {
+          storeLogoImg.onload = resolve
+          storeLogoImg.onerror = resolve
+          storeLogoImg.src = logoDataUrl
+        })
+      }
+
+      // 4. Executive Tabletop Standee Canvas (640 x 900 px)
+      const canvasWidth = 640
+      const canvasHeight = 900
+      const canvas = document.createElement('canvas')
+      canvas.width = canvasWidth
+      canvas.height = canvasHeight
+      const ctx = canvas.getContext('2d')
+
+      // White background
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+
+      // Outer Standee Border
+      ctx.strokeStyle = '#0F2744'
+      ctx.lineWidth = 4
+      ctx.strokeRect(10, 10, canvasWidth - 20, canvasHeight - 20)
+
+      // Top Navy Header Banner
+      const grad = ctx.createLinearGradient(0, 12, 0, 126)
+      grad.addColorStop(0, '#0B2240')
+      grad.addColorStop(1, '#153860')
+      ctx.fillStyle = grad
+      ctx.fillRect(12, 12, canvasWidth - 24, 114)
+
+      if (storeLogoImg && storeLogoImg.width) {
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(canvasWidth / 2 - 22, 20, 44, 44)
+        ctx.drawImage(storeLogoImg, canvasWidth / 2 - 20, 22, 40, 40)
+        ctx.fillStyle = '#ffffff'
+        ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(shopName || 'ShopEase POS', canvasWidth / 2, 78)
+        ctx.fillStyle = '#38BDF8'
+        ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        ctx.fillText('★ SCAN & PAY WITH ANY UPI APP ★', canvasWidth / 2, 102)
+      } else {
+        ctx.fillStyle = '#ffffff'
+        ctx.font = 'bold 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(shopName || 'ShopEase POS', canvasWidth / 2, 52)
+        ctx.fillStyle = '#38BDF8'
+        ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        ctx.fillText('★ SCAN & PAY WITH ANY UPI APP ★', canvasWidth / 2, 88)
+      }
+
+      // Brand strip bar with pure official logos (NO borders, NO pill cards, NO text names)
+      const ribY = 126
+      const ribH = 54
+      ctx.fillStyle = '#F8FAFC'
+      ctx.fillRect(12, ribY, canvasWidth - 24, ribH)
+      ctx.strokeStyle = '#E2E8F0'
+      ctx.lineWidth = 1.5
+      ctx.strokeRect(12, ribY, canvasWidth - 24, ribH)
+
+      ctx.fillStyle = '#64748B'
+      ctx.font = 'bold 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillText('ACCEPTED PAYMENT METHODS', canvasWidth / 2, ribY + 14)
+
+      if (ribbonImg.width) {
+        const rW = 420
+        const rH = 26
+        ctx.drawImage(ribbonImg, (canvasWidth - rW) / 2, ribY + 22, rW, rH)
+      }
+      URL.revokeObjectURL(ribbonUrl)
+
+      // Centered QR Code with Quiet Zone & Frame
+      const qrSize = 390
+      const qrX = (canvasWidth - qrSize) / 2
+      const qrY = ribY + ribH + 24
+
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24)
+      ctx.strokeStyle = '#0F2744'
+      ctx.lineWidth = 2.5
+      ctx.strokeRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24)
+
+      ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize)
+      URL.revokeObjectURL(svgUrl)
+
+      // Amount Box
+      const isFixed = numericAmount > 0
+      const amtY = qrY + qrSize + 30
+      const amtH = 92
+      ctx.fillStyle = isFixed ? '#EFF6FF' : '#F0FDF4'
+      ctx.fillRect(28, amtY, canvasWidth - 56, amtH)
+      ctx.strokeStyle = isFixed ? '#BFDBFE' : '#BBF7D0'
+      ctx.lineWidth = 1.5
+      ctx.strokeRect(28, amtY, canvasWidth - 56, amtH)
+
+      ctx.fillStyle = isFixed ? '#1E40AF' : '#15803D'
+      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillText(isFixed ? 'AMOUNT PAYABLE' : 'PAYMENT COLLECTION', canvasWidth / 2, amtY + 22)
+
+      ctx.fillStyle = isFixed ? '#1E3A5F' : '#166534'
+      ctx.font = isFixed
+        ? '900 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        : '800 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillText(
+        isFixed
+          ? `₹ ${numericAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : 'Scan & Enter Any Amount',
+        canvasWidth / 2,
+        amtY + 56
+      )
+
+      ctx.fillStyle = '#64748B'
+      ctx.font = '600 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillText(
+        isFixed ? `Ref: ${invoice || 'NEW-BILL'} • Instant Payment Confirmation` : 'Zero Extra Fee • Instant Bank Settlement',
+        canvasWidth / 2,
+        amtY + 79
+      )
+
+      // Merchant UPI VPA
+      const vpaY = amtY + amtH + 18
+      ctx.fillStyle = '#059669'
+      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillText('✔ Verified Merchant UPI VPA', canvasWidth / 2, vpaY)
+
+      ctx.fillStyle = '#0F172A'
+      ctx.font = 'bold 15px "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace'
+      ctx.fillText(upiId, canvasWidth / 2, vpaY + 24)
+
+      // Standee Base Footer
+      ctx.fillStyle = '#0B2240'
+      ctx.fillRect(12, canvasHeight - 44, canvasWidth - 24, 32)
+      ctx.fillStyle = '#94A3B8'
+      ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillText('Bharat QR  •  Powered by NPCI UPI  •  Works with All Indian Banks', canvasWidth / 2, canvasHeight - 28)
+
+      // Format descriptive filename based on amount: e.g. UPI-QR-276.png or UPI-QR-Any-Amount.png
+      const amountTag = Number.isInteger(numericAmount) ? String(numericAmount) : numericAmount.toFixed(2)
+      const filename = numericAmount > 0 ? `UPI-QR-${amountTag}.png` : 'UPI-QR-Any-Amount.png'
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          toast.error('Could not generate PNG image')
+          setDownloading(false)
+          return
+        }
+        const pngUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = pngUrl
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        setTimeout(() => URL.revokeObjectURL(pngUrl), 1000)
+        setDownloading(false)
+        toast.success(`Downloaded ${filename}`)
+      }, 'image/png')
+    } catch (err) {
+      console.error('Download QR PNG error:', err)
+      setDownloading(false)
+      toast.error('Could not download QR code as PNG')
+    }
   }
 
   const print = () => {
@@ -339,7 +595,6 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
       return
     }
 
-    // Clone the rendered QR and make it completely self-contained for printing.
     const svgClone = svg.cloneNode(true)
     svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
     svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
@@ -348,68 +603,25 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
     svgClone.setAttribute('viewBox', svg.getAttribute('viewBox') || '0 0 240 240')
     const svgMarkup = new XMLSerializer().serializeToString(svgClone)
 
-    const escapeHtml = value => String(value ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;')
-
-    // Open synchronously from the button click so mobile browsers are less
-    // likely to block the print window as a popup.
     const win = window.open('', '_blank', 'width=480,height=760')
     if (!win) {
       toast.error('Allow pop-ups to print the QR')
       return
     }
 
-    const safeShopName = escapeHtml(shopName)
-    const safeUpiId = escapeHtml(upiId)
-    const safeInvoice = escapeHtml(invoice || 'NEW-BILL')
-    const safeAmount = escapeHtml(fmt(numericAmount))
+    const standHtml = generatePrintStandHtml({
+      shopName,
+      upiId,
+      invoice: invoice || 'NEW-BILL',
+      amount: numericAmount,
+      logoDataUrl,
+      svgMarkup,
+    })
 
     win.document.open()
-    win.document.write(`<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <title>UPI Payment QR - ${safeInvoice}</title>
-  <style>
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;background:#fff;color:#111827}
-    body{font-family:Arial,Helvetica,sans-serif;min-height:100vh}
-    .page{width:min(100%,480px);margin:0 auto;padding:28px 20px;text-align:center}
-    h1{font-size:22px;line-height:1.25;margin:0 0 6px;font-weight:700}
-    .subtitle{font-size:14px;color:#475569;margin-bottom:20px}
-    .qr{display:flex;justify-content:center;align-items:center;margin:0 auto 18px}
-    .qr svg{display:block;width:240px;height:240px;max-width:72vw;max-height:72vw}
-    .amount{font-size:30px;font-weight:800;line-height:1.1;margin:10px 0}
-    .upi{font-size:14px;color:#475569;word-break:break-all;margin-top:6px}
-    .invoice{font-size:12px;color:#64748b;margin-top:8px}
-    .hint{font-size:12px;color:#64748b;margin-top:18px}
-    @media print{
-      @page{size:auto;margin:10mm}
-      body{min-height:auto}
-      .page{padding:8px 0}
-    }
-  </style>
-</head>
-<body>
-  <main class="page">
-    <h1>${safeShopName}</h1>
-    <div class="subtitle">Scan to pay</div>
-    <div class="qr">${svgMarkup}</div>
-    <div class="amount">${safeAmount}</div>
-    <div class="upi">${safeUpiId}</div>
-    <div class="invoice">Invoice: ${safeInvoice}</div>
-    <div class="hint">Scan this QR using any UPI app</div>
-  </main>
-</body>
-</html>`)
+    win.document.write(standHtml)
     win.document.close()
 
-    // Give the browser time to parse/layout the inline SVG before print.
     const triggerPrint = () => {
       try {
         win.focus()
@@ -430,32 +642,46 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
   return (
     <Modal open={open} onClose={onClose} title="UPI QR Payment" size="sm">
       <div className="pb-modal pb-stack pb-qr-modal-content">
-        {/* Top Amount & Shop Card */}
+        {/* Top Header Card */}
         <div className="pb-qr-header-card">
           <div className="pb-qr-shop-title">
-            <Smartphone size={15} className="text-blue-600" />
-            <span>{shopName}</span>
+            {logoDataUrl ? (
+              <img src={logoDataUrl} alt={shopName} className="pb-qr-shop-logo" />
+            ) : (
+              <Smartphone size={16} className="text-blue-600 shrink-0" />
+            )}
+            <span className="truncate">{shopName}</span>
+            <span className="pb-qr-verified-tag" title="Verified UPI Merchant">
+              <CheckCircle2 size={12} className="text-teal-600 dark:text-teal-400 shrink-0" />
+              <span>Verified</span>
+            </span>
           </div>
 
           <div className="pb-qr-amount-hero">
-            <span className="pb-qr-amount-label">Amount to Collect</span>
+            <span className="pb-qr-amount-label">
+              {numericAmount > 0 ? 'Amount to Collect' : 'Open Amount (Customer Enters Any Amount)'}
+            </span>
             <div className="pb-qr-amount-display">
-              <span className="pb-qr-curr">₹</span>
-              <span className="pb-qr-figure">
-                {numericAmount > 0
-                  ? numericAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                  : '0.00'}
-              </span>
+              {numericAmount > 0 ? (
+                <>
+                  <span className="pb-qr-curr">₹</span>
+                  <span className="pb-qr-figure">
+                    {numericAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </>
+              ) : (
+                <span className="pb-qr-figure text-lg">Any Amount (Open QR)</span>
+              )}
             </div>
           </div>
 
           <div className="pb-qr-meta-sub">
             {differsFromBill ? (
               <span className="pb-text-amber flex items-center gap-1 font-semibold text-xs">
-                <AlertTriangle size={13} /> Bill total is {fmt(billTotal)}
+                <AlertTriangle size={13} className="shrink-0" /> Bill total is {fmt(billTotal)}
               </span>
             ) : (
-              <span className="text-xs text-slate-500">Scan with any UPI app</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Scan with any UPI app</span>
             )}
             {hasCart && billTotal > 0 && (
               <button
@@ -486,12 +712,28 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
             />
             <div className="pb-chips">
               {hasCart && billTotal > 0 && (
-                <button type="button" onClick={applyBillTotal} className="pb-chip pb-chip-exact">
+                <button
+                  type="button"
+                  onClick={applyBillTotal}
+                  className={`pb-chip pb-chip-exact${Math.abs(numericAmount - billTotal) < 0.005 ? ' pb-chip-active' : ''}`}
+                >
                   Bill Total {fmt(billTotal)}
                 </button>
               )}
+              <button
+                type="button"
+                onClick={() => setAmount('0')}
+                className={`pb-chip pb-chip-open${numericAmount === 0 ? ' pb-chip-active' : ''}`}
+              >
+                Fixed / Any Amount QR
+              </button>
               {QR_PRESETS.map(v => (
-                <button type="button" key={v} onClick={() => applyPreset(v)} className="pb-chip">
+                <button
+                  type="button"
+                  key={v}
+                  onClick={() => applyPreset(v)}
+                  className={`pb-chip${Math.abs(numericAmount - v) < 0.005 ? ' pb-chip-active' : ''}`}
+                >
                   ₹{v.toLocaleString('en-IN')}
                 </button>
               ))}
@@ -499,52 +741,67 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
           </div>
         )}
 
-        {/* The QR Code Card */}
+        {/* The QR Code Card with Corner Brackets & Center Logo */}
         <section className="pb-quick-qr-preview" aria-label="UPI payment QR">
-          <div ref={qrRef} className="pb-qr-box">
-            {numericAmount > 0 ? (
-              <QRCodeSVG
-                value={uri}
-                size={200}
-                level="M"
-                includeMargin
-                bgColor="#ffffff"
-                fgColor="#111827"
-                className="w-full h-auto max-w-[200px]"
-              />
-            ) : (
-              <div className="pb-qr-empty">Enter an amount to generate the QR</div>
-            )}
+          <div className="pb-qr-box-wrapper">
+            <div ref={qrRef} className="pb-qr-box">
+              <div className="pb-qr-corner pb-qr-corner-tl" aria-hidden="true" />
+              <div className="pb-qr-corner pb-qr-corner-tr" aria-hidden="true" />
+              <div className="pb-qr-corner pb-qr-corner-bl" aria-hidden="true" />
+              <div className="pb-qr-corner pb-qr-corner-br" aria-hidden="true" />
+              {upiId ? (
+                <QRCodeSVG
+                  value={uri}
+                  size={200}
+                  level="H"
+                  includeMargin
+                  bgColor="#ffffff"
+                  fgColor="#0F172A"
+                  imageSettings={
+                    logoDataUrl
+                      ? {
+                          src: logoDataUrl,
+                          height: 38,
+                          width: 38,
+                          excavate: true,
+                        }
+                      : undefined
+                  }
+                  className="w-full h-auto max-w-[200px]"
+                />
+              ) : (
+                <div className="pb-qr-empty">Configure shop UPI ID in Settings</div>
+              )}
+            </div>
           </div>
 
-          <div className="pb-qr-brand-strip">
-            <span>GPay</span>
-            <span className="pb-dot-sep">·</span>
-            <span>PhonePe</span>
-            <span className="pb-dot-sep">·</span>
-            <span>Paytm</span>
-            <span className="pb-dot-sep">·</span>
-            <span>BHIM</span>
-            <span className="pb-dot-sep">·</span>
-            <span>Any UPI</span>
-          </div>
+          <UpiBrandStrip height={20} className="mt-3" />
         </section>
 
-        {/* UPI ID Bar with 1-Tap Copy */}
+        {/* UPI ID Bar with 1-Tap Copy & Visual Feedback */}
         <div className="pb-qr-id-bar">
           <div className="pb-qr-id-text">
             <span className="pb-qr-id-label">UPI ID:</span>
-            <span className="pb-qr-id-val">{upiId || 'UPI ID not configured'}</span>
+            <span className="pb-qr-id-val" title={upiId}>{upiId || 'UPI ID not configured'}</span>
           </div>
           {upiId && (
             <button
               type="button"
-              className="pb-qr-copy-chip"
+              className={`pb-qr-copy-chip${copied ? ' pb-qr-copied' : ''}`}
               onClick={copyUpiId}
               title="Copy UPI ID to clipboard"
             >
-              <Copy size={13} />
-              <span>Copy</span>
+              {copied ? (
+                <>
+                  <Check size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-emerald-600 dark:text-emerald-400">Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Copy size={13} />
+                  <span>Copy</span>
+                </>
+              )}
             </button>
           )}
         </div>
@@ -556,7 +813,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
               <button
                 type="button"
                 onClick={() => onCompleteSale(numericAmount, false)}
-                disabled={!canAct}
+                disabled={!canComplete}
                 className="pb-btn-qr-complete"
               >
                 <CheckCircle2 size={18} />
@@ -567,7 +824,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
                 <button
                   type="button"
                   onClick={() => onCompleteSale(numericAmount, true)}
-                  disabled={!canAct}
+                  disabled={!canComplete}
                   className="pb-btn pb-btn-sm"
                 >
                   <Printer size={14} />
@@ -576,7 +833,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
                 <button
                   type="button"
                   onClick={() => onPaid(numericAmount)}
-                  disabled={!canAct}
+                  disabled={!canComplete}
                   className="pb-btn pb-btn-sm"
                 >
                   <CheckCircle2 size={14} />
@@ -588,16 +845,23 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
             <button
               type="button"
               onClick={() => onPaid(numericAmount)}
-              disabled={!canAct}
+              disabled={!canComplete}
               className="pb-btn pb-btn-primary pb-btn-lg w-full"
             >
-              <CheckCircle2 size={16} /> Payment received — mark paid ({fmt(numericAmount)})
+              <CheckCircle2 size={16} /> Payment received — mark paid {numericAmount > 0 ? `(${fmt(numericAmount)})` : ''}
             </button>
           )}
 
           <div className="pb-grid2 pb-qr-actions">
-            <button type="button" onClick={download} disabled={!canAct} className="pb-btn pb-btn-sm">
-              <Download size={13} /> Download QR
+            <button
+              type="button"
+              onClick={downloadPng}
+              disabled={!canAct || downloading}
+              className="pb-btn pb-btn-sm"
+              title="Download scannable high-resolution QR as PNG image"
+            >
+              <Download size={13} />
+              <span>{downloading ? 'Downloading...' : 'Download QR'}</span>
             </button>
             <button type="button" onClick={print} disabled={!canAct} className="pb-btn pb-btn-sm">
               <Printer size={13} /> Print QR Stand
@@ -1472,7 +1736,7 @@ export default function NewBill() {
             )}
           </div>
         </div>
-        <div className="pb-head-actionns">
+        <div className="pb-head-actions">
           <button
             type="button"
             className="pb-btn pb-btn-sm pb-drafts-head-btn"
@@ -1508,14 +1772,20 @@ export default function NewBill() {
           <div className="pb-mobile-only pb-more-container" ref={mobileMoreRef}>
             <button
               type="button"
-              className="pb-btn pb-btn-sm pb-more-btn"
+              className={`pb-btn pb-btn-sm pb-more-btn${mobileMoreOpen ? ' active' : ''}`}
               aria-label="More actions"
+              aria-expanded={mobileMoreOpen}
               onClick={() => setMobileMoreOpen(v => !v)}
             >
               <MoreVertical size={16} />
             </button>
             {mobileMoreOpen && (
-              <div className="pb-more-popover" role="menu">
+              <>
+                <div
+                  className="fixed inset-0 z-40 bg-black/10"
+                  onClick={() => setMobileMoreOpen(false)}
+                />
+                <div className="pb-more-popover" role="menu">
                 <button
                   type="button"
                   className="pb-more-item"
@@ -1550,9 +1820,10 @@ export default function NewBill() {
                   <span>{fmtDate(now)}</span>
                 </div>
               </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
+      </div>
       </header>
 
       {loadError && !initializing && (
@@ -2934,6 +3205,7 @@ export default function NewBill() {
         invoice={lastInvoice?.invoice_number || 'NEW-BILL'}
         billTotal={grandTotal}
         hasCart={cart.length > 0}
+        logoSrc={settings.shop_logo || logoImg || '/logo.png'}
         onPaid={(amount) => {
           setPayment(x => ({ ...x, method: 'upi', amount: amount.toFixed(2), status: 'paid', autoAmount: false }))
           setShowQr(false)

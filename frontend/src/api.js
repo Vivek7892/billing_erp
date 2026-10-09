@@ -4,6 +4,8 @@ import http, {
   listData,
   errorMessage,
   forceLogout,
+  executeWithRetry,
+  notifyApiError,
 } from './services/http'
 
 export {
@@ -12,6 +14,8 @@ export {
   listData,
   errorMessage,
   forceLogout,
+  executeWithRetry,
+  notifyApiError,
 }
 
 export default http

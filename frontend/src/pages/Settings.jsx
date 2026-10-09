@@ -16,8 +16,17 @@ import {
   Sliders,
   Save,
   Check,
+  Download,
+  QrCode,
 } from 'lucide-react'
 import InvoiceDocument, { isTrue } from '../components/InvoiceDocument'
+import { QRCodeSVG } from 'qrcode.react'
+import logoImg from '../assets/logo.png'
+import {
+  UpiBrandStrip,
+  generatePrintStandHtml,
+  getUpiBrandRibbonSvg,
+} from '../components/UpiLogos'
 
 function FormField({ label, children, full, hint }) {
   return (
@@ -195,6 +204,532 @@ const TABS = [
   { id: 'printer', label: 'Printer Setup', icon: Printer },
   { id: 'preview', label: 'Live Bill Preview', icon: Eye },
 ]
+
+function StoreQrStandSettingsCard({ s }) {
+  const [standMode, setStandMode] = useState('any')
+  const [standAmount, setStandAmount] = useState('')
+  const [standDownloading, setStandDownloading] = useState(false)
+  const [logoDataUrl, setLogoDataUrl] = useState('')
+  const standQrRef = useRef(null)
+
+  useEffect(() => {
+    const targetLogo = s.shop_logo || logoImg || '/logo.png'
+    if (!targetLogo) return
+
+    if (typeof targetLogo === 'string' && targetLogo.startsWith('data:')) {
+      setLogoDataUrl(targetLogo)
+      return
+    }
+
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = img.naturalWidth || 80
+        canvas.height = img.naturalHeight || 80
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0)
+        setLogoDataUrl(canvas.toDataURL('image/png'))
+      } catch {
+        setLogoDataUrl(targetLogo)
+      }
+    }
+    img.onerror = () => setLogoDataUrl(targetLogo)
+    img.src = targetLogo
+  }, [s.shop_logo])
+
+  const upiId = s.shop_upi_id || ''
+  const merchantName = s.upi_merchant_name || s.shop_name || 'Sri Balaji Store'
+  const isFixed = standMode === 'fixed' && Number(standAmount) > 0
+  const numAmt = isFixed ? Number(standAmount) : 0
+
+  const upiUri = (() => {
+    const params = new URLSearchParams()
+    if (upiId) params.set('pa', upiId)
+    if (merchantName) params.set('pn', merchantName)
+    if (numAmt > 0) {
+      params.set('am', numAmt.toFixed(2))
+    }
+    params.set('cu', 'INR')
+    params.set('tn', isFixed ? `Pay to ${merchantName}` : 'Store Counter Payment')
+    return `upi://pay?${params.toString()}`
+  })()
+
+  const downloadQrStandPng = async () => {
+    if (!upiId) {
+      toast.error('Please configure your Shop UPI ID in the section above first')
+      return
+    }
+
+    const svg = standQrRef.current?.querySelector('svg')
+    if (!svg) {
+      toast.error('QR code not available')
+      return
+    }
+
+    setStandDownloading(true)
+    try {
+      // 1. High-resolution cloned SVG
+      const svgClone = svg.cloneNode(true)
+      svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+      svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+      svgClone.setAttribute('width', '500')
+      svgClone.setAttribute('height', '500')
+
+      const svgData = new XMLSerializer().serializeToString(svgClone)
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+      const svgUrl = URL.createObjectURL(svgBlob)
+
+      const qrImg = new Image()
+      qrImg.crossOrigin = 'anonymous'
+
+      await new Promise((resolve, reject) => {
+        qrImg.onload = resolve
+        qrImg.onerror = reject
+        qrImg.src = svgUrl
+      })
+
+      // 2. Load composite brand ribbon SVG (Google Pay, PhonePe, Paytm, UPI - no borders/cards)
+      const ribbonSvg = getUpiBrandRibbonSvg({ width: 440, height: 26 })
+      const ribbonBlob = new Blob([ribbonSvg], { type: 'image/svg+xml;charset=utf-8' })
+      const ribbonUrl = URL.createObjectURL(ribbonBlob)
+      const ribbonImg = new Image()
+      ribbonImg.crossOrigin = 'anonymous'
+      await new Promise((resolve) => {
+        ribbonImg.onload = resolve
+        ribbonImg.onerror = resolve
+        ribbonImg.src = ribbonUrl
+      })
+
+      // 3. Optional store logo image
+      let storeLogoImg = null
+      if (logoDataUrl) {
+        storeLogoImg = new Image()
+        storeLogoImg.crossOrigin = 'anonymous'
+        await new Promise((resolve) => {
+          storeLogoImg.onload = resolve
+          storeLogoImg.onerror = resolve
+          storeLogoImg.src = logoDataUrl
+        })
+      }
+
+      // 4. Executive Tabletop Standee Canvas (640 x 900 px)
+      const canvasWidth = 640
+      const canvasHeight = 900
+      const canvas = document.createElement('canvas')
+      canvas.width = canvasWidth
+      canvas.height = canvasHeight
+      const ctx = canvas.getContext('2d')
+
+      // White background
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+
+      // Outer Standee Border
+      ctx.strokeStyle = '#0F2744'
+      ctx.lineWidth = 4
+      ctx.strokeRect(10, 10, canvasWidth - 20, canvasHeight - 20)
+
+      // Top Navy Header Banner
+      const grad = ctx.createLinearGradient(0, 12, 0, 126)
+      grad.addColorStop(0, '#0B2240')
+      grad.addColorStop(1, '#153860')
+      ctx.fillStyle = grad
+      ctx.fillRect(12, 12, canvasWidth - 24, 114)
+
+      if (storeLogoImg && storeLogoImg.width) {
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(canvasWidth / 2 - 22, 20, 44, 44)
+        ctx.drawImage(storeLogoImg, canvasWidth / 2 - 20, 22, 40, 40)
+        ctx.fillStyle = '#ffffff'
+        ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(merchantName, canvasWidth / 2, 78)
+        ctx.fillStyle = '#38BDF8'
+        ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        ctx.fillText('★ SCAN & PAY WITH ANY UPI APP ★', canvasWidth / 2, 102)
+      } else {
+        ctx.fillStyle = '#ffffff'
+        ctx.font = 'bold 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(merchantName, canvasWidth / 2, 52)
+        ctx.fillStyle = '#38BDF8'
+        ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        ctx.fillText('★ SCAN & PAY WITH ANY UPI APP ★', canvasWidth / 2, 88)
+      }
+
+      // Brand strip bar with pure official logos (NO borders, NO pill cards, NO text names)
+      const ribY = 126
+      const ribH = 54
+      ctx.fillStyle = '#F8FAFC'
+      ctx.fillRect(12, ribY, canvasWidth - 24, ribH)
+      ctx.strokeStyle = '#E2E8F0'
+      ctx.lineWidth = 1.5
+      ctx.strokeRect(12, ribY, canvasWidth - 24, ribH)
+
+      ctx.fillStyle = '#64748B'
+      ctx.font = 'bold 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillText('ACCEPTED PAYMENT METHODS', canvasWidth / 2, ribY + 14)
+
+      if (ribbonImg.width) {
+        const rW = 420
+        const rH = 26
+        ctx.drawImage(ribbonImg, (canvasWidth - rW) / 2, ribY + 22, rW, rH)
+      }
+      URL.revokeObjectURL(ribbonUrl)
+
+      // Centered QR Code with Quiet Zone & Frame
+      const qrSize = 390
+      const qrX = (canvasWidth - qrSize) / 2
+      const qrY = ribY + ribH + 24
+
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24)
+      ctx.strokeStyle = '#0F2744'
+      ctx.lineWidth = 2.5
+      ctx.strokeRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24)
+
+      ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize)
+      URL.revokeObjectURL(svgUrl)
+
+      // Amount Box
+      const amtY = qrY + qrSize + 30
+      const amtH = 92
+      ctx.fillStyle = isFixed ? '#EFF6FF' : '#F0FDF4'
+      ctx.fillRect(28, amtY, canvasWidth - 56, amtH)
+      ctx.strokeStyle = isFixed ? '#BFDBFE' : '#BBF7D0'
+      ctx.lineWidth = 1.5
+      ctx.strokeRect(28, amtY, canvasWidth - 56, amtH)
+
+      ctx.fillStyle = isFixed ? '#1E40AF' : '#15803D'
+      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillText(isFixed ? 'AMOUNT PAYABLE' : 'PAYMENT COLLECTION', canvasWidth / 2, amtY + 22)
+
+      ctx.fillStyle = isFixed ? '#1E3A5F' : '#166534'
+      ctx.font = isFixed
+        ? '900 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        : '800 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillText(
+        isFixed
+          ? `₹ ${numAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+          : 'Scan & Enter Any Amount',
+        canvasWidth / 2,
+        amtY + 56
+      )
+
+      ctx.fillStyle = '#64748B'
+      ctx.font = '600 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillText(
+        isFixed ? 'Zero Extra Fee • Instant Bank Settlement' : 'Zero Extra Fee • Instant Bank Settlement',
+        canvasWidth / 2,
+        amtY + 79
+      )
+
+      // Merchant UPI VPA
+      const vpaY = amtY + amtH + 18
+      ctx.fillStyle = '#059669'
+      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillText('✔ Verified Merchant UPI VPA', canvasWidth / 2, vpaY)
+
+      ctx.fillStyle = '#0F172A'
+      ctx.font = 'bold 15px "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace'
+      ctx.fillText(upiId, canvasWidth / 2, vpaY + 24)
+
+      // Standee Base Footer
+      ctx.fillStyle = '#0B2240'
+      ctx.fillRect(12, canvasHeight - 44, canvasWidth - 24, 32)
+      ctx.fillStyle = '#94A3B8'
+      ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      ctx.fillText('Bharat QR  •  Powered by NPCI UPI  •  Works with All Indian Banks', canvasWidth / 2, canvasHeight - 28)
+
+      const safeName = merchantName.replace(/[^a-zA-Z0-9_-]/g, '_')
+      const filename = isFixed
+        ? `UPI-QR-Stand-${safeName}-${numAmt}.png`
+        : `UPI-QR-Stand-${safeName}-AnyAmount.png`
+
+      canvas.toBlob(blob => {
+        if (!blob) {
+          toast.error('Could not generate PNG image')
+          setStandDownloading(false)
+          return
+        }
+        const pngUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = pngUrl
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        setTimeout(() => URL.revokeObjectURL(pngUrl), 1000)
+        setStandDownloading(false)
+        toast.success(`Downloaded ${filename}`)
+      }, 'image/png')
+    } catch (err) {
+      console.error('Download QR Stand PNG error:', err)
+      setStandDownloading(false)
+      toast.error('Could not download QR stand as PNG')
+    }
+  }
+
+  const printQrStand = () => {
+    if (!upiId) {
+      toast.error('Please configure your Shop UPI ID in the section above first')
+      return
+    }
+
+    const svg = standQrRef.current?.querySelector('svg')
+    if (!svg) {
+      toast.error('QR code not available')
+      return
+    }
+
+    const svgClone = svg.cloneNode(true)
+    svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    svgClone.setAttribute('width', '240')
+    svgClone.setAttribute('height', '240')
+    svgClone.setAttribute('viewBox', svg.getAttribute('viewBox') || '0 0 240 240')
+    const svgMarkup = new XMLSerializer().serializeToString(svgClone)
+
+    const win = window.open('', '_blank', 'width=480,height=760')
+    if (!win) {
+      toast.error('Allow pop-ups to print the QR stand')
+      return
+    }
+
+    const standHtml = generatePrintStandHtml({
+      shopName: merchantName,
+      upiId,
+      invoice: isFixed ? `STAND-${numAmt}` : 'STORE-COUNTER',
+      amount: numAmt,
+      logoDataUrl,
+      svgMarkup,
+    })
+
+    win.document.open()
+    win.document.write(standHtml)
+    win.document.close()
+
+    const triggerPrint = () => {
+      try {
+        win.focus()
+        win.print()
+      } catch {
+        toast.error('Could not open print dialog')
+      }
+    }
+    if (win.document.readyState === 'complete') {
+      setTimeout(triggerPrint, 500)
+    } else {
+      win.addEventListener('load', () => setTimeout(triggerPrint, 300), { once: true })
+      setTimeout(triggerPrint, 900)
+    }
+  }
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-none">
+      <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-3 sm:px-5 flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-bold text-[var(--ink)]">Store Counter QR Standee (Download &amp; Print)</h3>
+          <p className="mt-0.5 text-[11px] leading-4 text-[var(--muted)]">
+            Generate and download a high-resolution, branded tabletop QR stand for your checkout counter. Accepts Google Pay, PhonePe, Paytm, and any UPI app.
+          </p>
+        </div>
+      </div>
+
+      <div className="p-4 sm:p-5 grid gap-6 md:grid-cols-[1fr_320px]">
+        {/* Left Column: Configuration Controls */}
+        <div className="space-y-4">
+          <div>
+            <label className="block mb-1.5 text-xs font-semibold tracking-wide text-[var(--ink-secondary)]">
+              Stand QR Amount Mode
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setStandMode('any')}
+                className={`px-3 py-2.5 rounded-lg border text-xs font-bold text-left transition-all ${
+                  standMode === 'any'
+                    ? 'border-[#1E3A5F] bg-[#1E3A5F]/5 text-[#1E3A5F] dark:border-blue-400 dark:bg-blue-950/30 dark:text-blue-300 ring-1 ring-[#1E3A5F]'
+                    : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span>Any Amount (Open QR)</span>
+                  {standMode === 'any' && <Check size={14} className="text-[#1E3A5F] dark:text-blue-400" />}
+                </div>
+                <p className="mt-1 text-[11px] font-normal text-[var(--muted)]">
+                  Customer enters any amount on their phone
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setStandMode('fixed')}
+                className={`px-3 py-2.5 rounded-lg border text-xs font-bold text-left transition-all ${
+                  standMode === 'fixed'
+                    ? 'border-[#1E3A5F] bg-[#1E3A5F]/5 text-[#1E3A5F] dark:border-blue-400 dark:bg-blue-950/30 dark:text-blue-300 ring-1 ring-[#1E3A5F]'
+                    : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span>Fixed Amount (₹)</span>
+                  {standMode === 'fixed' && <Check size={14} className="text-[#1E3A5F] dark:text-blue-400" />}
+                </div>
+                <p className="mt-1 text-[11px] font-normal text-[var(--muted)]">
+                  Preset amount encoded into QR code
+                </p>
+              </button>
+            </div>
+          </div>
+
+          {standMode === 'fixed' && (
+            <div>
+              <label className="block mb-1.5 text-xs font-semibold tracking-wide text-[var(--ink-secondary)]">
+                Fixed Payment Amount (₹)
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-[var(--muted)]">₹</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="0.01"
+                  value={standAmount}
+                  onChange={e => setStandAmount(e.target.value)}
+                  placeholder="e.g. 100"
+                  className="input w-full h-11 pl-7 text-xs sm:text-sm font-bold"
+                />
+              </div>
+              <p className="mt-1 text-[11px] text-[var(--muted-light)]">
+                Customers will be automatically prompted to pay exactly this amount upon scanning.
+              </p>
+            </div>
+          )}
+
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] p-3 space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[var(--muted)]">Active Merchant:</span>
+              <span className="font-bold text-[var(--ink)]">{merchantName}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[var(--muted)]">Shop UPI ID:</span>
+              <span className="font-mono font-bold text-[var(--ink)]">{upiId || '⚠️ UPI ID not set'}</span>
+            </div>
+            {!upiId && (
+              <p className="text-[11px] font-medium text-amber-600 dark:text-amber-400 pt-1 border-t border-[var(--line)]">
+                Enter your UPI ID in the field above to enable high-res download and printing.
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-2">
+            <button
+              type="button"
+              onClick={downloadQrStandPng}
+              disabled={!upiId || standDownloading}
+              className="flex-1 min-w-[150px] inline-flex items-center justify-center gap-2 h-11 px-4 rounded-lg bg-[#1E3A5F] text-white text-xs font-bold shadow-sm hover:bg-[#162F4D] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <Download size={15} />
+              <span>{standDownloading ? 'Generating PNG…' : 'Download QR Stand (PNG)'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={printQrStand}
+              disabled={!upiId}
+              className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-xs font-bold shadow-sm hover:bg-[var(--surface-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <Printer size={15} />
+              <span>Print Standee</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Right Column: Live Tabletop Standee Preview */}
+        <div className="flex flex-col items-center justify-center">
+          <div className="w-full max-w-[280px] rounded-xl border-2 border-slate-900 bg-white shadow-xl overflow-hidden text-center text-slate-900">
+            {/* Header Banner */}
+            <div className="bg-[#1E3A5F] text-white p-3 flex flex-col items-center gap-1.5">
+              {logoDataUrl && (
+                <img
+                  src={logoDataUrl}
+                  alt={merchantName}
+                  className="w-8 h-8 rounded object-contain bg-white p-0.5 shadow-sm"
+                />
+              )}
+              <h4 className="text-sm font-extrabold truncate w-full px-2">{merchantName}</h4>
+              <span className="text-[9px] font-bold uppercase tracking-wider text-blue-200 bg-white/10 px-2 py-0.5 rounded-full">
+                Scan &amp; Pay With Any UPI App
+              </span>
+            </div>
+
+            {/* Official Brand Logos Strip */}
+            <div className="bg-slate-50 border-b border-slate-200 py-1.5 px-2">
+              <UpiBrandStrip size={11} className="gap-1" />
+            </div>
+
+            {/* Centered QR Frame */}
+            <div className="p-3 flex items-center justify-center bg-slate-50/50">
+              <div ref={standQrRef} className="p-2 bg-white rounded-lg border-2 border-slate-900 shadow-sm inline-block">
+                {upiId ? (
+                  <QRCodeSVG
+                    value={upiUri}
+                    size={160}
+                    level="H"
+                    includeMargin
+                    bgColor="#ffffff"
+                    fgColor="#0F172A"
+                    imageSettings={
+                      logoDataUrl
+                        ? {
+                            src: logoDataUrl,
+                            height: 32,
+                            width: 32,
+                            excavate: true,
+                          }
+                        : undefined
+                    }
+                    className="block"
+                  />
+                ) : (
+                  <div className="w-40 h-40 flex items-center justify-center text-[11px] text-slate-400 font-medium p-2 text-center">
+                    Enter UPI ID to generate standee
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Amount Box */}
+            <div className="border-t border-b border-slate-200 bg-slate-50/80 py-2 px-3">
+              <div className="text-[9.5px] font-bold uppercase text-slate-500 tracking-wider">
+                {isFixed ? 'Amount Payable' : 'Payment Collection'}
+              </div>
+              <div className="text-base font-black text-[#1E3A5F] tracking-tight">
+                {isFixed
+                  ? `₹ ${numAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  : 'Scan & Enter Any Amount'}
+              </div>
+            </div>
+
+            {/* Merchant UPI ID */}
+            <div className="py-2 px-2 bg-white">
+              <div className="text-[9px] font-semibold text-slate-500 uppercase">Merchant UPI ID</div>
+              <div className="font-mono text-xs font-extrabold text-slate-800 break-all">{upiId || 'balajistore@sbi'}</div>
+            </div>
+
+            {/* Standee Base Footer */}
+            <div className="bg-slate-900 text-slate-400 text-[8.5px] font-semibold py-1.5 px-2">
+              Accepted Here: GPay • PhonePe • Paytm • BHIM
+            </div>
+          </div>
+          <span className="text-[10.5px] text-[var(--muted)] mt-2 font-medium">Tabletop Acrylic Stand Preview</span>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function Settings() {
   const [tab, setTab] = useState('business')
@@ -931,6 +1466,8 @@ export default function Settings() {
                   />
                 </div>
               </SectionCard>
+
+              <StoreQrStandSettingsCard s={s} />
             </div>
           )}
 

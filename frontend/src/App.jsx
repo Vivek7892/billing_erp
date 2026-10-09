@@ -4,10 +4,13 @@ import { Toaster } from 'react-hot-toast'
 
 import { AuthProvider, useAuth } from './AuthContext'
 import { ThemeProvider } from './ThemeContext'
+import { NetworkStatusProvider } from './context/NetworkStatusContext'
 import { ROLES } from './constants'
 
 import Layout from './components/Layout'
 import { PageSkeleton } from './components/UI'
+import NetworkOfflineBanner from './components/NetworkOfflineBanner'
+import SessionExpiredModal from './components/SessionExpiredModal'
 
 // Lazy-loaded pages for route-level code splitting
 const Login = lazy(() => import('./pages/Login'))
@@ -33,6 +36,15 @@ const PublicBill = lazy(() => import('./pages/PublicBill'))
 const AuditTrail = lazy(() => import('./pages/AuditTrail'))
 const RecycleBin = lazy(() => import('./pages/RecycleBin'))
 
+// Error and Diagnostic Pages
+const NotFound = lazy(() => import('./pages/errors/NotFound'))
+const Forbidden = lazy(() => import('./pages/errors/Forbidden'))
+const ServerError = lazy(() => import('./pages/errors/ServerError'))
+const ServiceUnavailable = lazy(() => import('./pages/errors/ServiceUnavailable'))
+const SessionExpired = lazy(() => import('./pages/errors/SessionExpired'))
+const RequestTimeout = lazy(() => import('./pages/errors/RequestTimeout'))
+const OfflineState = lazy(() => import('./pages/errors/OfflineState'))
+
 /* -------------------------------------------------------
    Loading Screen
 ------------------------------------------------------- */
@@ -56,7 +68,7 @@ function LoadingScreen() {
 }
 
 /* -------------------------------------------------------
-   Route Guard
+   Route Guard with Role Protection & Forbidden State
 ------------------------------------------------------- */
 
 function Guard({ children, adminOnly = false, roles }) {
@@ -67,18 +79,31 @@ function Guard({ children, adminOnly = false, roles }) {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />
+    const currentPath = window.location.pathname + window.location.search
+    return <Navigate to={`/login?redirect=${encodeURIComponent(currentPath)}`} replace />
   }
 
   if (adminOnly && ![ROLES.ADMIN, ROLES.OWNER].includes(user.role)) {
-    return <Navigate to="/" replace />
+    return <Layout><Forbidden /></Layout>
   }
 
   if (roles && !roles.includes(user.role)) {
-    return <Navigate to="/" replace />
+    return <Layout><Forbidden /></Layout>
   }
 
   return <Layout>{children}</Layout>
+}
+
+/* -------------------------------------------------------
+   Error Page Layout Wrapper (embeds in Layout if logged in)
+------------------------------------------------------- */
+
+function ErrorPageLayout({ children }) {
+  const { user } = useAuth()
+  if (user) {
+    return <Layout>{children}</Layout>
+  }
+  return children
 }
 
 /* -------------------------------------------------------
@@ -370,8 +395,82 @@ function AppRoutes() {
         element={<Navigate to="/parties/suppliers" replace />}
       />
 
-      {/* Catch-all */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* -------------------------------------------------
+          Error and Diagnostic Routes
+      ------------------------------------------------- */}
+      <Route
+        path="/403"
+        element={
+          <ErrorPageLayout>
+            <Forbidden />
+          </ErrorPageLayout>
+        }
+      />
+
+      <Route
+        path="/404"
+        element={
+          <ErrorPageLayout>
+            <NotFound />
+          </ErrorPageLayout>
+        }
+      />
+
+      <Route
+        path="/500"
+        element={
+          <ErrorPageLayout>
+            <ServerError />
+          </ErrorPageLayout>
+        }
+      />
+
+      <Route
+        path="/502"
+        element={
+          <ErrorPageLayout>
+            <ServiceUnavailable />
+          </ErrorPageLayout>
+        }
+      />
+
+      <Route
+        path="/503"
+        element={
+          <ErrorPageLayout>
+            <ServiceUnavailable />
+          </ErrorPageLayout>
+        }
+      />
+
+      <Route
+        path="/session-expired"
+        element={<SessionExpired />}
+      />
+
+      <Route
+        path="/timeout"
+        element={
+          <ErrorPageLayout>
+            <RequestTimeout />
+          </ErrorPageLayout>
+        }
+      />
+
+      <Route
+        path="/offline"
+        element={<OfflineState />}
+      />
+
+      {/* Catch-all: 404 Page Not Found */}
+      <Route
+        path="*"
+        element={
+          <ErrorPageLayout>
+            <NotFound />
+          </ErrorPageLayout>
+        }
+      />
     </Routes>
   )
 }
@@ -384,64 +483,68 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <BrowserRouter>
-          <Toaster
-            position="top-right"
-            reverseOrder={false}
-            gutter={10}
-            toastOptions={{
-              duration: 3000,
-
-              style: {
-                fontFamily: "'Inter', system-ui, sans-serif",
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                lineHeight: 1.5,
-                borderRadius: '0.875rem',
-                padding: '0.875rem 1rem',
-                maxWidth: '420px',
-                background: 'var(--surface)',
-                color: 'var(--ink)',
-                border: '1px solid var(--line)',
-                boxShadow:
-                  '0 16px 40px rgba(15, 23, 42, 0.12), 0 4px 12px rgba(15, 23, 42, 0.06)',
-              },
-
-              success: {
-                iconTheme: {
-                  primary: '#16a34a',
-                  secondary: '#f0fdf4',
-                },
+        <NetworkStatusProvider>
+          <BrowserRouter>
+            <NetworkOfflineBanner />
+            <SessionExpiredModal />
+            <Toaster
+              position="top-right"
+              reverseOrder={false}
+              gutter={10}
+              toastOptions={{
+                duration: 3000,
 
                 style: {
-                  borderColor: '#bbf7d0',
+                  fontFamily: "'Inter', system-ui, sans-serif",
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  lineHeight: 1.5,
+                  borderRadius: '0.875rem',
+                  padding: '0.875rem 1rem',
+                  maxWidth: '420px',
+                  background: 'var(--surface)',
+                  color: 'var(--ink)',
+                  border: '1px solid var(--line)',
+                  boxShadow:
+                    '0 16px 40px rgba(15, 23, 42, 0.12), 0 4px 12px rgba(15, 23, 42, 0.06)',
                 },
-              },
 
-              error: {
-                iconTheme: {
-                  primary: '#dc2626',
-                  secondary: '#fef2f2',
+                success: {
+                  iconTheme: {
+                    primary: '#16a34a',
+                    secondary: '#f0fdf4',
+                  },
+
+                  style: {
+                    borderColor: '#bbf7d0',
+                  },
                 },
 
-                style: {
-                  borderColor: '#fecaca',
-                },
-              },
+                error: {
+                  iconTheme: {
+                    primary: '#dc2626',
+                    secondary: '#fef2f2',
+                  },
 
-              loading: {
-                iconTheme: {
-                  primary: 'var(--primary)',
-                  secondary: 'var(--surface)',
+                  style: {
+                    borderColor: '#fecaca',
+                  },
                 },
-              },
-            }}
-          />
 
-          <Suspense fallback={<LoadingScreen />}>
-            <AppRoutes />
-          </Suspense>
-        </BrowserRouter>
+                loading: {
+                  iconTheme: {
+                    primary: 'var(--primary)',
+                    secondary: 'var(--surface)',
+                  },
+                },
+              }}
+            />
+
+            <Suspense fallback={<LoadingScreen />}>
+              <AppRoutes />
+            </Suspense>
+          </BrowserRouter>
+        </NetworkStatusProvider>
       </AuthProvider>
     </ThemeProvider>
   )
