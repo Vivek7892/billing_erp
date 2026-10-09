@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
 import api, { API_BASE_URL } from '../api'
 import productService from '../features/inventory/api/productService'
-import { Badge, PageHeader, Modal, Spinner, EmptyState, Pagination } from '../components/UI'
+import { Badge, PageHeader, Modal, Spinner, EmptyState, Pagination, TableSkeleton } from '../components/UI'
+import { STOCK_STATUS } from '../constants'
 import toast from 'react-hot-toast'
 import BarcodePrintModal from '../components/BarcodePrintModal'
 import {
@@ -677,9 +678,7 @@ export default function Stock() {
         </div>
 
         {loading ? (
-          <div className="flex min-h-64 items-center justify-center">
-            <Spinner />
-          </div>
+          <TableSkeleton rows={10} cols={5} label="Loading inventory stock" />
         ) : filteredProducts.length === 0 ? (
           <div className="px-4 py-16">
             <EmptyState

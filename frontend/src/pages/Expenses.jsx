@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import api from '../api'
-import { Spinner, Modal } from '../components/UI'
+import { Spinner, Modal, EmptyState } from '../components/UI'
 import {
   IndianRupee, Plus, RefreshCw, Search, Pencil, Trash2,
-  ShoppingBag, Zap, Car, Users, MoreHorizontal, TrendingDown
+  ShoppingBag, Zap, Car, Users, MoreHorizontal, TrendingDown, Receipt
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -253,16 +253,20 @@ export default function Expenses() {
             <Spinner />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 px-10 py-20 text-[var(--muted-light)]">
-            <IndianRupee size={28} className="opacity-30" />
-            <span className="text-sm">No expenses found</span>
-            <button
-              onClick={openAdd}
-             className="mt-2 btn-primary btn-base"
-            >
-              Add First Expense
-            </button>
-          </div>
+          <EmptyState
+            icon={Receipt}
+            title={q || catFilter !== 'all' ? 'No expenses found' : 'No expenses recorded'}
+            description={
+              q || catFilter !== 'all'
+                ? 'Try adjusting your search query or category filter.'
+                : 'Track business expenses like rent, utilities, transport, and supplies.'
+            }
+            action={
+              q || catFilter !== 'all'
+                ? { label: 'Clear Filters', onClick: () => { setQ(''); setCatFilter('all'); } }
+                : { label: 'Add First Expense', onClick: openAdd }
+            }
+          />
         ) : (
           <>
             {/* Mobile list */}

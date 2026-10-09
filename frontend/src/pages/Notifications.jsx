@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
@@ -30,7 +30,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import api from '../api'
-import { Badge, Card } from '../components/UI'
+import { Badge, Card, EmptyState, useModalA11y } from '../components/UI'
 
 const TYPE_CONFIG = {
   low_stock: {
@@ -125,6 +125,9 @@ export default function Notifications() {
   const [actioningId, setActioningId] = useState(null)
   const [approvalModal, setApprovalModal] = useState(null)
   const [approvalNotes, setApprovalNotes] = useState('')
+  const approvalModalRef = useRef(null)
+
+  useModalA11y(Boolean(approvalModal), () => setApprovalModal(null), approvalModalRef)
 
   const fetchNotifications = useCallback(async (isBackground = false) => {
     try {
@@ -598,15 +601,11 @@ export default function Notifications() {
             </table>
           </div>
         ) : (
-          <div className="flex min-h-36 flex-col items-center justify-center gap-2 p-6 text-center">
-            <CheckCircle2 size={24} className="text-teal-600" />
-            <p className="text-xs font-semibold text-[var(--ink)]">
-              No notifications matching your criteria
-            </p>
-            <p className="text-[11px] text-[var(--muted)]">
-              All monitored inventory, billing, compliance, and approval channels are operating normally.
-            </p>
-          </div>
+          <EmptyState
+            icon={Bell}
+            title="You're all caught up"
+            description="All monitored inventory, billing, compliance, and approval channels are operating normally."
+          />
         )}
       </section>
 
@@ -614,9 +613,24 @@ export default function Notifications() {
           APPROVAL MODAL
       -------------------------------------------------------------- */}
       {approvalModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg border border-[var(--line)] bg-[var(--surface)] p-5 shadow-lg">
-            <h3 className="text-sm font-bold text-[var(--ink)]">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="presentation"
+          onClick={() => {
+            setApprovalModal(null)
+            setApprovalNotes('')
+          }}
+        >
+          <div
+            ref={approvalModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="approval-modal-title"
+            tabIndex={-1}
+            onClick={e => e.stopPropagation()}
+            className="w-full max-w-md rounded-lg border border-[var(--line)] bg-[var(--surface)] p-5 shadow-lg outline-none"
+          >
+            <h3 id="approval-modal-title" className="text-sm font-bold text-[var(--ink)]">
               Confirm {approvalModal.type === 'approve' ? 'Approval' : 'Rejection'}
             </h3>
             <p className="mt-1 text-xs text-[var(--muted)]">

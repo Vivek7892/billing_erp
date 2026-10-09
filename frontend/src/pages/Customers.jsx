@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import api from '../api'
+import customerService from '../features/customers/api/customerService'
 import {
   Card,
   PageHeader,
   Modal,
   ConfirmDialog,
   Spinner,
+  TableSkeleton,
   EmptyState,
 } from '../components/UI'
 import toast from 'react-hot-toast'
@@ -122,13 +124,11 @@ export default function Customers() {
       setLoading(true)
 
       try {
-        const params = query.trim()
-          ? `?search=${encodeURIComponent(query.trim())}`
-          : ''
+        const params = query.trim() ? { search: query.trim() } : {}
+        const result = await customerService.getCustomers(params)
+        const rows = Array.isArray(result?.items) ? result.items : (Array.isArray(result) ? result : [])
 
-        const { data } = await api.get(`/customers/${params}`)
-
-        setCustomers(data?.results || data || [])
+        setCustomers(rows)
       } catch (error) {
         toast.error(getErrorMessage(error))
         setCustomers([])
@@ -172,11 +172,8 @@ export default function Customers() {
     setBillsLoading(true)
 
     try {
-      const { data } = await api.get(
-        `/customers/${customer.id}/bills/`
-      )
-
-      setCustomerBills(data || [])
+      const data = await customerService.getCustomerBills(customer.id)
+      setCustomerBills(Array.isArray(data) ? data : (data?.results || []))
     } catch (error) {
       toast.error(getErrorMessage(error))
     } finally {
@@ -203,10 +200,10 @@ export default function Customers() {
       }
 
       if (editId) {
-        await api.patch(`/customers/${editId}/`, payload)
+        await customerService.updateCustomer(editId, payload)
         toast.success('Customer updated successfully')
       } else {
-        await api.post('/customers/', payload)
+        await customerService.createCustomer(payload)
         toast.success('Customer added successfully')
       }
 
@@ -225,7 +222,7 @@ export default function Customers() {
     setDeleting(true)
 
     try {
-      await api.delete(`/customers/${deleteId}/`)
+      await customerService.deleteCustomer(deleteId)
 
       toast.success('Customer deleted')
 
@@ -246,12 +243,9 @@ export default function Customers() {
     const popup = channel === 'whatsapp' ? window.open('', '_blank') : null
 
     try {
-      const res = await api.post(
-        `/customers/${reminderCustomer.id}/send-reminder/`,
-        { channel }
-      )
+      const res = await customerService.sendReminder(reminderCustomer.id, channel)
 
-      if (res.data?.whatsapp_url && channel === 'whatsapp') {
+      if (res?.data?.whatsapp_url && channel === 'whatsapp') {
         if (popup) popup.location.href = res.data.whatsapp_url
         else window.location.href = res.data.whatsapp_url
       }
@@ -282,12 +276,9 @@ export default function Customers() {
     const popup = channel === 'whatsapp' ? window.open('', '_blank') : null
 
     try {
-      const res = await api.post(
-        `/customers/${customer.id}/send-statement/`,
-        { channel }
-      )
+      const res = await customerService.sendStatement(customer.id, channel)
 
-      if (res.data?.whatsapp_url && channel === 'whatsapp') {
+      if (res?.data?.whatsapp_url && channel === 'whatsapp') {
         if (popup) popup.location.href = res.data.whatsapp_url
         else window.location.href = res.data.whatsapp_url
       }
@@ -511,39 +502,31 @@ export default function Customers() {
       <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
 
         {loading ? (
-          <div className="py-14">
-            <Spinner />
-          </div>
+          <TableSkeleton rows={8} cols={5} label="Loading customers" />
         ) : displayed.length === 0 ? (
-
-          <div className="py-10">
-
-            <EmptyState
-              message={
-                hasSearch || onlyCredit
-                  ? 'No customers match your filters'
-                  : 'No customers found'
-              }
-            />
-
-            {(hasSearch || onlyCredit) && (
-              <div className="flex justify-center mt-4">
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearch('')
-                    setOnlyCredit(false)
-                  }}
-                  className="btn-secondary text-sm"
-                >
-                  Clear Filters
-                </button>
-
-              </div>
-            )}
-          </div>
-
+          <EmptyState
+            icon={Users}
+            title={hasSearch || onlyCredit ? 'No customers match your filters' : 'No customers yet'}
+            description={
+              hasSearch || onlyCredit
+                ? 'Try adjusting your search terms or credit filter.'
+                : 'Add your first customer to track ledger balance, invoices, and communication.'
+            }
+            action={
+              hasSearch || onlyCredit
+                ? {
+                    label: 'Clear Filters',
+                    onClick: () => {
+                      setSearch('')
+                      setOnlyCredit(false)
+                    },
+                  }
+                : {
+                    label: 'Add First Customer',
+                    onClick: openAdd,
+                  }
+            }
+          />
         ) : (
           <>
             {/* =================================================

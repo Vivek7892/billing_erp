@@ -1,6 +1,6 @@
 import { Fragment, useState, useEffect, useMemo, useRef } from 'react'
 import api from '../api'
-import { Badge, PageHeader, Modal, Spinner, EmptyState, ConfirmDialog } from '../components/UI'
+import { Badge, PageHeader, Modal, Spinner, EmptyState, ConfirmDialog, TableSkeleton } from '../components/UI'
 import toast from 'react-hot-toast'
 import {
   Plus, Trash2, Printer, Package, ChevronDown, ChevronRight,
@@ -1487,7 +1487,7 @@ export default function Purchases() {
         ))}
       </div>
 
-      {loading ? <Spinner /> : (
+      {loading ? <TableSkeleton rows={8} cols={6} label="Loading purchases" /> : (
         <>
           {/* ── Purchase Orders Tab ── */}
           {tab === 'orders' && (

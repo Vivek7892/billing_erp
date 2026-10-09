@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react'
 import api from '../api'
 
-import { Badge, Spinner, Modal } from '../components/UI'
+import { Badge, Spinner, TableSkeleton, Modal, EmptyState } from '../components/UI'
 
 import {
   Building2,
+  Truck,
   Plus,
   Search,
   Pencil,
@@ -1594,46 +1595,22 @@ export default function Suppliers() {
         </div>
 
         {loading ? (
-          <div className="py-20 flex items-center justify-center">
-            <Spinner />
-          </div>
+          <TableSkeleton rows={8} cols={5} label="Loading suppliers" />
         ) : filtered.length === 0 ? (
-          <div className="py-16 text-center px-4">
-            <Building2
-              size={36}
-              className="mx-auto text-[var(--muted-light)] mb-3"
-            />
-            <p className="text-sm font-semibold text-[var(--ink)]">
-              {q
-                ? 'No suppliers matching your search'
-                : 'No suppliers registered'}
-            </p>
-            <p className="text-xs text-[var(--muted)] mt-1">
-              {q
+          <EmptyState
+            icon={Truck}
+            title={q ? 'No suppliers matching your search' : 'No suppliers yet'}
+            description={
+              q
                 ? 'Try another supplier name, phone, email or GSTIN.'
-                : 'Add your first supplier or import an Excel sheet to start managing vendor accounts.'}
-            </p>
-            {!q && (
-              <div className="flex items-center justify-center gap-2 mt-4">
-                <button
-                  type="button"
-                  onClick={() => setImportModal(true)}
-                  className="btn-secondary h-9 px-4 text-xs inline-flex items-center gap-1.5 rounded-md"
-                >
-                  <FileSpreadsheet size={14} />
-                  Import Excel
-                </button>
-                <button
-                  type="button"
-                  onClick={openAdd}
-                  className="btn-primary h-9 px-4 text-xs inline-flex items-center gap-1.5 rounded-md"
-                >
-                  <Plus size={14} />
-                  Add Supplier
-                </button>
-              </div>
-            )}
-          </div>
+                : 'Add your first supplier or import an Excel sheet to start managing vendor accounts.'
+            }
+            action={
+              q
+                ? { label: 'Clear Search', onClick: () => setQ('') }
+                : { label: 'Add Supplier', onClick: openAdd }
+            }
+          />
         ) : (
           <>
             {/* Mobile Card List (lg:hidden) */}

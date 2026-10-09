@@ -1,34 +1,37 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 
 import { AuthProvider, useAuth } from './AuthContext'
 import { ThemeProvider } from './ThemeContext'
+import { ROLES } from './constants'
 
 import Layout from './components/Layout'
 import { PageSkeleton } from './components/UI'
 
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import NewBill from './pages/NewBill'
-import Drafts from './pages/Drafts'
-import Bills from './pages/Bills'
-import Returns from './pages/Returns'
-import Payments from './pages/Payments'
-import Products from './pages/Products'
-import Stock from './pages/Stock'
-import Purchases from './pages/Purchases'
-import Customers from './pages/Customers'
-import Suppliers from './pages/Suppliers'
-import Expenses from './pages/Expenses'
-import Reports from './pages/Reports'
-import Users from './pages/Users'
-import Settings from './pages/Settings'
-import Support from './pages/Support'
-import PaymentReconciliation from './pages/PaymentReconciliation'
-import Notifications from './pages/Notifications'
-import PublicBill from './pages/PublicBill'
-import AuditTrail from './pages/AuditTrail'
-import RecycleBin from './pages/RecycleBin'
+// Lazy-loaded pages for route-level code splitting
+const Login = lazy(() => import('./pages/Login'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const NewBill = lazy(() => import('./pages/NewBill'))
+const Drafts = lazy(() => import('./pages/Drafts'))
+const Bills = lazy(() => import('./pages/Bills'))
+const Returns = lazy(() => import('./pages/Returns'))
+const Payments = lazy(() => import('./pages/Payments'))
+const Products = lazy(() => import('./pages/Products'))
+const Stock = lazy(() => import('./pages/Stock'))
+const Purchases = lazy(() => import('./pages/Purchases'))
+const Customers = lazy(() => import('./pages/Customers'))
+const Suppliers = lazy(() => import('./pages/Suppliers'))
+const Expenses = lazy(() => import('./pages/Expenses'))
+const Reports = lazy(() => import('./pages/Reports'))
+const Users = lazy(() => import('./pages/Users'))
+const Settings = lazy(() => import('./pages/Settings'))
+const Support = lazy(() => import('./pages/Support'))
+const PaymentReconciliation = lazy(() => import('./pages/PaymentReconciliation'))
+const Notifications = lazy(() => import('./pages/Notifications'))
+const PublicBill = lazy(() => import('./pages/PublicBill'))
+const AuditTrail = lazy(() => import('./pages/AuditTrail'))
+const RecycleBin = lazy(() => import('./pages/RecycleBin'))
 
 /* -------------------------------------------------------
    Loading Screen
@@ -67,7 +70,7 @@ function Guard({ children, adminOnly = false, roles }) {
     return <Navigate to="/login" replace />
   }
 
-  if (adminOnly && !['admin', 'owner'].includes(user.role)) {
+  if (adminOnly && ![ROLES.ADMIN, ROLES.OWNER].includes(user.role)) {
     return <Navigate to="/" replace />
   }
 
@@ -222,10 +225,10 @@ function AppRoutes() {
         element={
           <Guard
             roles={[
-              'owner',
-              'admin',
-              'manager',
-              'accountant',
+              ROLES.OWNER,
+              ROLES.ADMIN,
+              ROLES.MANAGER,
+              ROLES.ACCOUNTANT,
             ]}
           >
             <Reports />
@@ -348,8 +351,13 @@ function AppRoutes() {
       />
 
       <Route
-        path="/inventory"
+        path="/stock"
         element={<Navigate to="/inventory/stock" replace />}
+      />
+
+      <Route
+        path="/purchases"
+        element={<Navigate to="/inventory/purchases" replace />}
       />
 
       <Route
@@ -358,21 +366,18 @@ function AppRoutes() {
       />
 
       <Route
-        path="/purchases"
-        element={<Navigate to="/inventory/purchases" replace />}
+        path="/suppliers"
+        element={<Navigate to="/parties/suppliers" replace />}
       />
 
-      {/* Unknown routes return to dashboard */}
-      <Route
-        path="*"
-        element={<Navigate to="/" replace />}
-      />
+      {/* Catch-all */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
 
 /* -------------------------------------------------------
-   Main Application
+   Root Application
 ------------------------------------------------------- */
 
 export default function App() {
@@ -433,7 +438,9 @@ export default function App() {
             }}
           />
 
-          <AppRoutes />
+          <Suspense fallback={<LoadingScreen />}>
+            <AppRoutes />
+          </Suspense>
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>

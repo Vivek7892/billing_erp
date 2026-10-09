@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { API_BASE_URL } from '../api'
 import invoiceService from '../features/billing/api/invoiceService'
 import settingsService from '../features/settings/api/settingsService'
-import { Spinner, ConfirmDialog } from '../components/UI'
+import { Spinner, TableSkeleton, ConfirmDialog, EmptyState, useModalA11y } from '../components/UI'
+import { INVOICE_STATUS, PAYMENT_STATUS, PAYMENT_METHODS } from '../constants'
 import toast from 'react-hot-toast'
 import InvoiceDocument from '../components/InvoiceDocument'
 import CommunicationHistory from '../components/CommunicationHistory'
@@ -23,6 +24,7 @@ import {
   Receipt,
   IndianRupee,
   ShoppingBag,
+  ShoppingCart,
   CreditCard,
   CalendarDays,
   ChevronLeft,
@@ -571,11 +573,14 @@ function InvoiceModal({
   shopName,
   onClose,
 }) {
+  const modalRef = useRef(null)
   const [shareOpen, setShareOpen] = useState(false)
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false)
   const [historyKey, setHistoryKey] = useState(0)
   const defaultMode = settings?.invoice_template === 'thermal_80' ? 'thermal' : 'a4'
   const [modalMode, setModalMode] = useState(defaultMode)
+
+  useModalA11y(Boolean(selected), onClose, modalRef)
 
   if (!selected) return null
 
@@ -605,10 +610,16 @@ function InvoiceModal({
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-3 backdrop-blur-sm sm:p-5"
+      role="presentation"
       onClick={onClose}
     >
       <div
-        className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-[var(--surface)] shadow-2xl border border-[var(--line)]"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="invoice-modal-title"
+        tabIndex={-1}
+        className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-[var(--surface)] shadow-2xl border border-[var(--line)] outline-none"
         onClick={e => e.stopPropagation()}
       >
         {/* Modal top action bar */}
@@ -624,7 +635,7 @@ function InvoiceModal({
                   Invoice Details
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-base font-bold text-[var(--ink)]">
+                  <h2 id="invoice-modal-title" className="text-base font-bold text-[var(--ink)]">
                     {selected.invoice_number}
                   </h2>
                   <StatusPill bill={selected} />
@@ -953,7 +964,7 @@ export default function Bills() {
      CANCEL
   ------------------------------------------------------- */
 
-  const cancel = async (id, reason) => {
+  const cancel = useCallback(async (id, reason) => {
     try {
       await invoiceService.cancelInvoice(id, reason || cancelReason || 'Customer requested cancellation')
 
@@ -968,13 +979,13 @@ export default function Bills() {
           'Failed to cancel invoice'
       )
     }
-  }
+  }, [cancelReason, page, load])
 
   /* -------------------------------------------------------
      REFUND
   ------------------------------------------------------- */
 
-  const refund = async id => {
+  const refund = useCallback(async id => {
     try {
       await invoiceService.refundInvoice(id)
 
@@ -988,7 +999,7 @@ export default function Bills() {
           'Failed to refund invoice'
       )
     }
-  }
+  }, [page, load])
 
   /* -------------------------------------------------------
      TOTALS
@@ -1252,24 +1263,13 @@ export default function Bills() {
 
           {/* Loading */}
           {loading ? (
-            <div className="flex min-h-[300px] items-center justify-center">
-              <Spinner />
-            </div>
+            <TableSkeleton rows={10} cols={6} label="Loading bills" />
           ) : visibleBills.length === 0 ? (
-            <div className="flex min-h-[300px] flex-col items-center justify-center px-5">
-              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-md bg-[var(--surface-elevated)] border border-[var(--line)] text-[var(--muted-light)]">
-                <FileText size={22} />
-              </div>
-
-              <h3 className="font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
-                No invoices found
-              </h3>
-
-              <p className="mt-1 max-w-sm text-center text-xs text-[var(--muted-light)]">
-                Try changing your search, date or payment
-                status filters.
-              </p>
-            </div>
+            <EmptyState
+              icon={ShoppingCart}
+              title="No invoices found"
+              description="Try changing your search, date or payment status filters."
+            />
           ) : (
             <>
               {/* Mobile cards */}

@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef } from 'react'
+import { useEffect, useId, useRef, isValidElement } from 'react'
+
 
 /* ============================================================
    CARD
@@ -377,6 +378,103 @@ export function Tabs({
 }
 
 /* ============================================================
+   MODAL ACCESSIBILITY HOOK
+============================================================ */
+
+export function useModalA11y(isOpen, onClose, containerRef) {
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
+
+  const hasFocusedRef = useRef(false)
+
+  useEffect(() => {
+    if (!isOpen) {
+      hasFocusedRef.current = false
+      return undefined
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation()
+        onCloseRef.current?.()
+        return
+      }
+
+      if (event.key === 'Tab' && containerRef?.current) {
+        const focusable = containerRef.current.querySelectorAll(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+        if (focusable.length === 0) return
+
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+
+        if (event.shiftKey) {
+          if (document.activeElement === first) {
+            event.preventDefault()
+            last.focus()
+          }
+        } else {
+          if (document.activeElement === last) {
+            event.preventDefault()
+            first.focus()
+          }
+        }
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', handleKeyDown)
+
+    // Only set initial focus once upon opening the modal. Never steal focus during typing or state updates!
+    if (!hasFocusedRef.current) {
+      hasFocusedRef.current = true
+      const timer = setTimeout(() => {
+        if (containerRef?.current) {
+          // If focus is already inside container, do not touch it
+          if (
+            containerRef.current.contains(document.activeElement) &&
+            document.activeElement !== containerRef.current
+          ) {
+            return
+          }
+
+          // Prioritize first form field (input, select, textarea) instead of the top close button
+          const formField = containerRef.current.querySelector(
+            'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled])'
+          )
+          if (formField) {
+            formField.focus()
+            return
+          }
+
+          const focusable = containerRef.current.querySelectorAll(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+          if (focusable.length > 0) {
+            focusable[0].focus()
+          }
+        }
+      }, 50)
+
+      return () => {
+        clearTimeout(timer)
+        window.removeEventListener('keydown', handleKeyDown)
+        document.body.style.overflow = previousOverflow
+      }
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isOpen, containerRef])
+}
+
+/* ============================================================
    MODAL
 ============================================================ */
 
@@ -391,25 +489,7 @@ export function Modal({
   const dialogRef = useRef(null)
   const titleId = useId()
 
-  useEffect(() => {
-    if (!open) return undefined
-
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        onClose?.()
-      }
-    }
-
-    const previousOverflow = document.body.style.overflow
-
-    window.addEventListener('keydown', handleKeyDown)
-    document.body.style.overflow = 'hidden'
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = previousOverflow
-    }
-  }, [open, onClose])
+  useModalA11y(open, onClose, dialogRef)
 
   if (!open) return null
 
@@ -436,8 +516,9 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        tabIndex={-1}
         className={[
-          'flex max-h-[95dvh] w-full flex-col',
+          'flex max-h-[95dvh] w-full flex-col outline-none',
           sizes[size] || sizes.md,
           'overflow-hidden rounded-t-[12px] sm:max-h-[90vh] sm:rounded-[12px]',
           'border border-[var(--line)]',
@@ -506,11 +587,29 @@ export function ConfirmDialog({
   loading = false,
   children,
 }) {
+  const dialogRef = useRef(null)
+  const titleId = useId()
+
+  useModalA11y(open, onClose, dialogRef)
+
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-[12px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-modal)] sm:p-6">
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+      role="presentation"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose?.()
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="w-full max-w-sm rounded-[12px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-modal)] sm:p-6 outline-none"
+      >
         <div
           className={[
             'mb-4 flex h-11 w-11 items-center justify-center rounded-xl border',
@@ -552,7 +651,7 @@ export function ConfirmDialog({
           )}
         </div>
 
-        <h3 className="text-base font-semibold text-[var(--ink)]">
+        <h3 id={titleId} className="text-base font-semibold text-[var(--ink)]">
           {title}
         </h3>
 
@@ -594,6 +693,8 @@ export function ConfirmDialog({
   )
 }
 
+export const ConfirmModal = ConfirmDialog
+
 /* ============================================================
    LOADING PLACEHOLDER
 ============================================================ */
@@ -628,42 +729,80 @@ export function InlineSpinner({ className = '' }) {
 ============================================================ */
 
 export function EmptyState({
-  message = 'No data found',
+  icon: Icon,
+  title,
+  message,
   description,
   action,
-  icon,
+  className = '',
 }) {
-  return (
-    <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--muted-light)]">
-        {icon || (
-          <svg
-            width="27"
-            height="27"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+  const displayTitle = title || message || 'No data found'
+
+  const renderIcon = () => {
+    if (!Icon) {
+      return (
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect width="20" height="14" x="2" y="7" rx="2" />
+          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+        </svg>
+      )
+    }
+    if (isValidElement(Icon)) {
+      return Icon
+    }
+    if (typeof Icon === 'function' || typeof Icon === 'object') {
+      return <Icon size={24} strokeWidth={1.5} className="text-[var(--muted)]" />
+    }
+    return null
+  }
+
+  const renderAction = () => {
+    if (!action) return null
+    if (isValidElement(action)) {
+      return <div className="mt-4">{action}</div>
+    }
+    if (typeof action === 'object' && action.label && action.onClick) {
+      return (
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={action.onClick}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#1E3A5F] px-3.5 py-2 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-[#162F4D]"
           >
-            <rect width="20" height="14" x="2" y="7" rx="2" />
-            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-          </svg>
-        )}
+            {action.label}
+          </button>
+        </div>
+      )
+    }
+    return null
+  }
+
+  return (
+    <div className={`flex flex-col items-center justify-center px-6 py-14 text-center ${className}`}>
+      <div className="mb-3.5 flex h-13 w-13 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--muted)] shadow-xs">
+        {renderIcon()}
       </div>
 
-      <p className="text-sm font-medium text-[var(--ink-secondary)]">
-        {message}
-      </p>
+      <h3 className="text-sm font-bold text-[var(--ink)]">
+        {displayTitle}
+      </h3>
 
       {description && (
-        <p className="mt-2 max-w-sm text-xs leading-relaxed text-[var(--muted)]">
+        <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-[var(--muted)]">
           {description}
         </p>
       )}
 
-      {action && <div className="mt-5">{action}</div>}
+      {renderAction()}
     </div>
   )
 }
@@ -677,8 +816,7 @@ export function Skeleton({ className = '' }) {
     <div
       aria-hidden="true"
       className={[
-        'animate-pulse rounded-lg',
-        'bg-[var(--surface-elevated)]',
+        'animate-pulse rounded-md bg-[var(--line)]',
         className,
       ].join(' ')}
     />
@@ -690,35 +828,50 @@ export function Skeleton({ className = '' }) {
 ============================================================ */
 
 export function TableSkeleton({
-  rows = 5,
-  columns = 5,
+  rows = 8,
+  cols = 5,
+  columns,
   label = 'Loading data',
 }) {
+  const columnCount = columns || cols || 5
+
   return (
     <div
-      className="divide-y divide-[var(--line-subtle)]"
+      className="w-full divide-y divide-[var(--line)] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-xs"
       aria-label={label}
       role="status"
     >
-      {Array.from({ length: rows }, (_, row) => (
-        <div
-          key={row}
-          className="flex gap-3 px-4 py-4"
-        >
-          {Array.from({ length: columns }, (_, col) => (
-            <Skeleton
-              key={col}
+      {/* Skeleton header */}
+      <div className="flex items-center gap-4 px-4 py-3 bg-[var(--surface-elevated)] rounded-lg">
+        {Array.from({ length: columnCount }, (_, c) => (
+          <div
+            key={c}
+            className={[
+              'h-4 flex-1 animate-pulse rounded bg-[var(--line)]',
+              c === 0 ? 'max-w-[50px]' : '',
+              c === columnCount - 1 ? 'max-w-[90px]' : '',
+            ].join(' ')}
+          />
+        ))}
+      </div>
+
+      {/* Skeleton rows */}
+      {Array.from({ length: rows }, (_, r) => (
+        <div key={r} className="flex items-center gap-4 px-4 py-3.5">
+          {Array.from({ length: columnCount }, (_, c) => (
+            <div
+              key={c}
               className={[
-                'h-5 flex-1',
-                col === 0 ? 'max-w-10' : '',
-                col === columns - 1 ? 'max-w-24' : '',
+                'h-3.5 flex-1 animate-pulse rounded bg-[var(--line)]',
+                c === 0 ? 'max-w-[40px]' : '',
+                c === columnCount - 1 ? 'max-w-[80px]' : '',
               ].join(' ')}
             />
           ))}
         </div>
       ))}
 
-      <span className="sr-only">Loading data</span>
+      <span className="sr-only">Loading table data...</span>
     </div>
   )
 }
@@ -733,17 +886,53 @@ export function CardSkeleton({ count = 4 }) {
       {Array.from({ length: count }, (_, index) => (
         <div
           key={index}
-          className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5"
+          className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-xs"
         >
           <div className="flex items-start justify-between gap-3">
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-10 w-10 rounded-xl" />
+            <div className="h-3 w-24 animate-pulse rounded bg-[var(--line)]" />
+            <div className="h-8 w-8 animate-pulse rounded-lg bg-[var(--line)]" />
           </div>
 
-          <Skeleton className="mt-5 h-8 w-28" />
-          <Skeleton className="mt-3 h-3 w-20" />
+          <div className="mt-4 h-7 w-28 animate-pulse rounded bg-[var(--line)]" />
+          <div className="mt-2 h-3 w-20 animate-pulse rounded bg-[var(--line)]" />
         </div>
       ))}
+    </div>
+  )
+}
+
+/* ============================================================
+   FORM SKELETON
+============================================================ */
+
+export function FormSkeleton() {
+  return (
+    <div className="space-y-5 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5 sm:p-6 shadow-xs" aria-hidden="true" role="status">
+      <div className="space-y-2">
+        <div className="h-3 w-28 animate-pulse rounded bg-[var(--line)]" />
+        <div className="h-10 w-full animate-pulse rounded-lg bg-[var(--line)]" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="space-y-2">
+            <div className="h-3 w-24 animate-pulse rounded bg-[var(--line)]" />
+            <div className="h-10 w-full animate-pulse rounded-lg bg-[var(--line)]" />
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-2">
+        <div className="h-3 w-32 animate-pulse rounded bg-[var(--line)]" />
+        <div className="h-24 w-full animate-pulse rounded-lg bg-[var(--line)]" />
+      </div>
+
+      <div className="flex justify-end gap-3 pt-2">
+        <div className="h-9 w-20 animate-pulse rounded-lg bg-[var(--line)]" />
+        <div className="h-9 w-28 animate-pulse rounded-lg bg-[var(--line)]" />
+      </div>
+
+      <span className="sr-only">Loading form...</span>
     </div>
   )
 }

@@ -172,7 +172,7 @@ export default function Reports() {
     } catch (err) {
       const message =
         err.response?.status === 403
-          ? 'Reports are restricted to administrator roles.'
+          ? 'Reports are restricted to administrator and accountant roles.'
           : err.response?.data?.detail ||
             'Failed to generate report from server. Please try again.'
       setError(message)

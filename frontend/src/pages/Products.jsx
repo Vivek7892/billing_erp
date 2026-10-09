@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import api, { API_BASE_URL } from '../api'
 import productService from '../features/inventory/api/productService'
+import { STOCK_STATUS } from '../constants'
 import {
   Badge,
   PageHeader,
   Modal,
   ConfirmDialog,
   Spinner,
+  TableSkeleton,
   EmptyState,
   Pagination,
 } from '../components/UI'
@@ -274,14 +276,13 @@ export default function Products() {
   const load = useCallback(async (query = search, category = catFilter) => {
     setLoading(true)
     try {
-      const params = new URLSearchParams()
-      if (query?.trim()) params.set('search', query.trim())
-      if (category) params.set('category', category)
-      params.set('page_size', '300')
+      const params = {}
+      if (query?.trim()) params.search = query.trim()
+      if (category) params.category = category
+      params.page_size = 300
 
-      const response = await api.get(`/products/?${params.toString()}`)
-      const data = response.data?.results || response.data || []
-      const rows = Array.isArray(data) ? data : []
+      const result = await productService.getProducts(params)
+      const rows = Array.isArray(result?.items) ? result.items : (Array.isArray(result) ? result : [])
       setProducts(rows)
     } catch (error) {
       console.error('Failed to load products:', error)
@@ -432,7 +433,7 @@ export default function Products() {
     statusFilter !== 'all'
 
   // Open Add Product
-  const openAdd = () => {
+  const openAdd = useCallback(() => {
     const generatedSKU = generateRandomSKU()
     setForm({
       ...EMPTY_FORM,
@@ -441,10 +442,10 @@ export default function Products() {
     })
     setEditId(null)
     setModal('add')
-  }
+  }, [])
 
   // Open Edit Product
-  const openEdit = product => {
+  const openEdit = useCallback(product => {
     setForm({
       name: product.name || '',
       sku: product.sku || '',
@@ -466,10 +467,10 @@ export default function Products() {
     })
     setEditId(product.id)
     setModal('edit')
-  }
+  }, [])
 
   // Save Product (Add or Edit)
-  const save = async () => {
+  const save = useCallback(async () => {
     if (!form.name.trim()) {
       toast.error('Product name is required')
       return
@@ -508,14 +509,13 @@ export default function Products() {
       }
 
       if (editId) {
-        await api.patch(`/products/${editId}/`, payload)
+        await productService.updateProduct(editId, payload)
         toast.success('Product updated successfully')
       } else {
-        const res = await api.post('/products/', payload)
-        const saved = res.data
-        if (!saved.barcode && saved.id) {
+        const saved = await productService.createProduct(payload)
+        if (!saved?.barcode && saved?.id) {
           const autoCode = generateRandomBarcode()
-          await api.patch(`/products/${saved.id}/`, { barcode: autoCode })
+          await productService.updateProduct(saved.id, { barcode: autoCode })
         }
         toast.success('Product created successfully')
       }
@@ -532,26 +532,26 @@ export default function Products() {
     } finally {
       setSaving(false)
     }
-  }
+  }, [form, editId, load, search, catFilter])
 
   // Delete Product
-  const del = async () => {
+  const del = useCallback(async () => {
     if (!deleteId) return
     try {
-      await api.delete(`/products/${deleteId}/`)
+      await productService.deleteProduct(deleteId)
       toast.success('Product deleted successfully')
       setDeleteId(null)
       await load(search, catFilter)
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete product')
     }
-  }
+  }, [deleteId, load, search, catFilter])
 
   // Quick Toggle Active/Inactive Status
-  const toggleProductStatus = async product => {
+  const toggleProductStatus = useCallback(async product => {
     const newStatus = product.status === 'active' ? 'inactive' : 'active'
     try {
-      await api.patch(`/products/${product.id}/`, { status: newStatus })
+      await productService.updateProduct(product.id, { status: newStatus })
       toast.success(
         `Product marked as ${newStatus === 'active' ? 'Active' : 'Inactive'}`,
       )
@@ -561,10 +561,10 @@ export default function Products() {
       if (detailProduct?.id === product.id) {
         setDetailProduct(prev => ({ ...prev, status: newStatus }))
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to update product status')
     }
-  }
+  }, [detailProduct])
 
   // Copy SKU to clipboard
   const copySKU = sku => {
@@ -665,7 +665,7 @@ export default function Products() {
       // Fallback direct stock patch if adjust endpoint has permission limitation
       try {
         const updatedStock = Math.max(0, current + delta)
-        await api.patch(`/products/${adjustProduct.id}/`, {
+        await productService.updateProduct(adjustProduct.id, {
           current_stock: updatedStock,
         })
         toast.success('Stock updated successfully')
@@ -962,9 +962,9 @@ export default function Products() {
         )
 
         if (existing) {
-          await api.patch(`/products/${existing.id}/`, payload)
+          await productService.updateProduct(existing.id, payload)
         } else {
-          await api.post('/products/', payload)
+          await productService.createProduct(payload)
         }
         imported++
       } catch (err) {
@@ -1380,38 +1380,22 @@ export default function Products() {
         </div>
 
         {loading ? (
-          <div className="flex min-h-64 items-center justify-center">
-            <Spinner />
-          </div>
+          <TableSkeleton rows={10} cols={7} label="Loading products" />
         ) : visibleProducts.length === 0 ? (
-          <div className="px-4 py-16">
-            <EmptyState
-              message={
-                isFilterActive
-                  ? 'No products match the selected filters'
-                  : 'No products registered yet'
-              }
-              action={
-                isFilterActive ? (
-                  <button
-                    type="button"
-                    onClick={resetFilters}
-                    className="btn-secondary btn-base mt-3"
-                  >
-                    Clear Filters
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={openAdd}
-                    className="btn-primary btn-base mt-3"
-                  >
-                    <Plus size={15} className="mr-1 inline" /> Add First Product
-                  </button>
-                )
-              }
-            />
-          </div>
+          <EmptyState
+            icon={Package}
+            title={isFilterActive ? 'No products match filters' : 'No products yet'}
+            description={
+              isFilterActive
+                ? 'Try adjusting your search query, category, or stock filter.'
+                : 'Get started by creating your first product or importing catalog.'
+            }
+            action={
+              isFilterActive
+                ? { label: 'Clear Filters', onClick: resetFilters }
+                : { label: 'Add First Product', onClick: openAdd }
+            }
+          />
         ) : (
           <>
             {/* Mobile Cards View (< 768px) */}

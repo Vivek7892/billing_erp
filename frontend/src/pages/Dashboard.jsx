@@ -148,8 +148,25 @@ export default function Dashboard() {
     [data.today_sales, data.yesterday_sales]
   )
 
-  const salesData = data.sales_7days || []
-  const payments = data.payment_distribution || []
+  const salesChartData = useMemo(() => {
+    const list = data.sales_7days || []
+    return list.map(item => ({
+      ...item,
+      sales: Number(item.sales || 0),
+    }))
+  }, [data.sales_7days])
+
+  const paymentDistributionData = useMemo(() => {
+    const list = data.payment_distribution || []
+    const total = list.reduce((s, x) => s + Number(x.total || 0), 0) || 1
+    return list.map(p => ({
+      ...p,
+      share: Math.round((Number(p.total || 0) / total) * 100),
+    }))
+  }, [data.payment_distribution])
+
+  const salesData = salesChartData
+  const payments = paymentDistributionData
   const lowStock = data.low_stock_products || []
   const recentBills = data.recent_bills || []
   const topProducts = data.top_products || []
@@ -580,9 +597,7 @@ export default function Dashboard() {
             {payments.length ? (
               <div className="space-y-3.5">
                 {payments.map((p, i) => {
-                  const total =
-                    payments.reduce((s, x) => s + Number(x.total || 0), 0) || 1
-                  const share = Math.round((Number(p.total || 0) / total) * 100)
+                  const share = p.share || 0
                   return (
                     <div key={`${p.method}-${i}`}>
                       <div className="mb-1 flex items-center justify-between text-xs">

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import inventoryService from '../features/inventory/api/inventoryService'
-import { Badge, Card, PageHeader, Modal, Spinner, EmptyState } from '../components/UI'
+import { Badge, Card, PageHeader, Modal, Spinner, EmptyState, TableSkeleton } from '../components/UI'
 import toast from 'react-hot-toast'
 import { Search, ArrowUpCircle, ArrowDownCircle, Settings, Layers, Upload, Download, RefreshCw } from 'lucide-react'
 
@@ -247,7 +247,7 @@ export default function Inventory() {
             </div>
           </Card>
           <Card>
-            {loading ? <Spinner /> : products.length === 0 ? <EmptyState /> : (
+            {loading ? <TableSkeleton rows={10} cols={5} label="Loading products" /> : products.length === 0 ? <EmptyState /> : (
               <>
                 <div className="space-y-2.5 p-2.5 sm:hidden">
                   {products.map(p => <MobileStockCard key={p.id} product={p} />)}
@@ -281,7 +281,7 @@ export default function Inventory() {
 
       {tab === 'transactions' && (
         <Card>
-          {loading ? <Spinner /> : transactions.length === 0 ? <EmptyState message="No transactions" /> : (
+          {loading ? <TableSkeleton rows={10} cols={5} label="Loading transactions" /> : transactions.length === 0 ? <EmptyState message="No transactions" /> : (
             <>
               <div className="space-y-2.5 p-2.5 sm:hidden">
                 {transactions.map(t => <MobileTransactionCard key={t.id} transaction={t} />)}

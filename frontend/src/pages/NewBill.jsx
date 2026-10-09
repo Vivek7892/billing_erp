@@ -42,6 +42,7 @@ import {
 import { Modal } from '../components/UI'
 import { useNavigate } from 'react-router-dom'
 import RazorpayPaymentModal from '../features/billing/RazorpayPaymentModal'
+import { PAYMENT_METHODS, PAYMENT_STATUS, INVOICE_STATUS } from '../constants'
 
 // ---------------------------------------------------------------------------
 // Configuration switches (UI-level validation only)
@@ -95,16 +96,16 @@ const enforcedStock = product => {
 // on-screen keyboard pops up on every product tap.
 const canAutoFocus = () => typeof window !== 'undefined' && Boolean(window.matchMedia?.('(pointer: fine)').matches)
 
-const PAYMENT_METHODS = [
-  { id: 'cash', label: 'Cash', icon: Banknote },
-  { id: 'upi', label: 'UPI', icon: Smartphone },
-  { id: 'card', label: 'Card', icon: CreditCard },
-  { id: 'credit', label: 'Credit', icon: BookOpen },
-  { id: 'razorpay', label: 'Razorpay', icon: Wallet },
+const PAYMENT_METHOD_OPTIONS = [
+  { id: PAYMENT_METHODS.CASH, label: 'Cash', icon: Banknote },
+  { id: PAYMENT_METHODS.UPI, label: 'UPI', icon: Smartphone },
+  { id: PAYMENT_METHODS.CARD, label: 'Card', icon: CreditCard },
+  { id: PAYMENT_METHODS.CREDIT, label: 'Credit', icon: BookOpen },
+  { id: PAYMENT_METHODS.RAZORPAY, label: 'Razorpay', icon: Wallet },
 ]
 const CASH_CHIPS = [50, 100, 200, 500, 1000, 2000]
 const QR_PRESETS = [100, 200, 500, 1000, 2000]
-const INITIAL_PAYMENT = { method: 'cash', amount: '', reference: '', status: 'paid', autoAmount: true }
+const INITIAL_PAYMENT = { method: PAYMENT_METHODS.CASH, amount: '', reference: '', status: PAYMENT_STATUS.PAID, autoAmount: true }
 
 // Amount actually received for an invoice, without overstating pending Razorpay.
 const lastPaidAmount = inv => {
@@ -437,7 +438,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
                 includeMargin
                 bgColor="#ffffff"
                 fgColor="#111827"
-                style={{ maxWidth: '100%', height: 'auto' }}
+                className="max-w-full h-auto"
               />
             ) : (
               <div className="pb-qr-empty">Enter an amount to generate the QR</div>
@@ -538,20 +539,32 @@ export default function NewBill() {
       settingsService.getAll(),
     ])
     const [productsResult, categoriesResult, customersResult, dashboardResult, settingsResult] = results
-    if (productsResult.status === 'fulfilled') setProducts(productsResult.value)
-    if (categoriesResult.status === 'fulfilled') setCategories(categoriesResult.value)
-    if (customersResult.status === 'fulfilled') setCustomers(customersResult.value)
-    if (dashboardResult.status === 'fulfilled') setDashboard(dashboardResult.value.data)
-    if (settingsResult.status === 'fulfilled') setSettings(settingsResult.value)
+    if (productsResult.status === 'fulfilled') {
+      const pVal = productsResult.value
+      setProducts(Array.isArray(pVal) ? pVal : (Array.isArray(pVal?.items) ? pVal.items : []))
+    }
+    if (categoriesResult.status === 'fulfilled') {
+      const cVal = categoriesResult.value
+      setCategories(Array.isArray(cVal) ? cVal : (Array.isArray(cVal?.items) ? cVal.items : []))
+    }
+    if (customersResult.status === 'fulfilled') {
+      const custVal = customersResult.value
+      setCustomers(Array.isArray(custVal) ? custVal : (Array.isArray(custVal?.items) ? custVal.items : []))
+    }
+    if (dashboardResult.status === 'fulfilled') setDashboard(dashboardResult.value?.data || dashboardResult.value)
+    if (settingsResult.status === 'fulfilled') setSettings(settingsResult.value || {})
     setLoadError(results.some(result => result.status === 'rejected'))
     setInitializing(false)
   }, [])
 
   useEffect(() => { loadInitialData() }, [loadInitialData])
 
-  const productMap = useMemo(() => new Map(products.map(p => [p.id, p])), [products])
+  const productMap = useMemo(() => {
+    const list = Array.isArray(products) ? products : []
+    return new Map(list.map(p => [p.id, p]))
+  }, [products])
   // Display only: quantity already in the bill, shown as a badge on product cards.
-  const cartQtyMap = useMemo(() => new Map(cart.map(i => [i.id, i.qty])), [cart])
+  const cartQtyMap = useMemo(() => new Map((Array.isArray(cart) ? cart : []).map(i => [i.id, i.qty])), [cart])
 
   const recalc = item => {
     const basic = item.unit_price * item.qty * (1 - item.discount_percent / 100)
@@ -594,7 +607,7 @@ export default function NewBill() {
     if (canAutoFocus()) searchRef.current?.focus()
   }, [])
 
-  const updateQty = (id, qty) => {
+  const updateQty = useCallback((id, qty) => {
     if (qty > 0) {
       const stock = enforcedStock(productMap.get(id))
       if (qty > stock) {
@@ -604,18 +617,19 @@ export default function NewBill() {
       }
     }
     setCart(prev => qty <= 0 ? prev.filter(item => item.id !== id) : prev.map(item => item.id === id ? recalc({ ...item, qty }) : item))
-  }
+  }, [productMap])
 
-  const updateDiscount = (id, pct) => {
+  const updateDiscount = useCallback((id, pct) => {
     const value = Math.min(100, Math.max(0, Number(pct) || 0))
     setCart(prev => prev.map(item => item.id === id ? recalc({ ...item, discount_percent: value }) : item))
-  }
+  }, [])
 
-  const removeItem = id => setCart(x => x.filter(i => i.id !== id))
+  const removeItem = useCallback(id => setCart(x => x.filter(i => i.id !== id)), [])
 
   const filtered = useMemo(() => {
+    const list = Array.isArray(products) ? products : []
     const q = search.trim().toLowerCase()
-    return products.filter(p => {
+    return list.filter(p => {
       const name = String(p?.name || '').toLowerCase()
       const sku = String(p?.sku || '').toLowerCase()
       const barcode = String(p?.barcode || '').toLowerCase()
@@ -629,8 +643,9 @@ export default function NewBill() {
   const availableProducts = useMemo(() => filtered.filter(p => Number(p?.current_stock || 0) > 0), [filtered])
   const recentProducts = useMemo(() => {
     try {
+      const list = Array.isArray(products) ? products : []
       const ids = JSON.parse(localStorage.getItem('pos_recent_products') || '[]').map(p => p?.id)
-      return ids.map(id => products.find(p => p?.id === id)).filter(Boolean).filter(p => Number(p.current_stock || 0) > 0).slice(0, 5)
+      return ids.map(id => list.find(p => p?.id === id)).filter(Boolean).filter(p => Number(p.current_stock || 0) > 0).slice(0, 5)
     } catch { return [] }
   }, [products, cart])
   const recommendedProducts = useMemo(() => {
@@ -646,20 +661,49 @@ export default function NewBill() {
     else if (e.key === 'Escape') { setSearchActive(false); setActiveIdx(-1) }
   }
 
-  // ---- Calculations (unchanged) -------------------------------------------
-  const subtotal = cart.reduce((sum, item) => sum + item.unit_price * item.qty, 0)
-  const discount = cart.reduce((sum, item) => sum + item.unit_price * item.qty * item.discount_percent / 100, 0)
-  const taxableBeforeBillDiscount = Math.max(0, subtotal - discount)
-  const billDiscount = Math.min(Math.max(0, Number(billDiscountInput) || 0), taxableBeforeBillDiscount)
-  const itemTax = cart.reduce((sum, item) => sum + item.unit_price * item.qty * (1 - item.discount_percent / 100) * item.gst_percent / 100, 0)
-  const tax = taxableBeforeBillDiscount ? itemTax * ((taxableBeforeBillDiscount - billDiscount) / taxableBeforeBillDiscount) : 0
-  const raw = taxableBeforeBillDiscount - billDiscount + tax
-  const roundOff = Math.round(raw) - raw
-  const grandTotal = raw + roundOff
-  // Display-only figures
-  const taxableAmount = taxableBeforeBillDiscount - billDiscount
-  const totalQty = cart.reduce((count, item) => count + Number(item.qty || 0), 0)
-  const cartItemsTotal = cart.reduce((sum, item) => sum + item.total, 0)
+  // ---- Calculations (memoized with useMemo) -------------------------------------------
+  const {
+    subtotal,
+    discount,
+    taxableBeforeBillDiscount,
+    billDiscount,
+    itemTax,
+    tax,
+    raw,
+    roundOff,
+    grandTotal,
+    taxableAmount,
+    totalQty,
+    cartItemsTotal,
+  } = useMemo(() => {
+    const sub = cart.reduce((sum, item) => sum + item.unit_price * item.qty, 0)
+    const disc = cart.reduce((sum, item) => sum + (item.unit_price * item.qty * item.discount_percent) / 100, 0)
+    const taxableBefore = Math.max(0, sub - disc)
+    const billDisc = Math.min(Math.max(0, Number(billDiscountInput) || 0), taxableBefore)
+    const itmTax = cart.reduce((sum, item) => sum + item.unit_price * item.qty * (1 - item.discount_percent / 100) * (item.gst_percent / 100), 0)
+    const tx = taxableBefore ? itmTax * ((taxableBefore - billDisc) / taxableBefore) : 0
+    const rw = taxableBefore - billDisc + tx
+    const rnd = Math.round(rw) - rw
+    const grand = rw + rnd
+    const taxable = taxableBefore - billDisc
+    const qtyCount = cart.reduce((count, item) => count + Number(item.qty || 0), 0)
+    const itemsTot = cart.reduce((sum, item) => sum + (item.total || 0), 0)
+
+    return {
+      subtotal: sub,
+      discount: disc,
+      taxableBeforeBillDiscount: taxableBefore,
+      billDiscount: billDisc,
+      itemTax: itmTax,
+      tax: tx,
+      raw: rw,
+      roundOff: rnd,
+      grandTotal: grand,
+      taxableAmount: taxable,
+      totalQty: qtyCount,
+      cartItemsTotal: itemsTot,
+    }
+  }, [cart, billDiscountInput])
 
   // Keep the payment amount in step with the bill grand total
   useEffect(() => {
@@ -693,8 +737,9 @@ export default function NewBill() {
   const cashChange = payment.method === 'cash' ? Math.max(0, cashTendered - grandTotal) : 0
 
   const filteredCustomers = useMemo(() => {
+    const list = Array.isArray(customers) ? customers : []
     const q = customerSearch.trim().toLowerCase()
-    return customers.filter(c =>
+    return list.filter(c =>
       String(c?.name || '').toLowerCase().includes(q) ||
       String(c?.mobile || '').includes(customerSearch)
     )
@@ -1397,12 +1442,12 @@ export default function NewBill() {
                           <span>
                             <span className="pb-strong">{p.name}</span>
                             {isOut(p) && <span className="pb-badge">Out of stock</span>}
-                            <span className="pb-sub" style={{ display: 'block' }}>
+                            <span className="pb-sub block">
                               SKU: {p.sku || '—'} | Barcode: {p.barcode || '—'}
                             </span>
                           </span>
                           <span className="pb-result-side">
-                            <span className="pb-strong" style={{ display: 'block' }}>{fmt(p.selling_price)}</span>
+                            <span className="pb-strong block">{fmt(p.selling_price)}</span>
                             <span className="pb-sub">Stock: {stockLabel(p)}</span>
                           </span>
                         </div>
@@ -1490,7 +1535,7 @@ export default function NewBill() {
                 >
                   All Items
                 </button>
-                {categories.map(c => (
+                {(Array.isArray(categories) ? categories : []).map(c => (
                   <button
                     type="button"
                     key={c.id}
@@ -1518,7 +1563,7 @@ export default function NewBill() {
                 </tr>
               </thead>
               <tbody>
-                {initializing && !products.length ? (
+                {initializing && (!Array.isArray(products) || !products.length) ? (
                   <tr>
                     <td colSpan="5" className="pb-bill-empty-td">
                       <div className="pb-bill-empty-content">
@@ -1871,7 +1916,7 @@ export default function NewBill() {
           {/* Top Row: Segmented Payment Method Selector + Contextual Fields */}
           <div className="pb-dock-top-row">
             <div className="pb-methods-segmented" role="radiogroup" aria-label="Payment method (F4)">
-              {PAYMENT_METHODS.map(({ id, label, icon: Icon }) => (
+              {PAYMENT_METHOD_OPTIONS.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
                   type="button"
@@ -2208,7 +2253,7 @@ export default function NewBill() {
 
       <Modal open={showClearConfirm} onClose={() => setShowClearConfirm(false)} title="Clear cart?" size="sm">
         <div className="pb-modal pb-stack">
-          <p style={{ margin: 0 }}>Remove all {cart.length} item{cart.length === 1 ? '' : 's'} from this bill? This cannot be undone.</p>
+          <p className="m-0">Remove all {cart.length} item{cart.length === 1 ? '' : 's'} from this bill? This cannot be undone.</p>
           <div className="pb-grid2">
             <button type="button" className="pb-btn" onClick={() => setShowClearConfirm(false)}>Cancel</button>
             <button type="button" className="pb-btn pb-btn-primary" onClick={() => { setCart([]); setShowClearConfirm(false); searchRef.current?.focus() }}>Clear Cart</button>
@@ -2219,7 +2264,7 @@ export default function NewBill() {
       <Modal open={showDrafts} onClose={() => setShowDrafts(false)} title="Draft bills" size="md">
         <div className="pb-modal">
           {drafts.length === 0 ? (
-            <p className="pb-sub" style={{ margin: 0 }}>No draft bills saved. Use “Save Draft” to park a bill and resume it later.</p>
+            <p className="pb-sub m-0">No draft bills saved. Use “Save Draft” to park a bill and resume it later.</p>
           ) : drafts.map(d => {
             const draftTotal = (d.cart || []).reduce((s, i) => s + Number(i.total || 0), 0)
             return (
@@ -2230,7 +2275,7 @@ export default function NewBill() {
                     {new Date(d.savedAt).toLocaleString('en-IN')} | {(d.cart || []).length} item(s) | Items total {fmt(draftTotal)}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 6 }}>
+                <div className="flex gap-1.5">
                   <button type="button" className="pb-btn pb-btn-sm pb-btn-primary" onClick={() => resumeDraft(d)}>Resume</button>
                   <button type="button" className="pb-btn pb-btn-sm pb-btn-danger" onClick={() => deleteDraft(d.id)}>Delete</button>
                 </div>
@@ -2252,10 +2297,10 @@ export default function NewBill() {
               Invoice {lastInvoice?.invoice_number || '—'}
             </div>
           </div>
-          <dl className="pb-dl" style={{ borderTop: '1px solid var(--pb-border)', paddingTop: 8 }}>
+          <dl className="pb-dl border-t border-[var(--pb-border)] pt-2">
             <dt>Invoice number</dt><dd>{lastInvoice?.invoice_number || '—'}</dd>
-            <dt>Payment method</dt><dd style={{ textTransform: 'capitalize' }}>{lastInvoice?.payment_method || 'cash'}</dd>
-            <dt>Payment status</dt><dd style={{ textTransform: 'capitalize' }}>{lastInvoice?.payment_status || '—'}</dd>
+            <dt>Payment method</dt><dd className="capitalize">{lastInvoice?.payment_method || 'cash'}</dd>
+            <dt>Payment status</dt><dd className="capitalize">{lastInvoice?.payment_status || '—'}</dd>
             <dt>Paid amount</dt><dd>{fmt(lastPaidAmount(lastInvoice))}</dd>
             {lastInvoice?.payment_method === 'cash' && (
               <>
@@ -2331,10 +2376,9 @@ export default function NewBill() {
 
       <Modal open={showShortcuts} onClose={() => setShowShortcuts(false)} title="Keyboard shortcuts" size="sm">
         <div className="pb-modal">
-          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '6px 12px', alignItems: 'center' }}>
+          <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 items-center">
             {[
               ['Ctrl + K / F3', 'Focus product search'],
-             ['↑ ↓', 'Move through search results'],
               ['↑ ↓', 'Move through search results'],
               ['F2', 'Focus customer search'],
               ['F4', 'Focus payment section'],
@@ -2345,7 +2389,7 @@ export default function NewBill() {
               ['F1', 'New bill screen'],
               ['Esc', 'Close dropdown / dialog'],
             ].map(([key, text]) => (
-              <div key={key} style={{ display: 'contents' }}>
+              <div key={key} className="contents">
                 <kbd className="pb-kbd">{key}</kbd>
                 <span>{text}</span>
               </div>

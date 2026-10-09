@@ -6,24 +6,24 @@
 
 .pb-page,
 .pb-modal {
-  --pb-primary: #1E3A5F;
-  --pb-primary-hover: #162F4D;
-  --pb-primary-light: #F1F5F9;
-  --pb-success: #15803D;
-  --pb-success-hover: #166534;
-  --pb-warning: #B45309;
-  --pb-danger: #B91C1C;
-  --pb-danger-hover: #991B1B;
+  --pb-primary: var(--primary, #1E3A5F);
+  --pb-primary-hover: var(--primary-hover, #162F4D);
+  --pb-primary-light: var(--primary-light, #F1F5F9);
+  --pb-success: var(--success, #15803D);
+  --pb-success-hover: var(--success-hover, #166534);
+  --pb-warning: var(--warning, #B45309);
+  --pb-danger: var(--danger, #B91C1C);
+  --pb-danger-hover: var(--danger-hover, #991B1B);
 
-  --pb-canvas: #F8FAFC;
-  --pb-surface: #FFFFFF;
-  --pb-surface-alt: #F1F5F9;
-  --pb-border: #D7DEE7;
-  --pb-border-strong: #CBD5E1;
+  --pb-canvas: var(--app-bg, #F8FAFC);
+  --pb-surface: var(--surface, #FFFFFF);
+  --pb-surface-alt: var(--surface-hover, #F1F5F9);
+  --pb-border: var(--line, #D7DEE7);
+  --pb-border-strong: var(--line-strong, #CBD5E1);
 
-  --pb-text: #172033;
-  --pb-text-secondary: #475569;
-  --pb-muted: #64748B;
+  --pb-text: var(--ink, #172033);
+  --pb-text-secondary: var(--ink-secondary, #475569);
+  --pb-muted: var(--muted, #64748B);
 
   --pb-r: 6px;
   --pb-r-lg: 8px;
@@ -31,19 +31,19 @@
 
 .dark .pb-page,
 .dark .pb-modal {
-  --pb-canvas: #0B1120;
-  --pb-surface: #111827;
-  --pb-surface-alt: #172033;
-  --pb-border: #263244;
-  --pb-border-strong: #334155;
+  --pb-canvas: var(--app-bg, #0B1120);
+  --pb-surface: var(--surface, #111827);
+  --pb-surface-alt: var(--surface-hover, #172033);
+  --pb-border: var(--line, #263244);
+  --pb-border-strong: var(--line-strong, #334155);
 
-  --pb-text: #F8FAFC;
-  --pb-text-secondary: #94A3B8;
-  --pb-muted: #64748B;
-  --pb-primary: #2563EB;
-  --pb-primary-hover: #1D4ED8;
-  --pb-success: #22C55E;
-  --pb-success-hover: #16A34A;
+  --pb-text: var(--ink, #F8FAFC);
+  --pb-text-secondary: var(--ink-secondary, #94A3B8);
+  --pb-muted: var(--muted, #64748B);
+  --pb-primary: var(--primary, #2563EB);
+  --pb-primary-hover: var(--primary-hover, #1D4ED8);
+  --pb-success: var(--success, #22C55E);
+  --pb-success-hover: var(--success-hover, #16A34A);
 }
 
 /* Base Page Setup */

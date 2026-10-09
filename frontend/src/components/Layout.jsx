@@ -3,6 +3,7 @@ import { useAuth } from '../AuthContext'
 import { useTheme } from '../ThemeContext'
 import api from '../api'
 import logoImg from '../assets/logo.png'
+import { ROLES } from '../constants'
 import {
   LayoutDashboard, ShoppingCart, FileText, Package, Users, BarChart2,
   UserCog, Settings, LogOut, ChevronDown, ChevronUp, ChevronRight,
@@ -61,7 +62,7 @@ const NAV_GROUPS = [
     label: 'Business',
     items: [
       { to: '/expenses', icon: IndianRupee, label: 'Expenses' },
-      { to: '/reports', icon: BarChart2, label: 'Reports', roles: ['owner', 'admin', 'manager', 'accountant'] }
+      { to: '/reports', icon: BarChart2, label: 'Reports', roles: [ROLES.OWNER, ROLES.ADMIN, ROLES.MANAGER, ROLES.ACCOUNTANT] }
     ]
   },
   {
@@ -89,14 +90,16 @@ function NavGroup({ group, collapsed, user, onNav }) {
   const location = useLocation()
   const [open, setOpen] = useState(true)
 
+  const userRole = String(user?.role || '').toLowerCase()
+
   const visibleItems = group.items.filter(item => {
     if (item.to === '/support') return true
-    if (item.roles && !item.roles.includes(user?.role)) return false
-    return !item.adminOnly || ['admin', 'owner'].includes(user?.role)
+    if (item.roles && !item.roles.map(r => String(r).toLowerCase()).includes(userRole)) return false
+    return !item.adminOnly || [ROLES.ADMIN, ROLES.OWNER].includes(userRole)
   })
   if (!visibleItems.length) return null
 
-  if (group.adminOnly && !['admin', 'owner'].includes(user?.role)) {
+  if (group.adminOnly && ![ROLES.ADMIN, ROLES.OWNER].includes(userRole)) {
     const supportOnly = visibleItems.filter(i => i.to === '/support')
     if (!supportOnly.length) return null
     return (
@@ -290,7 +293,10 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
               <div className="text-[12px] font-semibold text-slate-200 truncate leading-tight">
                 {[user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username}
               </div>
-              <div className="text-[10px] text-slate-400 capitalize font-medium">{user?.role || 'Staff'}</div>
+              <div className="text-[10px] text-slate-300 capitalize font-medium flex items-center gap-1 mt-0.5">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-teal-400"></span>
+                <span>{user?.role || 'Staff'}</span>
+              </div>
             </div>
             <button
               onClick={onLogout}
@@ -590,7 +596,10 @@ function ProfileMenu({ user, onLogout }) {
         </div>
         <div className="text-left hidden md:block">
           <div className="text-xs font-semibold text-[var(--ink)] leading-tight">{fullName}</div>
-          <div className="text-[10px] text-[var(--muted)] capitalize">{user?.role || 'Staff'}</div>
+          <div className="text-[10px] text-[var(--muted)] capitalize font-medium flex items-center gap-1">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-teal-500"></span>
+            <span>{user?.role || 'Staff'}</span>
+          </div>
         </div>
         <ChevronDown size={13} className={`text-[var(--muted)] hidden md:block transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -604,7 +613,11 @@ function ProfileMenu({ user, onLogout }) {
               </div>
               <div className="min-w-0">
                 <div className="font-semibold text-[var(--ink)] text-sm truncate">{fullName}</div>
-                <div className="text-[11px] text-[var(--muted)] capitalize">{user?.role || 'Staff'}</div>
+                <div className="mt-0.5">
+                  <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold uppercase tracking-wider bg-teal-50 text-teal-800 border border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800">
+                    {user?.role || 'Staff'}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
