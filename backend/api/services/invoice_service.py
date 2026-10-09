@@ -175,6 +175,11 @@ class InvoiceService:
                     amount=amount,
                     reference=payment_data.get('reference', ''),
                 )
+                if payment_data.get('method') == 'razorpay' and payment_data.get('reference'):
+                    from ..models import RazorpayTransaction
+                    RazorpayTransaction.objects.filter(
+                        razorpay_payment_id=payment_data['reference']
+                    ).update(invoice=invoice)
 
             if customer is not None:
                 LedgerService.record_customer(

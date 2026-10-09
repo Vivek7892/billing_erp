@@ -3925,42 +3925,57 @@ class RazorpayCreateOrderView(APIView):
         logger = logging.getLogger('razorpay')
 
         invoice_id = request.data.get('invoice_id')
-        if not invoice_id:
-            return Response({'error': 'invoice_id is required'}, status=400)
+        amount_input = request.data.get('amount')
 
-        try:
-            invoice = Invoice.objects.get(pk=invoice_id, business=request.user.business)
-        except Invoice.DoesNotExist:
-            return Response({'error': 'Invoice not found'}, status=404)
+        invoice = None
+        if invoice_id:
+            try:
+                invoice = Invoice.objects.get(pk=invoice_id, business=request.user.business)
+            except Invoice.DoesNotExist:
+                return Response({'error': 'Invoice not found'}, status=404)
 
-        if invoice.payment_status == 'paid':
-            return Response({'error': 'Invoice is already paid'}, status=400)
+            if invoice.payment_status == 'paid':
+                return Response({'error': 'Invoice is already paid'}, status=400)
 
-        amount_rupees = invoice.grand_total
+            amount_rupees = invoice.grand_total
+        elif amount_input is not None:
+            try:
+                from decimal import Decimal
+                amount_rupees = Decimal(str(amount_input))
+            except Exception:
+                return Response({'error': 'Invalid amount'}, status=400)
+        else:
+            return Response({'error': 'invoice_id or amount is required'}, status=400)
+
         amount_paise = int(amount_rupees * 100)
         if amount_paise <= 0:
-            return Response({'error': 'Invoice amount must be greater than zero'}, status=400)
+            return Response({'error': 'Amount must be greater than zero'}, status=400)
 
         cutoff = timezone.now() - timedelta(minutes=30)
-        existing = RazorpayTransaction.objects.filter(
-            invoice=invoice,
-            status__in=['created', 'initiated', 'pending'],
-            created_at__gte=cutoff,
-        ).order_by('-created_at').first()
-        if existing:
-            logger.info('Razorpay: reusing order %s for invoice %s', existing.razorpay_order_id, invoice.invoice_number)
-            return Response({
-                'order_id': existing.razorpay_order_id,
-                'amount': amount_paise,
-                'currency': 'INR',
-                'key_id': env('RAZORPAY_KEY_ID', default='').strip(),
-            })
+        if invoice:
+            existing = RazorpayTransaction.objects.filter(
+                invoice=invoice,
+                status__in=['created', 'initiated', 'pending'],
+                created_at__gte=cutoff,
+            ).order_by('-created_at').first()
+            if existing:
+                logger.info('Razorpay: reusing order %s for invoice %s', existing.razorpay_order_id, invoice.invoice_number)
+                return Response({
+                    'order_id': existing.razorpay_order_id,
+                    'amount': amount_paise,
+                    'currency': 'INR',
+                    'key_id': env('RAZORPAY_KEY_ID', default='').strip(),
+                })
 
-        receipt = generate_receipt(invoice.invoice_number)
+        receipt = generate_receipt(invoice.invoice_number if invoice else 'POS')
         result = create_order(
             amount_paise=amount_paise,
             receipt=receipt,
-            notes={'invoice_number': invoice.invoice_number, 'invoice_id': str(invoice.pk)},
+            notes={
+                'invoice_number': invoice.invoice_number if invoice else '',
+                'invoice_id': str(invoice.pk) if invoice else '',
+                'business_id': str(request.user.business_id or ''),
+            },
         )
 
         RazorpayTransaction.objects.create(
@@ -3974,10 +3989,10 @@ class RazorpayCreateOrderView(APIView):
         )
 
         if not result['success']:
-            logger.warning('Razorpay order creation failed for invoice %s: %s', invoice.invoice_number, result.get('error'))
+            logger.warning('Razorpay order creation failed: %s', result.get('error'))
             return Response({'error': result.get('error', 'Razorpay order creation failed')}, status=502)
 
-        logger.info('Razorpay: created order %s for invoice %s amount=%s', result['order_id'], invoice.invoice_number, amount_rupees)
+        logger.info('Razorpay: created order %s amount=%s', result['order_id'], amount_rupees)
         return Response({
             'order_id': result['order_id'],
             'amount': amount_paise,

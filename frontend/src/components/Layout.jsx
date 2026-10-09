@@ -9,7 +9,7 @@ import {
   UserCog, Settings, LogOut, ChevronDown, ChevronUp, ChevronRight,
   Search, Bell, RotateCcw, CreditCard, Boxes, ShoppingBag, Building2,
   IndianRupee, HelpCircle, Layers, Activity, X, Sun, Moon, Clock, ScanLine, ArrowRight, Check,
-  ShieldCheck, Trash2
+  ShieldCheck, Trash2, AlertCircle, AlertTriangle, CheckCircle2
 } from 'lucide-react'
 import { useEffect, useState, createContext, useContext, useRef, useCallback } from 'react'
 
@@ -420,6 +420,22 @@ function GlobalSearch() {
   )
 }
 
+const SEVERITY_ICON_MAP = {
+  danger:  { icon: AlertCircle,   color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA' },
+  warning: { icon: AlertTriangle, color: '#B45309', bg: '#FFFBEB', border: '#FDE68A' },
+  success: { icon: CheckCircle2,  color: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
+  info:    { icon: Bell,          color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
+}
+
+function relativeTime(isoString) {
+  if (!isoString) return ''
+  const diff = Math.floor((Date.now() - new Date(isoString)) / 1000)
+  if (diff < 60) return 'just now'
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  return `${Math.floor(diff / 86400)}d ago`
+}
+
 function NotificationBell() {
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
@@ -435,7 +451,7 @@ function NotificationBell() {
   }, [])
 
   const loadNotifications = useCallback(() => {
-    api.get('/notifications/?limit=6').then(({ data }) => {
+    api.get('/notifications/?limit=8').then(({ data }) => {
       setNotifications(data.notifications || [])
       setUnreadCount(data.unread_count || 0)
       setCriticalCount(data.critical_count || 0)
@@ -444,7 +460,7 @@ function NotificationBell() {
 
   useEffect(() => {
     loadNotifications()
-    const timer = setInterval(loadNotifications, 45000)
+    const timer = setInterval(loadNotifications, 20000)
     return () => clearInterval(timer)
   }, [loadNotifications])
 
@@ -465,11 +481,7 @@ function NotificationBell() {
       } catch {}
     }
     setOpen(false)
-    if (n.action_url) {
-      navigate(n.action_url)
-    } else {
-      navigate('/notifications')
-    }
+    navigate(n.action_url || '/notifications')
   }
 
   return (
@@ -477,91 +489,109 @@ function NotificationBell() {
       <button
         onClick={() => setOpen(v => !v)}
         aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
-        className="relative flex items-center justify-center w-9 h-9 rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-all"
+        className={`relative flex items-center justify-center w-9 h-9 rounded-lg transition-all ${
+          open ? 'bg-[var(--surface-hover)] text-[var(--ink)]' : 'text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+        }`}
       >
-        <Bell size={17} />
+        <Bell size={17} className={criticalCount > 0 ? 'text-red-600' : ''} />
         {unreadCount > 0 && (
-          <span
-            className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white bg-[#DC2626]"
-          >
+          <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white bg-[#DC2626] animate-pulse">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-[var(--surface)] rounded-[12px] shadow-[var(--shadow-lg)] border border-[var(--line)] z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-80 sm:w-[360px] bg-[var(--surface)] rounded-xl shadow-[var(--shadow-lg)] border border-[var(--line)] z-50 overflow-hidden">
+
+          {/* Header */}
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--line)] bg-[var(--surface-elevated)]">
             <div className="flex items-center gap-2">
-              <span className="font-bold text-[var(--ink)] text-xs uppercase tracking-wider">Alerts</span>
+              <Bell size={13} className="text-[var(--muted)]" />
+              <span className="font-bold text-[var(--ink)] text-xs uppercase tracking-wider">Notifications</span>
               {unreadCount > 0 && (
-                <span className="text-[10px] font-bold bg-slate-100 text-[#1E3A5F] border border-[#D7DEE7] px-1.5 py-0.5 rounded">
-                  {unreadCount} unread
+                <span className="text-[10px] font-bold bg-[#1E3A5F] text-white px-1.5 py-0.5 rounded-full">
+                  {unreadCount}
                 </span>
               )}
             </div>
             {unreadCount > 0 && (
-              <button
-                onClick={handleMarkAllRead}
-                className="text-[11px] font-medium text-[#1E3A5F] hover:underline"
-              >
+              <button onClick={handleMarkAllRead} className="flex items-center gap-1 text-[11px] font-semibold text-[var(--primary)] hover:underline">
+                <Check size={11} />
                 Mark all read
               </button>
             )}
           </div>
 
-          <div className="divide-y divide-[var(--line-subtle)] max-h-80 overflow-y-auto">
+          {/* Critical banner */}
+          {criticalCount > 0 && (
+            <div className="flex items-center gap-2 px-3.5 py-2 bg-red-50 dark:bg-red-950/30 border-b border-red-200 dark:border-red-900/40">
+              <AlertCircle size={13} className="text-red-600 flex-shrink-0" />
+              <span className="text-[11px] font-semibold text-red-700 dark:text-red-400">
+                {criticalCount} critical alert{criticalCount > 1 ? 's' : ''} require immediate attention
+              </span>
+            </div>
+          )}
+
+          {/* List */}
+          <div className="divide-y divide-[var(--line-subtle)] max-h-[340px] overflow-y-auto">
             {notifications.length ? (
-              notifications.map((n) => (
-                <button
-                  key={n.id}
-                  onClick={() => handleNotificationClick(n)}
-                  className={`w-full flex items-start gap-2.5 px-3.5 py-2.5 hover:bg-[var(--surface-hover)] cursor-pointer transition-colors text-left ${
-                    !n.is_read ? 'bg-slate-50 dark:bg-slate-800/40' : ''
-                  }`}
-                >
-                  <div
-                    className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${
-                      n.severity === 'danger'
-                        ? 'bg-[#B91C1C]'
-                        : n.severity === 'warning'
-                          ? 'bg-[#B45309]'
-                          : n.severity === 'success'
-                            ? 'bg-[#15803D]'
-                            : 'bg-[#1E3A5F]'
+              notifications.map(n => {
+                const sev = SEVERITY_ICON_MAP[n.severity] || SEVERITY_ICON_MAP.info
+                const SevIcon = sev.icon
+                return (
+                  <button
+                    key={n.id}
+                    onClick={() => handleNotificationClick(n)}
+                    className={`w-full flex items-start gap-2.5 px-3.5 py-2.5 hover:bg-[var(--surface-hover)] transition-colors text-left ${
+                      !n.is_read ? 'bg-[var(--surface-elevated)]' : ''
                     }`}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-1">
-                      <p className="text-xs font-bold text-[var(--ink)] truncate">
-                        {n.title}
-                      </p>
-                      <span className="text-[10px] font-mono text-[var(--muted)] flex-shrink-0">
-                        {n.created_at ? new Date(n.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
-                      </span>
+                  >
+                    {/* Severity icon */}
+                    <div
+                      className="flex-shrink-0 mt-0.5 w-7 h-7 rounded-md flex items-center justify-center"
+                      style={{ background: sev.bg, border: `1px solid ${sev.border}` }}
+                    >
+                      <SevIcon size={13} style={{ color: sev.color }} />
                     </div>
-                    <p className="text-[11px] text-[var(--ink-secondary)] line-clamp-2 mt-0.5">
-                      {n.message}
-                    </p>
-                  </div>
-                </button>
-              ))
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-1">
+                        <p className={`text-xs truncate ${!n.is_read ? 'font-bold text-[var(--ink)]' : 'font-medium text-[var(--ink-secondary)]'}`}>
+                          {n.title}
+                        </p>
+                        <span className="text-[10px] text-[var(--muted)] flex-shrink-0 tabular-nums">
+                          {relativeTime(n.created_at)}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[var(--muted)] line-clamp-1 mt-0.5">
+                        {n.message}
+                      </p>
+                    </div>
+
+                    {/* Unread dot */}
+                    {!n.is_read && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--primary)] flex-shrink-0 mt-1.5" />
+                    )}
+                  </button>
+                )
+              })
             ) : (
-              <div className="px-4 py-8 text-xs text-[var(--muted)] text-center">
-                All caught up — no notifications
+              <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+                <CheckCircle2 size={22} className="text-teal-500" />
+                <p className="text-xs font-semibold text-[var(--ink)]">All caught up!</p>
+                <p className="text-[11px] text-[var(--muted)]">No new notifications</p>
               </div>
             )}
           </div>
 
-          <div className="border-t border-[var(--line)] bg-[var(--surface-elevated)] p-2">
+          {/* Footer */}
+          <div className="border-t border-[var(--line)] bg-[var(--surface-elevated)] px-3 py-2">
             <button
-              onClick={() => {
-                setOpen(false)
-                navigate('/notifications')
-              }}
-              className="w-full py-1.5 text-center text-xs font-semibold text-[#1E3A5F] hover:underline flex items-center justify-center gap-1"
+              onClick={() => { setOpen(false); navigate('/notifications') }}
+              className="w-full py-1.5 text-center text-xs font-semibold text-[var(--primary)] hover:underline flex items-center justify-center gap-1"
             >
-              <span>Open Notification Center</span>
+              <span>View all notifications</span>
               <ArrowRight size={12} />
             </button>
           </div>

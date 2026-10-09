@@ -38,6 +38,7 @@ import {
   Maximize2, Minimize2, Layers, Receipt,
   Package, Banknote, Smartphone, CreditCard, BookOpen, Wallet,
   User, UserPlus, ShoppingCart,
+  MoreVertical, ArrowLeft, ArrowRight, Copy,
 } from 'lucide-react'
 import { Modal } from '../components/UI'
 import { useNavigate } from 'react-router-dom'
@@ -175,10 +176,14 @@ function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, on
       <td className="pb-td-bitem">
         <div className="pb-item-name">
           <span className="pb-item-index">{index}. </span>
-          {item.product_name}
+          <span className="pb-item-title" title={item.product_name}>{item.product_name}</span>
+          {codes.length > 0 && <span className="pb-item-code-inline" title={codes.join(' · ')}>{codes[0]}</span>}
         </div>
-        {codes.length > 0 && <div className="pb-item-sub">{codes.join(' · ')}</div>}
         {overStock && <div className="pb-item-sub pb-text-red">Available stock: {stock}</div>}
+        <div className="pb-mobile-only pb-item-mobile-rate">
+          @ {fmt(item.unit_price)}
+          {item.discount_percent > 0 && <span className="pb-text-red"> ({item.discount_percent}% off)</span>}
+        </div>
       </td>
       <td className="pb-td-qty">
         <div className="pb-qty-group">
@@ -188,7 +193,7 @@ function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, on
             aria-label={`Decrease ${item.product_name} quantity`}
             onClick={() => onQty(item.id, item.qty - 1)}
           >
-            <Minus size={12} />
+            <Minus size={11} />
           </button>
           <BufferedNumber
             aria-label={`${item.product_name} quantity`}
@@ -204,15 +209,15 @@ function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, on
             aria-label={`Increase ${item.product_name} quantity`}
             onClick={() => onQty(item.id, item.qty + 1)}
           >
-            <Plus size={12} />
+            <Plus size={11} />
           </button>
         </div>
-        {item.unit ? <div className="pb-item-sub">{item.unit}</div> : null}
+        {item.unit ? <span className="pb-item-unit">{item.unit}</span> : null}
       </td>
       <td className="pb-td-rate">
-        <div className="pb-price-val">{fmt(item.unit_price)}</div>
+        <div className="pb-price-val pb-num-rate">{fmt(item.unit_price)}</div>
         {item.mrp && Number(item.mrp) > item.unit_price ? (
-          <div className="pb-mrp-val">{fmt(item.mrp)}</div>
+          <div className="pb-mrp-val pb-num-mrp">{fmt(item.mrp)}</div>
         ) : null}
       </td>
       <td className="pb-td-disc">
@@ -228,13 +233,13 @@ function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, on
           <span className="pb-disc-unit">%</span>
         </div>
         {discountAmount > 0 && (
-          <div className="pb-item-sub pb-text-red">-{fmt(discountAmount)}</div>
+          <div className="pb-disc-val pb-num-disc">-{fmt(discountAmount)}</div>
         )}
       </td>
       <td className="pb-td-total">
-        <div className="pb-price-val">{fmt(item.total)}</div>
+        <div className="pb-price-val pb-num-total">{fmt(item.total)}</div>
         {showGst && item.gst_percent > 0 && (
-          <div className="pb-item-sub">GST {item.gst_percent}%</div>
+          <div className="pb-gst-val pb-num-gst">GST {item.gst_percent}%</div>
         )}
       </td>
       <td className="pb-td-act">
@@ -245,7 +250,7 @@ function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, on
           title="Remove item"
           onClick={() => onRemove(item.id)}
         >
-          <Trash2 size={14} />
+          <Trash2 size={13} />
         </button>
       </td>
     </tr>
@@ -253,17 +258,20 @@ function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, on
 }
 
 // ---------------------------------------------------------------------------
-// QR payment modal (Quick Pay) — logic unchanged
+// QR payment modal (Quick Pay) — Mobile-Optimized & Seamless Flow
 // ---------------------------------------------------------------------------
-function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, hasCart, onPaid }) {
+function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, hasCart, onPaid, onCompleteSale }) {
   const qrRef = useRef(null)
   const [amount, setAmount] = useState('')
+  const [isEditingAmount, setIsEditingAmount] = useState(false)
 
-  // Reset the amount every time the modal is opened — default to the bill
-  // total when a cart exists, otherwise leave it blank for manual entry.
+  // Reset amount and editing toggle when modal opens
   useEffect(() => {
-    if (open) setAmount(billTotal > 0 ? billTotal.toFixed(2) : '')
-  }, [open, billTotal])
+    if (open) {
+      setAmount(billTotal > 0 ? billTotal.toFixed(2) : '')
+      setIsEditingAmount(!hasCart || billTotal <= 0)
+    }
+  }, [open, billTotal, hasCart])
 
   const numericAmount = Number(amount) || 0
   const uri = upiUri(upiId, shopName, numericAmount, invoice)
@@ -271,7 +279,42 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
   const canAct = !!upiId && numericAmount > 0
 
   const applyPreset = v => setAmount(v.toFixed(2))
-  const applyBillTotal = () => setAmount(billTotal.toFixed(2))
+  const applyBillTotal = () => {
+    setAmount(billTotal.toFixed(2))
+    setIsEditingAmount(false)
+  }
+
+  const copyUpiId = async () => {
+    if (!upiId) return
+    let copied = false
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(upiId)
+        copied = true
+      }
+    } catch {
+      // Fallback below
+    }
+    if (!copied) {
+      try {
+        const el = document.createElement('textarea')
+        el.value = upiId
+        el.style.position = 'fixed'
+        el.style.left = '-9999px'
+        document.body.appendChild(el)
+        el.select()
+        copied = document.execCommand('copy')
+        document.body.removeChild(el)
+      } catch {
+        // ignore
+      }
+    }
+    if (copied) {
+      toast.success('UPI ID copied to clipboard')
+    } else {
+      toast.error('Could not copy UPI ID')
+    }
+  }
 
   const download = () => {
     const svg = qrRef.current?.querySelector('svg')
@@ -386,87 +429,189 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
 
   return (
     <Modal open={open} onClose={onClose} title="UPI QR Payment" size="sm">
-      <div className="pb-modal pb-stack">
-        <div className="pb-note">
-          Customer scans this QR with any UPI app. <b>Generating the QR does not confirm payment.</b>
-        </div>
+      <div className="pb-modal pb-stack pb-qr-modal-content">
+        {/* Top Amount & Shop Card */}
+        <div className="pb-qr-header-card">
+          <div className="pb-qr-shop-title">
+            <Smartphone size={15} className="text-blue-600" />
+            <span>{shopName}</span>
+          </div>
 
-        <div>
-          <label className="pb-label" htmlFor="pb-qr-amount">Amount to collect (₹)</label>
-          <input
-            id="pb-qr-amount"
-            type="number" min="0" step="0.01" inputMode="decimal"
-            className="pb-input pb-input-lg"
-            value={amount}
-            onChange={e => setAmount(e.target.value)}
-            placeholder="0.00"
-            autoFocus
-          />
-          <div className="pb-chips">
-            {hasCart && billTotal > 0 && (
-              <button type="button" onClick={applyBillTotal} className="pb-chip">Bill total {fmt(billTotal)}</button>
+          <div className="pb-qr-amount-hero">
+            <span className="pb-qr-amount-label">Amount to Collect</span>
+            <div className="pb-qr-amount-display">
+              <span className="pb-qr-curr">₹</span>
+              <span className="pb-qr-figure">
+                {numericAmount > 0
+                  ? numericAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                  : '0.00'}
+              </span>
+            </div>
+          </div>
+
+          <div className="pb-qr-meta-sub">
+            {differsFromBill ? (
+              <span className="pb-text-amber flex items-center gap-1 font-semibold text-xs">
+                <AlertTriangle size={13} /> Bill total is {fmt(billTotal)}
+              </span>
+            ) : (
+              <span className="text-xs text-slate-500">Scan with any UPI app</span>
             )}
-            {QR_PRESETS.map(v => (
-              <button type="button" key={v} onClick={() => applyPreset(v)} className="pb-chip">
-                ₹{v.toLocaleString('en-IN')}
+            {hasCart && billTotal > 0 && (
+              <button
+                type="button"
+                className="pb-qr-edit-amt-btn"
+                onClick={() => setIsEditingAmount(v => !v)}
+              >
+                {isEditingAmount ? 'Done Editing' : 'Change Amount'}
               </button>
-            ))}
+            )}
           </div>
         </div>
 
-        {differsFromBill && (
-          <div className="pb-note pb-note-warn" role="alert">
-            <AlertTriangle size={14} />
-            <span>Bill total is <b>{fmt(billTotal)}</b> but this QR is for <b>{fmt(numericAmount)}</b>.</span>
+        {/* Collapsible Amount Editor (Only when requested or no cart) */}
+        {isEditingAmount && (
+          <div className="pb-qr-edit-section">
+            <label className="pb-label" htmlFor="pb-qr-amount">Custom Amount (₹)</label>
+            <input
+              id="pb-qr-amount"
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              className="pb-input pb-input-lg"
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              placeholder="0.00"
+            />
+            <div className="pb-chips">
+              {hasCart && billTotal > 0 && (
+                <button type="button" onClick={applyBillTotal} className="pb-chip pb-chip-exact">
+                  Bill Total {fmt(billTotal)}
+                </button>
+              )}
+              {QR_PRESETS.map(v => (
+                <button type="button" key={v} onClick={() => applyPreset(v)} className="pb-chip">
+                  ₹{v.toLocaleString('en-IN')}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
+        {/* The QR Code Card */}
         <section className="pb-quick-qr-preview" aria-label="UPI payment QR">
-          <div className="pb-quick-qr-heading">
-            <div>
-              <p className="pb-label">Scan to pay</p>
-              <p className="pb-sub">Use any UPI app to pay this amount</p>
-            </div>
-            <QrCode size={20} aria-hidden="true" />
-          </div>
           <div ref={qrRef} className="pb-qr-box">
             {numericAmount > 0 ? (
               <QRCodeSVG
                 value={uri}
-                size={220}
+                size={200}
                 level="M"
                 includeMargin
                 bgColor="#ffffff"
                 fgColor="#111827"
-                className="max-w-full h-auto"
+                className="w-full h-auto max-w-[200px]"
               />
             ) : (
               <div className="pb-qr-empty">Enter an amount to generate the QR</div>
             )}
           </div>
+
+          <div className="pb-qr-brand-strip">
+            <span>GPay</span>
+            <span className="pb-dot-sep">·</span>
+            <span>PhonePe</span>
+            <span className="pb-dot-sep">·</span>
+            <span>Paytm</span>
+            <span className="pb-dot-sep">·</span>
+            <span>BHIM</span>
+            <span className="pb-dot-sep">·</span>
+            <span>Any UPI</span>
+          </div>
         </section>
 
-        <div className="pb-qr-details">
-          <div className="pb-qr-amount">{fmt(numericAmount)}</div>
-          <div className="pb-strong">{shopName}</div>
-          <div className="pb-sub">{upiId || 'UPI ID not configured'}</div>
-          <div className="pb-sub">Invoice: {invoice || 'NEW-BILL'}</div>
+        {/* UPI ID Bar with 1-Tap Copy */}
+        <div className="pb-qr-id-bar">
+          <div className="pb-qr-id-text">
+            <span className="pb-qr-id-label">UPI ID:</span>
+            <span className="pb-qr-id-val">{upiId || 'UPI ID not configured'}</span>
+          </div>
+          {upiId && (
+            <button
+              type="button"
+              className="pb-qr-copy-chip"
+              onClick={copyUpiId}
+              title="Copy UPI ID to clipboard"
+            >
+              <Copy size={13} />
+              <span>Copy</span>
+            </button>
+          )}
         </div>
 
-        <div className="pb-grid2 pb-qr-actions">
-          <button type="button" onClick={download} disabled={!canAct} className="pb-btn"><Download size={14} /> Download QR</button>
-          <button type="button" onClick={print} disabled={!canAct} className="pb-btn"><Printer size={14} /> Print QR</button>
+        {/* Action Buttons for Proper Flow */}
+        <div className="pb-qr-action-stack">
+          {hasCart && billTotal > 0 && onCompleteSale ? (
+            <>
+              <button
+                type="button"
+                onClick={() => onCompleteSale(numericAmount, false)}
+                disabled={!canAct}
+                className="pb-btn-qr-complete"
+              >
+                <CheckCircle2 size={18} />
+                <span>Payment Received — Complete Sale</span>
+              </button>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onCompleteSale(numericAmount, true)}
+                  disabled={!canAct}
+                  className="pb-btn pb-btn-sm"
+                >
+                  <Printer size={14} />
+                  <span>Complete &amp; Print</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onPaid(numericAmount)}
+                  disabled={!canAct}
+                  className="pb-btn pb-btn-sm"
+                >
+                  <CheckCircle2 size={14} />
+                  <span>Mark Paid Only</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onPaid(numericAmount)}
+              disabled={!canAct}
+              className="pb-btn pb-btn-primary pb-btn-lg w-full"
+            >
+              <CheckCircle2 size={16} /> Payment received — mark paid ({fmt(numericAmount)})
+            </button>
+          )}
+
+          <div className="pb-grid2 pb-qr-actions">
+            <button type="button" onClick={download} disabled={!canAct} className="pb-btn pb-btn-sm">
+              <Download size={13} /> Download QR
+            </button>
+            <button type="button" onClick={print} disabled={!canAct} className="pb-btn pb-btn-sm">
+              <Printer size={13} /> Print QR Stand
+            </button>
+          </div>
+
+          <button type="button" onClick={onClose} className="pb-btn pb-btn-sm w-full">
+            Back to Bill
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => onPaid(numericAmount)}
-          disabled={!canAct}
-          className="pb-btn pb-btn-primary pb-btn-lg"
-        >
-          <CheckCircle2 size={16} /> Payment received — mark paid ({fmt(numericAmount)})
-        </button>
-        <button type="button" onClick={onClose} className="pb-btn">Close</button>
-        <div className="pb-sub">Verify the money in your UPI app or bank account before marking the bill as paid.</div>
+
+        <div className="pb-sub text-center text-xs text-slate-500">
+          Verify the payment notification in your UPI app or bank before completing.
+        </div>
       </div>
     </Modal>
   )
@@ -514,6 +659,8 @@ export default function NewBill() {
   const [now, setNow] = useState(new Date())
   const [cashier] = useState(getCashierName)
   const [mobileTab, setMobileTab] = useState('catalog') // 'catalog' | 'cart'
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false)
+  const [mobilePaymentOpen, setMobilePaymentOpen] = useState(false)
 
   const searchRef = useRef()
   const customerRef = useRef()
@@ -522,7 +669,32 @@ export default function NewBill() {
   const savingRef = useRef(false)
   const cartRef = useRef([])
   const actionsRef = useRef({})
+  const mobileMoreRef = useRef(null)
   cartRef.current = cart
+
+  useEffect(() => {
+    if (!mobileMoreOpen) return
+    const handleClickOutside = (e) => {
+      if (mobileMoreRef.current && !mobileMoreRef.current.contains(e.target)) {
+        setMobileMoreOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('touchstart', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
+    }
+  }, [mobileMoreOpen])
+
+  useEffect(() => {
+    if (!mobilePaymentOpen) return
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setMobilePaymentOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [mobilePaymentOpen])
 
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t) }, [])
   const fmtDate = d => d.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
@@ -783,10 +955,18 @@ export default function NewBill() {
     setShowQr(true)
   }
 
+  const openRazorpayCheckout = () => {
+    if (!cart.length) return toast.error('Add products to the bill first')
+    if (grandTotal <= 0) return toast.error('Bill total must be greater than ₹0')
+    if (validationErrors.length) return toast.error(validationErrors[0])
+    setShowRazorpay(true)
+  }
+
   const resetBill = ({ closeSuccess = true } = {}) => {
     setCart([]); setCustomer(null); setCustomerSearch('')
     setPayment(INITIAL_PAYMENT)
     setBillDiscountInput(''); setNotes(''); setLastAddedId(null)
+    setMobilePaymentOpen(false)
     if (closeSuccess) setShowSuccess(false)
     setSearchActive(false); setActiveIdx(-1); setCustomerOpen(false)
     searchRef.current?.focus()
@@ -952,19 +1132,20 @@ export default function NewBill() {
   // -------------------------------------------------------------------------
   // Complete sale (payload and flow unchanged; validation + double-submit guard added)
   // -------------------------------------------------------------------------
-  const saveBill = async print => {
+  const saveBill = async (print, overridePayment = null) => {
     if (savingRef.current) return
     if (validationErrors.length) return toast.error(validationErrors[0])
 
-    const receivedAmount = payment.method === 'cash'
-      ? (Number(payment.amount) || grandTotal)
-      : Number(payment.amount || 0)
-    const effectivePaymentStatus = payment.method === 'cash' && payment.status === 'pending'
+    const activePayment = overridePayment || payment
+    const receivedAmount = activePayment.method === 'cash'
+      ? (Number(activePayment.amount) || grandTotal)
+      : Number(activePayment.amount || 0)
+    const effectivePaymentStatus = activePayment.method === 'cash' && activePayment.status === 'pending'
       ? 'paid'
-      : payment.method === 'razorpay'
-      ? 'pending'
-      : payment.status
-    if (payment.method !== 'credit' && payment.method !== 'razorpay' && !receivedAmount) {
+      : activePayment.method === 'razorpay'
+      ? (activePayment.status || 'paid')
+      : activePayment.status
+    if (activePayment.method !== 'credit' && activePayment.method !== 'razorpay' && !receivedAmount) {
       return toast.error('Enter payment amount')
     }
 
@@ -995,7 +1176,7 @@ export default function NewBill() {
         customer_name: customer?.name || 'Walk-in Customer',
         customer_phone: customer?.mobile || '',
         place_of_supply: customer?.place_of_supply || customer?.state || settings.place_of_supply || settings.shop_state || 'Tamil Nadu (33)',
-        payment_method: payment.method,
+        payment_method: activePayment.method,
         payment_status: effectivePaymentStatus,
         bill_discount: billDiscount,
         notes,
@@ -1006,14 +1187,14 @@ export default function NewBill() {
           discount_percent: i.discount_percent,
           gst_percent: i.gst_percent
         })),
-        payments: payment.method === 'credit' || payment.method === 'razorpay'
+        payments: activePayment.method === 'credit'
           ? []
           : [{
-              method: payment.method,
-              amount: payment.method === 'cash'
+              method: activePayment.method,
+              amount: activePayment.method === 'cash'
                 ? Math.min(receivedAmount, grandTotal)
-                : Number(payment.amount),
-              reference: payment.reference
+                : Number(activePayment.amount || grandTotal),
+              reference: activePayment.reference || ''
             }]
       }
 
@@ -1028,7 +1209,7 @@ export default function NewBill() {
         ...data,
         customer_phone: data.customer_phone || customer?.mobile || '',
         customer_name: data.customer_name || customer?.name || 'Walk-in Customer',
-        payment_method: data.payment_method || payment.method,
+        payment_method: data.payment_method || activePayment.method,
         payment_status: data.payment_status || effectivePaymentStatus,
         amount_received: receivedAmount,
       }
@@ -1040,14 +1221,9 @@ export default function NewBill() {
         printWindow = null
       }
 
-      const usedRazorpay = payment.method === 'razorpay'
       resetBill({ closeSuccess: false })
       setLastInvoice(savedInvoice)
-      if (usedRazorpay) {
-        setShowRazorpay(true)
-      } else {
-        setShowSuccess(true)
-      }
+      setShowSuccess(true)
     } catch (err) {
       if (printWindow && !printWindow.closed) {
         try { printWindow.close() } catch { /* ignore */ }
@@ -1189,7 +1365,7 @@ export default function NewBill() {
   }
 
   // Keyboard shortcuts — handlers are read through a ref so they never go stale.
-  actionsRef.current = { saveBill, saveDraft, printCurrent, focusPayment, navigate }
+  actionsRef.current = { saveBill, saveDraft, printCurrent, focusPayment, navigate, openRazorpayCheckout }
   useEffect(() => {
     const onKey = e => {
       const a = actionsRef.current
@@ -1199,7 +1375,11 @@ export default function NewBill() {
       if (mod && key.toLowerCase() === 'k') { e.preventDefault(); searchRef.current?.focus() }
       else if (mod && key.toLowerCase() === 'd') { e.preventDefault(); a.saveDraft() }
       else if (mod && key.toLowerCase() === 'p') { e.preventDefault(); a.printCurrent() }
-      else if (mod && key === 'Enter') { e.preventDefault(); a.saveBill(false) }
+      else if (mod && key === 'Enter') {
+        e.preventDefault()
+        if (payment.method === 'razorpay') a.openRazorpayCheckout()
+        else a.saveBill(false)
+      }
       else if (key === 'F1') { e.preventDefault(); a.navigate('/billing/new') }
       else if (key === 'F2') { e.preventDefault(); customerRef.current?.focus() }
       else if (key === 'F3') { e.preventDefault(); searchRef.current?.focus() }
@@ -1207,10 +1387,14 @@ export default function NewBill() {
       else if (key === 'F5') { e.preventDefault(); a.saveDraft() }
       else if (key === 'F6') { e.preventDefault(); billDiscountRef.current?.focus() }
       else if (key === 'F7') { e.preventDefault(); a.printCurrent() }
-      else if (key === 'F8') { e.preventDefault(); a.saveBill(false) }
+      else if (key === 'F8') {
+        e.preventDefault()
+        if (payment.method === 'razorpay') a.openRazorpayCheckout()
+        else a.saveBill(false)
+      }
       else if (key === 'Escape') {
         setShowQr(false); setShowCustomerModal(false); setShowShortcuts(false)
-        setShowClearConfirm(false); setShowDrafts(false)
+        setShowClearConfirm(false); setShowDrafts(false); setShowRazorpay(false)
         setSearchActive(false); setCustomerOpen(false)
         if (!typing) setShowSuccess(false)
       }
@@ -1288,20 +1472,20 @@ export default function NewBill() {
             )}
           </div>
         </div>
-        <div className="pb-head-actions">
+        <div className="pb-head-actionns">
           <button
             type="button"
-            className="pb-btn pb-btn-sm"
+            className="pb-btn pb-btn-sm pb-drafts-head-btn"
             aria-label={`Draft bills (${drafts.length})`}
             title="Draft bills (Ctrl+D to save)"
             onClick={() => { setDrafts(loadDrafts()); setShowDrafts(true) }}
           >
             <Layers size={14} />
-            <span>Drafts ({drafts.length})</span>
+            <span className="pb-drafts-label">Drafts ({drafts.length})</span>
           </button>
           <button
             type="button"
-            className="pb-btn pb-btn-sm"
+            className="pb-btn pb-btn-sm pb-desktop-only"
             aria-label="Keyboard shortcuts"
             title="Keyboard shortcuts (F1-F10)"
             onClick={() => setShowShortcuts(true)}
@@ -1311,7 +1495,7 @@ export default function NewBill() {
           </button>
           <button
             type="button"
-            className="pb-btn pb-btn-sm"
+            className="pb-btn pb-btn-sm pb-desktop-only"
             aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
             title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
             onClick={toggleFullscreen}
@@ -1319,6 +1503,55 @@ export default function NewBill() {
             {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
             <span className="pb-hide-sm">{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
           </button>
+
+          {/* Mobile More Actions Menu */}
+          <div className="pb-mobile-only pb-more-container" ref={mobileMoreRef}>
+            <button
+              type="button"
+              className="pb-btn pb-btn-sm pb-more-btn"
+              aria-label="More actions"
+              onClick={() => setMobileMoreOpen(v => !v)}
+            >
+              <MoreVertical size={16} />
+            </button>
+            {mobileMoreOpen && (
+              <div className="pb-more-popover" role="menu">
+                <button
+                  type="button"
+                  className="pb-more-item"
+                  role="menuitem"
+                  onClick={() => { setShowShortcuts(true); setMobileMoreOpen(false) }}
+                >
+                  <Keyboard size={14} />
+                  <span>Shortcuts</span>
+                </button>
+                <button
+                  type="button"
+                  className="pb-more-item"
+                  role="menuitem"
+                  onClick={() => { toggleFullscreen(); setMobileMoreOpen(false) }}
+                >
+                  {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                  <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
+                </button>
+                <button
+                  type="button"
+                  className="pb-more-item"
+                  role="menuitem"
+                  onClick={() => { startNewBill(); setMobileMoreOpen(false) }}
+                  disabled={saving || (!cart.length && !lastInvoice)}
+                >
+                  <RefreshCw size={14} />
+                  <span>Start New Bill</span>
+                </button>
+                <div className="pb-more-divider" />
+                <div className="pb-more-info">
+                  <span>Cashier: <b>{cashier}</b></span>
+                  <span>{fmtDate(now)}</span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -1587,6 +1820,7 @@ export default function NewBill() {
                         <td>
                           <div className="pb-prod-name">{p.name}</div>
                           <div className="pb-prod-sub">
+                            <span className="pb-mobile-only pb-sku-inline">{p.sku ? `SKU: ${p.sku} · ` : ''}</span>
                             {[p.category_name, p.unit, p.barcode ? `Bar: ${p.barcode}` : ''].filter(Boolean).join(' · ')}
                           </div>
                         </td>
@@ -1906,6 +2140,22 @@ export default function NewBill() {
               />
             </div>
 
+            {/* Mobile-only Continue to Payment CTA */}
+            <div className="pb-mobile-only pb-mobile-cart-action-bar">
+              <div className="pb-mobile-cart-total-info">
+                <span className="pb-sub">To Pay</span>
+                <span className="pb-mobile-cart-total-val">{fmt(grandTotal)}</span>
+              </div>
+              <button
+                type="button"
+                className="pb-mobile-continue-pay-btn"
+                disabled={!cart.length || grandTotal <= 0}
+                onClick={() => setMobilePaymentOpen(true)}
+              >
+                <span>Continue to Payment</span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
           </div>
         </section>
       </main>
@@ -2028,7 +2278,8 @@ export default function NewBill() {
                     type="button"
                     className="pb-btn pb-btn-sm"
                     onClick={openQuickPayment}
-                    disabled={!upiId || grandTotal <= 0 || !cart.length}
+                    disabled={grandTotal <= 0 || !cart.length}
+                    title={!upiId ? 'Configure shop UPI ID in Settings' : 'Show UPI QR Code'}
                   >
                     <QrCode size={14} /> Show QR
                   </button>
@@ -2129,8 +2380,8 @@ export default function NewBill() {
 
               {payment.method === 'razorpay' && (
                 <div className="pb-razorpay-info">
-                  <span>Payable via Razorpay Gateway</span>
-                  <span className="text-slate-400">· Saved as pending until verified</span>
+                  <span className="font-semibold text-blue-600 dark:text-blue-400">Payable via Razorpay Gateway</span>
+                  <span className="text-slate-400">· Click "Pay with Razorpay" below. Sale confirms upon payment success.</span>
                 </div>
               )}
             </div>
@@ -2152,23 +2403,25 @@ export default function NewBill() {
               <button
                 type="button"
                 className="pb-btn-dock"
-                title="Quick QR for UPI collection"
+                title={!upiId ? 'Configure shop UPI ID in Settings' : 'Quick QR for UPI collection'}
                 onClick={openQuickPayment}
-                disabled={!upiId || grandTotal <= 0 || !cart.length}
+                disabled={grandTotal <= 0 || !cart.length}
               >
                 <QrCode size={14} />
                 <span>Quick QR</span>
               </button>
-              <button
-                type="button"
-                className="pb-btn-dock"
-                title="Complete Sale &amp; Print Bill (Ctrl+P / F7)"
-                onClick={() => saveBill(true)}
-                disabled={!canAttemptComplete}
-              >
-                <Printer size={14} />
-                <span>Complete &amp; Print</span>
-              </button>
+              {payment.method !== 'razorpay' && (
+                <button
+                  type="button"
+                  className="pb-btn-dock"
+                  title="Complete Sale &amp; Print Bill (Ctrl+P / F7)"
+                  onClick={() => saveBill(true)}
+                  disabled={!canAttemptComplete}
+                >
+                  <Printer size={14} />
+                  <span>Complete &amp; Print</span>
+                </button>
+              )}
               <button
                 type="button"
                 className="pb-btn-dock pb-btn-danger"
@@ -2191,23 +2444,36 @@ export default function NewBill() {
               </button>
             </div>
 
-            {/* Single, Responsive, Touch-Friendly Complete Sale Button */}
-            <button
-              type="button"
-              className="pb-btn-complete-sale"
-              title={completeTitle}
-              onClick={() => saveBill(false)}
-              disabled={!canAttemptComplete}
-            >
-              <CheckCircle2 size={18} />
-              <span>{saving ? 'Processing…' : `✓ COMPLETE SALE · ${fmt(grandTotal)}`}</span>
-            </button>
+            {/* Primary Action: Pay with Razorpay OR Complete Sale */}
+            {payment.method === 'razorpay' ? (
+              <button
+                type="button"
+                className="pb-btn-razorpay-pay"
+                title={canAttemptComplete ? `Pay ${fmt(grandTotal)} with Razorpay` : completeTitle}
+                onClick={openRazorpayCheckout}
+                disabled={!canAttemptComplete}
+              >
+                <CreditCard size={18} />
+                <span>{saving ? 'Processing…' : `Pay with Razorpay · ${fmt(grandTotal)}`}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="pb-btn-complete-sale"
+                title={completeTitle}
+                onClick={() => saveBill(false)}
+                disabled={!canAttemptComplete}
+              >
+                <CheckCircle2 size={18} />
+                <span>{saving ? 'Processing…' : `✓ COMPLETE SALE · ${fmt(grandTotal)}`}</span>
+              </button>
+            )}
           </div>
         </div>
       </footer>
 
       {/* Floating Mobile Cart Bar when viewing Catalog */}
-      {cart.length > 0 && mobileTab === 'catalog' && (
+      {cart.length > 0 && mobileTab === 'catalog' && !mobilePaymentOpen && (
         <aside className="pb-mobile-floating-dock" aria-label="Quick cart bar">
           <div className="pb-floating-info">
             <div className="pb-floating-qty">
@@ -2222,11 +2488,349 @@ export default function NewBill() {
           <button
             type="button"
             className="pb-floating-checkout-btn"
-            onClick={() => setMobileTab('cart')}
+            onClick={() => {
+              setMobileTab('cart')
+              setMobilePaymentOpen(true)
+            }}
           >
             View Cart &amp; Pay →
           </button>
         </aside>
+      )}
+
+      {/* ============================ MOBILE PAYMENT BOTTOM SHEET ============================ */}
+      {mobilePaymentOpen && (
+        <div className="pb-mobile-only pb-mobile-sheet-overlay" onClick={() => setMobilePaymentOpen(false)}>
+          <div
+            className="pb-mobile-sheet-content"
+            onClick={e => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Payment and Checkout"
+          >
+            {/* Sheet Handle & Header */}
+            <div className="pb-mobile-sheet-header">
+              <div className="pb-mobile-sheet-handle" />
+              <div className="pb-mobile-sheet-title-bar">
+                <button
+                  type="button"
+                  className="pb-mobile-sheet-back-btn"
+                  onClick={() => setMobilePaymentOpen(false)}
+                  aria-label="Back to bill"
+                >
+                  <ArrowLeft size={16} />
+                  <span>Back to Bill</span>
+                </button>
+                <span className="pb-mobile-sheet-heading">Payment</span>
+                <button
+                  type="button"
+                  className="pb-mobile-sheet-close-btn"
+                  onClick={() => setMobilePaymentOpen(false)}
+                  aria-label="Close payment"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Grand Total Banner at Top */}
+              <div className="pb-mobile-sheet-total-banner">
+                <div className="pb-mobile-sheet-total-label">Grand Total to Collect</div>
+                <div className="pb-mobile-sheet-total-val">{fmt(grandTotal)}</div>
+                <div className="pb-mobile-sheet-total-meta">
+                  {cart.length} {cart.length === 1 ? 'item' : 'items'} ({totalQty} units)
+                  {customer ? ` · ${customer.name}` : ' · Walk-in Customer'}
+                </div>
+              </div>
+            </div>
+
+            {/* Sheet Scrollable Body */}
+            <div className="pb-mobile-sheet-body">
+              {/* Payment Methods Selector */}
+              <div className="pb-mobile-methods-label">Payment Method</div>
+              <div className="pb-mobile-methods-grid" role="radiogroup" aria-label="Payment method">
+                {PAYMENT_METHOD_OPTIONS.map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="radio"
+                    aria-checked={payment.method === id}
+                    className={`pb-mobile-method-chip${payment.method === id ? ' active' : ''}`}
+                    onClick={() => selectPayment(id)}
+                  >
+                    <Icon size={15} />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Method-specific Form Controls */}
+              <div className="pb-mobile-sheet-context">
+                {payment.method === 'cash' && (
+                  <div className="pb-mobile-cash-panel">
+                    <label className="pb-mobile-field-label" htmlFor="pb-mobile-cash">Cash Received (₹)</label>
+                    <div className="pb-mobile-money-input-wrap">
+                      <span className="pb-curr-sym">₹</span>
+                      <input
+                        id="pb-mobile-cash"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        inputMode="decimal"
+                        className="pb-mobile-cash-input"
+                        value={payment.amount}
+                        placeholder={grandTotal > 0 ? grandTotal.toFixed(2) : '0.00'}
+                        onChange={e => setPayment(x => ({ ...x, amount: e.target.value, status: 'paid', autoAmount: false }))}
+                      />
+                    </div>
+
+                    {/* Quick Cash Chips */}
+                    <div className="pb-mobile-cash-chips">
+                      <button type="button" className="pb-mobile-chip pb-mobile-chip-exact" onClick={setExactCash}>
+                        Exact
+                      </button>
+                      {CASH_CHIPS.map(v => (
+                        <button key={v} type="button" className="pb-mobile-chip" onClick={() => addCashChip(v)}>
+                          +{v}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className="pb-mobile-chip"
+                        onClick={() => setPayment(x => ({ ...x, amount: grandTotal > 0 ? grandTotal.toFixed(2) : '', autoAmount: true }))}
+                      >
+                        Reset
+                      </button>
+                    </div>
+
+                    {/* Change / Due Feedback */}
+                    <div className={`pb-mobile-cash-feedback ${cashShort ? 'is-due' : 'is-change'}`}>
+                      {cashShort ? (
+                        <>
+                          <span className="pb-feedback-label">Balance Due:</span>
+                          <span className="pb-feedback-val pb-text-red">{fmt(cashBalanceDue)}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="pb-feedback-label">Change to Return:</span>
+                          <span className="pb-feedback-val pb-text-green">{fmt(cashChange)}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {payment.method === 'upi' && (
+                  <div className="pb-mobile-upi-panel">
+                    <div className="pb-mobile-qr-hero">
+                      <button
+                        type="button"
+                        className="pb-mobile-qr-launch-btn"
+                        onClick={openQuickPayment}
+                        disabled={grandTotal <= 0}
+                      >
+                        <div className="pb-qr-launch-icon">
+                          <QrCode size={22} />
+                        </div>
+                        <div className="pb-qr-launch-info">
+                          <span className="pb-qr-launch-title">Show UPI QR to Customer</span>
+                          <span className="pb-qr-launch-sub">
+                            {!upiId
+                              ? '⚠️ Configure shop UPI ID in Settings'
+                              : `Customer scans with any UPI app to pay ${fmt(grandTotal)}`}
+                          </span>
+                        </div>
+                        <ArrowRight size={18} className="pb-qr-launch-arrow" />
+                      </button>
+                    </div>
+
+                    <div className="pb-mobile-field-group">
+                      <label className="pb-mobile-field-label">Amount (₹)</label>
+                      <div className="pb-mobile-money-input-wrap">
+                        <span className="pb-curr-sym">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="pb-mobile-cash-input"
+                          value={payment.amount}
+                          onChange={e => setPayment(x => ({ ...x, amount: e.target.value, autoAmount: false }))}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pb-mobile-field-group">
+                      <label className="pb-mobile-field-label">UTR / Transaction Reference</label>
+                      <input
+                        className="pb-mobile-text-input"
+                        placeholder="Optional reference / UTR"
+                        value={payment.reference}
+                        onChange={e => setPayment(x => ({ ...x, reference: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="pb-mobile-field-group">
+                      <label className="pb-mobile-field-label">Payment Status</label>
+                      <div className="pb-mobile-status-toggle">
+                        <button
+                          type="button"
+                          className={`pb-mobile-status-btn ${payment.status === 'paid' ? 'active' : ''}`}
+                          onClick={() => setPayment(x => ({ ...x, status: 'paid' }))}
+                        >
+                          <CheckCircle2 size={14} /> <span>Paid</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={`pb-mobile-status-btn ${payment.status === 'pending' ? 'active' : ''}`}
+                          onClick={() => setPayment(x => ({ ...x, status: 'pending' }))}
+                        >
+                          <Clock size={14} /> <span>Pending</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {['card', 'online'].includes(payment.method) && (
+                  <div className="pb-mobile-card-panel">
+                    <div className="pb-mobile-field-group">
+                      <label className="pb-mobile-field-label">Amount (₹)</label>
+                      <div className="pb-mobile-money-input-wrap">
+                        <span className="pb-curr-sym">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="pb-mobile-cash-input"
+                          value={payment.amount}
+                          onChange={e => setPayment(x => ({ ...x, amount: e.target.value, autoAmount: false }))}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pb-mobile-field-group">
+                      <label className="pb-mobile-field-label">Approval Code / Reference</label>
+                      <input
+                        className="pb-mobile-text-input"
+                        placeholder="Optional approval code"
+                        value={payment.reference}
+                        onChange={e => setPayment(x => ({ ...x, reference: e.target.value }))}
+                      />
+                    </div>
+
+                    <div className="pb-mobile-field-group">
+                      <label className="pb-mobile-field-label">Payment Status</label>
+                      <div className="pb-mobile-status-toggle">
+                        <button
+                          type="button"
+                          className={`pb-mobile-status-btn ${payment.status === 'paid' ? 'active' : ''}`}
+                          onClick={() => setPayment(x => ({ ...x, status: 'paid' }))}
+                        >
+                          <CheckCircle2 size={14} /> <span>Paid</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={`pb-mobile-status-btn ${payment.status === 'pending' ? 'active' : ''}`}
+                          onClick={() => setPayment(x => ({ ...x, status: 'pending' }))}
+                        >
+                          <Clock size={14} /> <span>Pending</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {payment.method === 'credit' && (
+                  <div className="pb-mobile-credit-panel">
+                    <div className="font-semibold text-sm">Credit Sale / Account Khata</div>
+                    {CREDIT_REQUIRES_CUSTOMER && !customer ? (
+                      <div className="pb-note pb-note-warn mt-2">
+                        <AlertTriangle size={14} />
+                        <span>A named customer is required for credit sales. Please select or add a customer in the bill tab.</span>
+                      </div>
+                    ) : (
+                      <div className="pb-sub mt-1">This sale will be recorded against {customer?.name || 'the customer'}'s credit ledger.</div>
+                    )}
+                  </div>
+                )}
+
+                {payment.method === 'razorpay' && (
+                  <div className="pb-mobile-razorpay-panel">
+                    <div className="flex items-center gap-2 font-semibold text-sm text-blue-600 dark:text-blue-400">
+                      <CreditCard size={16} />
+                      <span>Razorpay Online Gateway</span>
+                    </div>
+                    <div className="pb-sub mt-1">
+                      Customer pays {fmt(grandTotal)} via UPI, Cards, NetBanking, or Wallets.
+                    </div>
+                    <div className="dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-900/50">
+                      ⚠️ Sale will be confirmed only after online payment succeeds.
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Validation errors in bottom sheet if any */}
+              {billIssues.length > 0 && (
+                <ul className="pb-errors mt-2" role="alert">
+                  {billIssues.map((m, i) => <li key={i}>{m}</li>)}
+                </ul>
+              )}
+            </div>
+
+            {/* Sheet Footer with Razorpay Pay OR Complete Sale Action */}
+            <div className="pb-mobile-sheet-footer">
+              <div className="pb-mobile-sheet-actions-grid">
+                {payment.method !== 'razorpay' && (
+                  <button
+                    type="button"
+                    className="pb-mobile-sheet-btn-secondary"
+                    onClick={() => saveBill(true)}
+                    disabled={!canAttemptComplete}
+                  >
+                    <Printer size={15} />
+                    <span>Complete &amp; Print</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={`pb-mobile-sheet-btn-secondary ${payment.method === 'razorpay' ? 'col-span-2' : ''}`}
+                  onClick={saveDraft}
+                  disabled={saving || !cart.length}
+                >
+                  <Layers size={15} />
+                  <span>Save Draft</span>
+                </button>
+              </div>
+
+              {payment.method === 'razorpay' ? (
+                <button
+                  type="button"
+                  className="pb-mobile-sheet-razorpay-btn"
+                  title={canAttemptComplete ? `Pay ${fmt(grandTotal)} with Razorpay` : completeTitle}
+                  onClick={() => {
+                    setMobilePaymentOpen(false)
+                    openRazorpayCheckout()
+                  }}
+                  disabled={!canAttemptComplete}
+                >
+                  <CreditCard size={18} />
+                  <span>{saving ? 'Processing…' : `Pay with Razorpay · ${fmt(grandTotal)}`}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="pb-mobile-sheet-complete-btn"
+                  title={completeTitle}
+                  onClick={() => saveBill(false)}
+                  disabled={!canAttemptComplete}
+                >
+                  <CheckCircle2 size={18} />
+                  <span>{saving ? 'Processing Sale…' : `Complete Sale · ${fmt(grandTotal)}`}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ============================ MODALS ============================ */}
@@ -2309,11 +2913,12 @@ export default function NewBill() {
               </>
             )}
           </dl>
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" className="pb-btn pb-btn-primary" onClick={() => printInvoiceDocument(lastInvoice?.id)}><Printer size={14} /> Print invoice</button>
-            <button type="button" className="pb-btn" onClick={() => downloadInvoiceDocument(lastInvoice?.id)}><Download size={14} /> Download</button>
-            <button type="button" className="pb-btn" onClick={shareInvoice}><Share2 size={14} /> Share</button>
-            <button type="button" className="pb-btn" onClick={() => navigate(`/invoice/${lastInvoice?.id}`)}><FileText size={14} /> View invoice</button>
+          <div className="grid grid-cols-2 gap-2 pb-success-actions-grid">
+            <button type="button" className="pb-btn pb-btn-primary" onClick={() => printInvoiceDocument(lastInvoice?.id, false)}><Printer size={14} /> Print invoice</button>
+            <button type="button" className="pb-btn" onClick={() => printInvoiceDocument(lastInvoice?.id, true)}><Printer size={14} /> Thermal Print</button>
+            <button type="button" className="pb-btn" onClick={() => downloadInvoiceDocument(lastInvoice?.id)}><Download size={14} /> Download PDF</button>
+            <button type="button" className="pb-btn" onClick={shareInvoice}><Share2 size={14} /> Share Bill</button>
+            <button type="button" className="pb-btn col-span-2" onClick={() => navigate(`/invoice/${lastInvoice?.id}`)}><FileText size={14} /> View Invoice</button>
           </div>
           <button type="button" className="pb-btn pb-btn-primary pb-btn-lg w-full" onClick={() => { setShowSuccess(false); startNewBill() }}>
             <RefreshCw size={14} /> Start New Bill
@@ -2334,43 +2939,70 @@ export default function NewBill() {
           setShowQr(false)
           toast.success(`UPI payment of ${fmt(amount)} marked paid`)
         }}
+        onCompleteSale={async (amount, isPrint = false) => {
+          const upiPayment = {
+            method: 'upi',
+            amount: amount.toFixed(2),
+            reference: payment.reference || '',
+            status: 'paid',
+            autoAmount: false,
+          }
+          setPayment(upiPayment)
+          setShowQr(false)
+          setMobilePaymentOpen(false)
+          await saveBill(isPrint, upiPayment)
+        }}
       />
 
       <RazorpayPaymentModal
         open={showRazorpay}
         onClose={() => setShowRazorpay(false)}
         invoice={lastInvoice}
-        onSuccess={async (invoiceId) => {
+        amount={grandTotal}
+        customerName={customer?.name}
+        customerPhone={customer?.mobile}
+        onConfirmSale={async (paymentResult) => {
           setShowRazorpay(false)
-          setPayment(x => ({ ...x, method: 'razorpay', status: 'paid' }))
-          // The invoice held in state was created before checkout, so its
-          // payment_status is still "pending". Reload the backend-confirmed
-          // record before showing the receipt or allowing it to be printed.
-          try {
-            const paidInvoice = await invoiceService.getInvoice(invoiceId)
-            setLastInvoice(previous => ({
-              ...previous,
-              ...paidInvoice,
-              payment_method: paidInvoice?.payment_method || 'razorpay',
-              payment_status: paidInvoice?.payment_status || 'paid',
-              paid_amount: paidInvoice?.paid_amount ?? paidInvoice?.grand_total ?? previous?.grand_total,
-              balance_due: paidInvoice?.balance_due ?? 0,
-              amount_received: paidInvoice?.paid_amount ?? paidInvoice?.grand_total ?? previous?.grand_total,
-            }))
-          } catch {
-            // Payment verification has already completed server-side. Keep
-            // the receipt truthful even if the follow-up display fetch fails.
-            setLastInvoice(previous => previous && ({
-              ...previous,
-              payment_method: 'razorpay',
-              payment_status: 'paid',
-              paid_amount: previous.grand_total,
-              balance_due: 0,
-              amount_received: previous.grand_total,
-            }))
+          setMobilePaymentOpen(false)
+          const razorpayPayment = {
+            method: 'razorpay',
+            amount: grandTotal.toFixed(2),
+            reference: paymentResult?.paymentId || '',
+            status: 'paid',
+            autoAmount: false,
           }
-          toast.success('Razorpay payment confirmed — invoice marked paid')
-          setShowSuccess(true)
+          setPayment(razorpayPayment)
+          await saveBill(false, razorpayPayment)
+        }}
+        onSuccess={async (paymentResult) => {
+          // If invoice is already saved (e.g., from an existing invoice retry)
+          if (paymentResult?.invoiceId && lastInvoice?.id === paymentResult.invoiceId) {
+            setShowRazorpay(false)
+            setPayment(x => ({ ...x, method: 'razorpay', status: 'paid' }))
+            try {
+              const paidInvoice = await invoiceService.getInvoice(paymentResult.invoiceId)
+              setLastInvoice(previous => ({
+                ...previous,
+                ...paidInvoice,
+                payment_method: 'razorpay',
+                payment_status: 'paid',
+                paid_amount: paidInvoice?.paid_amount ?? paidInvoice?.grand_total ?? previous?.grand_total,
+                balance_due: paidInvoice?.balance_due ?? 0,
+                amount_received: paidInvoice?.paid_amount ?? paidInvoice?.grand_total ?? previous?.grand_total,
+              }))
+            } catch {
+              setLastInvoice(previous => previous && ({
+                ...previous,
+                payment_method: 'razorpay',
+                payment_status: 'paid',
+                paid_amount: previous.grand_total,
+                balance_due: 0,
+                amount_received: previous.grand_total,
+              }))
+            }
+            toast.success('Razorpay payment confirmed — invoice marked paid')
+            setShowSuccess(true)
+          }
         }}
       />
 

@@ -191,7 +191,7 @@ export default function Support() {
 
         {/* Email Support */}
         <a
-          href="mailto:support@balajistore.com"
+          href="mailto:connectwithvvivek@gmail.com"
           className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none hover:border-[#1E3A5F] transition-all group block"
         >
           <div className="flex items-start gap-3">
@@ -203,7 +203,7 @@ export default function Support() {
                 Email Support
               </span>
               <p className="mt-0.5 text-sm font-bold text-[var(--ink)] group-hover:text-[#1E3A5F] transition-colors truncate">
-                support@balajistore.com
+               connectwithvvivek@gmail.com
               </p>
               <span className="text-[11px] text-[var(--muted-light)] mt-0.5 block">
                 Detailed inquiry &amp; invoice issues

@@ -1036,7 +1036,7 @@ def build_payment_and_bank(s, invoice):
         ]))
         flow.extend([Spacer(1, 1.5 * mm), qr_table])
 
-    return flow + [Spacer(1, 2.0 * mm)]
+    return flow + [Spacer(1, 3.0 * mm)]
 
 
 def build_notes_and_terms(s, invoice):
