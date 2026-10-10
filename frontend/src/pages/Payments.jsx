@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../api'
 import { Badge, Spinner, Modal } from '../components/UI'
 import toast from 'react-hot-toast'
@@ -19,6 +20,9 @@ import {
   ReceiptText,
   Printer,
   Download,
+  ShieldCheck,
+  ExternalLink,
+  Plus,
 } from 'lucide-react'
 
 const formatCurrency = value =>
@@ -60,6 +64,16 @@ const METHOD_META = {
       'bg-[var(--payment-upi-bg)] text-[var(--payment-upi-text)] border-[var(--payment-upi-border)]',
     badgeClass:
       'bg-[var(--payment-upi-bg)] text-[var(--payment-upi-text)] border border-[var(--payment-upi-border)]',
+  },
+  razorpay: {
+    label: 'Razorpay',
+    description: 'Razorpay Gateway',
+    icon: CreditCard,
+    tone: 'blue',
+    iconClass:
+      'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
+    badgeClass:
+      'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
   },
   card: {
     label: 'Card',
@@ -219,6 +233,7 @@ function PaymentStatus({ status }) {
 }
 
 export default function Payments() {
+  const navigate = useNavigate()
   const [bills, setBills] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
@@ -516,8 +531,8 @@ export default function Payments() {
 
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="mb-2 flex items-center gap-2 text-[var(--muted-light)]">
-            <Receipt size={16} />
+          <div className="mb-1.5 flex items-center gap-2 text-[var(--muted-light)]">
+            <Receipt size={15} />
             <span className="text-[10px] font-bold uppercase tracking-[0.16em]">
               Finance / Payments
             </span>
@@ -527,9 +542,28 @@ export default function Payments() {
             Payment Sheet
           </h1>
 
-          <p className="mt-1 text-xs text-[var(--muted)] sm:text-sm">
-            Track collections, credit sales, and payment transactions.
+          <p className="mt-0.5 text-xs text-[var(--muted)] sm:text-sm">
+            Track collections, credit sales, Razorpay online gateway, and payment transactions.
           </p>
+        </div>
+
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
+          <button
+            type="button"
+            onClick={() => navigate('/payments/reconciliation')}
+            className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--ink-secondary)] shadow-sm transition hover:bg-[var(--surface-elevated)]"
+          >
+            <ShieldCheck size={14} className="text-blue-600" />
+            <span>Reconciliation</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/billing/new')}
+            className="btn-primary inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold text-white shadow-sm transition"
+          >
+            <Plus size={15} />
+            <span>New Bill</span>
+          </button>
         </div>
       </header>
 
@@ -538,9 +572,9 @@ export default function Payments() {
       ====================================================== */}
       <section className="erp-table-container">
         <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-          Payment & Collection Summary
+          Payment &amp; Collection Summary
         </div>
-        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-5 sm:divide-y-0 sm:divide-x">
+        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-3 lg:grid-cols-6 sm:divide-y-0 sm:divide-x">
           <div className="p-3 sm:p-3.5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
               Collected
@@ -571,7 +605,7 @@ export default function Payments() {
             <p className="text-[10px] text-[var(--muted)]">Total recorded bills</p>
           </div>
 
-          {summary.slice(0, 2).map(item => (
+          {summary.filter(item => ['cash', 'upi', 'razorpay'].includes(item.key)).map(item => (
             <div
               key={item.key}
               onClick={() => setFilter(c => (c === item.key ? 'all' : item.key))}
@@ -776,15 +810,29 @@ export default function Payments() {
                     </div>
                   </div>
 
+                  {(bill.razorpay_payment_id || bill.payment_method === 'razorpay') && (
+                    <div className="mt-2.5 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50/80 px-2.5 py-1.5 text-[11px] font-mono text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <ShieldCheck size={13} className="shrink-0 text-blue-600 dark:text-blue-400" />
+                        <span className="truncate">
+                          {bill.razorpay_payment_id ? `RZP: ${bill.razorpay_payment_id}` : 'Razorpay Verified'}
+                        </span>
+                      </div>
+                      <span className="shrink-0 text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400">
+                        Gateway
+                      </span>
+                    </div>
+                  )}
+
                   <div className="mt-3 flex items-center justify-between">
                     <PaymentStatus status={bill.payment_status} />
 
                     <button
                       type="button"
                       onClick={() => setSelectedBill(bill)}
-                      className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1.5 text-[10px] font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950/60 dark:text-blue-200 dark:hover:bg-blue-900/70"
+                      className="inline-flex min-h-[38px] items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 dark:bg-blue-950/60 dark:text-blue-200 dark:hover:bg-blue-900/70"
                     >
-                      <Eye size={12} /> View details
+                      <Eye size={13} /> View details
                     </button>
                   </div>
                   <div className="mt-3">
@@ -842,6 +890,14 @@ export default function Payments() {
 
                       <td>
                         <PaymentBadge method={bill.payment_method} />
+                        {bill.razorpay_payment_id && (
+                          <div className="mt-1 flex items-center gap-1 font-mono text-[10px] text-blue-600 dark:text-blue-400">
+                            <ShieldCheck size={11} className="shrink-0" />
+                            <span className="max-w-[130px] truncate" title={bill.razorpay_payment_id}>
+                              {bill.razorpay_payment_id}
+                            </span>
+                          </div>
+                        )}
                       </td>
 
                       <td className="num-col font-mono text-sm font-bold text-[var(--ink)]">
@@ -947,6 +1003,42 @@ export default function Payments() {
                 </tbody>
               </table>
             </div>
+
+            {(selectedBill.payment_method === 'razorpay' || selectedBill.razorpay_payment_id || selectedBill.razorpay_order_id) && (
+              <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 dark:border-blue-900/60 dark:bg-blue-950/30">
+                <div className="flex items-center justify-between">
+                  <h3 className="flex items-center gap-1.5 font-bold text-blue-800 dark:text-blue-300">
+                    <ShieldCheck size={16} className="text-blue-600 dark:text-blue-400" />
+                    Razorpay Gateway Transaction Details
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedBill(null)
+                      navigate('/reconciliation')
+                    }}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200"
+                  >
+                    <span>Reconciliation</span>
+                    <ExternalLink size={11} />
+                  </button>
+                </div>
+                <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div className="rounded-lg border border-blue-100 bg-white p-2.5 dark:border-blue-900/40 dark:bg-slate-900/70">
+                    <span className="text-[10px] font-bold uppercase text-[var(--muted)]">Payment ID</span>
+                    <p className="mt-0.5 select-all font-mono text-xs font-bold text-blue-700 dark:text-blue-300">
+                      {selectedBill.razorpay_payment_id || 'Direct Settlement / Captured'}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-blue-100 bg-white p-2.5 dark:border-blue-900/40 dark:bg-slate-900/70">
+                    <span className="text-[10px] font-bold uppercase text-[var(--muted)]">Order ID</span>
+                    <p className="mt-0.5 select-all font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
+                      {selectedBill.razorpay_order_id || 'Standard Checkout'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="rounded-xl border border-[var(--line)] p-3">
               <h3 className="mb-2 flex items-center gap-1.5 font-bold text-[var(--ink)]"><Banknote size={14} /> Payment entries</h3>

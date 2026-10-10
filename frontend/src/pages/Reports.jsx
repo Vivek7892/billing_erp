@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import api from '../api'
 import { Card, PageHeader, Spinner, EmptyState } from '../components/UI'
 import {
@@ -64,6 +64,7 @@ const parseDateInput = value => {
 
 function ReportDateField({ label, value, min, max, onChange }) {
   const [draft, setDraft] = useState(formatDateInput(value))
+  const dateInputRef = useRef(null)
 
   useEffect(() => {
     setDraft(formatDateInput(value))
@@ -84,6 +85,16 @@ function ReportDateField({ label, value, min, max, onChange }) {
     }
   }
 
+  const triggerCalendar = () => {
+    if (dateInputRef.current) {
+      if (typeof dateInputRef.current.showPicker === 'function') {
+        dateInputRef.current.showPicker()
+      } else {
+        dateInputRef.current.focus()
+      }
+    }
+  }
+
   return (
     <label className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-none">
       <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--muted)]">
@@ -98,12 +109,30 @@ function ReportDateField({ label, value, min, max, onChange }) {
           onBlur={() => setDraft(formatDateInput(value))}
           placeholder="DD/MM/YYYY"
           aria-label={`${label} date in DD/MM/YYYY format`}
-          className="input h-10 w-full min-w-0 pr-9 text-sm font-mono font-semibold tracking-wide sm:w-36"
+          className="input h-10 w-full min-w-0 pr-9 text-xs sm:text-sm font-mono font-semibold tracking-wide sm:w-36 focus:ring-1 focus:ring-[#1E3A5F]"
         />
-        <Calendar
-          size={15}
-          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)]"
+        <input
+          ref={dateInputRef}
+          type="date"
+          value={value || ''}
+          min={min}
+          max={max}
+          onChange={e => {
+            if (e.target.value) onChange(e.target.value)
+          }}
+          className="sr-only"
+          tabIndex={-1}
+          aria-hidden="true"
         />
+        <button
+          type="button"
+          onClick={triggerCalendar}
+          className="calendar-icon-btn absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-[var(--muted)] hover:text-[#1E3A5F]"
+          title="Open calendar picker"
+          aria-label="Open calendar picker"
+        >
+          <Calendar size={15} />
+        </button>
       </div>
     </label>
   )
@@ -325,22 +354,22 @@ export default function Reports() {
               type="button"
               onClick={() => downloadReport('pdf')}
               disabled={Boolean(exporting)}
-              className="btn-secondary btn-base flex w-full items-center justify-center gap-1.5 text-xs"
+              className="btn-secondary inline-flex min-h-[40px] w-full items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold shadow-none transition"
               title="Download formal A4 PDF Report"
             >
               <FileText size={14} className="text-rose-600" />
-              {exporting === 'pdf' ? 'Generating...' : 'Export PDF'}
+              <span>{exporting === 'pdf' ? 'Generating...' : 'Export PDF'}</span>
             </button>
 
             <button
               type="button"
               onClick={() => downloadReport('xlsx')}
               disabled={Boolean(exporting)}
-              className="btn-secondary btn-base flex w-full items-center justify-center gap-1.5 text-xs"
+              className="btn-secondary inline-flex min-h-[40px] w-full items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold shadow-none transition"
               title="Download formatted Excel workbook"
             >
               <FileSpreadsheet size={14} className="text-teal-600" />
-              {exporting === 'xlsx' ? 'Generating...' : 'Export Excel'}
+              <span>{exporting === 'xlsx' ? 'Generating...' : 'Export Excel'}</span>
             </button>
           </div>
         }
@@ -476,8 +505,58 @@ function SalesReportView({ data }) {
 
   return (
     <div className="space-y-4">
-      {/* Executive Financial Summary Table */}
-      <div className="erp-table-container">
+      {/* Mobile KPI Summary Grid (sm:hidden) */}
+      <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] sm:hidden">
+        <div className="border-b border-[var(--line)] px-3.5 py-2 bg-[var(--surface-elevated)] flex items-center justify-between">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            Sales Performance
+          </span>
+          <span className="font-mono text-xs font-bold text-[#1E3A5F] dark:text-slate-200">
+            {summary.count ?? 0} bills
+          </span>
+        </div>
+        <div className="grid grid-cols-2 divide-y divide-x divide-[var(--line)]">
+          <div className="p-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Gross Sales</span>
+            <p className="mt-1 font-mono text-base font-bold text-[#1E3A5F] dark:text-slate-200">
+              {fmtCurrency(summary.total_sales)}
+            </p>
+          </div>
+          <div className="p-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Net Revenue</span>
+            <p className="mt-1 font-mono text-base font-bold text-teal-600 dark:text-teal-400">
+              {fmtCurrency(summary.net_sales || summary.total_sales)}
+            </p>
+          </div>
+          <div className="p-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Output Tax</span>
+            <p className="mt-1 font-mono text-base font-bold text-[var(--ink)]">
+              {fmtCurrency(summary.total_tax)}
+            </p>
+          </div>
+          <div className="p-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Collections</span>
+            <p className="mt-1 font-mono text-base font-bold text-teal-600 dark:text-teal-400">
+              {fmtCurrency(summary.collection || summary.total_sales)}
+            </p>
+          </div>
+          <div className="p-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Credit Due</span>
+            <p className="mt-1 font-mono text-base font-bold text-rose-600 dark:text-rose-400">
+              {fmtCurrency(summary.outstanding)}
+            </p>
+          </div>
+          <div className="p-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Discounts</span>
+            <p className="mt-1 font-mono text-base font-bold text-amber-600 dark:text-amber-400">
+              {fmtCurrency(summary.total_discount)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Executive Financial Summary Table (Desktop/Tablet) */}
+      <div className="erp-table-container hidden sm:block">
         <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--surface-elevated)] flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
             Sales Performance Summary
@@ -955,7 +1034,35 @@ function PaymentReportView({ data }) {
           </h3>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile View for Payment Channels */}
+        <div className="divide-y divide-[var(--line-subtle)] sm:hidden">
+          {methods.length === 0 ? (
+            <div className="py-8 text-center text-xs text-[var(--muted)]">
+              No payments recorded in this date range.
+            </div>
+          ) : (
+            methods.map((m, i) => (
+              <div key={i} className="flex items-center justify-between p-3">
+                <div>
+                  <span className="font-semibold capitalize text-xs text-[var(--ink)]">
+                    {m.method || m.payment_method}
+                  </span>
+                  <p className="mt-0.5 text-[10px] text-[var(--muted)]">
+                    {m.count} transaction{m.count !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="font-mono text-sm font-bold text-teal-600 dark:text-teal-400">
+                    {fmtCurrency(m.total)}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="erp-report-table">
             <thead>
               <tr>

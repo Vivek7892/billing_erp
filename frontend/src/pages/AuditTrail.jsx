@@ -206,7 +206,7 @@ export default function AuditTrail() {
               type="button"
               onClick={fetchLogs}
               disabled={loading}
-              className="audit-action btn-base flex items-center justify-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-3 text-xs font-semibold text-sky-700 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-700 dark:bg-sky-950/50 dark:text-sky-200 dark:hover:bg-sky-900/60"
+              className="audit-action min-h-[42px] btn-base flex items-center justify-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-3 text-xs font-semibold text-sky-700 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-700 dark:bg-sky-950/50 dark:text-sky-200 dark:hover:bg-sky-900/60 shadow-xs transition"
               title="Refresh audit logs"
             >
               <RotateCcw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
@@ -214,7 +214,7 @@ export default function AuditTrail() {
             <button
               onClick={exportCsv}
               disabled={!filteredLogs.length}
-              className="audit-action btn-base flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="audit-action min-h-[42px] btn-base flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 shadow-xs transition"
               title="Export filtered audit logs to CSV"
             >
               <Download size={14} /> Export CSV
@@ -225,9 +225,9 @@ export default function AuditTrail() {
 
       {/* Filter Toolbar */}
       <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 shadow-xs space-y-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
           {/* Search */}
-          <div className="relative">
+          <div className="relative sm:col-span-2 lg:col-span-1">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
             <input
               type="text"
@@ -359,9 +359,9 @@ export default function AuditTrail() {
                           e.stopPropagation()
                           setSelectedLog(log)
                         }}
-                        className="inline-flex h-8 items-center gap-1 rounded-lg bg-sky-600 px-2.5 text-xs font-medium text-white hover:bg-sky-700"
+                        className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg bg-sky-600 px-3 text-xs font-semibold text-white shadow-xs hover:bg-sky-700 transition"
                       >
-                        <Eye size={12} />
+                        <Eye size={13} />
                         View
                       </button>
                     </div>

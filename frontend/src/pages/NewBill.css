@@ -2815,7 +2815,7 @@
   /* 2. Mobile Tabs */
   .pb-mobile-view-tabs {
     display: flex;
-    height: 42px;
+    height: 46px;
     padding: 4px 8px;
     gap: 6px;
     background: var(--pb-surface);
@@ -2825,7 +2825,8 @@
 
   .pb-mobile-tab {
     flex: 1;
-    height: 34px;
+    height: 38px;
+    min-height: 38px;
     font-size: 12px;
     font-weight: 600;
     display: flex;
@@ -3734,7 +3735,8 @@
   }
 
   .pb-mobile-sheet-btn-secondary {
-    height: 40px;
+    height: 44px;
+    min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3743,7 +3745,7 @@
     border: 1px solid var(--pb-border);
     background: var(--pb-surface-alt);
     color: var(--pb-text);
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
   }

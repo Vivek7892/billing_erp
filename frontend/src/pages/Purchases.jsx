@@ -1410,21 +1410,27 @@ export default function Purchases() {
         title="Purchases"
         subtitle="Manage purchase orders, suppliers, payments and stock-in"
         action={
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-row sm:items-center">
             <button
               onClick={() => {
                 setImportMode(tab === 'suppliers' ? 'suppliers' : 'orders')
                 setImportModal(true)
               }}
-              className="btn-secondary flex items-center justify-center gap-2 text-sm"
+              className="btn-secondary min-h-[42px] flex items-center justify-center gap-2 text-xs font-semibold"
               title="Bulk import from Excel"
             >
               <FileSpreadsheet size={15} /> Import Excel
             </button>
-            <button onClick={() => { setEditSupplier(null); setSupModal(true) }} className="btn-secondary flex items-center justify-center gap-2 text-sm">
+            <button
+              onClick={() => { setEditSupplier(null); setSupModal(true) }}
+              className="btn-secondary min-h-[42px] flex items-center justify-center gap-2 text-xs font-semibold"
+            >
               <Building2 size={15} /> Add Supplier
             </button>
-            <button onClick={() => setModal(true)} className="btn-primary flex items-center justify-center gap-2">
+            <button
+              onClick={() => setModal(true)}
+              className="btn-primary min-h-[42px] col-span-2 sm:col-span-1 flex items-center justify-center gap-2 text-xs font-semibold"
+            >
               <Plus size={16} /> New Purchase
             </button>
           </div>
@@ -1525,7 +1531,106 @@ export default function Purchases() {
 
               {filteredPOs.length === 0 ? <EmptyState message="No purchase orders yet" /> : (
                 <div className={`overflow-hidden ${cardCls}`}>
-                  <div className="w-full max-w-full overflow-x-auto overscroll-x-contain">
+                  {/* Mobile PO Cards (< 768px) */}
+                  <div className="divide-y divide-[var(--line-subtle)] md:hidden">
+                    {filteredPOs.map(p => (
+                      <article key={p.id} className="p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-sm font-bold text-[#1E3A5F] dark:text-blue-300">
+                                PO-{p.id}
+                              </span>
+                              <Badge status={p.payment_status} />
+                            </div>
+                            <h4 className="mt-1 text-sm font-bold text-[var(--ink)] truncate">
+                              {p.supplier_name || '—'}
+                            </h4>
+                            <p className="text-xs text-[var(--muted)] font-mono">
+                              Inv: {p.invoice_number || '—'} • {fmtDate(p.purchase_date)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Amount details grid */}
+                        <div className="grid grid-cols-3 gap-2 rounded-xl bg-[var(--surface-elevated)] p-2.5 text-xs">
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-[var(--muted-light)]">Total</span>
+                            <p className="mt-0.5 font-mono font-bold text-[var(--ink)]">{fmt(p.total_amount)}</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-[var(--muted-light)]">Paid</span>
+                            <p className="mt-0.5 font-mono text-[var(--muted)]">{fmt(p.paid_amount)}</p>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-[var(--muted-light)]">Balance</span>
+                            <p className={`mt-0.5 font-mono font-bold ${dueOf(p) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600'}`}>
+                              {fmt(dueOf(p))}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Mobile Actions */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-[var(--line-subtle)]">
+                          <button
+                            type="button"
+                            onClick={() => setExpandedPO(expandedPO === p.id ? null : p.id)}
+                            className="text-xs font-semibold text-[#1E3A5F] dark:text-blue-300 hover:underline flex items-center gap-1 min-h-[36px]"
+                          >
+                            <span>{(p.items || []).length} items</span>
+                            {expandedPO === p.id ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                          </button>
+
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => sendConfirmation(p)}
+                              disabled={sendingPO === p.id}
+                              className="btn-secondary min-h-[36px] text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/50 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow-xs"
+                              title="Send Confirmation via WhatsApp"
+                            >
+                              <MessageCircle size={14} />
+                              <span>{sendingPO === p.id ? 'Sending…' : 'WhatsApp'}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => printPO(p, suppliers)}
+                              className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-elevated)] shadow-xs transition"
+                              title="Print purchase order"
+                            >
+                              <Printer size={15} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {expandedPO === p.id && (
+                          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-3 space-y-2 text-xs">
+                            <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">Line Items</div>
+                            <div className="space-y-1.5 divide-y divide-[var(--line-subtle)]">
+                              {(p.items || []).map((it, idx) => (
+                                <div key={it.id || idx} className="pt-1.5 first:pt-0 flex items-center justify-between">
+                                  <div>
+                                    <p className="font-semibold text-[var(--ink)]">{it.product_name || it.product}</p>
+                                    <p className="text-[11px] text-[var(--muted)] font-mono">{it.quantity} × {fmt(it.purchase_price)} ({it.gst_percent}% GST)</p>
+                                  </div>
+                                  <span className="font-mono font-bold text-[var(--ink)]">{fmt(it.total)}</span>
+                                </div>
+                              ))}
+                            </div>
+                            {p.notes && (
+                              <p className="text-xs text-[var(--muted)] pt-1">
+                                <span className="font-semibold text-[var(--ink)]">Notes: </span>{p.notes}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+
+                  {/* Desktop Table View (>= 768px) */}
+                  <div className="hidden md:block w-full max-w-full overflow-x-auto overscroll-x-contain">
                     <table className={`table min-w-[900px] ${tableCls}`}>
                       <thead>
                         <tr>

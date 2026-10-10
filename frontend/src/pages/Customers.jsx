@@ -894,16 +894,16 @@ export default function Customers() {
                     </div>
 
                     {mobileActionId === customer.id && (
-                      <div className="mt-1.5 grid grid-cols-2 gap-1.5 rounded-lg bg-[var(--surface-elevated)] p-1.5 sm:hidden">
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-xl bg-[var(--surface-elevated)] p-2 sm:hidden border border-[var(--line-subtle)] shadow-xs">
                         {outstanding > 0 && (
                           <button
                             onClick={() => {
                               setMobileActionId(null)
                               openReminder(customer)
                             }}
-                            className="flex h-9 items-center justify-center gap-1 rounded-md px-2 text-[10px] font-semibold text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-950/50"
+                            className="flex min-h-[38px] flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/60 transition"
                           >
-                            <Send size={13} /> Remind
+                            <Send size={13} /> <span>Remind</span>
                           </button>
                         )}
                         <button
@@ -911,18 +911,18 @@ export default function Customers() {
                             setMobileActionId(null)
                             sendStatement(customer)
                           }}
-                          className="flex h-9 items-center justify-center gap-1 rounded-md px-2 text-[10px] font-semibold text-teal-700 hover:bg-teal-100 dark:text-teal-300 dark:hover:bg-teal-950/50"
+                          className="flex min-h-[38px] flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/40 dark:text-teal-300 dark:hover:bg-teal-950/60 transition"
                         >
-                          <FileText size={13} /> Statement
+                          <FileText size={13} /> <span>Statement</span>
                         </button>
                         <button
                           onClick={() => {
                             setMobileActionId(null)
                             setDeleteId(customer.id)
                           }}
-                          className="flex h-9 items-center justify-center gap-1 rounded-md px-2 text-[10px] font-semibold text-red-600 hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-950/50"
+                          className="flex min-h-[38px] flex-1 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 dark:bg-rose-950/40 dark:text-red-300 dark:hover:bg-rose-950/60 transition"
                         >
-                          <Trash2 size={13} /> Delete
+                          <Trash2 size={13} /> <span>Delete</span>
                         </button>
                       </div>
                     )}

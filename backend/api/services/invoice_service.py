@@ -66,7 +66,7 @@ class InvoiceService:
             )
             balance_due = max(Decimal('0'), calculation.grand_total - paid_amount)
 
-            product_ids = sorted({item_data['product_id'] for item_data in items_data})
+            product_ids = sorted({item_data.get('product_id') or item_data.get('product') for item_data in items_data})
             products = Product.objects.select_for_update().filter(
                 id__in=product_ids,
                 business=business,
@@ -78,7 +78,7 @@ class InvoiceService:
 
             projected_stock = {key: product.current_stock for key, product in locked_products.items()}
             for item_data, line in zip(items_data, calculation.lines):
-                product_key = str(item_data['product_id'])
+                product_key = str(item_data.get('product_id') or item_data.get('product'))
                 product = locked_products[product_key]
                 if not allow_negative and projected_stock[product_key] < line.quantity:
                     raise ValueError(f'Insufficient stock for {product.name}')
@@ -113,7 +113,7 @@ class InvoiceService:
             )
 
             for item_data, line in zip(items_data, calculation.lines):
-                product = locked_products[str(item_data['product_id'])]
+                product = locked_products[str(item_data.get('product_id') or item_data.get('product'))]
                 gst_percent = Decimal(str(item_data.get('gst_percent', product.gst_percent)))
                 invoice_item = InvoiceItem.objects.create(
                     invoice=invoice,

@@ -85,6 +85,52 @@ function relativeTime(isoString) {
   return `${Math.floor(diff / 86400)}d ago`
 }
 
+function getNotificationRoute(item) {
+  if (item.action_url) return item.action_url
+
+  const type = item.notification_type
+  const refId = item.reference_id
+
+  switch (type) {
+    case 'low_stock':
+      return refId ? `/inventory/stock?search=${encodeURIComponent(refId)}` : '/inventory/stock'
+    case 'batch_expiring':
+      return '/inventory/stock'
+    case 'invoice_overdue':
+      return refId ? `/invoice/${refId}` : '/sales/invoices'
+    case 'payment_received':
+      return '/payments'
+    case 'purchase_order_pending':
+      return '/purchases'
+    case 'quotation_expiring':
+      return '/reports'
+    case 'gst_submission_failed':
+    case 'einvoice_failed':
+    case 'eway_bill_expiring':
+      return '/reports'
+    default:
+      if (item.category === 'inventory') return '/inventory/stock'
+      if (item.category === 'sales_finance') return refId ? `/invoice/${refId}` : '/sales/invoices'
+      return null
+  }
+}
+
+function getNotificationActionLabel(item) {
+  if (item.action_label) return item.action_label
+  switch (item.notification_type) {
+    case 'low_stock': return 'View Stock'
+    case 'batch_expiring': return 'Check Batch'
+    case 'invoice_overdue': return 'View Invoice'
+    case 'payment_received': return 'View Payment'
+    case 'purchase_order_pending': return 'View PO'
+    case 'quotation_expiring': return 'Open Report'
+    case 'gst_submission_failed':
+    case 'einvoice_failed':
+    case 'eway_bill_expiring': return 'Review Report'
+    default: return 'Open'
+  }
+}
+
 // ─── Metric Card ───────────────────────────────────────────────────────────
 
 function MetricCard({ label, value, sub, valueColor, icon: Icon, iconBg, iconColor }) {
@@ -209,6 +255,16 @@ export default function Notifications() {
     }
   }
 
+  const handleNavigateNotification = item => {
+    if (!item.is_read) handleMarkRead(item.id)
+    const targetRoute = getNotificationRoute(item)
+    if (targetRoute) {
+      navigate(targetRoute)
+    } else {
+      toast('No direct redirection destination for this alert', { icon: 'ℹ️' })
+    }
+  }
+
   const filteredNotifications = useMemo(() => {
     return notifications.filter(item => {
       if (activeTab === 'unread' && item.is_read) return false
@@ -247,38 +303,48 @@ export default function Notifications() {
 
       {/* ── Header ── */}
       <header className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-[var(--primary)]" />
               <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Real-Time Alert Engine</p>
             </div>
             <h1 className="mt-0.5 truncate text-lg sm:text-xl font-bold text-[var(--ink)]">
-              Notifications & Alerts Center
+              Notifications &amp; Alerts Center
             </h1>
-            <p className="mt-1 text-xs text-[var(--muted)]">
-              Automated monitoring for stock, invoices, approvals, and compliance
+            <p className="mt-0.5 text-xs text-[var(--muted)]">
+              Automated monitoring for stock, invoices, approvals, and compliance.
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
             <button
+              type="button"
               onClick={handleRunChecks}
               disabled={refreshing}
-              className="btn-secondary h-9 text-xs px-3 inline-flex items-center gap-1.5"
+              className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold shadow-none transition"
             >
-              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-              <span>Scan & Refresh</span>
+              <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
+              <span>Scan &amp; Refresh</span>
             </button>
             {filteredUnreadCount > 0 && (
               <button
-                onClick={handleMarkAllRead}
-                className="btn-secondary h-9 text-xs px-3 inline-flex items-center gap-1.5"
+                type="button"
+                onClick={handleMarkAllAllRead => handleMarkAllRead()}
+                className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold shadow-none transition"
               >
-                <Check size={14} />
+                <Check size={13} />
                 <span>Mark All Read</span>
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => navigate('/inventory/stock')}
+              className="btn-secondary col-span-2 inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold shadow-none transition sm:col-span-1"
+            >
+              <Package size={14} />
+              <span>Stock Control</span>
+            </button>
           </div>
         </div>
       </header>
@@ -395,152 +461,284 @@ export default function Notifications() {
             </div>
           </div>
         ) : filteredNotifications.length ? (
-          <div className="overflow-x-auto">
-            <table className="table notifications-table">
-              <thead>
-                <tr>
-                  <th className="w-8 text-center">·</th>
-                  <th>Severity</th>
-                  <th>Type</th>
-                  <th>Alert Details</th>
-                  <th>Time</th>
-                  <th>Action</th>
-                  <th className="text-right">Controls</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredNotifications.map(item => {
-                  const cfg = TYPE_CONFIG[item.notification_type] || { label: item.notification_type, icon: Bell, badgeClass: 'status-neutral' }
-                  const sev = SEVERITY_STYLE[item.severity] || SEVERITY_STYLE.info
-                  const TypeIcon = cfg.icon
-                  const SevIcon = sev.icon
+          <>
+            {/* ── Mobile Notification Cards (md:hidden) ── */}
+            <div className="divide-y divide-[var(--line-subtle)] md:hidden">
+              {filteredNotifications.map(item => {
+                const cfg = TYPE_CONFIG[item.notification_type] || { label: item.notification_type, icon: Bell, badgeClass: 'status-neutral' }
+                const sev = SEVERITY_STYLE[item.severity] || SEVERITY_STYLE.info
+                const TypeIcon = cfg.icon
+                const SevIcon = sev.icon
+                const targetRoute = getNotificationRoute(item)
+                const actionLabel = getNotificationActionLabel(item)
 
-                  const rowClass =
-                    item.severity === 'danger' ? 'row-overdue' :
-                    item.severity === 'warning' ? 'row-pending' :
-                    item.severity === 'success' ? 'row-paid' : 'row-info'
-
-                  return (
-                    <tr
-                      key={item.id}
-                      className={[rowClass, !item.is_read ? 'font-medium' : 'opacity-80'].join(' ')}
-                    >
-                      {/* Unread dot */}
-                      <td className="text-center">
+                return (
+                  <article
+                    key={item.id}
+                    className={`p-3 space-y-2.5 transition ${!item.is_read ? 'bg-blue-50/20 dark:bg-blue-950/20' : ''}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span
                           style={item.is_read ? {} : { background: sev.dot }}
                           className={`inline-block h-2 w-2 rounded-full ${item.is_read ? 'bg-[var(--line-strong)] opacity-30' : ''}`}
-                          title={item.is_read ? 'Read' : 'Unread'}
                         />
-                      </td>
-
-                      {/* Severity badge with icon */}
-                      <td>
                         <span
                           style={{ background: sev.bg, color: sev.color, border: `1px solid ${sev.border}` }}
-                          className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold"
+                          className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold"
                         >
-                          <SevIcon size={11} />
+                          <SevIcon size={10} />
                           <span>{sev.label}</span>
                         </span>
-                      </td>
-
-                      {/* Type badge */}
-                      <td>
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold ${cfg.badgeClass}`}>
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${cfg.badgeClass}`}>
                           <TypeIcon size={10} />
                           <span>{cfg.label}</span>
                         </span>
-                      </td>
+                      </div>
 
-                      {/* Content */}
-                      <td className="max-w-xs">
-                        <div className="font-bold text-xs text-[var(--ink)] leading-snug">{item.title}</div>
-                        <p className="mt-0.5 text-xs text-[var(--ink-secondary)] leading-relaxed line-clamp-2">
-                          {item.message}
-                        </p>
-                        {item.requires_approval && (
-                          <span className={`mt-1 inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            item.status === 'approved' ? 'bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300' :
-                            item.status === 'rejected' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300' :
-                            'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-                          }`}>
-                            {item.status?.toUpperCase()}
-                            {item.actioned_by_name ? ` · ${item.actioned_by_name}` : ''}
-                          </span>
-                        )}
-                      </td>
+                      <span className="text-[10px] text-[var(--muted)] shrink-0 font-mono">
+                        {relativeTime(item.created_at)}
+                      </span>
+                    </div>
 
-                      {/* Timestamp */}
-                      <td className="whitespace-nowrap">
-                        <div className="text-xs font-mono text-[var(--ink-secondary)]">{formatTime(item.created_at)}</div>
-                        <div className="text-[10px] text-[var(--muted)] mt-0.5">{relativeTime(item.created_at)}</div>
-                      </td>
+                    <div>
+                      <h3 className="text-xs font-bold text-[var(--ink)] leading-snug">
+                        {item.title}
+                      </h3>
+                      <p className="mt-1 text-xs text-[var(--ink-secondary)] leading-relaxed">
+                        {item.message}
+                      </p>
+                      {item.requires_approval && (
+                        <span className={`mt-1.5 inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          item.status === 'approved' ? 'bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300' :
+                          item.status === 'rejected' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300' :
+                          'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                        }`}>
+                          {item.status?.toUpperCase()}{item.actioned_by_name ? ` · ${item.actioned_by_name}` : ''}
+                        </span>
+                      )}
+                    </div>
 
-                      {/* Action URL */}
-                      <td>
-                        {item.action_url ? (
-                          <button
-                            onClick={() => { if (!item.is_read) handleMarkRead(item.id); navigate(item.action_url) }}
-                            className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--primary)] hover:underline"
-                          >
-                            <span>{item.action_label || 'View'}</span>
-                            <ArrowUpRight size={11} />
-                          </button>
+                    <div className="flex items-center justify-between gap-2 border-t border-[var(--line-subtle)] pt-2">
+                      {targetRoute ? (
+                        <button
+                          type="button"
+                          onClick={() => handleNavigateNotification(item)}
+                          className="inline-flex min-h-[36px] items-center gap-1 rounded-md bg-[var(--primary)] px-3 py-1.5 text-xs font-semibold text-white shadow-xs transition hover:brightness-110 active:scale-95"
+                        >
+                          <span>{actionLabel}</span>
+                          <ArrowUpRight size={12} />
+                        </button>
+                      ) : (
+                        <div />
+                      )}
+
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        {item.requires_approval && item.status === 'active' ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setApprovalModal({ id: item.id, title: item.title, type: 'approve' })}
+                              disabled={actioningId === item.id}
+                              className="btn-success min-h-[36px] px-2.5 text-xs inline-flex items-center gap-1"
+                            >
+                              <Check size={12} /> Approve
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setApprovalModal({ id: item.id, title: item.title, type: 'reject' })}
+                              disabled={actioningId === item.id}
+                              className="btn-danger min-h-[36px] px-2.5 text-xs inline-flex items-center gap-1"
+                            >
+                              <X size={12} /> Reject
+                            </button>
+                          </>
                         ) : (
-                          <span className="text-[11px] text-[var(--muted)]">—</span>
+                          <>
+                            {!item.is_read && (
+                              <button
+                                type="button"
+                                onClick={() => handleMarkRead(item.id)}
+                                className="inline-flex min-h-[36px] items-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] shadow-xs transition hover:bg-[var(--surface-elevated)]"
+                                title="Mark as read"
+                              >
+                                <Check size={12} />
+                                <span>Read</span>
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDismiss(item.id)}
+                              disabled={dismissingId === item.id}
+                              className="inline-flex min-h-[36px] w-9 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-red-50 hover:text-red-600 hover:border-red-200 shadow-xs transition"
+                              title="Dismiss"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </>
                         )}
-                      </td>
+                      </div>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
 
-                      {/* Controls */}
-                      <td className="text-right">
-                        <div className="inline-flex items-center justify-end gap-1">
-                          {item.requires_approval && item.status === 'active' ? (
-                            <>
-                              <button
-                                onClick={() => setApprovalModal({ id: item.id, title: item.title, type: 'approve' })}
-                                disabled={actioningId === item.id}
-                                className="btn-success btn-sm text-[11px] px-2 inline-flex items-center gap-1"
-                              >
-                                <Check size={11} /> Approve
-                              </button>
-                              <button
-                                onClick={() => setApprovalModal({ id: item.id, title: item.title, type: 'reject' })}
-                                disabled={actioningId === item.id}
-                                className="btn-danger btn-sm text-[11px] px-2 inline-flex items-center gap-1"
-                              >
-                                <X size={11} /> Reject
-                              </button>
-                            </>
-                          ) : (
-                            <div className="inline-flex items-center gap-1">
-                              {!item.is_read && (
-                                <button
-                                  onClick={() => handleMarkRead(item.id)}
-                                  className="btn-secondary btn-sm text-xs px-2"
-                                  title="Mark as read"
-                                >
-                                  <Check size={12} />
-                                </button>
-                              )}
-                              <button
-                                onClick={() => handleDismiss(item.id)}
-                                disabled={dismissingId === item.id}
-                                className="btn-sm text-xs px-2 inline-flex items-center justify-center border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-red-50 hover:text-red-600 hover:border-red-200 rounded transition-colors"
-                                title="Dismiss notification"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
+            {/* ── Desktop Table (hidden md:block) ── */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="table notifications-table">
+                <thead>
+                  <tr>
+                    <th className="w-8 text-center">·</th>
+                    <th>Severity</th>
+                    <th>Type</th>
+                    <th>Alert Details</th>
+                    <th>Time</th>
+                    <th>Action</th>
+                    <th className="text-right">Controls</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredNotifications.map(item => {
+                    const cfg = TYPE_CONFIG[item.notification_type] || { label: item.notification_type, icon: Bell, badgeClass: 'status-neutral' }
+                    const sev = SEVERITY_STYLE[item.severity] || SEVERITY_STYLE.info
+                    const TypeIcon = cfg.icon
+                    const SevIcon = sev.icon
+                    const targetRoute = getNotificationRoute(item)
+                    const actionLabel = getNotificationActionLabel(item)
+
+                    const rowClass =
+                      item.severity === 'danger' ? 'row-overdue' :
+                      item.severity === 'warning' ? 'row-pending' :
+                      item.severity === 'success' ? 'row-paid' : 'row-info'
+
+                    return (
+                      <tr
+                        key={item.id}
+                        className={[rowClass, !item.is_read ? 'font-medium' : 'opacity-80'].join(' ')}
+                      >
+                        {/* Unread dot */}
+                        <td className="text-center">
+                          <span
+                            style={item.is_read ? {} : { background: sev.dot }}
+                            className={`inline-block h-2 w-2 rounded-full ${item.is_read ? 'bg-[var(--line-strong)] opacity-30' : ''}`}
+                            title={item.is_read ? 'Read' : 'Unread'}
+                          />
+                        </td>
+
+                        {/* Severity badge with icon */}
+                        <td>
+                          <span
+                            style={{ background: sev.bg, color: sev.color, border: `1px solid ${sev.border}` }}
+                            className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold"
+                          >
+                            <SevIcon size={11} />
+                            <span>{sev.label}</span>
+                          </span>
+                        </td>
+
+                        {/* Type badge */}
+                        <td>
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold ${cfg.badgeClass}`}>
+                            <TypeIcon size={10} />
+                            <span>{cfg.label}</span>
+                          </span>
+                        </td>
+
+                        {/* Content */}
+                        <td className="max-w-xs">
+                          <div className="font-bold text-xs text-[var(--ink)] leading-snug">{item.title}</div>
+                          <p className="mt-0.5 text-xs text-[var(--ink-secondary)] leading-relaxed line-clamp-2">
+                            {item.message}
+                          </p>
+                          {item.requires_approval && (
+                            <span className={`mt-1 inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              item.status === 'approved' ? 'bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300' :
+                              item.status === 'rejected' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300' :
+                              'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                            }`}>
+                              {item.status?.toUpperCase()}
+                              {item.actioned_by_name ? ` · ${item.actioned_by_name}` : ''}
+                            </span>
                           )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+
+                        {/* Timestamp */}
+                        <td className="whitespace-nowrap">
+                          <div className="text-xs font-mono text-[var(--ink-secondary)]">{formatTime(item.created_at)}</div>
+                          <div className="text-[10px] text-[var(--muted)] mt-0.5">{relativeTime(item.created_at)}</div>
+                        </td>
+
+                        {/* Action URL */}
+                        <td>
+                          {targetRoute ? (
+                            <button
+                              type="button"
+                              onClick={() => handleNavigateNotification(item)}
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--primary)] hover:underline"
+                            >
+                              <span>{actionLabel}</span>
+                              <ArrowUpRight size={11} />
+                            </button>
+                          ) : (
+                            <span className="text-[11px] text-[var(--muted)]">—</span>
+                          )}
+                        </td>
+
+                        {/* Controls */}
+                        <td className="text-right">
+                          <div className="inline-flex items-center justify-end gap-1">
+                            {item.requires_approval && item.status === 'active' ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setApprovalModal({ id: item.id, title: item.title, type: 'approve' })}
+                                  disabled={actioningId === item.id}
+                                  className="btn-success btn-sm text-[11px] px-2 inline-flex items-center gap-1"
+                                >
+                                  <Check size={11} /> Approve
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setApprovalModal({ id: item.id, title: item.title, type: 'reject' })}
+                                  disabled={actioningId === item.id}
+                                  className="btn-danger btn-sm text-[11px] px-2 inline-flex items-center gap-1"
+                                >
+                                  <X size={11} /> Reject
+                                </button>
+                              </>
+                            ) : (
+                              <div className="inline-flex items-center gap-1">
+                                {!item.is_read && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMarkRead(item.id)}
+                                    className="btn-secondary btn-sm text-xs px-2"
+                                    title="Mark as read"
+                                  >
+                                    <Check size={12} />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleDismiss(item.id)}
+                                  disabled={dismissingId === item.id}
+                                  className="btn-sm text-xs px-2 inline-flex items-center justify-center border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-red-50 hover:text-red-600 hover:border-red-200 rounded transition-colors"
+                                  title="Dismiss notification"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         ) : (
           <div className="flex min-h-40 flex-col items-center justify-center gap-2 p-6 text-center">
             <CheckCircle2 size={28} className="text-teal-500" />

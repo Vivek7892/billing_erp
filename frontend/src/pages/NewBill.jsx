@@ -36,6 +36,8 @@ import {
   UpiBrandStrip,
   generatePrintStandHtml,
   getUpiBrandRibbonSvg,
+  loadUpiBrandLogos,
+  drawTabletopStandeeCanvas,
 } from '../components/UpiLogos'
 import './NewBill.css'
 import {
@@ -404,17 +406,8 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
         qrImg.src = svgUrl
       })
 
-      // 2. Load composite brand ribbon SVG (Google Pay, PhonePe, Paytm, UPI - no borders/cards)
-      const ribbonSvg = getUpiBrandRibbonSvg({ width: 440, height: 26 })
-      const ribbonBlob = new Blob([ribbonSvg], { type: 'image/svg+xml;charset=utf-8' })
-      const ribbonUrl = URL.createObjectURL(ribbonBlob)
-      const ribbonImg = new Image()
-      ribbonImg.crossOrigin = 'anonymous'
-      await new Promise((resolve) => {
-        ribbonImg.onload = resolve
-        ribbonImg.onerror = resolve
-        ribbonImg.src = ribbonUrl
-      })
+      // 2. Load official brand logos (Google Pay, PhonePe, Paytm, UPI)
+      const brandLogos = await loadUpiBrandLogos()
 
       // 3. Optional store logo image
       let storeLogoImg = null
@@ -428,141 +421,26 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
         })
       }
 
-      // 4. Executive Tabletop Standee Canvas (640 x 900 px)
-      const canvasWidth = 640
-      const canvasHeight = 900
+      // 4. Draw exact rendered preview onto canvas (preserving dimensions, colors, logo, and layout)
       const canvas = document.createElement('canvas')
-      canvas.width = canvasWidth
-      canvas.height = canvasHeight
-      const ctx = canvas.getContext('2d')
+      drawTabletopStandeeCanvas({
+        canvas,
+        merchantName: shopName || 'ShopEase POS',
+        upiId,
+        isFixed: numericAmount > 0,
+        numAmt: numericAmount,
+        qrImg,
+        brandLogos,
+        storeLogoImg,
+        footerText: 'Accepted Here: GPay • PhonePe • Paytm • UPI',
+      })
 
-      // White background
-      ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, canvasWidth, canvasHeight)
-
-      // Outer Standee Border
-      ctx.strokeStyle = '#0F2744'
-      ctx.lineWidth = 4
-      ctx.strokeRect(10, 10, canvasWidth - 20, canvasHeight - 20)
-
-      // Top Navy Header Banner
-      const grad = ctx.createLinearGradient(0, 12, 0, 126)
-      grad.addColorStop(0, '#0B2240')
-      grad.addColorStop(1, '#153860')
-      ctx.fillStyle = grad
-      ctx.fillRect(12, 12, canvasWidth - 24, 114)
-
-      if (storeLogoImg && storeLogoImg.width) {
-        ctx.fillStyle = '#ffffff'
-        ctx.fillRect(canvasWidth / 2 - 22, 20, 44, 44)
-        ctx.drawImage(storeLogoImg, canvasWidth / 2 - 20, 22, 40, 40)
-        ctx.fillStyle = '#ffffff'
-        ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(shopName || 'ShopEase POS', canvasWidth / 2, 78)
-        ctx.fillStyle = '#38BDF8'
-        ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        ctx.fillText('★ SCAN & PAY WITH ANY UPI APP ★', canvasWidth / 2, 102)
-      } else {
-        ctx.fillStyle = '#ffffff'
-        ctx.font = 'bold 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(shopName || 'ShopEase POS', canvasWidth / 2, 52)
-        ctx.fillStyle = '#38BDF8'
-        ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        ctx.fillText('★ SCAN & PAY WITH ANY UPI APP ★', canvasWidth / 2, 88)
-      }
-
-      // Brand strip bar with pure official logos (NO borders, NO pill cards, NO text names)
-      const ribY = 126
-      const ribH = 54
-      ctx.fillStyle = '#F8FAFC'
-      ctx.fillRect(12, ribY, canvasWidth - 24, ribH)
-      ctx.strokeStyle = '#E2E8F0'
-      ctx.lineWidth = 1.5
-      ctx.strokeRect(12, ribY, canvasWidth - 24, ribH)
-
-      ctx.fillStyle = '#64748B'
-      ctx.font = 'bold 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.fillText('ACCEPTED PAYMENT METHODS', canvasWidth / 2, ribY + 14)
-
-      if (ribbonImg.width) {
-        const rW = 420
-        const rH = 26
-        ctx.drawImage(ribbonImg, (canvasWidth - rW) / 2, ribY + 22, rW, rH)
-      }
-      URL.revokeObjectURL(ribbonUrl)
-
-      // Centered QR Code with Quiet Zone & Frame
-      const qrSize = 390
-      const qrX = (canvasWidth - qrSize) / 2
-      const qrY = ribY + ribH + 24
-
-      ctx.fillStyle = '#ffffff'
-      ctx.fillRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24)
-      ctx.strokeStyle = '#0F2744'
-      ctx.lineWidth = 2.5
-      ctx.strokeRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24)
-
-      ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize)
+      brandLogos.cleanup()
       URL.revokeObjectURL(svgUrl)
-
-      // Amount Box
-      const isFixed = numericAmount > 0
-      const amtY = qrY + qrSize + 30
-      const amtH = 92
-      ctx.fillStyle = isFixed ? '#EFF6FF' : '#F0FDF4'
-      ctx.fillRect(28, amtY, canvasWidth - 56, amtH)
-      ctx.strokeStyle = isFixed ? '#BFDBFE' : '#BBF7D0'
-      ctx.lineWidth = 1.5
-      ctx.strokeRect(28, amtY, canvasWidth - 56, amtH)
-
-      ctx.fillStyle = isFixed ? '#1E40AF' : '#15803D'
-      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.fillText(isFixed ? 'AMOUNT PAYABLE' : 'PAYMENT COLLECTION', canvasWidth / 2, amtY + 22)
-
-      ctx.fillStyle = isFixed ? '#1E3A5F' : '#166534'
-      ctx.font = isFixed
-        ? '900 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        : '800 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.fillText(
-        isFixed
-          ? `₹ ${numericAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-          : 'Scan & Enter Any Amount',
-        canvasWidth / 2,
-        amtY + 56
-      )
-
-      ctx.fillStyle = '#64748B'
-      ctx.font = '600 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.fillText(
-        isFixed ? `Ref: ${invoice || 'NEW-BILL'} • Instant Payment Confirmation` : 'Zero Extra Fee • Instant Bank Settlement',
-        canvasWidth / 2,
-        amtY + 79
-      )
-
-      // Merchant UPI VPA
-      const vpaY = amtY + amtH + 18
-      ctx.fillStyle = '#059669'
-      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.fillText('✔ Verified Merchant UPI VPA', canvasWidth / 2, vpaY)
-
-      ctx.fillStyle = '#0F172A'
-      ctx.font = 'bold 15px "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace'
-      ctx.fillText(upiId, canvasWidth / 2, vpaY + 24)
-
-      // Standee Base Footer
-      ctx.fillStyle = '#0B2240'
-      ctx.fillRect(12, canvasHeight - 44, canvasWidth - 24, 32)
-      ctx.fillStyle = '#94A3B8'
-      ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.fillText('Bharat QR  •  Powered by NPCI UPI  •  Works with All Indian Banks', canvasWidth / 2, canvasHeight - 28)
 
       // Format descriptive filename based on amount: e.g. UPI-QR-276.png or UPI-QR-Any-Amount.png
       const amountTag = Number.isInteger(numericAmount) ? String(numericAmount) : numericAmount.toFixed(2)
-      const filename = numericAmount > 0 ? `UPI-QR-${amountTag}.png` : 'UPI-QR-Any-Amount.png'
+      const filename = numericAmount > 0 ? `UPI-QR-${amountTag}.png` : 'UPI-QR.png'
 
       canvas.toBlob((blob) => {
         if (!blob) {
@@ -612,7 +490,6 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
     const standHtml = generatePrintStandHtml({
       shopName,
       upiId,
-      invoice: invoice || 'NEW-BILL',
       amount: numericAmount,
       logoDataUrl,
       svgMarkup,
@@ -1488,6 +1365,9 @@ export default function NewBill() {
       resetBill({ closeSuccess: false })
       setLastInvoice(savedInvoice)
       setShowSuccess(true)
+      try {
+        window.dispatchEvent(new CustomEvent('pos:invoice-created', { detail: savedInvoice }))
+      } catch { /* ignore */ }
     } catch (err) {
       if (printWindow && !printWindow.closed) {
         try { printWindow.close() } catch { /* ignore */ }
@@ -3033,7 +2913,7 @@ export default function NewBill() {
                     <div className="pb-sub mt-1">
                       Customer pays {fmt(grandTotal)} via UPI, Cards, NetBanking, or Wallets.
                     </div>
-                    <div className="dark:bg-amber-950/30 p-2 rounded border border-amber-200 dark:border-amber-900/50">
+                    <div className="p-2 rounded border bg-amber-50 text-amber-900 border-amber-200 dark:bg-amber-950/30 dark:text-amber-200 dark:border-amber-900/50 text-xs">
                       ⚠️ Sale will be confirmed only after online payment succeeds.
                     </div>
                   </div>
@@ -3160,39 +3040,126 @@ export default function NewBill() {
         </div>
       </Modal>
 
-      <Modal open={showSuccess && Boolean(lastInvoice?.id)} onClose={() => setShowSuccess(false)} title="Sale completed" size="sm">
-        <div className="pb-modal pb-stack">
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center dark:border-emerald-800/60 dark:bg-emerald-950/30">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-600/25">
-              <CheckCircle2 size={32} />
+      <Modal open={showSuccess && Boolean(lastInvoice?.id)} onClose={() => setShowSuccess(false)} title="Sale Completed" size="md">
+        <div className="space-y-4 p-1">
+          {/* Hero Success Card - High contrast, vibrant emerald styling, zero dull grey */}
+          <div className="relative overflow-hidden rounded-2xl border-2 border-emerald-500/80 bg-white p-5 text-center shadow-md dark:border-emerald-600 dark:bg-slate-900">
+            {/* Top decorative gradient accent strip */}
+            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600" />
+
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 ring-4 ring-emerald-100 dark:ring-emerald-950/60">
+              <CheckCircle2 size={32} className="stroke-[2.5]" />
             </div>
-            <p className="mt-3 text-lg font-extrabold text-emerald-800 dark:text-emerald-200">Sale completed successfully</p>
-            <div className="mt-1 font-mono text-2xl font-extrabold text-[var(--ink)]">{fmt(lastInvoice?.grand_total)}</div>
-            <div className="mt-2 break-all font-mono text-xs font-bold text-emerald-700 dark:text-emerald-300">
-              Invoice {lastInvoice?.invoice_number || '—'}
+
+            <h3 className="mt-3 text-lg font-black text-emerald-950 dark:text-emerald-100 tracking-tight">
+              Sale Completed Successfully
+            </h3>
+
+            <div className="mt-1.5 font-mono text-3xl sm:text-4xl font-black text-[#1E3A5F] dark:text-emerald-400 tracking-tight">
+              {fmt(lastInvoice?.grand_total)}
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1 font-mono text-xs font-bold text-emerald-900 shadow-xs dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">
+                <Receipt size={13} className="text-emerald-700 dark:text-emerald-400" />
+                <span>Invoice #{lastInvoice?.invoice_number || '—'}</span>
+              </span>
+              {lastInvoice?.customer_name && lastInvoice?.customer_name !== 'Walk-in Customer' && (
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-800 shadow-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                  <UserRound size={12} className="text-slate-600 dark:text-slate-300" />
+                  <span>{lastInvoice.customer_name}</span>
+                </span>
+              )}
             </div>
           </div>
-          <dl className="pb-dl border-t border-[var(--pb-border)] pt-2">
-            <dt>Invoice number</dt><dd>{lastInvoice?.invoice_number || '—'}</dd>
-            <dt>Payment method</dt><dd className="capitalize">{lastInvoice?.payment_method || 'cash'}</dd>
-            <dt>Payment status</dt><dd className="capitalize">{lastInvoice?.payment_status || '—'}</dd>
-            <dt>Paid amount</dt><dd>{fmt(lastPaidAmount(lastInvoice))}</dd>
-            {lastInvoice?.payment_method === 'cash' && (
-              <>
-                <dt>Change returned</dt>
-                <dd>{fmt(Math.max(0, Number(lastInvoice?.amount_received || 0) - Number(lastInvoice?.grand_total || 0)))}</dd>
-              </>
-            )}
-          </dl>
-          <div className="grid grid-cols-2 gap-2 pb-success-actions-grid">
-            <button type="button" className="pb-btn pb-btn-primary" onClick={() => printInvoiceDocument(lastInvoice?.id, false)}><Printer size={14} /> Print invoice</button>
-            <button type="button" className="pb-btn" onClick={() => printInvoiceDocument(lastInvoice?.id, true)}><Printer size={14} /> Thermal Print</button>
-            <button type="button" className="pb-btn" onClick={() => downloadInvoiceDocument(lastInvoice?.id)}><Download size={14} /> Download PDF</button>
-            <button type="button" className="pb-btn" onClick={shareInvoice}><Share2 size={14} /> Share Bill</button>
-            <button type="button" className="pb-btn col-span-2" onClick={() => navigate(`/invoice/${lastInvoice?.id}`)}><FileText size={14} /> View Invoice</button>
+
+          {/* Transaction Summary Card - Pure white surface with strong borders and deep readable text */}
+          <div className="rounded-xl border-2 border-slate-200 bg-white p-4 text-xs shadow-xs dark:border-slate-800 dark:bg-slate-900">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-700 dark:text-slate-300">Payment Method</span>
+                <span className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-[#1E3A5F] uppercase tracking-wide dark:border-blue-900 dark:bg-blue-950/70 dark:text-blue-300">
+                  {lastInvoice?.payment_method || 'Cash'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-700 dark:text-slate-300">Payment Status</span>
+                <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800 uppercase tracking-wide dark:border-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-300">
+                  {lastInvoice?.payment_status || 'Paid'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-slate-700 dark:text-slate-300">Amount Received</span>
+                <span className="font-mono text-sm font-black text-slate-900 dark:text-white">
+                  {fmt(lastPaidAmount(lastInvoice))}
+                </span>
+              </div>
+
+              {lastInvoice?.payment_method === 'cash' && (
+                <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50/80 p-2.5 dark:border-emerald-900 dark:bg-emerald-950/50">
+                  <span className="font-bold text-emerald-900 dark:text-emerald-200">Change Returned</span>
+                  <span className="font-mono text-base font-black text-emerald-700 dark:text-emerald-300">
+                    {fmt(Math.max(0, Number(lastInvoice?.amount_received || 0) - Number(lastInvoice?.grand_total || 0)))}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
-          <button type="button" className="pb-btn pb-btn-primary pb-btn-lg w-full" onClick={() => { setShowSuccess(false); startNewBill() }}>
-            <RefreshCw size={14} /> Start New Bill
+
+          {/* Action Buttons - 5 distinct, high-contrast touch targets (44px+ on mobile) */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => printInvoiceDocument(lastInvoice?.id, false)}
+              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#1E3A5F] px-3 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#162F4D] active:scale-[0.98]"
+            >
+              <Printer size={16} />
+              <span>Print A4 Invoice</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => printInvoiceDocument(lastInvoice?.id, true)}
+              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl border-2 border-[#1E3A5F] bg-blue-50/80 px-3 py-2.5 text-xs font-bold text-[#1E3A5F] shadow-xs transition hover:bg-blue-100 active:scale-[0.98] dark:border-blue-600 dark:bg-slate-800 dark:text-blue-300 dark:hover:bg-slate-700"
+            >
+              <Printer size={16} />
+              <span>Thermal Receipt</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => downloadInvoiceDocument(lastInvoice?.id)}
+              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl border-2 border-indigo-200 bg-indigo-50/80 px-3 py-2.5 text-xs font-bold text-indigo-900 shadow-xs transition hover:bg-indigo-100 active:scale-[0.98] dark:border-indigo-900 dark:bg-slate-800 dark:text-indigo-200 dark:hover:bg-slate-700"
+            >
+              <Download size={16} />
+              <span>Download PDF</span>
+            </button>
+            <button
+              type="button"
+              onClick={shareInvoice}
+              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#25D366] px-3 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#20bd5a] active:scale-[0.98]"
+            >
+              <Share2 size={16} />
+              <span>Share WhatsApp</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(`/invoice/${lastInvoice?.id}`)}
+              className="col-span-2 flex min-h-[44px] items-center justify-center gap-2 rounded-xl border-2 border-slate-300 bg-slate-50/80 px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            >
+              <FileText size={16} className="text-[#1E3A5F] dark:text-blue-400" />
+              <span>View Full Invoice Record</span>
+            </button>
+          </div>
+
+          {/* Primary Action Button - Start New Bill */}
+          <button
+            type="button"
+            onClick={() => { setShowSuccess(false); startNewBill() }}
+            className="flex min-h-[50px] w-full items-center justify-center gap-2.5 rounded-xl bg-emerald-600 px-4 py-3 text-base font-extrabold text-white shadow-lg shadow-emerald-600/30 transition hover:bg-emerald-700 active:scale-[0.99]"
+          >
+            <RefreshCw size={18} />
+            <span>Start New Bill</span>
           </button>
         </div>
       </Modal>

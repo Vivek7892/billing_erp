@@ -768,31 +768,31 @@ export default function Stock() {
 
 
                     {/* Action Bar */}
-                    <div className="flex items-center justify-end gap-2 pt-1 border-t border-[var(--line-subtle)]">
+                    <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-[var(--line-subtle)]">
                       <button
                         type="button"
                         onClick={() => setBarcodeProduct(p)}
-                        className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-elevated)] flex items-center gap-1"
+                        className="min-h-[36px] flex-1 sm:flex-none justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-elevated)] flex items-center gap-1.5 shadow-xs transition"
                         title="Print Barcode Labels"
                       >
-                        <Barcode size={12} />
-                        Barcode
+                        <Barcode size={13} />
+                        <span>Barcode</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => openHistory(p)}
-                        className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-elevated)] flex items-center gap-1"
+                        className="min-h-[36px] flex-1 sm:flex-none justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-elevated)] flex items-center gap-1.5 shadow-xs transition"
                       >
-                        <History size={12} />
-                        History
+                        <History size={13} />
+                        <span>History</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => openAdjust(p)}
-                        className="rounded-md bg-[#1E3A5F] text-white px-3 py-1 text-xs font-semibold hover:bg-[#162F4D] flex items-center gap-1"
+                        className="min-h-[36px] w-full sm:w-auto justify-center rounded-lg bg-[#1E3A5F] text-white px-3.5 py-1.5 text-xs font-semibold hover:bg-[#162F4D] flex items-center gap-1.5 shadow-xs transition"
                       >
-                        <SlidersHorizontal size={12} />
-                        Adjust Stock
+                        <SlidersHorizontal size={13} />
+                        <span>Adjust Stock</span>
                       </button>
                     </div>
                   </article>

@@ -117,21 +117,23 @@ export default function Drafts() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
           <button
+            type="button"
             onClick={() => navigate('/billing/new')}
-            className="btn-secondary inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-semibold"
+            className="btn-secondary inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-xs font-semibold shadow-none transition"
           >
             <ArrowLeft size={13} />
-            New Bill
+            <span>New Bill</span>
           </button>
 
           <button
+            type="button"
             onClick={clearAll}
-            className="btn-danger inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-semibold"
+            className="btn-danger inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-xs font-semibold shadow-none transition"
           >
             <Trash2 size={13} />
-            Clear All
+            <span>Clear All</span>
           </button>
         </div>
       </div>
@@ -251,22 +253,24 @@ export default function Drafts() {
                   {itemCount > 3 && ` +${itemCount - 3} more`}
                 </div>
 
-                <div className="flex items-center gap-2 pt-1">
+                <div className="flex items-center gap-2 pt-1.5">
                   <button
+                    type="button"
                     onClick={() => resume(draft)}
-                    className="flex-1 btn-primary h-8 px-3 text-xs flex items-center justify-center gap-1.5 rounded-md"
+                    className="flex-1 btn-primary min-h-[42px] px-3.5 text-xs font-bold flex items-center justify-center gap-1.5 rounded-md shadow-xs active:scale-[0.99] transition"
                   >
-                    <RotateCcw size={12} />
-                    Resume
-                    <ChevronRight size={12} />
+                    <RotateCcw size={13} />
+                    <span>Resume Bill</span>
+                    <ChevronRight size={13} />
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => discard(draft.id)}
                     title="Discard bill"
-                    className="w-8 h-8 rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-red-600 hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center transition-colors"
+                    className="w-11 min-h-[42px] rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-red-600 hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center transition-colors active:scale-95"
                   >
-                    <Trash2 size={13} />
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api, { API_BASE_URL } from '../api'
 import { Badge, Spinner, Modal } from '../components/UI'
 import {
   RotateCcw, RefreshCw, PackageX, IndianRupee, FileX, TrendingDown,
-  Eye, ChevronDown, ChevronUp, Printer, AlertCircle
+  Eye, ChevronDown, ChevronUp, Printer, AlertCircle, Plus, Receipt
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -181,6 +182,7 @@ function ViewModal({ open, onClose, invoice }) {
 }
 
 export default function Returns() {
+  const navigate = useNavigate()
   const [invoices, setInvoices] = useState([])
   const [returns, setReturns] = useState([])
   const [loading, setLoading] = useState(true)
@@ -223,47 +225,93 @@ export default function Returns() {
   const toggleExpand = (id) => setExpandedReturns(prev => ({ ...prev, [id]: !prev[id] }))
 
   return (
-    <div className="space-y-6 min-w-0 pb-6">
-      <div className="flex flex-col gap-1 px-0.5">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink)]">Returns &amp; Refunds</h1>
-        <p className="text-sm text-[var(--muted)] max-w-2xl">Review returned items, refunded invoices, and process new returns.</p>
+    <div className="space-y-4 sm:space-y-6 min-w-0 pb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-0.5">
+        <div>
+          <div className="mb-1 flex items-center gap-2 text-[var(--muted-light)]">
+            <RotateCcw size={14} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Sales / Returns</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--ink)]">Returns &amp; Refunds</h1>
+          <p className="mt-0.5 text-xs text-[var(--muted)] max-w-2xl">Review returned items, refunded invoices, and process new returns.</p>
+        </div>
+
+        <div className="grid w-full grid-cols-3 gap-1.5 sm:flex sm:w-auto sm:items-center sm:gap-2">
+          <button
+            type="button"
+            onClick={load}
+            disabled={loading}
+            className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold shadow-none transition"
+            title="Refresh returns list"
+          >
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/sales/invoices')}
+            className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold shadow-none transition"
+            title="View Invoices"
+          >
+            <Receipt size={14} />
+            <span>Invoices</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/billing/new')}
+            className="btn-primary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-xs font-bold text-white shadow-none transition"
+          >
+            <Plus size={15} />
+            <span>New Bill</span>
+          </button>
+        </div>
       </div>
 
-      {/* Return & Refund Summary (Table-Based) */}
-      <div className="erp-table-container">
-        <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--surface-elevated)] flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+      {/* Return & Refund Summary (Responsive KPI Grid) */}
+      <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)]">
+        <div className="border-b border-[var(--line)] px-4 py-2 bg-[var(--surface-elevated)] flex items-center justify-between">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
             Returns &amp; Refund Valuation Summary
           </span>
-          <span className="text-xs text-[var(--muted)]">Audit overview</span>
+          <span className="text-[10px] text-[var(--muted)]">Audit overview</span>
         </div>
-        <div className="overflow-x-auto">
-          <table className="erp-summary-table">
-            <thead>
-              <tr>
-                <th>Total Returns</th>
-                <th>Refunded Invoices</th>
-                <th>Cancelled Invoices</th>
-                <th>Value Refunded</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="font-mono font-bold text-sm text-[var(--ink)]">
-                  {returns.length + refundedInvoices.length}
-                </td>
-                <td className="font-mono font-bold text-sm text-amber-600 dark:text-amber-400">
-                  {refundedInvoices.length}
-                </td>
-                <td className="font-mono font-bold text-sm text-[var(--muted)]">
-                  {cancelledInvoices.length}
-                </td>
-                <td className="font-mono font-bold text-sm text-rose-600 dark:text-rose-400">
-                  {fmt(totalRefunded)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
+          <div className="p-3 sm:p-3.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Total Returns
+            </span>
+            <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+              {returns.length + refundedInvoices.length}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">Recorded returns</p>
+          </div>
+          <div className="p-3 sm:p-3.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Refunded Invoices
+            </span>
+            <p className="mt-1 font-mono text-lg font-bold text-amber-600 dark:text-amber-400">
+              {refundedInvoices.length}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">Complete refunds</p>
+          </div>
+          <div className="p-3 sm:p-3.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Cancelled Invoices
+            </span>
+            <p className="mt-1 font-mono text-lg font-bold text-[var(--muted)]">
+              {cancelledInvoices.length}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">Voided sales</p>
+          </div>
+          <div className="p-3 sm:p-3.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              Value Refunded
+            </span>
+            <p className="mt-1 font-mono text-lg font-bold text-rose-600 dark:text-rose-400">
+              {fmt(totalRefunded)}
+            </p>
+            <p className="text-[10px] text-[var(--muted)]">Total refund amount</p>
+          </div>
         </div>
       </div>
 
@@ -475,13 +523,15 @@ export default function Returns() {
                         <div className="text-[11px] uppercase tracking-wide text-[var(--muted-light)]">Amount</div>
                         <div className="text-base font-bold text-[var(--ink)]">{fmt(b.grand_total)}</div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => setViewModal(b)} className="w-8 h-8 inline-flex items-center justify-center text-[var(--ink-secondary)] rounded-md bg-[var(--surface)] border border-[var(--line)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-all active:scale-95" title="View" aria-label="View invoice">
-                          <Eye size={15} />
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={() => setViewModal(b)} className="min-h-[38px] px-2.5 inline-flex items-center justify-center gap-1 text-[var(--ink-secondary)] rounded-md bg-[var(--surface)] border border-[var(--line)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-all active:scale-95 text-xs font-semibold" title="View" aria-label="View invoice">
+                          <Eye size={14} />
+                          <span>View</span>
                         </button>
                         <a href={`${API_BASE_URL}/invoices/${b.id}/pdf/?token=${localStorage.getItem('access_token')}`}
-                          target="_blank" rel="noreferrer" className="w-8 h-8 inline-flex items-center justify-center text-[var(--ink-secondary)] rounded-md bg-[var(--surface)] border border-[var(--line)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-all active:scale-95" title="Print" aria-label="Print invoice">
-                          <Printer size={15} />
+                          target="_blank" rel="noreferrer" className="min-h-[38px] px-2.5 inline-flex items-center justify-center gap-1 text-[var(--ink-secondary)] rounded-md bg-[var(--surface)] border border-[var(--line)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-all active:scale-95 text-xs font-semibold" title="Print" aria-label="Print invoice">
+                          <Printer size={14} />
+                          <span>Print</span>
                         </a>
                       </div>
                     </div>
@@ -550,8 +600,8 @@ export default function Returns() {
                       <div className="text-base font-bold text-[var(--ink)]">{fmt(b.grand_total)}</div>
                     </div>
                     <button onClick={() => setReturnModal(b)}
-                      className="btn-danger min-h-9 px-3 text-xs rounded-md font-semibold inline-flex items-center justify-center gap-1.5 shrink-0">
-                      <RotateCcw size={13} /> Return
+                      className="btn-danger min-h-[40px] px-3.5 text-xs rounded-md font-bold inline-flex items-center justify-center gap-1.5 shrink-0 shadow-xs active:scale-95 transition">
+                      <RotateCcw size={13} /> <span>Return</span>
                     </button>
                   </div>
                 </div>

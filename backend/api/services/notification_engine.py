@@ -126,7 +126,7 @@ class NotificationEngine:
     # -------------------------------------------------------------
     @classmethod
     def check_invoices_overdue(cls, business):
-        today = timezone.now().date()
+        today = timezone.localdate()
         today_str = today.strftime('%Y-%m-%d')
         # Invoices completed with pending credit, older than 15 days
         cutoff_date = today - timedelta(days=15)
@@ -227,7 +227,7 @@ class NotificationEngine:
     # -------------------------------------------------------------
     @classmethod
     def check_quotations_expiring(cls, business):
-        today = timezone.now().date()
+        today = timezone.localdate()
         today_str = today.strftime('%Y-%m-%d')
         # Draft invoices created > 5 days ago are expiring quotations
         draft_cutoff = today - timedelta(days=5)
@@ -265,7 +265,7 @@ class NotificationEngine:
     # -------------------------------------------------------------
     @classmethod
     def check_batches_expiring(cls, business):
-        today = timezone.now().date()
+        today = timezone.localdate()
         today_str = today.strftime('%Y-%m-%d')
 
         # Check products or settings indicating batch/perishable management
@@ -361,7 +361,7 @@ class NotificationEngine:
     # -------------------------------------------------------------
     @classmethod
     def check_eway_bill_expiring(cls, business):
-        today = timezone.now().date()
+        today = timezone.localdate()
         today_str = today.strftime('%Y-%m-%d')
         # Consignments requiring transit validity (> ₹50,000 created in last 2 days)
         high_val_recent = Invoice.objects.filter(

@@ -1873,7 +1873,7 @@ class PurchaseViewSet(viewsets.ModelViewSet):
                     attributes={
                         'supplier': supplier,
                         'invoice_number': inv_num,
-                        'purchase_date': ord_data.get('purchase_date') or timezone.now().date(),
+                        'purchase_date': ord_data.get('purchase_date') or timezone.localdate(),
                         'paid_amount': Decimal(str(ord_data.get('paid_amount', 0))),
                         'notes': ord_data.get('notes', ''),
                     },
@@ -2037,7 +2037,7 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         if user.role == 'cashier':
             qs = qs.filter(created_by=user)
         date_filter = self.request.query_params.get('date_filter')
-        today = timezone.now().date()
+        today = timezone.localdate()
         if date_filter == 'today':
             qs = qs.filter(created_at__date=today)
         elif date_filter == 'yesterday':
@@ -2263,7 +2263,7 @@ class DashboardView(APIView):
     permission_classes = [IsCashierOrAdmin]
     def get(self, request):
         biz = request.user.business
-        today = timezone.now().date()
+        today = timezone.localdate()
         yesterday = today - timedelta(days=1)
         month_start = today.replace(day=1)
         last_month_start = (month_start - timedelta(days=1)).replace(day=1)

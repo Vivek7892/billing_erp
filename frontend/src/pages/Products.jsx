@@ -1057,11 +1057,11 @@ export default function Products() {
         title="Products & Inventory"
         subtitle={`${stats.total} total items • ${stats.active} active • ${formatCurrency(stats.stockValue)} total stock valuation`}
         action={
-          <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             <button
               type="button"
               onClick={exportToCSV}
-              className="btn-secondary btn-base flex items-center justify-center gap-2 text-xs font-semibold"
+              className="btn-secondary btn-base min-h-[42px] flex items-center justify-center gap-2 text-xs font-semibold"
               title="Export products to CSV"
             >
               <Download size={15} />
@@ -1076,7 +1076,7 @@ export default function Products() {
                 setImportErrors([])
                 setModal('import')
               }}
-              className="btn-secondary btn-base flex items-center justify-center gap-2 text-xs font-semibold"
+              className="btn-secondary btn-base min-h-[42px] flex items-center justify-center gap-2 text-xs font-semibold"
               title="Import products from CSV"
             >
               <Upload size={15} />
@@ -1086,7 +1086,7 @@ export default function Products() {
             <button
               type="button"
               onClick={openAdd}
-              className="btn-primary btn-base flex items-center justify-center gap-2 text-xs font-semibold"
+              className="btn-primary btn-base min-h-[42px] col-span-2 sm:col-span-1 flex items-center justify-center gap-2 text-xs font-semibold"
             >
               <Plus size={16} />
               Add Product
@@ -1304,7 +1304,6 @@ export default function Products() {
                 type="button"
                 onClick={resetFilters}
                 className="btn-secondary h-11 w-full px-3 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center gap-1.5 font-medium"
-                className="btn-secondary h-11 w-full px-3 text-xs text-rose-400 hover:bg-rose-950/40 flex items-center justify-center gap-1.5 font-medium"
                 title="Reset all filters"
               >
                 <X size={14} />
@@ -1421,11 +1420,11 @@ export default function Products() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           type="button"
                           onClick={() => openDetails(product)}
-                          className="icon-btn"
+                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-elevated)] transition shadow-xs"
                           title="View Details"
                         >
                           <Eye size={15} />
@@ -1433,7 +1432,7 @@ export default function Products() {
                         <button
                           type="button"
                           onClick={() => openEdit(product)}
-                          className="icon-btn"
+                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-elevated)] transition shadow-xs"
                           title="Edit"
                         >
                           <Edit2 size={15} />
@@ -1480,7 +1479,7 @@ export default function Products() {
                     </div>
 
                     {/* Stock Alert Badge & Actions */}
-                    <div className="flex items-center justify-between gap-2 pt-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                       <div className="flex items-center gap-2">
                         <span
                           className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${stockAlert.badgeClass}`}
@@ -1492,11 +1491,11 @@ export default function Products() {
                         <Badge status={product.status || 'active'} />
                       </div>
 
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         <button
                           type="button"
                           onClick={() => openAdjust(product)}
-                          className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
+                          className="min-h-[36px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-elevated)] shadow-xs transition"
                           title="Adjust stock"
                         >
                           Stock
@@ -1504,10 +1503,11 @@ export default function Products() {
                         <button
                           type="button"
                           onClick={() => openBarcode(product)}
-                          className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
+                          className="min-h-[36px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-elevated)] shadow-xs transition flex items-center gap-1"
                           title="Print barcode"
                         >
-                          <Barcode size={13} className="inline mr-1" />
+                          <Barcode size={14} />
+                          <span>Barcode</span>
                         </button>
                       </div>
                     </div>

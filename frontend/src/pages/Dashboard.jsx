@@ -267,25 +267,28 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid w-full grid-cols-3 gap-1.5 sm:flex sm:w-auto sm:items-center sm:gap-2">
             <button
+              type="button"
               onClick={() => navigate('/billing/new')}
-              className="btn-primary h-9 text-xs px-4"
+              className="btn-primary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-xs font-bold text-white shadow-none transition"
             >
               <Plus size={15} />
               <span>New Bill</span>
             </button>
             <button
+              type="button"
               onClick={loadDashboard}
               disabled={refreshing}
-              className="btn-secondary h-9 text-xs px-3"
+              className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold shadow-none transition"
             >
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
               <span>Refresh</span>
             </button>
             <button
+              type="button"
               onClick={() => navigate('/reports')}
-              className="btn-secondary h-9 text-xs px-3"
+              className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold shadow-none transition"
             >
               <FileText size={14} />
               <span>Reports</span>
@@ -293,6 +296,67 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
+
+      {/* -------------------------------------------------------------
+          QUICK ACTIONS BAR (Mobile-Friendly Tactile Controls)
+      -------------------------------------------------------------- */}
+      <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 sm:p-2.5 shadow-none">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+          <button
+            type="button"
+            onClick={() => navigate('/billing/new')}
+            className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-md border border-blue-200 bg-blue-50/70 p-2 text-center text-blue-900 transition hover:bg-blue-100 active:scale-95 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-200"
+          >
+            <Plus size={16} className="text-blue-600 dark:text-blue-400" />
+            <span className="text-[11px] font-bold">New Bill</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/billing/drafts')}
+            className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] p-2 text-center text-[var(--ink)] transition hover:bg-[var(--surface)] active:scale-95"
+          >
+            <Clock3 size={16} className="text-amber-600 dark:text-amber-400" />
+            <span className="text-[11px] font-bold">Parked Bills</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('sales/payments')}
+            className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] p-2 text-center text-[var(--ink)] transition hover:bg-[var(--surface)] active:scale-95"
+          >
+            <CreditCard size={16} className="text-emerald-600 dark:text-emerald-400" />
+            <span className="text-[11px] font-bold">Payments</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/sales/invoices')}
+            className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] p-2 text-center text-[var(--ink)] transition hover:bg-[var(--surface)] active:scale-95"
+          >
+            <FileText size={16} className="text-slate-600 dark:text-slate-400" />
+            <span className="text-[11px] font-bold">All Bills</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/inventory/stock')}
+            className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] p-2 text-center text-[var(--ink)] transition hover:bg-[var(--surface)] active:scale-95"
+          >
+            <Package size={16} className="text-purple-600 dark:text-purple-400" />
+            <span className="text-[11px] font-bold">Stock Control</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/purchases')}
+            className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] p-2 text-center text-[var(--ink)] transition hover:bg-[var(--surface)] active:scale-95"
+          >
+            <BarChart3 size={16} className="text-teal-600 dark:text-teal-400" />
+            <span className="text-[11px] font-bold">Purchases</span>
+          </button>
+        </div>
+      </section>
 
       {/* -------------------------------------------------------------
           ERROR BANNER
@@ -651,61 +715,107 @@ export default function Dashboard() {
         </div>
 
         {recentBills.length ? (
-          <div className="overflow-x-auto">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Invoice #</th>
-                  <th>Customer</th>
-                  <th>Date</th>
-                  <th className="num-col">Grand Total</th>
-                  <th>Status</th>
-                  <th className="text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentBills.slice(0, 8).map(bill => (
-                  <tr
-                    key={bill.id}
-                    className={getInvoiceRowClass(bill.payment_status || bill.status)}
-                  >
-                    <td>
-                      <button
-                        onClick={() => navigate(`/invoice/${bill.id}`)}
-                        className="font-mono font-bold text-[var(--primary)] hover:underline"
-                      >
+          <>
+            {/* Mobile Card List */}
+            <div className="divide-y divide-[var(--line-subtle)] sm:hidden">
+              {recentBills.slice(0, 8).map(bill => (
+                <div
+                  key={bill.id}
+                  onClick={() => navigate(`/invoice/${bill.id}`)}
+                  className="flex items-center justify-between p-3 transition active:bg-[var(--surface-elevated)]"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-[#1E3A5F] dark:text-slate-200">
                         {bill.invoice_number}
-                      </button>
-                    </td>
-                    <td>
-                      <span className="font-medium text-[var(--ink)]">
-                        {bill.customer_name || 'Walk-in Customer'}
                       </span>
-                    </td>
-                    <td className="text-xs text-[var(--muted)] font-mono">
-                      {formatDateShort(bill.created_at)}
-                    </td>
-                    <td className="num-col font-bold text-[var(--ink)] font-mono">
-                      {fmtCurrency(bill.grand_total)}
-                    </td>
-                    <td>
                       <Badge status={bill.payment_status || bill.status} />
-                    </td>
-                    <td className="text-right">
-                      <button
-                        onClick={() => navigate(`/invoice/${bill.id}`)}
-                        className="btn-secondary btn-sm flex items-center gap-1 text-xs inline-flex"
-                        title="View Invoice"
-                      >
-                        <Eye size={12} />
-                        <span>View</span>
-                      </button>
-                    </td>
+                    </div>
+                    <p className="mt-1 truncate text-xs font-semibold text-[var(--ink)]">
+                      {bill.customer_name || 'Walk-in Customer'}
+                    </p>
+                    <p className="mt-0.5 font-mono text-[10px] text-[var(--muted)]">
+                      {formatDateShort(bill.created_at)}
+                    </p>
+                  </div>
+
+                  <div className="ml-3 shrink-0 text-right">
+                    <p className="font-mono text-sm font-bold text-[var(--ink)]">
+                      {fmtCurrency(bill.grand_total)}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={e => {
+                        e.stopPropagation()
+                        navigate(`/invoice/${bill.id}`)
+                      }}
+                      className="mt-1 inline-flex min-h-[32px] items-center gap-1 rounded border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ink-secondary)]"
+                    >
+                      <Eye size={11} />
+                      <span>View</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Invoice #</th>
+                    <th>Customer</th>
+                    <th>Date</th>
+                    <th className="num-col">Grand Total</th>
+                    <th>Status</th>
+                    <th className="text-right">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {recentBills.slice(0, 8).map(bill => (
+                    <tr
+                      key={bill.id}
+                      className={getInvoiceRowClass(bill.payment_status || bill.status)}
+                    >
+                      <td>
+                        <button
+                          onClick={() => navigate(`/invoice/${bill.id}`)}
+                          className="font-mono font-bold text-[var(--primary)] hover:underline"
+                        >
+                          {bill.invoice_number}
+                        </button>
+                      </td>
+                      <td>
+                        <span className="font-medium text-[var(--ink)]">
+                          {bill.customer_name || 'Walk-in Customer'}
+                        </span>
+                      </td>
+                      <td className="text-xs text-[var(--muted)] font-mono">
+                        {formatDateShort(bill.created_at)}
+                      </td>
+                      <td className="num-col font-bold text-[var(--ink)] font-mono">
+                        {fmtCurrency(bill.grand_total)}
+                      </td>
+                      <td>
+                        <Badge status={bill.payment_status || bill.status} />
+                      </td>
+                      <td className="text-right">
+                        <button
+                          onClick={() => navigate(`/invoice/${bill.id}`)}
+                          className="btn-secondary btn-sm flex items-center gap-1 text-xs inline-flex"
+                          title="View Invoice"
+                        >
+                          <Eye size={12} />
+                          <span>View</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         ) : (
           <EmptyState
             icon={FileText}

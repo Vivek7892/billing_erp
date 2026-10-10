@@ -700,7 +700,7 @@ export default function PaymentReconciliation() {
               type="button"
               onClick={exportCSV}
               disabled={loading || !visibleRows.length}
-              className="btn-secondary inline-flex w-full items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold shadow-xs sm:w-auto"
+              className="btn-secondary min-h-[42px] inline-flex w-full items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold shadow-xs sm:w-auto transition"
             >
               <Download size={14} />
               Export CSV
@@ -710,7 +710,7 @@ export default function PaymentReconciliation() {
               type="button"
               onClick={load}
               disabled={loading}
-              className="btn-primary inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold shadow-xs sm:w-auto"
+              className="btn-primary min-h-[42px] inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold shadow-xs sm:w-auto transition"
             >
               <RefreshCw
                 size={14}
@@ -868,7 +868,7 @@ export default function PaymentReconciliation() {
               <button
                 type="button"
                 onClick={() => setShowFilters((value) => !value)}
-                className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-md border px-3 text-xs font-semibold transition-colors ${
+                className={`inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg border px-3.5 text-xs font-semibold shadow-xs transition-colors ${
                   showFilters
                     ? 'border-[var(--primary)] bg-[var(--primary)]/10 text-[var(--primary)]'
                     : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)]'
@@ -1243,9 +1243,9 @@ export default function PaymentReconciliation() {
                       <button
                         type="button"
                         onClick={() => setSelectedRow(row)}
-                        className="inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
+                        className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink-secondary)] shadow-xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
                       >
-                        <Eye size={12} />
+                        <Eye size={13} />
                         View Details
                       </button>
                     </div>

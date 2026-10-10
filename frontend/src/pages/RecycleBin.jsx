@@ -89,7 +89,7 @@ export default function RecycleBin() {
             type="button"
             onClick={fetchData}
             disabled={loading}
-            className="recycle-tab btn-base flex w-full items-center justify-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-3 text-xs font-semibold text-sky-700 hover:bg-sky-100 disabled:opacity-60 dark:border-sky-700 dark:bg-sky-950/50 dark:text-sky-200 dark:hover:bg-sky-900/60 sm:w-auto"
+            className="recycle-tab min-h-[42px] btn-base flex w-full items-center justify-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-3 text-xs font-semibold text-sky-700 hover:bg-sky-100 disabled:opacity-60 dark:border-sky-700 dark:bg-sky-950/50 dark:text-sky-200 dark:hover:bg-sky-900/60 sm:w-auto shadow-xs transition"
           >
             <RotateCcw size={14} className={loading ? 'animate-spin' : ''} />
             Refresh register
@@ -120,7 +120,7 @@ export default function RecycleBin() {
       <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-sm no-scrollbar">
         <button
           onClick={() => setTab('invoices')}
-          className={`recycle-tab flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors ${
+          className={`recycle-tab flex min-h-[40px] items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold whitespace-nowrap transition-colors ${
             tab === 'invoices'
               ? 'bg-rose-100 text-rose-800 shadow-sm dark:bg-rose-950/60 dark:text-rose-200'
               : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
@@ -135,7 +135,7 @@ export default function RecycleBin() {
 
         <button
           onClick={() => setTab('products')}
-          className={`recycle-tab flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors ${
+          className={`recycle-tab flex min-h-[40px] items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold whitespace-nowrap transition-colors ${
             tab === 'products'
               ? 'bg-emerald-100 text-emerald-800 shadow-sm dark:bg-emerald-950/60 dark:text-emerald-200'
               : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
@@ -150,7 +150,7 @@ export default function RecycleBin() {
 
         <button
           onClick={() => setTab('purchases')}
-          className={`recycle-tab flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs font-semibold whitespace-nowrap transition-colors ${
+          className={`recycle-tab flex min-h-[40px] items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold whitespace-nowrap transition-colors ${
             tab === 'purchases'
               ? 'bg-amber-100 text-amber-800 shadow-sm dark:bg-amber-950/60 dark:text-amber-200'
               : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
@@ -203,7 +203,7 @@ export default function RecycleBin() {
                   )}
                   <div className="pt-1 flex items-center justify-between">
                     <span className="text-[11px] text-[var(--muted)]">By: {inv.cancelled_by__username || 'System'}</span>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semiboldtext-rose-300 border border-rose-800/50">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800/50 bg-rose-50 dark:bg-rose-950/40">
                       Permanent Reversal (Immutable)
                     </span>
                   </div>
@@ -303,9 +303,9 @@ export default function RecycleBin() {
                   <div className="pt-1 flex justify-end">
                     <button
                       onClick={() => setRestoreModal({ open: true, item: p, reason: '' })}
-                      className="btn-primary btn-sm inline-flex items-center gap-1 text-[11px] px-3 py-1 rounded-lg"
+                      className="btn-primary min-h-[36px] inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg shadow-xs transition"
                     >
-                      <RotateCcw size={12} /> Restore Item
+                      <RotateCcw size={13} /> Restore Item
                     </button>
                   </div>
                 </div>

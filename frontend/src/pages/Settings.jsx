@@ -26,6 +26,8 @@ import {
   UpiBrandStrip,
   generatePrintStandHtml,
   getUpiBrandRibbonSvg,
+  loadUpiBrandLogos,
+  drawTabletopStandeeCanvas,
 } from '../components/UpiLogos'
 
 function FormField({ label, children, full, hint }) {
@@ -290,17 +292,8 @@ function StoreQrStandSettingsCard({ s }) {
         qrImg.src = svgUrl
       })
 
-      // 2. Load composite brand ribbon SVG (Google Pay, PhonePe, Paytm, UPI - no borders/cards)
-      const ribbonSvg = getUpiBrandRibbonSvg({ width: 440, height: 26 })
-      const ribbonBlob = new Blob([ribbonSvg], { type: 'image/svg+xml;charset=utf-8' })
-      const ribbonUrl = URL.createObjectURL(ribbonBlob)
-      const ribbonImg = new Image()
-      ribbonImg.crossOrigin = 'anonymous'
-      await new Promise((resolve) => {
-        ribbonImg.onload = resolve
-        ribbonImg.onerror = resolve
-        ribbonImg.src = ribbonUrl
-      })
+      // 2. Load official brand logos (Google Pay, PhonePe, Paytm, UPI)
+      const brandLogos = await loadUpiBrandLogos()
 
       // 3. Optional store logo image
       let storeLogoImg = null
@@ -314,141 +307,27 @@ function StoreQrStandSettingsCard({ s }) {
         })
       }
 
-      // 4. Executive Tabletop Standee Canvas (640 x 900 px)
-      const canvasWidth = 640
-      const canvasHeight = 900
+      // 4. Draw exact rendered preview onto canvas (preserving dimensions, colors, logo, and layout)
       const canvas = document.createElement('canvas')
-      canvas.width = canvasWidth
-      canvas.height = canvasHeight
-      const ctx = canvas.getContext('2d')
+      drawTabletopStandeeCanvas({
+        canvas,
+        merchantName,
+        upiId,
+        isFixed,
+        numAmt,
+        qrImg,
+        brandLogos,
+        storeLogoImg,
+        footerText: 'Accepted Here: GPay • PhonePe • Paytm • UPI',
+      })
 
-      // White background
-      ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, canvasWidth, canvasHeight)
-
-      // Outer Standee Border
-      ctx.strokeStyle = '#0F2744'
-      ctx.lineWidth = 4
-      ctx.strokeRect(10, 10, canvasWidth - 20, canvasHeight - 20)
-
-      // Top Navy Header Banner
-      const grad = ctx.createLinearGradient(0, 12, 0, 126)
-      grad.addColorStop(0, '#0B2240')
-      grad.addColorStop(1, '#153860')
-      ctx.fillStyle = grad
-      ctx.fillRect(12, 12, canvasWidth - 24, 114)
-
-      if (storeLogoImg && storeLogoImg.width) {
-        ctx.fillStyle = '#ffffff'
-        ctx.fillRect(canvasWidth / 2 - 22, 20, 44, 44)
-        ctx.drawImage(storeLogoImg, canvasWidth / 2 - 20, 22, 40, 40)
-        ctx.fillStyle = '#ffffff'
-        ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(merchantName, canvasWidth / 2, 78)
-        ctx.fillStyle = '#38BDF8'
-        ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        ctx.fillText('★ SCAN & PAY WITH ANY UPI APP ★', canvasWidth / 2, 102)
-      } else {
-        ctx.fillStyle = '#ffffff'
-        ctx.font = 'bold 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(merchantName, canvasWidth / 2, 52)
-        ctx.fillStyle = '#38BDF8'
-        ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        ctx.fillText('★ SCAN & PAY WITH ANY UPI APP ★', canvasWidth / 2, 88)
-      }
-
-      // Brand strip bar with pure official logos (NO borders, NO pill cards, NO text names)
-      const ribY = 126
-      const ribH = 54
-      ctx.fillStyle = '#F8FAFC'
-      ctx.fillRect(12, ribY, canvasWidth - 24, ribH)
-      ctx.strokeStyle = '#E2E8F0'
-      ctx.lineWidth = 1.5
-      ctx.strokeRect(12, ribY, canvasWidth - 24, ribH)
-
-      ctx.fillStyle = '#64748B'
-      ctx.font = 'bold 9.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.fillText('ACCEPTED PAYMENT METHODS', canvasWidth / 2, ribY + 14)
-
-      if (ribbonImg.width) {
-        const rW = 420
-        const rH = 26
-        ctx.drawImage(ribbonImg, (canvasWidth - rW) / 2, ribY + 22, rW, rH)
-      }
-      URL.revokeObjectURL(ribbonUrl)
-
-      // Centered QR Code with Quiet Zone & Frame
-      const qrSize = 390
-      const qrX = (canvasWidth - qrSize) / 2
-      const qrY = ribY + ribH + 24
-
-      ctx.fillStyle = '#ffffff'
-      ctx.fillRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24)
-      ctx.strokeStyle = '#0F2744'
-      ctx.lineWidth = 2.5
-      ctx.strokeRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24)
-
-      ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize)
+      brandLogos.cleanup()
       URL.revokeObjectURL(svgUrl)
-
-      // Amount Box
-      const amtY = qrY + qrSize + 30
-      const amtH = 92
-      ctx.fillStyle = isFixed ? '#EFF6FF' : '#F0FDF4'
-      ctx.fillRect(28, amtY, canvasWidth - 56, amtH)
-      ctx.strokeStyle = isFixed ? '#BFDBFE' : '#BBF7D0'
-      ctx.lineWidth = 1.5
-      ctx.strokeRect(28, amtY, canvasWidth - 56, amtH)
-
-      ctx.fillStyle = isFixed ? '#1E40AF' : '#15803D'
-      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.fillText(isFixed ? 'AMOUNT PAYABLE' : 'PAYMENT COLLECTION', canvasWidth / 2, amtY + 22)
-
-      ctx.fillStyle = isFixed ? '#1E3A5F' : '#166534'
-      ctx.font = isFixed
-        ? '900 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        : '800 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.fillText(
-        isFixed
-          ? `₹ ${numAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-          : 'Scan & Enter Any Amount',
-        canvasWidth / 2,
-        amtY + 56
-      )
-
-      ctx.fillStyle = '#64748B'
-      ctx.font = '600 10.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.fillText(
-        isFixed ? 'Zero Extra Fee • Instant Bank Settlement' : 'Zero Extra Fee • Instant Bank Settlement',
-        canvasWidth / 2,
-        amtY + 79
-      )
-
-      // Merchant UPI VPA
-      const vpaY = amtY + amtH + 18
-      ctx.fillStyle = '#059669'
-      ctx.font = 'bold 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.fillText('✔ Verified Merchant UPI VPA', canvasWidth / 2, vpaY)
-
-      ctx.fillStyle = '#0F172A'
-      ctx.font = 'bold 15px "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace'
-      ctx.fillText(upiId, canvasWidth / 2, vpaY + 24)
-
-      // Standee Base Footer
-      ctx.fillStyle = '#0B2240'
-      ctx.fillRect(12, canvasHeight - 44, canvasWidth - 24, 32)
-      ctx.fillStyle = '#94A3B8'
-      ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-      ctx.fillText('Bharat QR  •  Powered by NPCI UPI  •  Works with All Indian Banks', canvasWidth / 2, canvasHeight - 28)
 
       const safeName = merchantName.replace(/[^a-zA-Z0-9_-]/g, '_')
       const filename = isFixed
         ? `UPI-QR-Stand-${safeName}-${numAmt}.png`
-        : `UPI-QR-Stand-${safeName}-AnyAmount.png`
+        : `UPI-QR-Stand-${safeName}.png`
 
       canvas.toBlob(blob => {
         if (!blob) {
@@ -547,21 +426,21 @@ function StoreQrStandSettingsCard({ s }) {
             <label className="block mb-1.5 text-xs font-semibold tracking-wide text-[var(--ink-secondary)]">
               Stand QR Amount Mode
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <button
                 type="button"
                 onClick={() => setStandMode('any')}
-                className={`px-3 py-2.5 rounded-lg border text-xs font-bold text-left transition-all ${
+                className={`px-3.5 py-3 rounded-xl border text-xs font-bold text-left transition-all ${
                   standMode === 'any'
-                    ? 'border-[#1E3A5F] bg-[#1E3A5F]/5 text-[#1E3A5F] dark:border-blue-400 dark:bg-blue-950/30 dark:text-blue-300 ring-1 ring-[#1E3A5F]'
-                    : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+                    ? 'border-[#1E3A5F] bg-blue-50/90 text-[#1E3A5F] dark:border-blue-400 dark:bg-blue-950/40 dark:text-blue-300 ring-2 ring-[#1E3A5F]/20'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span>Any Amount (Open QR)</span>
                   {standMode === 'any' && <Check size={14} className="text-[#1E3A5F] dark:text-blue-400" />}
                 </div>
-                <p className="mt-1 text-[11px] font-normal text-[var(--muted)]">
+                <p className="mt-1 text-[11px] font-normal text-slate-500 dark:text-slate-400">
                   Customer enters any amount on their phone
                 </p>
               </button>
@@ -569,17 +448,17 @@ function StoreQrStandSettingsCard({ s }) {
               <button
                 type="button"
                 onClick={() => setStandMode('fixed')}
-                className={`px-3 py-2.5 rounded-lg border text-xs font-bold text-left transition-all ${
+                className={`px-3.5 py-3 rounded-xl border text-xs font-bold text-left transition-all ${
                   standMode === 'fixed'
-                    ? 'border-[#1E3A5F] bg-[#1E3A5F]/5 text-[#1E3A5F] dark:border-blue-400 dark:bg-blue-950/30 dark:text-blue-300 ring-1 ring-[#1E3A5F]'
-                    : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+                    ? 'border-[#1E3A5F] bg-blue-50/90 text-[#1E3A5F] dark:border-blue-400 dark:bg-blue-950/40 dark:text-blue-300 ring-2 ring-[#1E3A5F]/20'
+                    : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-300'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <span>Fixed Amount (₹)</span>
                   {standMode === 'fixed' && <Check size={14} className="text-[#1E3A5F] dark:text-blue-400" />}
                 </div>
-                <p className="mt-1 text-[11px] font-normal text-[var(--muted)]">
+                <p className="mt-1 text-[11px] font-normal text-slate-500 dark:text-slate-400">
                   Preset amount encoded into QR code
                 </p>
               </button>
@@ -592,24 +471,23 @@ function StoreQrStandSettingsCard({ s }) {
                 Fixed Payment Amount (₹)
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-[var(--muted)]">₹</span>
                 <input
                   type="number"
                   min="1"
                   step="0.01"
                   value={standAmount}
                   onChange={e => setStandAmount(e.target.value)}
-                  placeholder="e.g. 100"
-                  className="input w-full h-11 pl-7 text-xs sm:text-sm font-bold"
+                  placeholder="  e.g. 100"
+                  className="input w-full h-11 pl-7 text-xs sm:text-sm font-bold tracking-wide text-[var(--ink)] placeholder:text-[var(--muted-light)]"
                 />
               </div>
-              <p className="mt-1 text-[11px] text-[var(--muted-light)]">
+              <p className="mt-1 text-[11px] text-[var(--muted-light)] leading-normal ">
                 Customers will be automatically prompted to pay exactly this amount upon scanning.
               </p>
             </div>
           )}
 
-          <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] p-3 space-y-2 text-xs">
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-3 space-y-2 text-xs">
             <div className="flex items-center justify-between">
               <span className="text-[var(--muted)]">Active Merchant:</span>
               <span className="font-bold text-[var(--ink)]">{merchantName}</span>
@@ -625,12 +503,12 @@ function StoreQrStandSettingsCard({ s }) {
             )}
           </div>
 
-          <div className="flex flex-wrap gap-2 pt-2">
+          <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
             <button
               type="button"
               onClick={downloadQrStandPng}
               disabled={!upiId || standDownloading}
-              className="flex-1 min-w-[150px] inline-flex items-center justify-center gap-2 h-11 px-4 rounded-lg bg-[#1E3A5F] text-white text-xs font-bold shadow-sm hover:bg-[#162F4D] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="w-full sm:flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 px-4 rounded-xl bg-[#1E3A5F] text-white text-xs font-bold shadow-sm hover:bg-[#162F4D] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               <Download size={15} />
               <span>{standDownloading ? 'Generating PNG…' : 'Download QR Stand (PNG)'}</span>
@@ -639,7 +517,7 @@ function StoreQrStandSettingsCard({ s }) {
               type="button"
               onClick={printQrStand}
               disabled={!upiId}
-              className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-xs font-bold shadow-sm hover:bg-[var(--surface-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center gap-2 px-4 rounded-xl border border-slate-300 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 text-xs font-bold shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               <Printer size={15} />
               <span>Print Standee</span>
@@ -666,12 +544,12 @@ function StoreQrStandSettingsCard({ s }) {
             </div>
 
             {/* Official Brand Logos Strip */}
-            <div className="bg-slate-50 border-b border-slate-200 py-1.5 px-2">
-              <UpiBrandStrip size={11} className="gap-1" />
+            <div className="bg-white border-b border-slate-200 py-1.5 px-2">
+              <UpiBrandStrip height={16} className="gap-2.5" />
             </div>
 
             {/* Centered QR Frame */}
-            <div className="p-3 flex items-center justify-center bg-slate-50/50">
+            <div className="p-3 flex items-center justify-center bg-white">
               <div ref={standQrRef} className="p-2 bg-white rounded-lg border-2 border-slate-900 shadow-sm inline-block">
                 {upiId ? (
                   <QRCodeSVG
@@ -702,16 +580,21 @@ function StoreQrStandSettingsCard({ s }) {
             </div>
 
             {/* Amount Box */}
-            <div className="border-t border-b border-slate-200 bg-slate-50/80 py-2 px-3">
-              <div className="text-[9.5px] font-bold uppercase text-slate-500 tracking-wider">
-                {isFixed ? 'Amount Payable' : 'Payment Collection'}
+            {isFixed && (
+              <div className="border-t border-b border-blue-200 bg-[#EFF6FF] py-2 px-3">
+                <div className="text-[9.5px] font-bold uppercase text-blue-700 tracking-wider">
+                  Amount Payable
+                </div>
+
+                <div className="text-base font-black text-[#1E3A5F] tracking-tight">
+                  ₹{" "}
+                  {numAmt.toLocaleString("en-IN", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </div>
               </div>
-              <div className="text-base font-black text-[#1E3A5F] tracking-tight">
-                {isFixed
-                  ? `₹ ${numAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                  : 'Scan & Enter Any Amount'}
-              </div>
-            </div>
+            )}
 
             {/* Merchant UPI ID */}
             <div className="py-2 px-2 bg-white">
@@ -721,10 +604,10 @@ function StoreQrStandSettingsCard({ s }) {
 
             {/* Standee Base Footer */}
             <div className="bg-slate-900 text-slate-400 text-[8.5px] font-semibold py-1.5 px-2">
-              Accepted Here: GPay • PhonePe • Paytm • BHIM
+              Accepted Here: GPay • PhonePe • Paytm • UPI
             </div>
           </div>
-          <span className="text-[10.5px] text-[var(--muted)] mt-2 font-medium">Tabletop Acrylic Stand Preview</span>
+          
         </div>
       </div>
     </div>
@@ -862,21 +745,21 @@ export default function Settings() {
       {/* Grid: Formal Sidebar + Form Canvas */}
       <div className="grid gap-5 lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start">
         {/* Navigation Sidebar */}
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 shadow-none lg:sticky lg:top-4">
-          <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-1">
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 shadow-none lg:sticky lg:top-4 overflow-hidden">
+          <div className="flex gap-1.5 overflow-x-auto pb-1 lg:pb-0 lg:flex-col no-scrollbar">
             {TABS.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => setTab(id)}
-                className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-semibold transition-all ${
+                className={`flex items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-semibold whitespace-nowrap shrink-0 lg:shrink lg:whitespace-normal transition-all min-h-[40px] ${
                   tab === id
                     ? 'bg-[#1E3A5F] text-white shadow-xs'
                     : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
                 }`}
               >
                 <Icon size={16} className="shrink-0" />
-                <span className="truncate">{label}</span>
+                <span>{label}</span>
               </button>
             ))}
           </div>

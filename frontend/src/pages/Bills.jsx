@@ -767,6 +767,9 @@ function InvoiceModal({
 
 function MobileInvoiceCard({ bill, shopName, onView, onRefresh }) {
   const navigate = useNavigate()
+  const [shareOpen, setShareOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
+
   return (
     <article
       className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none transition active:bg-[var(--surface-elevated)]"
@@ -797,7 +800,7 @@ function MobileInvoiceCard({ bill, shopName, onView, onRefresh }) {
         </div>
 
         <div className="shrink-0 text-right">
-          <p className="font-mono text-base font-semibold tabular-nums text-[#0F172A]">
+          <p className="font-mono text-base font-semibold tabular-nums text-[#0F172A] dark:text-slate-100">
             {fmt(bill.grand_total)}
           </p>
           <div className="mt-1 flex justify-end">
@@ -853,16 +856,101 @@ function MobileInvoiceCard({ bill, shopName, onView, onRefresh }) {
         </p>
       )}
 
+      {/* 1-Tap Mobile Action Buttons */}
       <div
-        className="mt-3 flex justify-end border-t border-[var(--line-subtle)] pt-2.5"
+        className="mt-3 grid grid-cols-4 gap-1.5 border-t border-[var(--line-subtle)] pt-2.5"
         onClick={e => e.stopPropagation()}
       >
-        <InvoiceActions
-          bill={bill}
-          shopName={shopName}
-          onView={onView}
-          onRefresh={onRefresh}
-        />
+        <button
+          type="button"
+          onClick={() => navigate(`/invoice/${bill.id}`)}
+          className="inline-flex min-h-[38px] items-center justify-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface)] text-[11px] font-semibold text-[var(--ink)] shadow-xs transition hover:bg-[var(--surface-elevated)]"
+        >
+          <Eye size={13} />
+          <span>View</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => openPdf(bill.id, false)}
+          className="inline-flex min-h-[38px] items-center justify-center gap-1 rounded-md bg-[#1E3A5F] text-[11px] font-semibold text-white shadow-xs transition hover:bg-[#162a45]"
+        >
+          <Printer size={13} />
+          <span>Print</span>
+        </button>
+
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              setShareOpen(v => !v)
+              setMoreOpen(false)
+            }}
+            className="inline-flex min-h-[38px] w-full items-center justify-center gap-1 rounded-md border border-emerald-300 bg-emerald-50 text-[11px] font-semibold text-emerald-800 shadow-xs transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
+          >
+            <Share2 size={13} />
+            <span>Share</span>
+          </button>
+          {shareOpen && (
+            <ShareMenu
+              bill={bill}
+              shopName={shopName}
+              onClose={() => setShareOpen(false)}
+            />
+          )}
+        </div>
+
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              setMoreOpen(v => !v)
+              setShareOpen(false)
+            }}
+            className="inline-flex min-h-[38px] w-full items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] text-[11px] font-semibold text-[var(--muted)] shadow-xs transition hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]"
+            title="More actions"
+          >
+            <MoreHorizontal size={16} />
+          </button>
+          {moreOpen && (
+            <div className="absolute right-0 bottom-11 z-50 w-44 rounded-md border border-[var(--line)] bg-[var(--surface)] p-1 shadow-lg">
+              <button
+                type="button"
+                onClick={() => {
+                  setMoreOpen(false)
+                  openPdf(bill.id, true)
+                }}
+                className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
+              >
+                <Printer size={13} /> Thermal Print
+              </button>
+              {(bill.status === 'completed' || bill.status === 'paid') && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreOpen(false)
+                      onRefresh('cancel', bill.id)
+                    }}
+                    className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                  >
+                    <Ban size={13} /> Cancel Invoice
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreOpen(false)
+                      onRefresh('refund', bill.id)
+                    }}
+                    className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-xs text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                  >
+                    <RefundIcon size={13} /> Refund Sale
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </article>
   )
@@ -893,6 +981,14 @@ export default function Bills() {
   const [shopSettings, setShopSettings] = useState({})
 
   const [filterOpen, setFilterOpen] = useState(false)
+
+  const draftCount = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem('pos_drafts') || '[]').length
+    } catch {
+      return 0
+    }
+  }, [])
 
   /* -------------------------------------------------------
      SHOP SETTINGS
@@ -946,6 +1042,18 @@ export default function Bills() {
     searchDebounce.current = setTimeout(() => load(page, search), search ? 400 : 0)
     return () => clearTimeout(searchDebounce.current)
   }, [search, page, load])
+
+  // Live synchronization: reload when invoice is created anywhere in the app or window regains focus
+  useEffect(() => {
+    const handleInvoiceCreated = () => load(1, search)
+    const handleWindowFocus = () => load(page, search)
+    window.addEventListener('pos:invoice-created', handleInvoiceCreated)
+    window.addEventListener('focus', handleWindowFocus)
+    return () => {
+      window.removeEventListener('pos:invoice-created', handleInvoiceCreated)
+      window.removeEventListener('focus', handleWindowFocus)
+    }
+  }, [load, page, search])
 
   /* -------------------------------------------------------
      FILTERED BILLS
@@ -1050,9 +1158,9 @@ export default function Bills() {
             HEADER
         ================================================= */}
 
-        <div className=" flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className=" mb-1 flex items-center gap-2 text-[var(--muted-light)]">
+            <div className="mb-1 flex items-center gap-2 text-[var(--muted-light)]">
               <Receipt size={13} />
               <span>Sales</span>
               <span>/</span>
@@ -1062,21 +1170,57 @@ export default function Bills() {
             </div>
 
             <h1 className="text-xl font-bold tracking-tight text-[var(--ink)] sm:text-2xl">
-              Billing & Invoices
+              Billing &amp; Invoices
             </h1>
 
-            <p className="mt-1 text-xs text-[var(--muted)] sm:text-sm">
+            <p className="mt-0.5 text-xs text-[var(--muted)] sm:text-sm">
               Manage sales, payments and customer invoices.
             </p>
           </div>
 
-          <button
-            onClick={() => navigate('/billing/new')}
-            className="btn-primary inline-flex w-full items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold text-white shadow-none sm:w-auto"
-          >
-            <Plus size={16} />
-            New Bill
-          </button>
+          <div className="grid w-full grid-cols-4 gap-1.5 sm:flex sm:w-auto sm:items-center sm:gap-2">
+            <button
+              type="button"
+              onClick={() => load(page, search)}
+              disabled={loading}
+              className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-xs font-semibold text-[var(--ink-secondary)] shadow-none transition hover:bg-[var(--surface-elevated)] active:scale-95"
+              title="Refresh bills table"
+            >
+              <RefreshCw size={14} className={loading ? 'animate-spin text-[#1E3A5F]' : ''} />
+              <span className="hidden xs:inline">Refresh</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/billing/drafts')}
+              className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-xs font-semibold text-[var(--ink-secondary)] shadow-none transition hover:bg-[var(--surface-elevated)]"
+              title="Parked Bills"
+            >
+              <Clock3 size={14} />
+              <span>Parked</span>
+              {draftCount > 0 && (
+                <span className="rounded-full bg-[#1E3A5F] px-1.5 py-0.2 text-[10px] font-bold text-white">
+                  {draftCount}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/sales/payments')}
+              className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-xs font-semibold text-[var(--ink-secondary)] shadow-none transition hover:bg-[var(--surface-elevated)]"
+              title="Payment Sheet"
+            >
+              <CreditCard size={14} />
+              <span>Payments</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/billing/new')}
+              className="btn-primary inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-xs font-bold text-white shadow-none transition"
+            >
+              <Plus size={15} />
+              <span>New Bill</span>
+            </button>
+          </div>
         </div>
 
         {/* =================================================
