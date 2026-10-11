@@ -18,6 +18,7 @@ import {
   Check,
   Download,
   QrCode,
+  ExternalLink,
 } from 'lucide-react'
 import InvoiceDocument, { isTrue } from '../components/InvoiceDocument'
 import { QRCodeSVG } from 'qrcode.react'
@@ -1015,6 +1016,19 @@ export default function Settings() {
                     placeholder="Thank you for shopping with us! Visit again."
                   />
                 </FormField>
+
+                <div className="sm:col-span-2 pt-2 border-t border-[var(--line-subtle)] flex items-center justify-between">
+                  <span className="text-xs text-[var(--muted)]">Platform Terms &amp; Conditions:</span>
+                  <a
+                    href="/terms-and-conditions"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1E3A5F] dark:text-blue-400 hover:underline"
+                  >
+                    <span>View ShopEase Terms &amp; Conditions</span>
+                    <ExternalLink size={12} />
+                  </a>
+                </div>
               </SectionCard>
 
               <SectionCard
@@ -1413,17 +1427,7 @@ export default function Settings() {
           ========================================================= */}
           {tab === 'preview' && (
             <div className="space-y-4">
-              <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 text-xs text-[var(--muted)] flex items-center justify-between">
-                <span>
-                  Interactive preview reflecting your current profile,
-                  visibility settings, and layout options.
-                </span>
-                <span className="font-semibold text-[#1E3A5F] dark:text-slate-200">
-                  Real-time Simulation
-                </span>
-              </div>
-
-              <InvoiceDocument
+             <InvoiceDocument
                 invoice={{
                   invoice_number: `${s.invoice_prefix || 'INV-'}${s.invoice_start_number || '1001'}`,
                   created_at: new Date().toISOString(),

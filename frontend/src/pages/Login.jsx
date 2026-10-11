@@ -1,5 +1,5 @@
 import { useId, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import { useTheme } from '../ThemeContext'
 import toast from 'react-hot-toast'
@@ -243,9 +243,18 @@ export default function Login() {
                 © {new Date().getFullYear()} DreamWithTech
               </span>
 
-              <span className="text-xs text-[var(--muted-light)]">
-                ERP · Billing · Business Management
-              </span>
+              <div className="flex items-center gap-3">
+                <Link
+                  to="/terms-and-conditions"
+                  className="text-xs font-medium text-[var(--muted)] hover:text-[#1E3A5F] dark:hover:text-slate-200 hover:underline transition-colors"
+                >
+                  Terms &amp; Conditions
+                </Link>
+                <span className="text-xs text-[var(--muted-light)]">·</span>
+                <span className="text-xs text-[var(--muted-light)]">
+                  ERP · Billing
+                </span>
+              </div>
 
             </div>
 
@@ -634,19 +643,26 @@ export default function Login() {
             <div className="
               mt-8
               flex
+              flex-col
               items-center
               justify-center
               gap-2
               text-xs
               text-[var(--muted-light)]
             ">
+              <div className="flex items-center gap-2">
+                <LockIcon small />
+                <span>
+                  Secure ERP access
+                </span>
+              </div>
 
-              <LockIcon small />
-
-              <span>
-                Secure ERP access
-              </span>
-
+              <Link
+                to="/terms-and-conditions"
+                className="mt-1 text-xs text-[var(--muted)] hover:text-[#1E3A5F] dark:hover:text-slate-200 hover:underline transition-colors"
+              >
+                Terms &amp; Conditions
+              </Link>
             </div>
 
 

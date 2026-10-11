@@ -16,6 +16,7 @@ import {
   XCircle,
   RotateCcw,
   Search,
+  X,
   MessageCircle,
   Mail,
   Share2,
@@ -1293,14 +1294,13 @@ export default function Bills() {
 
           <div className="flex w-full items-center gap-2">
             {/* Search */}
-            <div className="relative min-w-0 flex-1">
-              <Search
-                size={16}
-                className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted-light)]"
-              />
+            <div className="group relative flex min-w-0 flex-1 items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
+                <Search size={14} strokeWidth={2.2} />
+              </div>
 
               <input
-                className="w-full rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] py-2 pl-10 pr-3 text-sm outline-none transition placeholder:text-[var(--muted-light)] focus:border-[#1E3A5F] focus:bg-[var(--surface)] focus:ring-1 focus:ring-[#1E3A5F]"
+                className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
                 placeholder="Search invoice, customer or phone..."
                 value={search}
                 onChange={e => {
@@ -1308,6 +1308,25 @@ export default function Bills() {
                   setPage(1)
                 }}
               />
+
+              {search ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch('')
+                    setPage(1)
+                  }}
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
+                  aria-label="Clear search"
+                  title="Clear search"
+                >
+                  <X size={13} strokeWidth={2.5} />
+                </button>
+              ) : (
+                <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
+                  Ctrl+K
+                </kbd>
+              )}
             </div>
 
             {/* Filter */}
@@ -1318,10 +1337,10 @@ export default function Bills() {
                   e.stopPropagation()
                   setFilterOpen(v => !v)
                 }}
-                className={`inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border px-3 text-xs font-semibold transition ${
+                className={`inline-flex min-h-[42px] items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-semibold shadow-xs transition ${
                   statusFilter
                     ? 'border-[#D7DEE7] bg-slate-100 text-[#1E3A5F] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
-                    : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]'
+                    : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:border-slate-300'
                 }`}
                 title="Filter invoices"
                 aria-label="Filter invoices"

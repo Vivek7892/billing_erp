@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   ArrowUpRight,
   BarChart3,
+  CalendarDays,
   CheckCircle2,
   Clock3,
   CreditCard,
@@ -121,6 +122,12 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
+  const [currentTime, setCurrentTime] = useState(new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -245,42 +252,57 @@ export default function Dashboard() {
   return (
     <div className="dashboard-page min-w-0 space-y-6 pb-6">
       {/* -------------------------------------------------------------
-          TOP BAR: Store Name, Current Date, Action Controls
+          TOP BAR: Store Name, Live IST Clock, Action Controls
       -------------------------------------------------------------- */}
-      <header className="dashboard-header border-b border-[var(--line)] bg-[var(--surface)] pb-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <header className="dashboard-header rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4 shadow-2xs">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3.5">
           <div className="min-w-0">
-            
-            <h1 className="mt-0.5 truncate text-lg sm:text-xl font-bold text-[var(--ink)]">
+           
+
+            <h1 className="mt-1.5 truncate text-lg sm:text-2xl font-black tracking-tight text-[var(--ink)]">
               {shopName || 'Dreamwithtech ERP'}
             </h1>
-            <p className="mt-1 flex items-center gap-1.5 text-xs text-[var(--muted)]">
-              <Clock3 size={13} className="shrink-0" />
-              <span>
-                {new Date().toLocaleDateString('en-IN', {
+
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
+              <span className="inline-flex items-center gap-1 font-medium">
+                <CalendarDays size={13} className="text-[var(--muted)] shrink-0" />
+                {currentTime.toLocaleDateString('en-IN', {
                   weekday: 'short',
-                  day: 'numeric',
+                  day: '2-digit',
                   month: 'short',
                   year: 'numeric',
                 })}
               </span>
-            </p>
+              <span className="text-[var(--line-strong)]">·</span>
+              <span className="inline-flex items-center gap-1 font-mono font-semibold text-[var(--ink)]">
+                <Clock3 size={13} className="text-[#1E3A5F] dark:text-sky-400 shrink-0" />
+                {currentTime.toLocaleTimeString('en-IN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                  hour12: true,
+                })}
+              </span>
+              <span className="text-[10px] text-[var(--muted)] font-medium bg-[var(--surface-elevated)] px-1.5 py-0.5 rounded border border-[var(--line)]">
+                IST
+              </span>
+            </div>
           </div>
 
-          <div className="grid w-full grid-cols-3 gap-1.5 sm:flex sm:w-auto sm:items-center sm:gap-2">
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:w-auto sm:items-center">
             <button
               type="button"
               onClick={() => navigate('/billing/new')}
-              className="btn-primary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-xs font-bold text-white shadow-none transition"
+              className="btn-primary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold text-white shadow-2xs transition"
             >
-              <Plus size={15} />
+              <Plus size={15} strokeWidth={2.5} />
               <span>New Bill</span>
             </button>
             <button
               type="button"
               onClick={loadDashboard}
               disabled={refreshing}
-              className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold shadow-none transition"
+              className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold shadow-2xs transition"
             >
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
               <span>Refresh</span>
@@ -288,7 +310,7 @@ export default function Dashboard() {
             <button
               type="button"
               onClick={() => navigate('/reports')}
-              className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold shadow-none transition"
+              className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold shadow-2xs transition"
             >
               <FileText size={14} />
               <span>Reports</span>
@@ -296,67 +318,6 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
-
-      {/* -------------------------------------------------------------
-          QUICK ACTIONS BAR (Mobile-Friendly Tactile Controls)
-      -------------------------------------------------------------- */}
-      <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 sm:p-2.5 shadow-none">
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-          <button
-            type="button"
-            onClick={() => navigate('/billing/new')}
-            className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-md border border-blue-200 bg-blue-50/70 p-2 text-center text-blue-900 transition hover:bg-blue-100 active:scale-95 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-200"
-          >
-            <Plus size={16} className="text-blue-600 dark:text-blue-400" />
-            <span className="text-[11px] font-bold">New Bill</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/billing/drafts')}
-            className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] p-2 text-center text-[var(--ink)] transition hover:bg-[var(--surface)] active:scale-95"
-          >
-            <Clock3 size={16} className="text-amber-600 dark:text-amber-400" />
-            <span className="text-[11px] font-bold">Parked Bills</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('sales/payments')}
-            className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] p-2 text-center text-[var(--ink)] transition hover:bg-[var(--surface)] active:scale-95"
-          >
-            <CreditCard size={16} className="text-emerald-600 dark:text-emerald-400" />
-            <span className="text-[11px] font-bold">Payments</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/sales/invoices')}
-            className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] p-2 text-center text-[var(--ink)] transition hover:bg-[var(--surface)] active:scale-95"
-          >
-            <FileText size={16} className="text-slate-600 dark:text-slate-400" />
-            <span className="text-[11px] font-bold">All Bills</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/inventory/stock')}
-            className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] p-2 text-center text-[var(--ink)] transition hover:bg-[var(--surface)] active:scale-95"
-          >
-            <Package size={16} className="text-purple-600 dark:text-purple-400" />
-            <span className="text-[11px] font-bold">Stock Control</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/purchases')}
-            className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] p-2 text-center text-[var(--ink)] transition hover:bg-[var(--surface)] active:scale-95"
-          >
-            <BarChart3 size={16} className="text-teal-600 dark:text-teal-400" />
-            <span className="text-[11px] font-bold">Purchases</span>
-          </button>
-        </div>
-      </section>
 
       {/* -------------------------------------------------------------
           ERROR BANNER
@@ -515,6 +476,72 @@ export default function Dashboard() {
               Month: {fmtCurrency(data.month_purchases)}
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* -------------------------------------------------------------
+          QUICK ACTIONS BAR (Compact & Small Buttons After KPI Cards)
+      -------------------------------------------------------------- */}
+      <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 shadow-2xs">
+        <div className="flex items-center gap-1.5 shrink-0 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          
+          <span>Quick Actions</span>
+        </div>
+
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+          <button
+            type="button"
+            onClick={() => navigate('/billing/new')}
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#1E3A5F] px-2.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-[#162b47] active:scale-95 dark:bg-sky-600 dark:hover:bg-sky-500"
+          >
+            <Plus size={13} strokeWidth={2.5} />
+            <span>New Bill</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/billing/drafts')}
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95"
+          >
+            <Clock3 size={13} className="text-amber-600 dark:text-amber-400" />
+            <span>Parked Bills</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/sales/payments')}
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95"
+          >
+            <CreditCard size={13} className="text-emerald-600 dark:text-emerald-400" />
+            <span>Payments</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/sales/invoices')}
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95"
+          >
+            <FileText size={13} className="text-slate-600 dark:text-slate-400" />
+            <span>All Bills</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/inventory/stock')}
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95"
+          >
+            <Package size={13} className="text-purple-600 dark:text-purple-400" />
+            <span>Stock Control</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/purchases')}
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95"
+          >
+            <BarChart3 size={13} className="text-teal-600 dark:text-teal-400" />
+            <span>Purchases</span>
+          </button>
         </div>
       </section>
 

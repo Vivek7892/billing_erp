@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import api from '../api'
 import { Spinner, Modal, EmptyState } from '../components/UI'
 import {
-  IndianRupee, Plus, RefreshCw, Search, Pencil, Trash2,
+  IndianRupee, Plus, RefreshCw, Search, X, Pencil, Trash2,
   ShoppingBag, Zap, Car, Users, MoreHorizontal, TrendingDown, Receipt
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -201,26 +201,40 @@ export default function Expenses() {
 
             <div className="ml-auto flex min-w-0 items-center gap-2">
               {/* Search */}
-              <div className="relative min-w-0 flex-1 sm:w-56 sm:flex-none">
-                <Search
-                  size={13}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]"
-                />
+              <div className="group relative flex min-w-0 flex-1 sm:w-64 sm:flex-none items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
+                  <Search size={14} strokeWidth={2.2} />
+                </div>
                 <input
                   value={q}
                   onChange={e => setQ(e.target.value)}
                   placeholder="Search expenses..."
-                  className="h-8 w-full rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] pl-8 pr-3 text-xs text-[var(--ink-secondary)] outline-none placeholder:text-[var(--muted-light)] focus:border-slate-300 focus:bg-[var(--surface)]"
+                  className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
                 />
+                {q ? (
+                  <button
+                    type="button"
+                    onClick={() => setQ('')}
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
+                    title="Clear search"
+                    aria-label="Clear search"
+                  >
+                    <X size={13} strokeWidth={2.5} />
+                  </button>
+                ) : (
+                  <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
+                    Ctrl+K
+                  </kbd>
+                )}
               </div>
 
               {/* Add */}
               <button
                 type="button"
                 onClick={openAdd}
-                className="btn-primary h-8 px-3 text-xs font-semibold inline-flex items-center gap-1.5"
+                className="btn-primary min-h-[42px] px-3.5 text-xs font-bold inline-flex items-center gap-1.5 rounded-xl shadow-2xs"
               >
-                <Plus size={13} strokeWidth={2} />
+                <Plus size={14} strokeWidth={2.5} />
                 <span className="hidden sm:inline">Add Expense</span>
                 <span className="sm:hidden">Add</span>
               </button>

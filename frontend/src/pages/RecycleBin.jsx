@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import api from '../api'
 import { PageHeader, Spinner, Modal } from '../components/UI'
 import toast from 'react-hot-toast'
@@ -15,6 +15,8 @@ import {
   Info,
   Calendar,
   User,
+  Search,
+  X,
 } from 'lucide-react'
 
 export default function RecycleBin() {
@@ -28,6 +30,40 @@ export default function RecycleBin() {
   const [tab, setTab] = useState('invoices') // invoices | products | purchases
   const [restoreModal, setRestoreModal] = useState({ open: false, item: null, reason: '' })
   const [restoring, setRestoring] = useState(false)
+  const [q, setQ] = useState('')
+
+  const filteredInvoices = useMemo(() => {
+    const list = data.cancelled_invoices || []
+    if (!q.trim()) return list
+    const term = q.toLowerCase()
+    return list.filter(inv =>
+      (inv.invoice_number || '').toLowerCase().includes(term) ||
+      (inv.customer__name || '').toLowerCase().includes(term) ||
+      (inv.cancel_reason || '').toLowerCase().includes(term)
+    )
+  }, [data.cancelled_invoices, q])
+
+  const filteredProducts = useMemo(() => {
+    const list = data.archived_products || []
+    if (!q.trim()) return list
+    const term = q.toLowerCase()
+    return list.filter(prod =>
+      (prod.name || '').toLowerCase().includes(term) ||
+      (prod.sku || '').toLowerCase().includes(term) ||
+      (prod.barcode || '').includes(term)
+    )
+  }, [data.archived_products, q])
+
+  const filteredPurchases = useMemo(() => {
+    const list = data.cancelled_purchases || []
+    if (!q.trim()) return list
+    const term = q.toLowerCase()
+    return list.filter(po =>
+      (po.invoice_number || '').toLowerCase().includes(term) ||
+      (po.supplier__name || '').toLowerCase().includes(term) ||
+      (po.notes || '').toLowerCase().includes(term)
+    )
+  }, [data.cancelled_purchases, q])
 
   const fetchData = async () => {
     setLoading(true)
@@ -116,52 +152,84 @@ export default function RecycleBin() {
         </div>
       </div>
 
-      {/* Clean Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-sm no-scrollbar">
-        <button
-          onClick={() => setTab('invoices')}
-          className={`recycle-tab flex min-h-[40px] items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold whitespace-nowrap transition-colors ${
-            tab === 'invoices'
-              ? 'bg-rose-100 text-rose-800 shadow-sm dark:bg-rose-950/60 dark:text-rose-200'
-              : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
-          }`}
-        >
-          <FileText size={14} />
-          <span>Cancelled Invoices</span>
-          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${tab === 'invoices' ? 'bg-[#1E3A5F] text-white' : 'bg-[var(--line-subtle)] text-[var(--muted)]'}`}>
-            {data.cancelled_invoices.length}
-          </span>
-        </button>
+      {/* Tabs & Search Toolbar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-sm no-scrollbar">
+          <button
+            onClick={() => setTab('invoices')}
+            className={`recycle-tab flex min-h-[40px] items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold whitespace-nowrap transition-colors ${
+              tab === 'invoices'
+                ? 'bg-rose-100 text-rose-800 shadow-sm dark:bg-rose-950/60 dark:text-rose-200'
+                : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
+            }`}
+          >
+            <FileText size={14} />
+            <span>Cancelled Invoices</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${tab === 'invoices' ? 'bg-[#1E3A5F] text-white' : 'bg-[var(--line-subtle)] text-[var(--muted)]'}`}>
+              {filteredInvoices.length}
+            </span>
+          </button>
 
-        <button
-          onClick={() => setTab('products')}
-          className={`recycle-tab flex min-h-[40px] items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold whitespace-nowrap transition-colors ${
-            tab === 'products'
-              ? 'bg-emerald-100 text-emerald-800 shadow-sm dark:bg-emerald-950/60 dark:text-emerald-200'
-              : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
-          }`}
-        >
-          <Package size={14} />
-          <span>Archived Products</span>
-          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${tab === 'products' ? 'bg-[#1E3A5F] text-white' : 'bg-[var(--line-subtle)] text-[var(--muted)]'}`}>
-            {data.archived_products.length}
-          </span>
-        </button>
+          <button
+            onClick={() => setTab('products')}
+            className={`recycle-tab flex min-h-[40px] items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold whitespace-nowrap transition-colors ${
+              tab === 'products'
+                ? 'bg-emerald-100 text-emerald-800 shadow-sm dark:bg-emerald-950/60 dark:text-emerald-200'
+                : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
+            }`}
+          >
+            <Package size={14} />
+            <span>Archived Products</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${tab === 'products' ? 'bg-[#1E3A5F] text-white' : 'bg-[var(--line-subtle)] text-[var(--muted)]'}`}>
+              {filteredProducts.length}
+            </span>
+          </button>
 
-        <button
-          onClick={() => setTab('purchases')}
-          className={`recycle-tab flex min-h-[40px] items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold whitespace-nowrap transition-colors ${
-            tab === 'purchases'
-              ? 'bg-amber-100 text-amber-800 shadow-sm dark:bg-amber-950/60 dark:text-amber-200'
-              : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
-          }`}
-        >
-          <ShoppingBag size={14} />
-          <span>Cancelled Purchases</span>
-          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${tab === 'purchases' ? 'bg-[#1E3A5F] text-white' : 'bg-[var(--line-subtle)] text-[var(--muted)]'}`}>
-            {data.cancelled_purchases.length}
-          </span>
-        </button>
+          <button
+            onClick={() => setTab('purchases')}
+            className={`recycle-tab flex min-h-[40px] items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold whitespace-nowrap transition-colors ${
+              tab === 'purchases'
+                ? 'bg-amber-100 text-amber-800 shadow-sm dark:bg-amber-950/60 dark:text-amber-200'
+                : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
+            }`}
+          >
+            <ShoppingBag size={14} />
+            <span>Cancelled Purchases</span>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${tab === 'purchases' ? 'bg-[#1E3A5F] text-white' : 'bg-[var(--line-subtle)] text-[var(--muted)]'}`}>
+              {filteredPurchases.length}
+            </span>
+          </button>
+        </div>
+
+        <div className="w-full md:w-72">
+          <div className="group relative flex items-center min-h-[42px] w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
+              <Search size={14} strokeWidth={2.2} />
+            </div>
+            <input
+              type="text"
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              placeholder="Search records in register..."
+              className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
+            />
+            {q ? (
+              <button
+                type="button"
+                onClick={() => setQ('')}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
+                title="Clear search"
+                aria-label="Clear search"
+              >
+                <X size={13} strokeWidth={2.5} />
+              </button>
+            ) : (
+              <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
+                Ctrl+K
+              </kbd>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Tab Content */}
@@ -174,13 +242,13 @@ export default function RecycleBin() {
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] overflow-hidden shadow-xs">
           {/* Mobile Cards (sm:hidden) */}
           <div className="sm:hidden divide-y divide-[var(--line-subtle)]">
-            {data.cancelled_invoices.length === 0 ? (
+            {filteredInvoices.length === 0 ? (
               <div className="py-10 text-center text-[var(--muted)]">
                 <FileText size={22} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
-                <p className="font-medium text-xs">No cancelled invoices</p>
+                <p className="font-medium text-xs">No cancelled invoices found</p>
               </div>
             ) : (
-              data.cancelled_invoices.map(inv => (
+              filteredInvoices.map(inv => (
                 <div key={inv.id} className="p-3.5 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-mono font-bold text-xs text-[var(--ink)]">
@@ -227,15 +295,15 @@ export default function RecycleBin() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--line-subtle)]">
-                {data.cancelled_invoices.length === 0 ? (
+                {filteredInvoices.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-[var(--muted)]">
                       <FileText size={24} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
-                      <p className="font-medium">No cancelled invoices</p>
+                      <p className="font-medium">No cancelled invoices found</p>
                     </td>
                   </tr>
                 ) : (
-                  data.cancelled_invoices.map(inv => (
+                  filteredInvoices.map(inv => (
                     <tr key={inv.id} className="hover:bg-[var(--surface-elevated)] transition-colors">
                       <td className="py-2.5 px-3 font-semibold font-mono text-[var(--ink)]">
                         {inv.invoice_number}
@@ -280,13 +348,13 @@ export default function RecycleBin() {
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] overflow-hidden shadow-xs">
           {/* Mobile Cards (sm:hidden) */}
           <div className="sm:hidden divide-y divide-[var(--line-subtle)]">
-            {data.archived_products.length === 0 ? (
+            {filteredProducts.length === 0 ? (
               <div className="py-10 text-center text-[var(--muted)]">
                 <Package size={22} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
-                <p className="font-medium text-xs">No archived products in recycle bin</p>
+                <p className="font-medium text-xs">No archived products found</p>
               </div>
             ) : (
-              data.archived_products.map(p => (
+              filteredProducts.map(p => (
                 <div key={p.id} className="p-3.5 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-xs text-[var(--ink)]">
@@ -328,15 +396,15 @@ export default function RecycleBin() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--line-subtle)]">
-                {data.archived_products.length === 0 ? (
+                {filteredProducts.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-[var(--muted)]">
                       <Package size={24} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
-                      <p className="font-medium">No archived products in recycle bin</p>
+                      <p className="font-medium">No archived products found</p>
                     </td>
                   </tr>
                 ) : (
-                  data.archived_products.map(p => (
+                  filteredProducts.map(p => (
                     <tr key={p.id} className="hover:bg-[var(--surface-elevated)] transition-colors">
                       <td className="py-2.5 px-3 font-semibold text-[var(--ink)]">
                         {p.name}
@@ -382,13 +450,13 @@ export default function RecycleBin() {
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] overflow-hidden shadow-xs">
           {/* Mobile Cards (sm:hidden) */}
           <div className="sm:hidden divide-y divide-[var(--line-subtle)]">
-            {data.cancelled_purchases.length === 0 ? (
+            {filteredPurchases.length === 0 ? (
               <div className="py-10 text-center text-[var(--muted)]">
                 <ShoppingBag size={22} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
-                <p className="font-medium text-xs">No cancelled purchases</p>
+                <p className="font-medium text-xs">No cancelled purchases found</p>
               </div>
             ) : (
-              data.cancelled_purchases.map(po => (
+              filteredPurchases.map(po => (
                 <div key={po.id} className="p-3.5 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-mono font-bold text-xs text-[var(--ink)]">
@@ -433,15 +501,15 @@ export default function RecycleBin() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--line-subtle)]">
-                {data.cancelled_purchases.length === 0 ? (
+                {filteredPurchases.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-[var(--muted)]">
                       <ShoppingBag size={24} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
-                      <p className="font-medium">No cancelled purchases</p>
+                      <p className="font-medium">No cancelled purchases found</p>
                     </td>
                   </tr>
                 ) : (
-                  data.cancelled_purchases.map(po => (
+                  filteredPurchases.map(po => (
                     <tr key={po.id} className="hover:bg-[var(--surface-elevated)] transition-colors">
                       <td className="py-2.5 px-3 font-semibold font-mono text-[var(--ink)]">
                         {po.invoice_number}

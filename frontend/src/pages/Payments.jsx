@@ -664,29 +664,32 @@ export default function Payments() {
               </p>
             </div>
 
-            <div className="flex w-full min-w-0 gap-2 lg:w-auto">
-              <div className="relative min-w-0 flex-1 lg:w-72 lg:flex-none">
-                <Search
-                  size={14}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]"
-                />
+            <div className="flex w-full min-w-0 items-center gap-2 lg:w-auto">
+              <div className="group relative flex min-w-0 flex-1 lg:w-72 lg:flex-none items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
+                  <Search size={14} strokeWidth={2.2} />
+                </div>
 
                 <input
                   value={search}
                   onChange={event => setSearch(event.target.value)}
                   placeholder="Search invoice or customer..."
-                  className="h-8 w-full rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] pl-8 pr-8 text-xs text-[var(--ink)] outline-none transition placeholder:text-[var(--muted-light)] focus:border-[var(--primary-border)] focus:ring-1 focus:ring-[var(--primary)]"
+                  className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
                 />
 
-                {search && (
+                {search ? (
                   <button
                     type="button"
                     onClick={() => setSearch('')}
                     aria-label="Clear search"
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted-light)] transition hover:text-[var(--ink)]"
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
                   >
-                    <X size={13} />
+                    <X size={13} strokeWidth={2.5} />
                   </button>
+                ) : (
+                  <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
+                    Ctrl+K
+                  </kbd>
                 )}
               </div>
 
@@ -695,7 +698,7 @@ export default function Payments() {
                 onClick={loadPayments}
                 disabled={loading}
                 aria-label="Refresh payment transactions"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] disabled:opacity-50"
+                className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] hover:border-slate-300 disabled:opacity-50 shadow-xs"
               >
                 <RefreshCw
                   size={14}

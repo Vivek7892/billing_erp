@@ -307,27 +307,28 @@ export default function Support() {
           </div>
 
           {/* Search box */}
-          <div className="relative min-w-0 sm:w-72">
-            <Search
-              size={15}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]"
-            />
+          <div className="group relative flex items-center min-h-[42px] min-w-0 w-full sm:w-72 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
+              <Search size={14} strokeWidth={2.2} />
+            </div>
             <input
               type="search"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search help articles..."
-              className="input h-9 w-full pl-9 pr-8 text-xs font-medium"
+              className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
             />
-            {search && (
+            {search ? (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--ink)]"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
+                title="Clear search"
+                aria-label="Clear search"
               >
-                <X size={13} />
+                <X size={13} strokeWidth={2.5} />
               </button>
-            )}
+            ) : null}
           </div>
         </div>
 

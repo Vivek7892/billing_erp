@@ -10,6 +10,7 @@ export default function AppFooter({ shopName }) {
     { label: 'Billing', path: '/billing' },
     { label: 'Reports', path: '/reports' },
     { label: 'Settings', path: '/settings' },
+    { label: 'Terms & Conditions', path: '/terms-and-conditions' },
   ]
 
   return (

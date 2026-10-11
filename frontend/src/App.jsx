@@ -35,6 +35,7 @@ const Notifications = lazy(() => import('./pages/Notifications'))
 const PublicBill = lazy(() => import('./pages/PublicBill'))
 const AuditTrail = lazy(() => import('./pages/AuditTrail'))
 const RecycleBin = lazy(() => import('./pages/RecycleBin'))
+const TermsAndConditions = lazy(() => import('./pages/TermsAndConditions'))
 
 // Error and Diagnostic Pages
 const NotFound = lazy(() => import('./pages/errors/NotFound'))
@@ -113,8 +114,9 @@ function ErrorPageLayout({ children }) {
 function AppRoutes() {
   return (
     <Routes>
-      {/* Authentication */}
+      {/* Authentication & Public Pages */}
       <Route path="/login" element={<Login />} />
+      <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
 
       {/* Dashboard */}
       <Route

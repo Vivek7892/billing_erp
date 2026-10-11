@@ -1526,24 +1526,31 @@ export default function Suppliers() {
       ====================================================== */}
       <div className="mb-4 rounded-md border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div className="flex items-center gap-2 w-full md:max-w-xl border border-[var(--line)] bg-[var(--surface-elevated)] px-3 h-9 rounded-md">
-            <Search size={14} className="text-[var(--muted-light)] shrink-0" />
+          <div className="group relative flex items-center min-h-[42px] w-full md:max-w-xl rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
+              <Search size={14} strokeWidth={2.2} />
+            </div>
             <input
               type="text"
               value={q}
               onChange={e => setQ(e.target.value)}
               placeholder="Search supplier name, phone, email or GSTIN..."
-              className="w-full bg-transparent outline-none text-xs text-[var(--ink)] placeholder:text-[var(--muted-light)]"
+              className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
             />
-            {q && (
+            {q ? (
               <button
                 type="button"
                 onClick={() => setQ('')}
-                className="text-[var(--muted)] hover:text-[var(--ink)] transition-colors"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
                 title="Clear search"
+                aria-label="Clear search"
               >
-                <X size={14} />
+                <X size={13} strokeWidth={2.5} />
               </button>
+            ) : (
+              <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
+                Ctrl+K
+              </kbd>
             )}
           </div>
 

@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import {
   ShieldCheck,
   Search,
+  X,
   Filter,
   Calendar,
   RotateCcw,
@@ -227,15 +228,28 @@ export default function AuditTrail() {
       <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 shadow-xs space-y-3">
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
           {/* Search */}
-          <div className="relative sm:col-span-2 lg:col-span-1">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+          <div className="group relative flex sm:col-span-2 lg:col-span-1 items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
+              <Search size={14} strokeWidth={2.2} />
+            </div>
             <input
               type="text"
-              className="input pl-8 w-full h-9 text-xs"
+              className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
               placeholder="Search action, reason, user, IP..."
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
+            {search ? (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
+                title="Clear search"
+                aria-label="Clear search"
+              >
+                <X size={13} strokeWidth={2.5} />
+              </button>
+            ) : null}
           </div>
 
           {/* Action Filter */}

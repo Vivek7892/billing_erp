@@ -439,29 +439,32 @@ export default function Customers() {
         <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
 
           {/* Search */}
-          <div className="relative min-w-0 flex-1">
-            <Search
-              size={15}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
-            />
+          <div className="group relative flex min-w-0 flex-1 items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
+              <Search size={14} strokeWidth={2.2} />
+            </div>
 
             <input
-              className="input w-full pl-9 pr-9 text-sm"
+              className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
               placeholder="Search name, mobile, or email..."
               value={search}
               onChange={event => setSearch(event.target.value)}
             />
 
-            {search && (
+            {search ? (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
                 title="Clear search"
                 aria-label="Clear search"
               >
-                <X size={15} />
+                <X size={13} strokeWidth={2.5} />
               </button>
+            ) : (
+              <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
+                Ctrl+K
+              </kbd>
             )}
           </div>
 

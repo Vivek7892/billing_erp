@@ -45,7 +45,7 @@ import {
   Keyboard, CheckCircle2, Share2, X, AlertTriangle, FileText,
   Maximize2, Minimize2, Layers, Receipt,
   Package, Banknote, Smartphone, CreditCard, BookOpen, Wallet,
-  User, UserPlus, ShoppingCart,
+  User, UserPlus, UserRound, ShoppingCart,
   MoreVertical, ArrowLeft, ArrowRight, Copy, Check, Sparkles,
 } from 'lucide-react'
 import { Modal } from '../components/UI'
@@ -3042,112 +3042,107 @@ export default function NewBill() {
 
       <Modal open={showSuccess && Boolean(lastInvoice?.id)} onClose={() => setShowSuccess(false)} title="Sale Completed" size="md">
         <div className="space-y-4 p-1">
-          {/* Hero Success Card - High contrast, vibrant emerald styling, zero dull grey */}
-          <div className="relative overflow-hidden rounded-2xl border-2 border-emerald-500/80 bg-white p-5 text-center shadow-md dark:border-emerald-600 dark:bg-slate-900">
-            {/* Top decorative gradient accent strip */}
-            <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600" />
-
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-600/30 ring-4 ring-emerald-100 dark:ring-emerald-950/60">
-              <CheckCircle2 size={32} className="stroke-[2.5]" />
+          {/* Header Card - Clean, elevated, light & dark theme compliant with soft emerald success badge */}
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] p-5 text-center shadow-xs">
+            <div className="mx-auto flex h-13 w-13 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-xs">
+              <CheckCircle2 size={28} className="stroke-[2.5]" />
             </div>
 
-            <h3 className="mt-3 text-lg font-black text-emerald-950 dark:text-emerald-100 tracking-tight">
+            <h3 className="mt-3 text-base sm:text-lg font-bold text-[var(--ink)] tracking-tight">
               Sale Completed Successfully
             </h3>
 
-            <div className="mt-1.5 font-mono text-3xl sm:text-4xl font-black text-[#1E3A5F] dark:text-emerald-400 tracking-tight">
+            <div className="mt-1 font-mono text-3xl sm:text-4xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
               {fmt(lastInvoice?.grand_total)}
             </div>
 
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1 font-mono text-xs font-bold text-emerald-900 shadow-xs dark:border-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200">
-                <Receipt size={13} className="text-emerald-700 dark:text-emerald-400" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1 font-mono text-xs font-semibold text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <Receipt size={13} className="text-emerald-600 dark:text-emerald-400" />
                 <span>Invoice #{lastInvoice?.invoice_number || '—'}</span>
               </span>
               {lastInvoice?.customer_name && lastInvoice?.customer_name !== 'Walk-in Customer' && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-800 shadow-xs dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                  <UserRound size={12} className="text-slate-600 dark:text-slate-300" />
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--ink)] shadow-xs">
+                  <UserRound size={12} className="text-[var(--muted)]" />
                   <span>{lastInvoice.customer_name}</span>
                 </span>
               )}
             </div>
           </div>
 
-          {/* Transaction Summary Card - Pure white surface with strong borders and deep readable text */}
-          <div className="rounded-xl border-2 border-slate-200 bg-white p-4 text-xs shadow-xs dark:border-slate-800 dark:bg-slate-900">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-700 dark:text-slate-300">Payment Method</span>
-                <span className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-bold text-[#1E3A5F] uppercase tracking-wide dark:border-blue-900 dark:bg-blue-950/70 dark:text-blue-300">
-                  {lastInvoice?.payment_method || 'Cash'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-700 dark:text-slate-300">Payment Status</span>
-                <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800 uppercase tracking-wide dark:border-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-300">
-                  {lastInvoice?.payment_status || 'Paid'}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-700 dark:text-slate-300">Amount Received</span>
-                <span className="font-mono text-sm font-black text-slate-900 dark:text-white">
-                  {fmt(lastPaidAmount(lastInvoice))}
-                </span>
-              </div>
-
-              {lastInvoice?.payment_method === 'cash' && (
-                <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50/80 p-2.5 dark:border-emerald-900 dark:bg-emerald-950/50">
-                  <span className="font-bold text-emerald-900 dark:text-emerald-200">Change Returned</span>
-                  <span className="font-mono text-base font-black text-emerald-700 dark:text-emerald-300">
-                    {fmt(Math.max(0, Number(lastInvoice?.amount_received || 0) - Number(lastInvoice?.grand_total || 0)))}
-                  </span>
-                </div>
-              )}
+          {/* Transaction Summary Card - Clean key-value breakdown */}
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4 text-xs shadow-xs space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-[var(--muted)]">Payment Method</span>
+              <span className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700 uppercase tracking-wide dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-300">
+                {lastInvoice?.payment_method || 'Cash'}
+              </span>
             </div>
+
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-[var(--muted)]">Payment Status</span>
+              <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 uppercase tracking-wide dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+                {lastInvoice?.payment_status || 'Paid'}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-[var(--muted)]">Amount Received</span>
+              <span className="font-mono text-xs sm:text-sm font-bold text-[var(--ink)]">
+                {fmt(lastPaidAmount(lastInvoice))}
+              </span>
+            </div>
+
+            {lastInvoice?.payment_method === 'cash' && (
+              <div className="flex items-center justify-between rounded-lg border border-emerald-200/80 bg-emerald-50/70 p-2.5 dark:border-emerald-800/60 dark:bg-emerald-950/40">
+                <span className="font-bold text-emerald-800 dark:text-emerald-200">Change Returned</span>
+                <span className="font-mono text-sm sm:text-base font-extrabold text-emerald-700 dark:text-emerald-300">
+                  {fmt(Math.max(0, Number(lastInvoice?.amount_received || 0) - Number(lastInvoice?.grand_total || 0)))}
+                </span>
+              </div>
+            )}
           </div>
 
-          {/* Action Buttons - 5 distinct, high-contrast touch targets (44px+ on mobile) */}
-          <div className="grid grid-cols-2 gap-2.5">
+          {/* Action Buttons - Light, clean, professional POS print and sharing targets */}
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => printInvoiceDocument(lastInvoice?.id, false)}
-              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#1E3A5F] px-3 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#162F4D] active:scale-[0.98]"
+              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--ink)] shadow-xs transition hover:bg-[var(--surface-elevated)] hover:border-emerald-500/50 active:scale-[0.98]"
             >
-              <Printer size={16} />
+              <Printer size={15} className="text-emerald-600 dark:text-emerald-400" />
               <span>Print A4 Invoice</span>
             </button>
             <button
               type="button"
               onClick={() => printInvoiceDocument(lastInvoice?.id, true)}
-              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl border-2 border-[#1E3A5F] bg-blue-50/80 px-3 py-2.5 text-xs font-bold text-[#1E3A5F] shadow-xs transition hover:bg-blue-100 active:scale-[0.98] dark:border-blue-600 dark:bg-slate-800 dark:text-blue-300 dark:hover:bg-slate-700"
+              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--ink)] shadow-xs transition hover:bg-[var(--surface-elevated)] hover:border-emerald-500/50 active:scale-[0.98]"
             >
-              <Printer size={16} />
+              <Receipt size={15} className="text-emerald-600 dark:text-emerald-400" />
               <span>Thermal Receipt</span>
             </button>
             <button
               type="button"
               onClick={() => downloadInvoiceDocument(lastInvoice?.id)}
-              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl border-2 border-indigo-200 bg-indigo-50/80 px-3 py-2.5 text-xs font-bold text-indigo-900 shadow-xs transition hover:bg-indigo-100 active:scale-[0.98] dark:border-indigo-900 dark:bg-slate-800 dark:text-indigo-200 dark:hover:bg-slate-700"
+              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--ink)] shadow-xs transition hover:bg-[var(--surface-elevated)] hover:border-blue-500/50 active:scale-[0.98]"
             >
-              <Download size={16} />
+              <Download size={15} className="text-blue-600 dark:text-blue-400" />
               <span>Download PDF</span>
             </button>
             <button
               type="button"
               onClick={shareInvoice}
-              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#25D366] px-3 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#20bd5a] active:scale-[0.98]"
+              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-xs transition hover:bg-emerald-100 active:scale-[0.98] dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300"
             >
-              <Share2 size={16} />
+              <Share2 size={15} className="text-emerald-600 dark:text-emerald-400" />
               <span>Share WhatsApp</span>
             </button>
             <button
               type="button"
               onClick={() => navigate(`/invoice/${lastInvoice?.id}`)}
-              className="col-span-2 flex min-h-[44px] items-center justify-center gap-2 rounded-xl border-2 border-slate-300 bg-slate-50/80 px-3 py-2 text-xs font-bold text-slate-800 transition hover:bg-slate-100 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              className="col-span-2 flex min-h-[38px] items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--muted)] transition hover:text-[var(--ink)] hover:bg-[var(--surface-elevated)] active:scale-[0.98]"
             >
-              <FileText size={16} className="text-[#1E3A5F] dark:text-blue-400" />
+              <FileText size={14} />
               <span>View Full Invoice Record</span>
             </button>
           </div>
@@ -3156,9 +3151,9 @@ export default function NewBill() {
           <button
             type="button"
             onClick={() => { setShowSuccess(false); startNewBill() }}
-            className="flex min-h-[50px] w-full items-center justify-center gap-2.5 rounded-xl bg-emerald-600 px-4 py-3 text-base font-extrabold text-white shadow-lg shadow-emerald-600/30 transition hover:bg-emerald-700 active:scale-[0.99]"
+            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 text-sm sm:text-base font-bold shadow-sm transition active:scale-[0.99]"
           >
-            <RefreshCw size={18} />
+            <RefreshCw size={17} />
             <span>Start New Bill</span>
           </button>
         </div>

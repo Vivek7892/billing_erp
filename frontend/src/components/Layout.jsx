@@ -361,13 +361,15 @@ function GlobalSearch() {
   }
 
   return (
-    <div ref={ref} className="relative">
-      <div className={`flex items-center gap-2 rounded-xl px-3 py-1.5 w-full max-w-sm transition-all duration-150 border ${
+    <div ref={ref} className="relative w-full max-w-sm">
+      <div className={`group flex items-center gap-2 rounded-xl px-2.5 py-1.5 w-full transition-all duration-200 border shadow-xs ${
         open || q
-          ? 'bg-[var(--surface)] border-[var(--primary)] shadow-xs ring-1 ring-[var(--primary)]'
-          : 'bg-[var(--surface-elevated)] border-[var(--line)] hover:border-[var(--line-strong)]'
+          ? 'bg-[var(--surface)] border-[#1E3A5F] ring-2 ring-[#1E3A5F]/15 dark:border-sky-500 dark:ring-sky-500/20'
+          : 'bg-[var(--surface-elevated)] border-[var(--line)] hover:border-slate-300 dark:hover:border-slate-600'
       }`}>
-        <Search size={15} className="text-[var(--muted)] flex-shrink-0" />
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[var(--surface)] text-[var(--muted)] group-focus-within:text-[#1E3A5F] dark:group-focus-within:text-sky-300">
+          <Search size={13} strokeWidth={2.2} />
+        </div>
         <input
           value={q}
           onChange={e => { setQ(e.target.value); setOpen(e.target.value.length > 0) }}
@@ -376,14 +378,14 @@ function GlobalSearch() {
           onKeyDown={handleKeyDown}
           placeholder="Search products… (Ctrl+K)"
           aria-label="Search products"
-          className="bg-transparent text-xs outline-none w-full text-[var(--ink)] placeholder:text-[var(--placeholder)]"
+          className="bg-transparent text-xs outline-none w-full text-[var(--ink)] placeholder:text-[var(--placeholder)] font-medium"
         />
         {q ? (
-          <button onClick={() => { setQ(''); setOpen(false) }} aria-label="Clear search" className="text-[var(--muted)] hover:text-[var(--ink)]">
-            <X size={13} />
+          <button onClick={() => { setQ(''); setOpen(false) }} aria-label="Clear search" className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface)] transition-colors">
+            <X size={12} strokeWidth={2.5} />
           </button>
         ) : (
-          <kbd className="hidden sm:inline-flex px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted-light)] bg-[var(--surface)] border border-[var(--line)] rounded">⌘K</kbd>
+          <kbd className="hidden sm:inline-flex shrink-0 items-center rounded border border-[var(--line)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">Ctrl+K</kbd>
         )}
       </div>
 
@@ -688,12 +690,12 @@ function PageHeading({ shopName, pathname }) {
   const title = meta?.label || 'Dashboard'
 
   return (
-    <div className="flex items-center gap-3 min-w-0">
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-[var(--surface-elevated)] border border-[var(--line)] text-[var(--ink)] shadow-xs">
-        <Icon size={16} />
+    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-[var(--surface-elevated)] border border-[var(--line)] text-[#1E3A5F] dark:text-sky-300 shadow-2xs">
+        <Icon size={16} strokeWidth={2.2} />
       </div>
       <div className="min-w-0 flex flex-col justify-center leading-tight">
-        <h1 className="font-bold text-[var(--ink)] text-[15px] sm:text-[16px] tracking-tight truncate">
+        <h1 className="font-bold text-[var(--ink)] text-[14px] sm:text-[16px] tracking-tight truncate">
           {title}
         </h1>
         <div className="text-[10px] text-[var(--muted)] font-medium truncate hidden sm:block">
@@ -726,11 +728,12 @@ function LiveDateTime() {
   })
 
   return (
-    <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--surface-elevated)] border border-[var(--line)] text-xs text-[var(--muted)]">
-      <Clock size={13} className="text-[var(--muted)] flex-shrink-0" />
+    <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--surface-elevated)] border border-[var(--line)] text-xs text-[var(--muted)] shadow-2xs">
+      <Clock size={13} className="text-[#1E3A5F] dark:text-sky-400 flex-shrink-0" />
       <span className="font-semibold text-[var(--ink)] tabular-nums">{date}</span>
       <span className="text-[var(--line-strong)]">·</span>
-      <span className="font-medium tabular-nums">{time}</span>
+      <span className="font-mono font-medium text-[var(--ink)] tabular-nums">{time}</span>
+      <span className="text-[9px] font-bold text-[var(--muted)] bg-[var(--surface)] px-1 py-0.5 rounded border border-[var(--line)] uppercase">IST</span>
     </div>
   )
 }
@@ -851,7 +854,7 @@ export default function Layout({ children }) {
               {/* Notifications */}
               <NotificationBell />
 
-              <div className="hidden xl:block w-px h-5 bg-[var(--line)]" />
+              <div className="hidden lg:block w-px h-5 bg-[var(--line)]" />
 
               {/* Live Clock */}
               <LiveDateTime />

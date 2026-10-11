@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import inventoryService from '../features/inventory/api/inventoryService'
 import { Badge, Card, PageHeader, Modal, Spinner, EmptyState, TableSkeleton } from '../components/UI'
 import toast from 'react-hot-toast'
-import { Search, ArrowUpCircle, ArrowDownCircle, Settings, Layers, Upload, Download, RefreshCw } from 'lucide-react'
+import { Search, X, ArrowUpCircle, ArrowDownCircle, Settings, Layers, Upload, Download, RefreshCw } from 'lucide-react'
 
 
 function MobileStockCard({ product }) {
@@ -235,14 +235,31 @@ export default function Inventory() {
         <>
           <Card className="p-2.5 sm:p-3">
             <div className="flex items-center gap-2">
-              <div className="relative min-w-0 flex-1">
-                <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-light)]" />
+              <div className="group relative flex min-w-0 flex-1 items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
+                  <Search size={14} strokeWidth={2.2} />
+                </div>
                 <input
-                  className="input w-full pl-8 pr-3 text-sm"
+                  className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
                   placeholder="Search products..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                 />
+                {search ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
+                    title="Clear search"
+                    aria-label="Clear search"
+                  >
+                    <X size={13} strokeWidth={2.5} />
+                  </button>
+                ) : (
+                  <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
+                    Ctrl+K
+                  </kbd>
+                )}
               </div>
             </div>
           </Card>

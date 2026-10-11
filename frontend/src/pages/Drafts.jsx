@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Layers,
@@ -11,6 +11,8 @@ import {
   ReceiptText,
   ArrowLeft,
   Clock3,
+  Search,
+  X,
 } from 'lucide-react'
 
 const DRAFT_KEY = 'pos_drafts'
@@ -35,11 +37,23 @@ const fmt = v =>
 
 export default function Drafts() {
   const [drafts, setDrafts] = useState([])
+  const [q, setQ] = useState('')
   const navigate = useNavigate()
 
   useEffect(() => {
     setDrafts(loadDrafts())
   }, [])
+
+  const filteredDrafts = useMemo(() => {
+    if (!q.trim()) return drafts
+    const term = q.toLowerCase()
+    return drafts.filter(d =>
+      (d.customer?.name || '').toLowerCase().includes(term) ||
+      (d.customer?.phone || '').includes(term) ||
+      (d.note || '').toLowerCase().includes(term) ||
+      (d.cart || []).some(item => (item.product_name || item.name || '').toLowerCase().includes(term) || (item.barcode || '').includes(term))
+    )
+  }, [drafts, q])
 
   const discard = id => {
     const updated = drafts.filter(d => d.id !== id)
@@ -176,25 +190,46 @@ export default function Drafts() {
       {/* Draft List Container with ERP Table */}
       <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)]">
         {/* Table topbar */}
-        <div className="flex items-center justify-between border-b border-[var(--line-subtle)] px-3.5 py-3 sm:px-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-[var(--line-subtle)] px-3.5 py-2.5 sm:px-5">
           <div className="flex items-center gap-2">
             <h2 className="font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
               Draft Invoices
             </h2>
             <span className="rounded-sm bg-[var(--surface-elevated)] border border-[var(--line)] px-2 py-0.5 text-[10px] font-bold text-[var(--muted)]">
-              {drafts.length}
+              {filteredDrafts.length}
             </span>
           </div>
 
-          <div className="hidden items-center gap-1.5 text-[11px] text-[var(--muted)] sm:flex">
-            <Clock3 size={12} />
-            <span>Saved in browser storage</span>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="group relative flex items-center min-h-[38px] w-full sm:w-64 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-2xs">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
+                <Search size={13} strokeWidth={2.2} />
+              </div>
+              <input
+                type="text"
+                value={q}
+                onChange={e => setQ(e.target.value)}
+                placeholder="Search parked bills..."
+                className="w-full bg-transparent px-2 text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
+              />
+              {q ? (
+                <button
+                  type="button"
+                  onClick={() => setQ('')}
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[var(--muted)] hover:text-[var(--ink)]"
+                  title="Clear search"
+                  aria-label="Clear search"
+                >
+                  <X size={12} strokeWidth={2.5} />
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
 
         {/* Mobile card list (md:hidden) */}
         <div className="space-y-2.5 p-2.5 md:hidden">
-          {drafts.map(draft => {
+          {filteredDrafts.map(draft => {
             const total =
               draft.cart?.reduce((s, i) => s + (i.total || 0), 0) || 0
             const itemCount = draft.cart?.length || 0
@@ -294,7 +329,7 @@ export default function Drafts() {
             </thead>
 
             <tbody className="divide-y divide-[var(--line-subtle)]">
-              {drafts.map((draft, index) => {
+              {filteredDrafts.map((draft, index) => {
                 const total =
                   draft.cart?.reduce((s, i) => s + (i.total || 0), 0) || 0
                 const itemCount = draft.cart?.length || 0

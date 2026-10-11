@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, isValidElement } from 'react'
+import { Search, X } from 'lucide-react'
 
 
 /* ============================================================
@@ -1143,60 +1144,37 @@ export function SearchInput({
   placeholder = 'Search…',
   className = '',
   autoFocus = false,
+  onClear,
 }) {
   return (
-    <div className={`relative ${className}`}>
-      <svg
-        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted-light)]"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="11" cy="11" r="8" />
-        <path d="m21 21-4.3-4.3" />
-      </svg>
+    <div className={`group relative flex items-center min-h-[42px] w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs ${className}`}>
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
+        <Search size={14} strokeWidth={2.2} />
+      </div>
 
       <input
         type="search"
-        className={[
-          'input w-full rounded-xl',
-          'pl-10 pr-10',
-          'transition-all duration-200',
-          'focus:ring-2 focus:ring-[var(--primary)]/15',
-        ].join(' ')}
+        className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
         placeholder={placeholder}
-        value={value}
+        value={value ?? ''}
         onChange={onChange}
         autoFocus={autoFocus}
       />
 
-      {value && (
+      {value ? (
         <button
           type="button"
-          onClick={() => onChange({ target: { value: '' } })}
-          className="absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--muted-light)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]"
+          onClick={() => {
+            if (onClear) onClear()
+            onChange?.({ target: { value: '' } })
+          }}
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
           aria-label="Clear search"
+          title="Clear search"
         >
-          <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M18 6 6 18" />
-            <path d="m6 6 12 12" />
-          </svg>
+          <X size={13} strokeWidth={2.5} />
         </button>
-      )}
+      ) : null}
     </div>
   )
 }
@@ -1563,33 +1541,25 @@ export function StatusBadge({ status, label: customLabel }) {
 export function SearchBar({
   value,
   onChange,
-  placeholder = 'Search products, customers, invoices… (Ctrl+K)',
+  placeholder = 'Search… (Ctrl+K)',
   className = '',
   onClear,
+  shortcut = 'Ctrl+K',
 }) {
   return (
-    <div className={`relative flex-1 min-w-[200px] ${className}`}>
-      <svg
-        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]"
-        width="15"
-        height="15"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="11" cy="11" r="8" />
-        <path d="m21 21-4.3-4.3" />
-      </svg>
+    <div className={`group relative flex items-center min-h-[42px] w-full min-w-[200px] flex-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs ${className}`}>
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
+        <Search size={14} strokeWidth={2.2} />
+      </div>
+
       <input
         type="text"
         value={value || ''}
         onChange={e => onChange?.(e.target.value)}
         placeholder={placeholder}
-        className="h-10 w-full pl-9 pr-8 text-xs rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] placeholder:text-[var(--placeholder)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-all"
+        className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
       />
+
       {value ? (
         <button
           type="button"
@@ -1597,16 +1567,17 @@ export function SearchBar({
             onChange?.('')
             onClear?.()
           }}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--ink)] p-1 text-xs"
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
           aria-label="Clear search"
+          title="Clear search"
         >
-          ✕
+          <X size={13} strokeWidth={2.5} />
         </button>
-      ) : (
-        <kbd className="hidden sm:inline-flex absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] bg-[var(--surface-elevated)] border border-[var(--line)] rounded">
-          Ctrl+K
+      ) : shortcut ? (
+        <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
+          {shortcut}
         </kbd>
-      )}
+      ) : null}
     </div>
   )
 }

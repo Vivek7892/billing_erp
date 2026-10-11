@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api, { API_BASE_URL } from '../api'
 import { Badge, Spinner, Modal } from '../components/UI'
 import {
   RotateCcw, RefreshCw, PackageX, IndianRupee, FileX, TrendingDown,
-  Eye, ChevronDown, ChevronUp, Printer, AlertCircle, Plus, Receipt
+  Eye, ChevronDown, ChevronUp, Printer, AlertCircle, Plus, Receipt,
+  Search, X
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -190,6 +191,7 @@ export default function Returns() {
   const [returnModal, setReturnModal] = useState(null)
   const [viewModal, setViewModal] = useState(null)
   const [expandedReturns, setExpandedReturns] = useState({})
+  const [returnSearch, setReturnSearch] = useState('')
 
   const load = () => {
     setLoading(true)
@@ -214,6 +216,17 @@ export default function Returns() {
   const completedInvoices = invoices.filter(b => b.status === 'completed')
 
   const totalRefunded = [...refundedInvoices, ...returns].reduce((s, b) => s + Number(b.refund_amount || b.grand_total || 0), 0)
+
+  const filteredReturns = useMemo(() => {
+    if (!returnSearch.trim()) return returns
+    const q = returnSearch.toLowerCase()
+    return returns.filter(r =>
+      (r.return_number || '').toLowerCase().includes(q) ||
+      (r.invoice_number || '').toLowerCase().includes(q) ||
+      (r.invoice?.customer_name || '').toLowerCase().includes(q) ||
+      (r.reason || '').toLowerCase().includes(q)
+    )
+  }, [returns, returnSearch])
 
   const stats = [
     { label: 'Total Returns', value: returns.length + refundedInvoices.length, icon: RotateCcw },
@@ -319,7 +332,7 @@ export default function Returns() {
       <div className="bg-[var(--surface)] rounded-lg border border-[var(--line)] shadow-none overflow-hidden min-w-0">
 
   {/* Header */}
-  <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-[var(--line-subtle)] bg-[var(--surface)]">
+  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b border-[var(--line-subtle)] bg-[var(--surface)]">
 
     {/* Title */}
     <div className="flex items-center gap-2 min-w-0">
@@ -331,19 +344,49 @@ export default function Returns() {
       <h2 className="font-semibold text-[var(--ink)] text-sm sm:text-base leading-5 tracking-tight truncate">
         Sales Returns (Item-level)
       </h2>
+      <span className="rounded-sm bg-[var(--surface-elevated)] border border-[var(--line)] px-2 py-0.5 text-[10px] font-bold text-[var(--muted)]">
+        {filteredReturns.length}
+      </span>
     </div>
 
-    {/* Refresh Button */}
-    <button
-      onClick={load}
-      type="button"
-      className="btn-icon"
-      aria-label="Refresh sales returns"
-      title="Refresh"
-    >
-      <RefreshCw size={15} strokeWidth={2} />
-    </button>
+    <div className="flex items-center gap-2 w-full sm:w-auto">
+      {/* Search bar */}
+      <div className="group relative flex items-center min-h-[38px] w-full sm:w-64 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-2xs">
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
+          <Search size={13} strokeWidth={2.2} />
         </div>
+        <input
+          type="text"
+          value={returnSearch}
+          onChange={e => setReturnSearch(e.target.value)}
+          placeholder="Search returns..."
+          className="w-full bg-transparent px-2 text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
+        />
+        {returnSearch ? (
+          <button
+            type="button"
+            onClick={() => setReturnSearch('')}
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[var(--muted)] hover:text-[var(--ink)]"
+            title="Clear search"
+            aria-label="Clear search"
+          >
+            <X size={12} strokeWidth={2.5} />
+          </button>
+        ) : null}
+      </div>
+
+      {/* Refresh Button */}
+      <button
+        onClick={load}
+        type="button"
+        className="btn-icon h-[38px] w-[38px] rounded-xl border border-[var(--line)]"
+        aria-label="Refresh sales returns"
+        title="Refresh"
+      >
+        <RefreshCw size={15} strokeWidth={2} />
+      </button>
+    </div>
+  </div>
         {loading ? <Spinner /> : (
           <>
             <div className="hidden md:block overflow-x-auto">
@@ -352,9 +395,9 @@ export default function Returns() {
                   <tr><th>Return #</th><th>Invoice</th><th>Customer</th><th>Date</th><th>Refund Method</th><th>Refund Amt</th><th>Reason</th><th></th></tr>
                 </thead>
                 <tbody>
-                  {returns.length === 0 ? (
+                  {filteredReturns.length === 0 ? (
                     <tr><td colSpan={8} className="text-center py-10 text-[var(--muted-light)] text-sm">No sales returns yet</td></tr>
-                  ) : returns.map(r => (
+                  ) : filteredReturns.map(r => (
                     <>
                       <tr key={r.id}>
                         <td className="font-mono font-semibold text-[#1E3A5F] dark:text-slate-200 text-sm">{r.return_number}</td>
@@ -386,9 +429,9 @@ export default function Returns() {
             </div>
 
             <div className="md:hidden p-3 space-y-3">
-              {returns.length === 0 ? (
+              {filteredReturns.length === 0 ? (
                 <div className="text-center py-10 text-[var(--muted-light)] text-sm">No sales returns yet</div>
-              ) : returns.map(r => (
+              ) : filteredReturns.map(r => (
                 <div key={r.id} className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none transition-all">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
