@@ -334,4 +334,76 @@ class TransactionWorkflowTests(TestCase):
 		self.assertEqual(response.status_code, 401)
 		self.assertEqual(response.data['code'], 'invalid_credentials')
 
+	def test_invoice_templates_crud_and_pdf(self):
+		# 1. List templates
+		res = self.client.get('/api/settings/templates/')
+		self.assertEqual(res.status_code, 200)
+		self.assertIn('templates', res.data)
+		template_ids = [t['id'] for t in res.data['templates']]
+		self.assertIn('half_a4', template_ids)
+		self.assertIn('gst_a4', template_ids)
+		self.assertIn('thermal_80', template_ids)
+		self.assertIn('thermal_58', template_ids)
+
+		# 2. Get template details
+		res_detail = self.client.get('/api/settings/templates/half_a4/')
+		self.assertEqual(res_detail.status_code, 200)
+		self.assertEqual(res_detail.data['template_id'], 'half_a4')
+		self.assertIn('business_info', res_detail.data)
+
+		# 3. Update template config
+		updated_cfg = res_detail.data
+		updated_cfg['business_info']['store_name_override'] = 'Customized Half A4 Store'
+		updated_cfg['layout']['margin_top_mm'] = 6
+		save_res = self.client.post('/api/settings/templates/half_a4/', updated_cfg, format='json')
+		self.assertEqual(save_res.status_code, 200)
+		self.assertEqual(save_res.data['business_info']['store_name_override'], 'Customized Half A4 Store')
+
+		# 4. Check persistence via GET
+		check_res = self.client.get('/api/settings/templates/half_a4/')
+		self.assertEqual(check_res.data['business_info']['store_name_override'], 'Customized Half A4 Store')
+
+		# 5. Select active templates
+		active_res = self.client.post('/api/settings/templates/select-active/', {
+			'format': 'half_a4',
+			'template_id': 'half_a4',
+		}, format='json')
+		self.assertEqual(active_res.status_code, 200)
+		self.assertEqual(active_res.data['active_template_half_a4'], 'half_a4')
+
+		# 6. Verify in settings/all
+		all_res = self.client.get('/api/settings/all/')
+		self.assertEqual(all_res.status_code, 200)
+		self.assertEqual(all_res.data['active_templates']['active_template_half_a4'], 'half_a4')
+		template_ids_in_all = [t['id'] for t in all_res.data['template_settings']['templates']]
+		self.assertIn('half_a4', template_ids_in_all)
+
+		# 7. Reset template config
+		reset_res = self.client.post('/api/settings/templates/half_a4/reset/', {}, format='json')
+		self.assertEqual(reset_res.status_code, 200)
+		self.assertEqual(reset_res.data['business_info']['store_name_override'], '')
+
+		# 8. Test PDF endpoint with template parameter
+		invoice = Invoice.objects.create(
+			business=self.business,
+			invoice_number='INV-TPL-01',
+			customer=self.customer,
+			subtotal=Decimal('500.00'),
+			grand_total=Decimal('500.00'),
+			paid_amount=Decimal('500.00'),
+			payment_status='paid',
+			payment_method='cash',
+		)
+		pdf_res = self.client.get(f'/api/invoices/{invoice.id}/pdf/?template=half_a4')
+		self.assertEqual(pdf_res.status_code, 200)
+		self.assertEqual(pdf_res['Content-Type'], 'application/pdf')
+		self.assertIn(b'%PDF', pdf_res.content[:10])
+
+		# Test thermal 58mm PDF
+		thermal_res = self.client.get(f'/api/invoices/{invoice.id}/pdf/?template=thermal_58')
+		self.assertEqual(thermal_res.status_code, 200)
+		self.assertEqual(thermal_res['Content-Type'], 'application/pdf')
+		self.assertIn(b'%PDF', thermal_res.content[:10])
+
+
 # Create your tests here.

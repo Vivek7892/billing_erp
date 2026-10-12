@@ -1172,9 +1172,9 @@ tr.row-info {
 
 .erp-table th {
   padding: 0.7rem 0.8rem;
-  background: linear-gradient(135deg, #1e3a8a, #2563eb);
-  border-bottom: 1px solid #1d4ed8;
-  color: #eff6ff;
+  background: #1E3A5F !important;
+  border-bottom: 1px solid #162F4D !important;
+  color: #FFFFFF !important;
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -1187,15 +1187,21 @@ tr.row-info {
   padding: 0.7rem 0.8rem;
   border-bottom: 1px solid var(--line-subtle);
   font-size: 0.8125rem;
+  color: var(--ink);
   vertical-align: middle;
 }
 
 .erp-table tbody tr {
+  background: var(--surface);
   transition: background-color 150ms ease;
 }
 
 .erp-table tbody tr:hover {
-  background: #f0fdfa;
+  background: #F0FDFA;
+}
+
+.dark .erp-table tbody tr {
+  background: var(--surface);
 }
 
 .dark .erp-table tbody tr:hover {

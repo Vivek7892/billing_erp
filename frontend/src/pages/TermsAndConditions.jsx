@@ -182,7 +182,7 @@ export default function TermsAndConditions() {
               </div>
               <div className="mt-4 space-y-3 text-sm leading-relaxed text-[var(--ink)]">
                 <p>
-                  By accessing, browsing, registering for, downloading, or using the <strong>ShopEase POS &amp; Billing ERP</strong> application (the &ldquo;Service&rdquo; or &ldquo;Software&rdquo;), operated by <strong>ShopEase Retail Technologies</strong> (together with <strong>Sri Balaji Store</strong>, &ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;), you (&ldquo;User&rdquo;, &ldquo;Merchant&rdquo;, &ldquo;Cashier&rdquo;, or &ldquo;Customer&rdquo;) agree to be legally bound by these Terms and Conditions (&ldquo;Terms&rdquo;).
+                  By accessing, browsing, registering for, downloading, or using the <strong>Dreamwithtech POS &amp; Billing ERP</strong> application (the &ldquo;Service&rdquo; or &ldquo;Software&rdquo;), operated by <strong>ShopEase Retail Technologies</strong> (together with <strong>Sri Balaji Store</strong>, &ldquo;we&rdquo;, &ldquo;us&rdquo;, or &ldquo;our&rdquo;), you (&ldquo;User&rdquo;, &ldquo;Merchant&rdquo;, &ldquo;Cashier&rdquo;, or &ldquo;Customer&rdquo;) agree to be legally bound by these Terms and Conditions (&ldquo;Terms&rdquo;).
                 </p>
                 <p>
                   If you are registering an account or using the Service on behalf of a company, retail establishment, partnership, or other legal entity, you represent and warrant that you have full legal authority to bind that entity to these Terms. If you do not agree to all provisions contained herein, do not use the application or services.

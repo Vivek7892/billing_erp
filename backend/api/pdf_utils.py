@@ -116,9 +116,10 @@ TIGHT_GAP = Spacer(1, 1.5 * mm)
 # Settings plumbing (the ONLY place invoice generation talks to Setting)
 # ═════════════════════════════════════════════════════════════════════════
 
-def invoice_settings(invoice):
-    """Settings belong to the invoice's business, never to another tenant."""
-    return {item.key: item.value for item in Setting.objects.filter(business=invoice.business)}
+def invoice_settings(invoice, template=None):
+    """Settings belong to the invoice's business, merged with template-specific overrides."""
+    from .services.template_service import resolve_invoice_template_settings
+    return resolve_invoice_template_settings(invoice, template_id=template)
 
 
 def setting_value(settings, key, default=""):
@@ -153,8 +154,8 @@ class Settings:
         return self._raw.get(key, "")
 
 
-def load_settings(invoice):
-    return Settings(invoice_settings(invoice))
+def load_settings(invoice, template=None):
+    return Settings(invoice_settings(invoice, template=template))
 
 
 # ═════════════════════════════════════════════════════════════════════════
@@ -1118,16 +1119,20 @@ _PAPER_SIZES = {
 }
 
 
-def generate_invoice_pdf(invoice, force_a4=False):
+def generate_invoice_pdf(invoice, force_a4=False, paper_size=None, template=None):
     """Generate the redesigned monochrome GST invoice (A4, Letter or A5)."""
-    raw_settings = invoice_settings(invoice)
-    if raw_settings.get("invoice_template", "gst_a4") == "thermal_80" and not force_a4:
+    raw_settings = invoice_settings(invoice, template=template)
+    template_name = str(raw_settings.get("invoice_template", "gst_a4")).lower()
+    if template_name == "thermal_80" and not force_a4:
         raise ValueError("invoice_template is 'thermal_80' — use generate_thermal_invoice_pdf() instead.")
 
-    paper_key = str(raw_settings.get("invoice_paper_size", "a4")).lower()
+    paper_key = str(paper_size or raw_settings.get("invoice_paper_size", "a4")).lower()
+    if template_name in ("half_a4", "advanced_gst_a5") and not paper_size:
+        paper_key = "a5"
+
     pagesize = _PAPER_SIZES.get(paper_key, A4)
     page_w, page_h = pagesize
-    margin = 8 * mm
+    margin = 5 * mm if paper_key == "a5" else 8 * mm
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
@@ -1226,15 +1231,15 @@ def _thermal_discount_total(invoice):
     return dec(getattr(invoice, "discount_amount", 0))
 
 
-def generate_thermal_invoice_pdf(invoice):
-    """Generate an 80mm monochrome receipt using the same section order as A4.
+def generate_thermal_invoice_pdf(invoice, template=None):
+    """Generate an 80mm or 58mm monochrome receipt using the same section order as A4.
 
     The layout is intentionally different in width, but not in document
     hierarchy: identity -> invoice control -> customer -> items -> totals ->
     settlement -> UPI -> terms -> footer.
     """
     buffer = BytesIO()
-    s = load_settings(invoice)
+    s = load_settings(invoice, template=template)
 
     shop_name = _fmt_value(s.get("shop_name"), "Business Name Not Configured")
     shop_address = s.get("shop_address")
@@ -1284,13 +1289,19 @@ def generate_thermal_invoice_pdf(invoice):
     ) * mm
     page_height = max(100 * mm, page_height)
 
+    tpl_name = str(template or s.get("invoice_template") or "").lower()
+    is_58mm = tpl_name == "thermal_58" or str(s.get("printer_paper_width", "")).strip() == "58mm"
+    roll_width_mm = 58 if is_58mm else 80
+    margin_mm = 3 if is_58mm else 4
+    content_w = (roll_width_mm - 2 * margin_mm) * mm
+
     doc = SimpleDocTemplate(
         buffer,
-        pagesize=portrait((80 * mm, page_height)),
-        topMargin=4 * mm,
-        bottomMargin=4 * mm,
-        leftMargin=4 * mm,
-        rightMargin=4 * mm,
+        pagesize=portrait((roll_width_mm * mm, page_height)),
+        topMargin=margin_mm * mm,
+        bottomMargin=margin_mm * mm,
+        leftMargin=margin_mm * mm,
+        rightMargin=margin_mm * mm,
         title=f"Invoice {invoice.invoice_number}",
         author="Billing Application",
     )
@@ -1303,8 +1314,8 @@ def generate_thermal_invoice_pdf(invoice):
         logo = _logo_for_a4(s)
         if logo is not None:
             logo.hAlign = "CENTER"
-            logo.drawHeight = 18 * mm
-            logo.drawWidth = 18 * mm
+            logo.drawHeight = 15 * mm
+            logo.drawWidth = 15 * mm
             story.append(logo)
     story.append(_tpara(shop_name.upper(), size=T_NAME + 1, align=TA_CENTER, bold=True))
     if s.flag("show_business_address", True):
@@ -1388,9 +1399,10 @@ def generate_thermal_invoice_pdf(invoice):
             _tpara(currency(item.total), size=T_ITEM, align=TA_RIGHT, bold=True),
         ])
 
+    item_col_widths = [20 * mm, 7 * mm, 12 * mm, 13 * mm] if is_58mm else [31 * mm, 9 * mm, 15 * mm, 17 * mm]
     item_tbl = Table(
         item_rows,
-        colWidths=[31 * mm, 9 * mm, 15 * mm, 17 * mm],
+        colWidths=item_col_widths,
         repeatRows=1,
         hAlign="CENTER",
     )
@@ -1436,7 +1448,8 @@ def generate_thermal_invoice_pdf(invoice):
         _tpara(currency(grand), size=T_TOTAL, align=TA_RIGHT, bold=True),
     ])
 
-    totals_tbl = Table(totals_rows, colWidths=[36 * mm, 36 * mm], hAlign="CENTER")
+    half_totals_w = (content_w / 2.0)
+    totals_tbl = Table(totals_rows, colWidths=[half_totals_w, half_totals_w], hAlign="CENTER")
     totals_tbl.setStyle(TableStyle([
         ("TOPPADDING", (0, 0), (-1, -1), 1.5),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 1.5),

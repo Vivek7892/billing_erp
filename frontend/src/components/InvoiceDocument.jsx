@@ -57,9 +57,40 @@ export function isTrue(val, defaultVal = true) {
   return val === 'true' || val === true || val === 1 || val === '1'
 }
 
+function InvoiceModePicker({ mode, onModeChange }) {
+  const modes = [
+    { id: 'a4', label: 'A4 Tax Invoice' },
+    { id: 'half_a4', label: 'Half-A4 Bill (A5)' },
+    { id: 'thermal_80', label: 'Thermal Receipt (80mm)' },
+    { id: 'thermal_58', label: 'Thermal Receipt (58mm)' },
+  ]
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 print:hidden">
+      {modes.map(m => {
+        const isSel = mode === m.id || (m.id === 'thermal_80' && mode === 'thermal')
+        return (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => onModeChange?.(m.id)}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+              isSel
+                ? 'bg-[#1E3A5F] text-white shadow-xs'
+                : 'border border-[#DCE3EC] bg-white text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            {m.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function InvoiceDocument({
   invoice,
   settings = {},
+  templateConfig = null,
   mode = 'a4',
   onModeChange,
   showModePicker = false,
@@ -67,6 +98,40 @@ export default function InvoiceDocument({
 }) {
   const s = settings || {}
   const inv = invoice || {}
+
+  // Determine effective invoice mode
+  const effectiveMode = useMemo(() => {
+    if (mode === 'thermal' || mode === 'thermal_80' || mode === 'thermal_58') return 'thermal'
+    if (mode === 'half_a4' || mode === 'a5' || mode === 'advanced_gst_a5') return 'half_a4'
+    if (mode === 'a4' || mode === 'gst_a4' || mode === 'luxury' || mode === 'stylish') return 'a4'
+    if (s.invoice_template === 'thermal_80' || s.invoice_template === 'thermal_58' || s.invoice_template === 'thermal') return 'thermal'
+    if (s.invoice_template === 'half_a4' || s.invoice_template === 'advanced_gst_a5') return 'half_a4'
+    return 'a4'
+  }, [mode, s.invoice_template])
+
+  // Extract template configuration if provided or resolve from settings.template_settings
+  const activeTplConfig = useMemo(() => {
+    if (templateConfig && typeof templateConfig === 'object') return templateConfig
+    if (s.template_settings && typeof s.template_settings === 'object') {
+      const activeMap = s.active_templates || {}
+      let targetId = mode
+      if (mode === 'half_a4') targetId = activeMap.active_template_half_a4 || 'half_a4'
+      else if (mode === 'thermal' || mode === 'thermal_80') targetId = activeMap.active_template_thermal || 'thermal_80'
+      else if (mode === 'thermal_58') targetId = 'thermal_58'
+      else if (mode === 'a4') targetId = activeMap.active_template_a4 || 'gst_a4'
+
+      const entry = s.template_settings[targetId] || s.template_settings[mode]
+      return entry?.config || null
+    }
+    return null
+  }, [templateConfig, s, mode])
+
+  const tBiz = activeTplConfig?.business_info || {}
+  const tFields = activeTplConfig?.fields || {}
+  const tLayout = activeTplConfig?.layout || {}
+  const tTax = activeTplConfig?.tax || {}
+  const tPayment = activeTplConfig?.payment || {}
+  const tPage = activeTplConfig?.page || {}
 
   // Currency formatter
   const fmt = val => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -91,23 +156,23 @@ export default function InvoiceDocument({
   }
 
   // Business profile
-  const shopName = s.shop_name || 'SRI BALAJI STORE'
-  const shopAddress = s.shop_address || ''
-  const shopPhone = s.shop_phone || ''
-  const shopEmail = s.shop_email || ''
-  const shopGstin = s.shop_gstin || ''
+  const shopName = tBiz.store_name_override || s.shop_name || 'SRI BALAJI STORE'
+  const shopAddress = tBiz.address_override || s.shop_address || ''
+  const shopPhone = tBiz.phone_override || s.shop_phone || ''
+  const shopEmail = tBiz.email_override || s.shop_email || ''
+  const shopGstin = tBiz.gstin_override || s.shop_gstin || ''
   const shopPan = s.shop_pan || ''
   const shopLogo = s.shop_logo || ''
   const fssai = s.fssai_licence || ''
   const cin = s.cin || ''
 
   // Business display flags
-  const showLogo = isTrue(s.show_business_logo, true) && Boolean(shopLogo) && s.invoice_header_layout !== 'name_only'
-  const showAddress = isTrue(s.show_business_address, true) && Boolean(shopAddress)
-  const showPhone = isTrue(s.show_business_phone, true) && Boolean(shopPhone)
-  const showEmail = isTrue(s.show_business_email, true) && Boolean(shopEmail)
-  const showGstin = isTrue(s.show_business_gstin, true) && Boolean(shopGstin)
-  const showPan = isTrue(s.show_business_pan, true) && Boolean(shopPan)
+  const showLogo = (tBiz.show_logo !== undefined ? tBiz.show_logo : isTrue(s.show_business_logo, true)) && Boolean(shopLogo) && (tBiz.header_layout || s.invoice_header_layout) !== 'name_only'
+  const showAddress = (tBiz.show_address !== undefined ? tBiz.show_address : isTrue(s.show_business_address, true)) && Boolean(shopAddress)
+  const showPhone = (tBiz.show_phone !== undefined ? tBiz.show_phone : isTrue(s.show_business_phone, true)) && Boolean(shopPhone)
+  const showEmail = (tBiz.show_email !== undefined ? tBiz.show_email : isTrue(s.show_business_email, true)) && Boolean(shopEmail)
+  const showGstin = (tBiz.show_gstin !== undefined ? tBiz.show_gstin : isTrue(s.show_business_gstin, true)) && Boolean(shopGstin)
+  const showPan = (tBiz.show_pan !== undefined ? tBiz.show_pan : isTrue(s.show_business_pan, true)) && Boolean(shopPan)
   const showFssai = isTrue(s.show_fssai_on_invoice, false) && Boolean(fssai)
   const showCin = isTrue(s.show_cin_on_invoice, false) && Boolean(cin)
 
@@ -117,9 +182,10 @@ export default function InvoiceDocument({
   const custAddress = inv.customer_address || inv.customer?.address || ''
   const custGstin = inv.customer_gstin || inv.customer?.gstin || ''
 
-  const showCustPhone = isTrue(s.show_customer_phone, true) && Boolean(custPhone)
-  const showCustAddress = isTrue(s.show_customer_address, true) && Boolean(custAddress)
-  const showCustGstin = isTrue(s.show_customer_gstin, true) && Boolean(custGstin)
+  const showCustName = tFields.show_customer_name !== undefined ? tFields.show_customer_name : true
+  const showCustPhone = (tFields.show_customer_phone !== undefined ? tFields.show_customer_phone : isTrue(s.show_customer_phone, true)) && Boolean(custPhone)
+  const showCustAddress = (tFields.show_customer_address !== undefined ? tFields.show_customer_address : isTrue(s.show_customer_address, true)) && Boolean(custAddress)
+  const showCustGstin = (tFields.show_customer_gstin !== undefined ? tFields.show_customer_gstin : isTrue(s.show_customer_gstin, true)) && Boolean(custGstin)
 
   // Invoice specifics
   const invoiceNo = inv.invoice_number || `${s.invoice_prefix || 'INV-'}${s.invoice_start_number || '1001'}`
@@ -128,8 +194,8 @@ export default function InvoiceDocument({
   const paymentMode = (inv.payment_method || s.default_payment_method || 'CASH').toUpperCase()
   const placeOfSupply = inv.place_of_supply || s.place_of_supply || ''
 
-  const showPaymentMode = isTrue(s.show_payment_mode, true) && Boolean(paymentMode)
-  const showPlaceOfSupply = isTrue(s.show_place_of_supply, true) && Boolean(placeOfSupply)
+  const showPaymentMode = (tFields.show_payment_mode !== undefined ? tFields.show_payment_mode : isTrue(s.show_payment_mode, true)) && Boolean(paymentMode)
+  const showPlaceOfSupply = (tFields.show_place_of_supply !== undefined ? tFields.show_place_of_supply : isTrue(s.show_place_of_supply, true)) && Boolean(placeOfSupply)
 
   // Document status
   const isCancelled = inv.status === 'cancelled'
@@ -180,78 +246,76 @@ export default function InvoiceDocument({
   const balanceDue = Number(inv.balance_due ?? Math.max(0, grandTotal - paidAmount))
 
   // Column toggles
-  const showSkuCol = isTrue(s.show_sku_col, false) && items.some(i => Boolean(i.sku))
-  const showHsnCol = isTrue(s.show_hsn_col, true) && items.some(i => Boolean(i.hsn))
-  const showUnitCol = isTrue(s.show_unit_col, false) && items.some(i => Boolean(i.unit))
-  const showBatchCol = isTrue(s.show_batch_col, false) && items.some(i => Boolean(i.batch))
-  const showDiscCol = isTrue(s.show_discount_col, true) && items.some(i => Number(i.disc) > 0)
-  const showTaxCols = isTrue(s.show_tax_cols, true) && s.gst_reg_type !== 'unregistered'
+  const showSkuCol = (tFields.show_sku !== undefined ? tFields.show_sku : isTrue(s.show_sku_col, false)) && items.some(i => Boolean(i.sku))
+  const showHsnCol = (tFields.show_hsn !== undefined ? tFields.show_hsn : isTrue(s.show_hsn_col, true)) && items.some(i => Boolean(i.hsn))
+  const showUnitCol = (tFields.show_unit !== undefined ? tFields.show_unit : isTrue(s.show_unit_col, false)) && items.some(i => Boolean(i.unit))
+  const showBatchCol = (tFields.show_batch !== undefined ? tFields.show_batch : isTrue(s.show_batch_col, false)) && items.some(i => Boolean(i.batch))
+  const showDiscCol = (tFields.show_discount !== undefined ? tFields.show_discount : isTrue(s.show_discount_col, true)) && items.some(i => Number(i.disc) > 0)
+  const showTaxCols = (tFields.show_tax_breakup !== undefined ? tFields.show_tax_breakup : isTrue(s.show_tax_cols, true)) && s.gst_reg_type !== 'unregistered'
   const showCessCol = isTrue(s.cess_enabled, false) && cessAmount > 0
 
+  // Tax breakdown flags
+  const showSubtotal = tTax.show_subtotal !== undefined ? tTax.show_subtotal : true
+  const showDiscountTotal = tTax.show_discount_total !== undefined ? tTax.show_discount_total : true
+  const showTaxSummary = tTax.show_tax_summary !== undefined ? tTax.show_tax_summary : true
+  const showRoundOff = tTax.show_round_off !== undefined ? tTax.show_round_off : true
+  const showWords = (tTax.show_amount_in_words !== undefined ? tTax.show_amount_in_words : isTrue(s.show_amount_in_words, true))
+
   // Payment, QR & Bank
-  const showPaymentSummary = isTrue(s.show_payment_summary, true)
-  const showBalanceDue = isTrue(s.show_balance_due, true)
-  const showBankDetails = isTrue(s.show_bank_details, true) && Boolean(s.shop_bank_details)
+  const showPaymentSummary = tPayment.show_payment_summary !== undefined ? tPayment.show_payment_summary : isTrue(s.show_payment_summary, true)
+  const showBalanceDue = tPayment.show_balance_due !== undefined ? tPayment.show_balance_due : isTrue(s.show_balance_due, true)
+  const showBankDetails = (tPayment.show_bank_details !== undefined ? tPayment.show_bank_details : isTrue(s.show_bank_details, true)) && Boolean(s.shop_bank_details)
   const upiId = s.shop_upi_id || ''
-  const showUpiA4 = isTrue(s.show_upi_qr_on_invoice, true) && Boolean(upiId)
-  const showUpiThermal = isTrue(s.show_upi_qr_on_thermal, true) && Boolean(upiId)
+  const showUpiA4 = (tPayment.show_upi_qr !== undefined ? tPayment.show_upi_qr : isTrue(s.show_upi_qr_on_invoice, true)) && Boolean(upiId)
+  const showUpiThermal = (tPayment.show_upi_qr !== undefined ? tPayment.show_upi_qr : isTrue(s.show_upi_qr_on_thermal, true)) && Boolean(upiId)
   const qrSizeA4 = ({ small: 64, medium: 78, large: 96 })[s.upi_qr_size_a4] || 78
   const qrSizeThermal = ({ small: 72, medium: 96, large: 120 })[s.upi_qr_size_thermal] || 96
   const qrValue = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(shopName)}&am=${grandTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(invoiceNo)}`
 
   // Digital Bill QR Code ("Scan to View Bill")
-  const showDigitalBillQr = isTrue(s.enable_invoice_qr, true)
+  const showDigitalBillQr = tPayment.show_digital_bill_qr !== undefined ? tPayment.show_digital_bill_qr : isTrue(s.enable_invoice_qr, true)
   const digitalBillUrl = inv.short_url
     || (inv.public_token ? `${window.location.origin}/bill/${inv.public_token}` : `${window.location.origin}/bill/${inv.id || 'preview'}`)
     || (inv.id ? `http://127.0.0.1:8000/s/${inv.public_token ? inv.public_token.slice(0, 6) : inv.id}/` : '')
 
   // Notes, Terms & Footer
   const notesText = inv.notes || s.invoice_notes || ''
-  const termsText = inv.terms || s.invoice_terms || ''
-  const showNotes = isTrue(s.show_notes, true) && Boolean(notesText)
-  const showTerms = isTrue(s.show_terms, true) && Boolean(termsText)
-  const showSignature = isTrue(s.show_signature_area, false)
-  const showWords = isTrue(s.show_amount_in_words, true)
-  const showFooter = isTrue(s.show_footer, true) && s.invoice_footer_layout !== 'none'
-  const footerText = s.invoice_footer || 'THANK YOU FOR SHOPPING WITH US!'
-  const footerAlign = s.invoice_footer_layout === 'text_left' ? 'left' : 'center'
+  const termsText = tPayment.terms_override || inv.terms || s.invoice_terms || ''
+  const showNotes = (tFields.show_notes !== undefined ? tFields.show_notes : isTrue(s.show_notes, true)) && Boolean(notesText)
+  const showTerms = (tPayment.show_terms !== undefined ? tPayment.show_terms : isTrue(s.show_terms, true)) && Boolean(termsText)
+  const showSignature = tPayment.show_signature !== undefined ? tPayment.show_signature : isTrue(s.show_signature_area, false)
+  const showFooter = (tPayment.show_footer !== undefined ? tPayment.show_footer : isTrue(s.show_footer, true)) && (tPayment.footer_layout || s.invoice_footer_layout) !== 'none'
+  const footerText = tPayment.footer_text_override || s.invoice_footer || 'THANK YOU FOR SHOPPING WITH US!'
+  const footerAlign = (tPayment.footer_layout || s.invoice_footer_layout) === 'text_left' ? 'left' : 'center'
 
-  // Font
-  const fontFamily = s.invoice_font === 'courier' ? 'Courier New, monospace' : 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+  // Font and typography
+  const selectedFont = tLayout.font_family || s.invoice_font || 'inter'
+  const fontFamily = selectedFont === 'courier'
+    ? 'Courier New, monospace'
+    : selectedFont === 'roboto'
+    ? 'Roboto, sans-serif'
+    : selectedFont === 'times'
+    ? '"Times New Roman", Times, serif'
+    : 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+
+  const is58mm = mode === 'thermal_58' || tPage.thermal_roll_width === '58mm' || (s.invoice_template === 'thermal_58' && mode !== 'thermal_80' && mode !== 'a4' && mode !== 'half_a4')
 
   // --------------------------------------------------------------------------
   // THERMAL RECEIPT MODE
   // --------------------------------------------------------------------------
-  if (mode === 'thermal') {
+  if (effectiveMode === 'thermal') {
     return (
       <div className={`invoice-document-root ${className}`}>
-        {showModePicker && (
-          <div className="flex items-center gap-2 mb-4 print:hidden">
-            <button
-              type="button"
-              onClick={() => onModeChange?.('a4')}
-              className="px-3.5 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-xs font-semibold text-[var(--muted)] hover:text-[var(--ink)]"
-            >
-              A4 Tax Invoice
-            </button>
-            <button
-              type="button"
-              onClick={() => onModeChange?.('thermal')}
-              className="px-3.5 py-1.5 rounded-lg bg-blue-600 text-xs font-semibold text-white shadow-sm"
-            >
-              Thermal Receipt (80mm)
-            </button>
-          </div>
-        )}
+        {showModePicker && <InvoiceModePicker mode={mode} onModeChange={onModeChange} />}
 
         <div className="flex justify-center print:m-0">
           <div
             className="bg-white text-black border border-slate-300 shadow-sm print:shadow-none print:border-none"
             style={{
-              width: 302,
+              width: is58mm ? 220 : 302,
               fontFamily: 'Courier New, monospace',
-              fontSize: 11,
-              padding: '12px 10px',
+              fontSize: is58mm ? 9.5 : 11,
+              padding: is58mm ? '10px 8px' : '12px 10px',
               lineHeight: 1.35,
             }}
           >
@@ -429,28 +493,374 @@ export default function InvoiceDocument({
   }
 
   // --------------------------------------------------------------------------
-  // A4 / A5 TAX INVOICE MODE
+  // HALF-A4 (A5) TAX INVOICE MODE (148 x 210 mm)
+  // --------------------------------------------------------------------------
+  if (effectiveMode === 'half_a4') {
+    return (
+      <div className={`invoice-document-root ${className}`}>
+        {showModePicker && <InvoiceModePicker mode={mode} onModeChange={onModeChange} />}
+
+        <div className="overflow-x-auto print:overflow-visible flex justify-center">
+          <div
+            className="bg-white text-[#0F172A] border border-slate-300 shadow-sm print:shadow-none print:border-none rounded-sm print:m-0"
+            style={{
+              width: 560,
+              maxWidth: '100%',
+              minHeight: 420,
+              fontFamily,
+              fontSize: 10,
+              padding: '16px 20px',
+              boxSizing: 'border-box',
+              lineHeight: 1.35,
+            }}
+          >
+            {/* Header: Shop info left, invoice metadata right */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, gap: 12 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {showLogo && (
+                  <img
+                    src={shopLogo}
+                    alt="Store Logo"
+                    style={{ maxHeight: 36, maxWidth: 110, objectFit: 'contain', marginBottom: 4 }}
+                  />
+                )}
+                <div style={{ fontWeight: '800', fontSize: 14.5, textTransform: 'uppercase', color: '#0F172A', letterSpacing: '0.02em', lineHeight: 1.2 }}>
+                  {shopName}
+                </div>
+                {showAddress && shopAddress.split('\n').map((line, idx) => (
+                  <div key={idx} style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}>{line}</div>
+                ))}
+                {(showPhone || showEmail) && (
+                  <div style={{ fontSize: 8.5, color: '#475569', marginTop: 1 }}>
+                    {showPhone && `Ph: ${shopPhone}`}
+                    {showPhone && showEmail && ' | '}
+                    {showEmail && shopEmail}
+                  </div>
+                )}
+                {(showGstin || showPan || showFssai || showCin) && (
+                  <div style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}>
+                    {showGstin && <span><b>GSTIN:</b> {shopGstin} </span>}
+                    {showPan && <span>| <b>PAN:</b> {shopPan} </span>}
+                    {showFssai && <span>| <b>FSSAI:</b> {fssai}</span>}
+                    {showCin && <span>| <b>CIN:</b> {cin}</span>}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ textAlign: 'right', minWidth: 170 }}>
+                <div style={{
+                  fontWeight: '800',
+                  fontSize: 15,
+                  letterSpacing: '0.03em',
+                  color: isCancelled ? '#DC2626' : '#0F172A',
+                }}>
+                  {docHeading}
+                </div>
+                <div style={{ fontSize: 10, fontWeight: '700', marginTop: 4, color: '#0F172A' }}>
+                  Inv #: {invoiceNo}
+                </div>
+                <div style={{ fontSize: 9, color: '#334155', marginTop: 1 }}>
+                  Date: {invoiceDate}
+                </div>
+                {inv.due_date && (
+                  <div style={{ fontSize: 9, color: '#334155', marginTop: 1 }}>
+                    Due: {formatDate(inv.due_date)}
+                  </div>
+                )}
+                {showPaymentMode && (
+                  <div style={{ fontSize: 9, color: '#334155', marginTop: 1 }}>
+                    Payment: {paymentMode}
+                  </div>
+                )}
+                {showPlaceOfSupply && (
+                  <div style={{ fontSize: 8.5, color: '#475569', marginTop: 1 }}>
+                    POS: {placeOfSupply}
+                  </div>
+                )}
+                {isCancelled && (
+                  <div style={{ marginTop: 4, fontSize: 8.5, color: '#DC2626', background: '#FEF2F2', padding: '2px 4px', borderRadius: 3 }}>
+                    <b>CANCELLED</b>
+                    {inv.cancel_reason && <div>{inv.cancel_reason}</div>}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{ borderTop: '1px solid #CBD5E1', marginBottom: 8 }} />
+
+            {/* Bill To & UPI QR */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 10 }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: 8.5, fontWeight: '700', textTransform: 'uppercase', color: '#475569', letterSpacing: '0.04em' }}>
+                  BILL TO
+                </div>
+                <div style={{ fontWeight: '700', fontSize: 11.5, color: '#0F172A' }}>
+                  {custName}
+                </div>
+                {showCustAddress && (
+                  <div style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}>{custAddress}</div>
+                )}
+                {showCustPhone && (
+                  <div style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}>Mobile: {custPhone}</div>
+                )}
+                {showCustGstin && (
+                  <div style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}><b>GSTIN:</b> {custGstin}</div>
+                )}
+              </div>
+
+              {showUpiA4 && (
+                <div style={{ textAlign: 'center', fontSize: 8, color: '#475569' }}>
+                  <div style={{ display: 'inline-block', border: '1px solid #E2E8F0', padding: 2, borderRadius: 4, background: '#FFFFFF' }}>
+                    <QRCodeSVG value={qrValue} size={58} />
+                  </div>
+                  <div style={{ marginTop: 1, fontWeight: '600', fontSize: 8 }}>SCAN TO PAY</div>
+                </div>
+              )}
+            </div>
+
+            {/* Items Table */}
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 9.5, marginTop: 2 }}>
+              <thead>
+                <tr style={{ background: '#F8FAFC', borderTop: '1px solid #334155', borderBottom: '1px solid #334155' }}>
+                  <th style={{ textAlign: 'center', padding: '4px 3px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 26 }}>#</th>
+                  <th style={{ textAlign: 'left', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155' }}>Item</th>
+                  {showHsnCol && (
+                    <th style={{ textAlign: 'center', padding: '4px 3px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 50 }}>HSN</th>
+                  )}
+                  <th style={{ textAlign: 'center', padding: '4px 3px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 34 }}>Qty</th>
+                  <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 56 }}>Rate</th>
+                  {showDiscCol && (
+                    <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 42 }}>Disc</th>
+                  )}
+                  {showTaxCols && (
+                    <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 44 }}>GST</th>
+                  )}
+                  <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 64 }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, idx) => (
+                  <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0' }}>
+                    <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 8.5, color: '#64748B' }}>{idx + 1}</td>
+                    <td style={{ padding: '4px 4px', fontSize: 9.5, color: '#0F172A', fontWeight: '500', wordBreak: 'break-word' }}>
+                      <div>{item.name}</div>
+                      {item.sku && showSkuCol && <span style={{ fontSize: 7.5, color: '#64748B' }}>SKU: {item.sku} </span>}
+                      {item.unit && showUnitCol && <span style={{ fontSize: 7.5, color: '#64748B' }}>({item.unit})</span>}
+                    </td>
+                    {showHsnCol && (
+                      <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 8.5, color: '#64748B' }}>{item.hsn || '—'}</td>
+                    )}
+                    <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 9.5, color: '#0F172A' }}>{item.qty}</td>
+                    <td style={{ padding: '4px 4px', textAlign: 'right', fontSize: 9.5, color: '#0F172A' }}>{fmt(item.rate)}</td>
+                    {showDiscCol && (
+                      <td style={{ padding: '4px 4px', textAlign: 'right', fontSize: 8.5, color: '#64748B' }}>
+                        {item.disc ? `${item.disc}%` : '—'}
+                      </td>
+                    )}
+                    {showTaxCols && (
+                      <td style={{ padding: '4px 4px', textAlign: 'right', fontSize: 8.5, color: '#334155' }}>
+                        {item.gst ? `${item.gst}%` : '—'}
+                      </td>
+                    )}
+                    <td style={{ padding: '4px 4px', textAlign: 'right', fontWeight: '700', fontSize: 9.5, color: '#0F172A' }}>
+                      {fmt(item.total)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Totals & Words / Notes */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 8, gap: 12 }}>
+              <div style={{ fontSize: 8.5, color: '#334155', flex: 1, minWidth: 0 }}>
+                {showWords && (
+                  <div style={{ marginBottom: 6 }}>
+                    <div style={{ fontWeight: '700', textTransform: 'uppercase', color: '#475569', fontSize: 8 }}>
+                      AMOUNT IN WORDS
+                    </div>
+                    <div style={{ fontSize: 9.5, color: '#0F172A', fontWeight: '600' }}>
+                      {numberToIndianWords(grandTotal)}
+                    </div>
+                  </div>
+                )}
+                {showNotes && (
+                  <div style={{ marginBottom: 4, fontSize: 8, color: '#475569' }}>
+                    <b>Notes:</b> {notesText}
+                  </div>
+                )}
+                {showTerms && (
+                  <div style={{ fontSize: 7.5, color: '#64748B', lineHeight: 1.3 }}>
+                    <b style={{ color: '#475569' }}>Terms &amp; Conditions: </b>
+                    {termsText}
+                  </div>
+                )}
+              </div>
+
+              {/* Accounting Totals */}
+              <div style={{ minWidth: 190 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1.5px 0', fontSize: 9.5, color: '#334155' }}>
+                  <span>Subtotal</span>
+                  <span style={{ fontWeight: '600', color: '#0F172A' }}>{fmt(subtotal)}</span>
+                </div>
+                {discountAmount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1.5px 0', fontSize: 9.5, color: '#334155' }}>
+                    <span>Discount</span>
+                    <span style={{ fontWeight: '600', color: '#DC2626' }}>-{fmt(discountAmount)}</span>
+                  </div>
+                )}
+                {showTaxCols && taxAmount > 0 && (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1.5px 0', fontSize: 9, color: '#334155' }}>
+                      <span>SGST</span>
+                      <span style={{ fontWeight: '600', color: '#0F172A' }}>{fmt(taxAmount / 2)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1.5px 0', fontSize: 9, color: '#334155' }}>
+                      <span>CGST</span>
+                      <span style={{ fontWeight: '600', color: '#0F172A' }}>{fmt(taxAmount / 2)}</span>
+                    </div>
+                  </>
+                )}
+                {showCessCol && cessAmount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1.5px 0', fontSize: 9, color: '#334155' }}>
+                    <span>CESS</span>
+                    <span style={{ fontWeight: '600', color: '#0F172A' }}>{fmt(cessAmount)}</span>
+                  </div>
+                )}
+                {roundOff !== 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1.5px 0', fontSize: 9, color: '#334155' }}>
+                    <span>Round Off</span>
+                    <span style={{ fontWeight: '600', color: '#0F172A' }}>{fmt(roundOff)}</span>
+                  </div>
+                )}
+
+                {/* Grand Total */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  padding: '5px 7px',
+                  fontWeight: '800',
+                  fontSize: 12,
+                  borderTop: '1px solid #0F172A',
+                  borderBottom: '1px solid #0F172A',
+                  background: '#F1F5F9',
+                  marginTop: 4,
+                  color: '#0F172A',
+                }}>
+                  <span>GRAND TOTAL</span>
+                  <span>{fmt(grandTotal)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Summary */}
+            {showPaymentSummary && (
+              <div style={{
+                background: '#F8FAFC',
+                border: '1px solid #CBD5E1',
+                borderRadius: 4,
+                marginTop: 8,
+                padding: '6px 10px',
+                fontSize: 8.5,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ fontSize: 7.5, color: '#475569', fontWeight: '700' }}>STATUS</span><br />
+                    <b style={{
+                      color: paymentStatus === 'PAID' ? '#16A34A' : paymentStatus === 'CANCELLED' ? '#DC2626' : '#D97706',
+                      fontSize: 9.5,
+                    }}>
+                      {paymentStatus}
+                    </b>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 7.5, color: '#475569', fontWeight: '700' }}>PAID</span><br />
+                    <b style={{ color: '#0F172A', fontSize: 9.5 }}>{fmt(paidAmount)}</b>
+                  </div>
+                  {showBalanceDue && (
+                    <div>
+                      <span style={{ fontSize: 7.5, color: '#475569', fontWeight: '700' }}>BALANCE DUE</span><br />
+                      <b style={{ color: balanceDue > 0 ? '#DC2626' : '#0F172A', fontSize: 9.5 }}>
+                        {fmt(balanceDue)}
+                      </b>
+                    </div>
+                  )}
+                  {showPaymentMode && (
+                    <div>
+                      <span style={{ fontSize: 7.5, color: '#475569', fontWeight: '700' }}>MODE</span><br />
+                      <b style={{ color: '#0F172A', fontSize: 9.5 }}>{paymentMode}</b>
+                    </div>
+                  )}
+                </div>
+
+                {showBankDetails && (
+                  <div style={{ borderTop: '1px solid #E2E8F0', marginTop: 4, paddingTop: 4, fontSize: 8, color: '#475569' }}>
+                    <b>Bank Details:</b> {s.shop_bank_details}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Signature Area */}
+            {showSignature && (
+              <div style={{
+                borderTop: '1px solid #CBD5E1',
+                marginTop: 14,
+                paddingTop: 16,
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: 8.5,
+                color: '#475569',
+              }}>
+                <span>Prepared by</span>
+                <span>Authorised Signatory</span>
+              </div>
+            )}
+
+            {/* Scan to View Bill QR */}
+            {showDigitalBillQr && (
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: 8,
+                marginBottom: 2,
+              }}>
+                <QRCodeSVG value={digitalBillUrl} size={54} />
+                <span style={{ fontSize: 8, fontWeight: '700', color: '#475569', marginTop: 2, letterSpacing: '0.02em' }}>
+                  Scan to View Bill
+                </span>
+              </div>
+            )}
+
+            {/* Footer */}
+            {showFooter && (
+              <div style={{
+                borderTop: '1px solid #E2E8F0',
+                marginTop: 8,
+                paddingTop: 6,
+                textAlign: footerAlign,
+                fontSize: 8.5,
+                color: '#475569',
+              }}>
+                <b style={{ color: '#334155' }}>{footerText.toUpperCase()}</b>
+                <div style={{ marginTop: 1, fontSize: 7.5, color: '#64748B' }}>
+                  Date: {invoiceDate} {invoiceTime ? ` ${invoiceTime}` : ''} · Ref: {invoiceNo}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // --------------------------------------------------------------------------
+  // A4 TAX INVOICE MODE
   // --------------------------------------------------------------------------
   return (
     <div className={`invoice-document-root ${className}`}>
-      {showModePicker && (
-        <div className="flex items-center gap-2 mb-4 print:hidden">
-          <button
-            type="button"
-            onClick={() => onModeChange?.('a4')}
-            className="px-3.5 py-1.5 rounded-lg bg-blue-600 text-xs font-semibold text-white shadow-sm"
-          >
-            A4 Tax Invoice
-          </button>
-          <button
-            type="button"
-            onClick={() => onModeChange?.('thermal')}
-            className="px-3.5 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-xs font-semibold text-[var(--muted)] hover:text-[var(--ink)]"
-          >
-            Thermal Receipt (80mm)
-          </button>
-        </div>
-      )}
+      {showModePicker && <InvoiceModePicker mode={mode} onModeChange={onModeChange} />}
 
       <div className="overflow-x-auto print:overflow-visible">
         <div

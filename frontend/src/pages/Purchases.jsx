@@ -41,8 +41,8 @@ const cardCls =
 const cardHover =
   'transition-all duration-150 hover:border-[var(--line-strong)]'
 const tableCls =
-  '[&_thead]:bg-[var(--surface-elevated)] [&_th]:text-[11px] [&_th]:font-bold [&_th]:uppercase [&_th]:tracking-wider [&_th]:text-[var(--muted)] ' +
-  '[&_th]:border-b [&_th]:border-[var(--line)] [&_td]:border-b [&_td]:border-[var(--line-subtle)] [&_td]:text-[var(--ink-secondary)]'
+  '[&_thead_tr]:!bg-[linear-gradient(135deg,#1e3a8a,#2563eb)] [&_th]:!text-[#eff6ff] [&_th]:text-[11px] [&_th]:font-bold [&_th]:uppercase [&_th]:tracking-wider ' +
+  '[&_th]:border-b [&_th]:border-blue-700 [&_td]:border-b [&_td]:border-[var(--line-subtle)] [&_td]:text-[var(--ink)]'
 
 /* ── Print purchase order ── */
 function printPO(purchase, suppliers) {
@@ -155,9 +155,9 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-base text-[var(--ink)]">{supplier.name}</span>
+              <span className="font-bold text-base text-slate-900 dark:text-slate-100">{supplier.name}</span>
               {supplier.gstin && (
-                <span className="text-xs font-mono text-[var(--muted)] bg-[var(--surface-elevated)] border border-[var(--line)] px-2 py-0.5 rounded">
+                <span className="text-xs font-mono text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded font-medium">
                   GST: {supplier.gstin}
                 </span>
               )}
@@ -167,20 +167,20 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
 
         <div className="flex w-full items-center gap-2 flex-wrap sm:w-auto sm:flex-nowrap sm:flex-shrink-0">
           {supplier.outstanding_amount > 0 && (
-            <span className="text-xs bg-rose-950/40 border border-rose-800/50 text-rose-300 font-semibold px-2.5 py-1 rounded-lg">
+            <span className="text-xs bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:border-rose-800/50 dark:text-rose-300 font-semibold px-2.5 py-1 rounded-lg">
               Due: {fmt(supplier.outstanding_amount)}
             </span>
           )}
-          <span className="text-xs bg-[var(--surface-elevated)] border border-[var(--line)] text-[var(--muted)] font-medium px-2.5 py-1 rounded-full">
+          <span className="text-xs bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold px-2.5 py-1 rounded-full">
             {supProducts.length} product{supProducts.length !== 1 ? 's' : ''}
           </span>
-          <button onClick={() => onEdit(supplier)} className="icon-btn hover:bg-[var(--surface-hover)] text-[var(--ink-secondary)]" title="Edit supplier">
+          <button onClick={() => onEdit(supplier)} className="icon-btn hover:bg-[var(--surface-hover)] text-slate-600 dark:text-slate-300" title="Edit supplier">
             <Edit2 size={14} />
           </button>
-          <button onClick={() => onDelete(supplier)} className="icon-btn hover:bg-rose-950/50 text-rose-400" title="Delete supplier">
+          <button onClick={() => onDelete(supplier)} className="icon-btn hover:bg-rose-100 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400" title="Delete supplier">
             <Trash2 size={14} />
           </button>
-          <button onClick={() => setExpanded(x => !x)} className="icon-btn hover:bg-[var(--surface-hover)] text-[var(--ink-secondary)]" title={expanded ? 'Collapse' : 'Expand products'}>
+          <button onClick={() => setExpanded(x => !x)} className="icon-btn hover:bg-[var(--surface-hover)] text-slate-600 dark:text-slate-300" title={expanded ? 'Collapse' : 'Expand products'}>
             {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           </button>
         </div>
@@ -189,36 +189,36 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
       {expanded && (
         <div className="border-t border-[var(--line)] bg-[var(--surface-elevated)] px-4 sm:px-5 py-4">
           {supplier.address && (
-            <p className="text-xs text-[var(--muted)] flex items-start gap-1.5 mb-3 bg-[var(--surface)] p-2.5 rounded-xl border border-[var(--line-subtle)]">
-              <MapPin size={12} className="mt-0.5 flex-shrink-0 text-[var(--muted-light)]" />
+            <p className="text-xs text-slate-700 dark:text-slate-300 flex items-start gap-1.5 mb-3 bg-[var(--surface)] p-2.5 rounded-xl border border-[var(--line-subtle)] font-medium">
+              <MapPin size={12} className="mt-0.5 flex-shrink-0 text-slate-500 dark:text-slate-400" />
               {supplier.address}
             </p>
           )}
           {supProducts.length === 0 ? (
-            <p className="text-xs text-[var(--muted)] py-2">No products linked to this supplier.</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 py-2 font-medium">No products linked to this supplier.</p>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-              <table className={`table text-xs ${tableCls}`}>
-                <thead>
+              <table className="erp-table w-full text-left text-xs">
+                <thead className="bg-[#1E3A5F] text-white">
                   <tr>
-                    <th>Product</th>
-                    <th>SKU</th>
-                    <th>Stock</th>
-                    <th>Purchase Price</th>
-                    <th>Selling Price</th>
-                    <th>Status</th>
+                    <th className="py-2.5 px-3 text-white font-bold">Product</th>
+                    <th className="py-2.5 px-3 text-white font-bold">SKU</th>
+                    <th className="py-2.5 px-3 text-white font-bold">Stock</th>
+                    <th className="text-right py-2.5 px-3 text-white font-bold">Purchase Price</th>
+                    <th className="text-right py-2.5 px-3 text-white font-bold">Selling Price</th>
+                    <th className="py-2.5 px-3 text-white font-bold">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {supProducts.map(p => (
                     <tr key={p.id} className="hover:bg-[var(--surface-hover)]">
-                      <td className="font-semibold text-[var(--ink)]">{p.name}</td>
-                      <td className="font-mono text-[var(--muted)]">{p.sku || '—'}</td>
+                      <td className="font-semibold text-slate-900 dark:text-slate-100">{p.name}</td>
+                      <td className="font-mono text-slate-600 dark:text-slate-400">{p.sku || '—'}</td>
                       <td className={`font-semibold tabular-nums ${p.current_stock <= 0 ? 'text-rose-600 dark:text-rose-400' : p.current_stock <= p.minimum_stock ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                         {p.current_stock}
                       </td>
-                      <td className="tabular-nums text-[var(--ink-secondary)]">{fmt(p.purchase_price)}</td>
-                      <td className="tabular-nums text-[var(--ink-secondary)]">{fmt(p.selling_price)}</td>
+                      <td className="tabular-nums font-mono text-right text-slate-800 dark:text-slate-200">{fmt(p.purchase_price)}</td>
+                      <td className="tabular-nums font-mono text-right text-slate-800 dark:text-slate-200">{fmt(p.selling_price)}</td>
                       <td><Badge status={p.stock_status} /></td>
                     </tr>
                   ))}
@@ -798,17 +798,17 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
             {mode === 'orders' ? (
               <div className="overflow-x-auto max-h-[340px] border border-[var(--line)] rounded-md bg-[var(--surface)]">
                 <table className="erp-table w-full text-xs min-w-[850px]">
-                  <thead className="sticky top-0 z-10 shadow-sm">
+                  <thead className="sticky top-0 z-10 shadow-sm bg-[#1E3A5F] text-white">
                     <tr>
-                      <th className="w-10 text-center">#</th>
-                      <th className="w-20">Status</th>
-                      <th>Invoice / PO #</th>
-                      <th>Supplier</th>
-                      <th>Date</th>
-                      <th className="text-center">Items</th>
-                      <th className="text-right">Total</th>
-                      <th className="text-right">Paid</th>
-                      <th>Validation Issues</th>
+                      <th className="w-10 text-center py-2.5 px-2 text-white font-bold">#</th>
+                      <th className="w-20 py-2.5 px-2 text-white font-bold">Status</th>
+                      <th className="py-2.5 px-2.5 text-white font-bold">Invoice / PO #</th>
+                      <th className="py-2.5 px-2.5 text-white font-bold">Supplier</th>
+                      <th className="py-2.5 px-2.5 text-white font-bold">Date</th>
+                      <th className="text-center py-2.5 px-2 text-white font-bold">Items</th>
+                      <th className="text-right py-2.5 px-2.5 text-white font-bold">Total</th>
+                      <th className="text-right py-2.5 px-2.5 text-white font-bold">Paid</th>
+                      <th className="py-2.5 px-2.5 text-white font-bold">Validation Issues</th>
                     </tr>
                   </thead>
 
@@ -907,17 +907,17 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
                                   <div className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2">
                                     Line items for {ord.invoice_number} ({ord.items.length})
                                   </div>
-                                  <table className="w-full text-xs border border-[var(--line)] bg-[var(--surface)] rounded">
-                                    <thead>
-                                      <tr className="border-b border-[var(--line)] bg-[var(--surface-elevated)] text-[10px] uppercase font-bold text-[var(--muted)]">
-                                        <th className="p-1.5 text-center">Row</th>
-                                        <th className="p-1.5 text-left">Product</th>
-                                        <th className="p-1.5 text-left">SKU</th>
-                                        <th className="p-1.5 text-right">Qty</th>
-                                        <th className="p-1.5 text-right">Unit Price</th>
-                                        <th className="p-1.5 text-right">GST %</th>
-                                        <th className="p-1.5 text-right">Total</th>
-                                        <th className="p-1.5 text-left">Issues</th>
+                                  <table className="w-full text-xs border border-[var(--line)] bg-[var(--surface)] rounded overflow-hidden">
+                                    <thead className="bg-[#1E3A5F] text-white">
+                                      <tr>
+                                        <th className="p-2 text-center text-white font-bold">Row</th>
+                                        <th className="p-2 text-left text-white font-bold">Product</th>
+                                        <th className="p-2 text-left text-white font-bold">SKU</th>
+                                        <th className="p-2 text-right text-white font-bold">Qty</th>
+                                        <th className="p-2 text-right text-white font-bold">Unit Price</th>
+                                        <th className="p-2 text-right text-white font-bold">GST %</th>
+                                        <th className="p-2 text-right text-white font-bold">Total</th>
+                                        <th className="p-2 text-left text-white font-bold">Issues</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--line-subtle)]">
@@ -1240,10 +1240,24 @@ export default function Purchases() {
   const load = () => {
     setLoading(true)
     Promise.all([
-      api.get('/purchases/').then(r => setPurchases(r.data.results || r.data)),
-      api.get('/products/?page_size=500').then(r => setProducts(r.data.results || r.data)),
-      api.get('/suppliers/?page_size=200').then(r => setSuppliers(r.data.results || r.data)),
-    ]).finally(() => setLoading(false))
+      api.get('/purchases/').then(r => {
+        const data = r.data?.results || r.data || []
+        setPurchases(Array.isArray(data) ? data : [])
+      }),
+      api.get('/products/?page_size=500').then(r => {
+        const data = r.data?.results || r.data || []
+        setProducts(Array.isArray(data) ? data : [])
+      }),
+      api.get('/suppliers/?page_size=200').then(r => {
+        const data = r.data?.results || r.data || []
+        setSuppliers(Array.isArray(data) ? data : [])
+      }),
+    ])
+      .catch(err => {
+        console.error('Failed to load purchases data:', err)
+        toast.error('Failed to load purchases or suppliers. Please check connection.')
+      })
+      .finally(() => setLoading(false))
   }
   useEffect(() => { load() }, [])
 
@@ -1358,28 +1372,28 @@ export default function Purchases() {
       value: fmt(totalSpend),
       hint: `${purchases.length} total orders`,
       icon: TrendingUp,
-      iconClass: 'bg-indigo-50 dark:bg-indigo-950/50 text-[#1E3A5F] dark:text-slate-200',
+      iconClass: 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300',
     },
     {
       label: 'Amount Paid',
       value: fmt(totalPaid),
       hint: 'Supplier settlements',
       icon: Wallet,
-      iconClass: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400',
+      iconClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300',
     },
     {
       label: 'Balance Due',
       value: fmt(totalDue),
       hint: 'Outstanding payable',
       icon: Clock3,
-      iconClass: 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400',
+      iconClass: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
     },
     {
       label: 'Active Suppliers',
       value: String(suppliers.length),
       hint: 'Registered vendors',
       icon: Building2,
-      iconClass: 'bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400',
+      iconClass: 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300',
     },
   ]
 
@@ -1442,7 +1456,7 @@ export default function Purchases() {
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#1E3A5F] dark:text-slate-300">
             Procurement workspace
           </p>
-          <p className="mt-1 text-sm text-[var(--muted)]">
+          <p className="mt-1 text-sm text-slate-700 dark:text-slate-300 font-medium">
             Track supplier spending, purchase orders and outstanding payments.
           </p>
         </div>
@@ -1450,24 +1464,24 @@ export default function Purchases() {
 
       {/* Table-First Procurement Summary */}
       <section className="erp-table-container">
-        <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+        <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
           Procurement & Supplier Payable Summary
         </div>
         <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
           {summaryCards.map(({ label, value, hint, icon: Icon, iconClass }) => (
             <div key={label} className="p-3 sm:p-3.5">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                   {label}
                 </span>
                 <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${iconClass}`}>
                   <Icon size={13} />
                 </div>
               </div>
-              <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[var(--ink)] tabular-nums">
+              <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 tabular-nums">
                 {value}
               </p>
-              <p className="text-[10px] text-[var(--muted)]">{hint}</p>
+              <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">{hint}</p>
             </div>
           ))}
         </div>
@@ -1484,8 +1498,8 @@ export default function Purchases() {
             onClick={() => setTab(key)}
             className={`whitespace-nowrap rounded-md px-3.5 py-2 text-xs font-semibold transition-all ${
               tab === key
-                ? 'bg-[var(--primary)] text-white shadow-sm'
-                : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
+                ? 'bg-[#1E3A5F] text-white shadow-sm'
+                : 'text-slate-700 dark:text-slate-300 hover:bg-[var(--surface-hover)] hover:text-slate-900 dark:hover:text-slate-100'
             }`}
           >
             {label}
@@ -1500,11 +1514,11 @@ export default function Purchases() {
             <div className="space-y-4">
               <div className={`flex flex-col gap-3 p-3.5 ${cardCls} sm:flex-row sm:items-center`}>
                 <div className="group relative flex flex-1 items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-slate-600 dark:text-slate-300 transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
                     <Search size={14} strokeWidth={2.2} />
                   </div>
                   <input
-                    className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
+                    className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
                     placeholder="Search supplier or invoice number..."
                     value={poSearch}
                     onChange={e => setPoSearch(e.target.value)}
@@ -1513,14 +1527,14 @@ export default function Purchases() {
                     <button
                       type="button"
                       onClick={() => setPoSearch('')}
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
+                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-[var(--surface-elevated)] hover:text-slate-900 dark:hover:text-slate-100 transition-colors active:scale-95"
                       title="Clear search"
                       aria-label="Clear search"
                     >
                       <X size={13} strokeWidth={2.5} />
                     </button>
                   ) : (
-                    <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
+                    <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:text-slate-400 shadow-2xs">
                       Ctrl+K
                     </kbd>
                   )}
@@ -1532,15 +1546,15 @@ export default function Purchases() {
                       setImportMode('orders')
                       setImportModal(true)
                     }}
-                    className="btn-secondary h-11 px-3 text-xs flex items-center justify-center gap-1.5 rounded-xl shrink-0"
+                    className="btn-secondary h-11 px-3 text-xs flex items-center justify-center gap-1.5 rounded-xl shrink-0 font-semibold text-slate-700 dark:text-slate-200"
                     title="Import purchase orders from Excel"
                   >
                     <FileSpreadsheet size={14} />
                     <span>Import Excel</span>
                   </button>
 
-                  <div className="flex shrink-0 items-center gap-2 text-xs font-medium text-[var(--muted)] px-1">
-                    <Filter size={14} className="text-[var(--muted-light)]" />
+                  <div className="flex shrink-0 items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 px-1">
+                    <Filter size={14} className="text-slate-500 dark:text-slate-400" />
                     <span>{filteredPOs.length} result{filteredPOs.length !== 1 ? 's' : ''}</span>
                   </div>
                 </div>
@@ -1548,8 +1562,8 @@ export default function Purchases() {
 
               {filteredPOs.length === 0 ? <EmptyState message="No purchase orders yet" /> : (
                 <div className={`overflow-hidden ${cardCls}`}>
-                  {/* Mobile PO Cards (< 768px) */}
-                  <div className="divide-y divide-[var(--line-subtle)] md:hidden">
+                  {/* Mobile PO Cards (< 640px) */}
+                  <div className="divide-y divide-[var(--line-subtle)] sm:hidden">
                     {filteredPOs.map(p => (
                       <article key={p.id} className="p-4 space-y-3">
                         <div className="flex items-start justify-between gap-2">
@@ -1560,10 +1574,10 @@ export default function Purchases() {
                               </span>
                               <Badge status={p.payment_status} />
                             </div>
-                            <h4 className="mt-1 text-sm font-bold text-[var(--ink)] truncate">
+                            <h4 className="mt-1 text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
                               {p.supplier_name || '—'}
                             </h4>
-                            <p className="text-xs text-[var(--muted)] font-mono">
+                            <p className="text-xs text-slate-600 dark:text-slate-400 font-mono font-medium">
                               Inv: {p.invoice_number || '—'} • {fmtDate(p.purchase_date)}
                             </p>
                           </div>
@@ -1572,16 +1586,16 @@ export default function Purchases() {
                         {/* Amount details grid */}
                         <div className="grid grid-cols-3 gap-2 rounded-xl bg-[var(--surface-elevated)] p-2.5 text-xs">
                           <div>
-                            <span className="text-[10px] uppercase font-bold text-[var(--muted-light)]">Total</span>
-                            <p className="mt-0.5 font-mono font-bold text-[var(--ink)]">{fmt(p.total_amount)}</p>
+                            <span className="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-400">Total</span>
+                            <p className="mt-0.5 font-mono font-bold text-slate-900 dark:text-slate-100">{fmt(p.total_amount)}</p>
                           </div>
                           <div>
-                            <span className="text-[10px] uppercase font-bold text-[var(--muted-light)]">Paid</span>
-                            <p className="mt-0.5 font-mono text-[var(--muted)]">{fmt(p.paid_amount)}</p>
+                            <span className="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-400">Paid</span>
+                            <p className="mt-0.5 font-mono text-slate-700 dark:text-slate-300 font-medium">{fmt(p.paid_amount)}</p>
                           </div>
                           <div>
-                            <span className="text-[10px] uppercase font-bold text-[var(--muted-light)]">Balance</span>
-                            <p className={`mt-0.5 font-mono font-bold ${dueOf(p) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600'}`}>
+                            <span className="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-400">Balance</span>
+                            <p className={`mt-0.5 font-mono font-bold ${dueOf(p) > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
                               {fmt(dueOf(p))}
                             </p>
                           </div>
@@ -1623,21 +1637,21 @@ export default function Purchases() {
 
                         {expandedPO === p.id && (
                           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-3 space-y-2 text-xs">
-                            <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">Line Items</div>
+                            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">Line Items</div>
                             <div className="space-y-1.5 divide-y divide-[var(--line-subtle)]">
                               {(p.items || []).map((it, idx) => (
                                 <div key={it.id || idx} className="pt-1.5 first:pt-0 flex items-center justify-between">
                                   <div>
-                                    <p className="font-semibold text-[var(--ink)]">{it.product_name || it.product}</p>
-                                    <p className="text-[11px] text-[var(--muted)] font-mono">{it.quantity} × {fmt(it.purchase_price)} ({it.gst_percent}% GST)</p>
+                                    <p className="font-semibold text-slate-900 dark:text-slate-100">{it.product_name || it.product}</p>
+                                    <p className="text-[11px] text-slate-600 dark:text-slate-400 font-mono font-medium">{it.quantity} × {fmt(it.purchase_price)} ({it.gst_percent}% GST)</p>
                                   </div>
-                                  <span className="font-mono font-bold text-[var(--ink)]">{fmt(it.total)}</span>
+                                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100">{fmt(it.total)}</span>
                                 </div>
                               ))}
                             </div>
                             {p.notes && (
-                              <p className="text-xs text-[var(--muted)] pt-1">
-                                <span className="font-semibold text-[var(--ink)]">Notes: </span>{p.notes}
+                              <p className="text-xs text-slate-700 dark:text-slate-300 pt-1 font-medium">
+                                <span className="font-bold text-slate-900 dark:text-slate-100">Notes: </span>{p.notes}
                               </p>
                             )}
                           </div>
@@ -1646,36 +1660,36 @@ export default function Purchases() {
                     ))}
                   </div>
 
-                  {/* Desktop Table View (>= 768px) */}
-                  <div className="hidden md:block w-full max-w-full overflow-x-auto overscroll-x-contain">
-                    <table className={`table min-w-[900px] ${tableCls}`}>
-                      <thead>
+                  {/* Desktop Table View (>= 640px) */}
+                  <div className="hidden sm:block w-full max-w-full overflow-x-auto overscroll-x-contain">
+                    <table className="erp-table w-full text-left text-xs min-w-[900px]">
+                      <thead className="bg-[#1E3A5F] text-white">
                         <tr>
-                          <th>PO #</th>
-                          <th>Supplier</th>
-                          <th>Invoice</th>
-                          <th>Date</th>
-                          <th>Total</th>
-                          <th>Paid</th>
-                          <th>Balance Due</th>
-                          <th>Status</th>
-                          <th className="text-right">Actions</th>
+                          <th className="py-2.5 px-3 text-white font-bold">PO #</th>
+                          <th className="py-2.5 px-3 text-white font-bold">Supplier</th>
+                          <th className="py-2.5 px-3 text-white font-bold">Invoice</th>
+                          <th className="py-2.5 px-3 text-white font-bold">Date</th>
+                          <th className="text-right py-2.5 px-3 text-white font-bold">Total</th>
+                          <th className="text-right py-2.5 px-3 text-white font-bold">Paid</th>
+                          <th className="text-right py-2.5 px-3 text-white font-bold">Balance Due</th>
+                          <th className="py-2.5 px-3 text-white font-bold">Status</th>
+                          <th className="text-right py-2.5 px-3 text-white font-bold">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredPOs.map(p => (
                           <Fragment key={p.id}>
                             <tr
-                              className="cursor-pointer transition-colors hover:bg-[var(--surface-hover)]"
+                              className="cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
                               onClick={() => setExpandedPO(expandedPO === p.id ? null : p.id)}
                             >
-                              <td className="font-mono font-bold text-[#1E3A5F] dark:text-slate-200">PO-{p.id}</td>
-                              <td className="font-semibold text-[var(--ink)]">{p.supplier_name || '—'}</td>
-                              <td className="text-sm text-[var(--muted)]">{p.invoice_number || '—'}</td>
-                              <td className="text-sm whitespace-nowrap text-[var(--ink-secondary)]">{fmtDate(p.purchase_date)}</td>
-                              <td className="font-bold text-[var(--ink)] whitespace-nowrap tabular-nums">{fmt(p.total_amount)}</td>
-                              <td className="text-sm text-[var(--ink-secondary)] whitespace-nowrap tabular-nums">{fmt(p.paid_amount)}</td>
-                              <td className={`text-sm font-semibold whitespace-nowrap tabular-nums ${dueOf(p) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-[var(--muted-light)]'}`}>
+                              <td className="font-mono font-bold text-[#1E3A5F] dark:text-blue-300">PO-{p.id}</td>
+                              <td className="font-semibold text-slate-900 dark:text-slate-100">{p.supplier_name || '—'}</td>
+                              <td className="text-xs font-mono text-slate-700 dark:text-slate-300">{p.invoice_number || '—'}</td>
+                              <td className="text-xs whitespace-nowrap text-slate-700 dark:text-slate-300">{fmtDate(p.purchase_date)}</td>
+                              <td className="font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap tabular-nums text-right font-mono">{fmt(p.total_amount)}</td>
+                              <td className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 whitespace-nowrap tabular-nums text-right font-mono">{fmt(p.paid_amount)}</td>
+                              <td className={`text-xs font-bold whitespace-nowrap tabular-nums text-right font-mono ${dueOf(p) > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-slate-600 dark:text-slate-400'}`}>
                                 {fmt(dueOf(p))}
                               </td>
                               <td><Badge status={p.payment_status} /></td>
@@ -1706,42 +1720,42 @@ export default function Purchases() {
                               <tr>
                                 <td colSpan={9} className="border-y border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-4 sm:px-6">
                                   <div className="flex items-center justify-between mb-2">
-                                    <div className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+                                    <div className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1">
                                       Items in Purchase Order #{p.id}
                                     </div>
-                                    <span className="text-xs text-[var(--muted-light)]">
+                                    <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
                                       {(p.items || []).length} line item{(p.items || []).length !== 1 ? 's' : ''}
                                     </span>
                                   </div>
                                   <div className="overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
-                                    <table className={`table text-xs min-w-[560px] ${tableCls}`}>
-                                      <thead>
+                                    <table className="erp-table w-full text-left text-xs min-w-[560px]">
+                                      <thead className="bg-[#1E3A5F] text-white">
                                         <tr>
-                                          <th>#</th>
-                                          <th>Product</th>
-                                          <th>Qty</th>
-                                          <th>Purchase Price</th>
-                                          <th>GST %</th>
-                                          <th>Line Total</th>
+                                          <th className="text-center w-10 py-2 px-3 text-white font-bold">#</th>
+                                          <th className="py-2 px-3 text-white font-bold">Product</th>
+                                          <th className="text-right py-2 px-3 text-white font-bold">Qty</th>
+                                          <th className="text-right py-2 px-3 text-white font-bold">Purchase Price</th>
+                                          <th className="text-right py-2 px-3 text-white font-bold">GST %</th>
+                                          <th className="text-right py-2 px-3 text-white font-bold">Line Total</th>
                                         </tr>
                                       </thead>
                                       <tbody>
                                         {(p.items || []).map((it, idx) => (
                                           <tr key={it.id || idx}>
-                                            <td className="font-mono text-[var(--muted)]">{idx + 1}</td>
-                                            <td className="font-semibold text-[var(--ink)]">{it.product_name || it.product}</td>
-                                            <td className="font-mono tabular-nums">{it.quantity}</td>
-                                            <td className="font-mono tabular-nums">{fmt(it.purchase_price)}</td>
-                                            <td className="font-mono tabular-nums">{it.gst_percent}%</td>
-                                            <td className="font-mono font-bold tabular-nums text-[var(--ink)]">{fmt(it.total)}</td>
+                                            <td className="font-mono text-slate-600 dark:text-slate-400 text-center font-semibold">{idx + 1}</td>
+                                            <td className="font-semibold text-slate-900 dark:text-slate-100">{it.product_name || it.product}</td>
+                                            <td className="font-mono tabular-nums text-right text-slate-800 dark:text-slate-200">{it.quantity}</td>
+                                            <td className="font-mono tabular-nums text-right text-slate-800 dark:text-slate-200">{fmt(it.purchase_price)}</td>
+                                            <td className="font-mono tabular-nums text-right text-slate-800 dark:text-slate-200">{it.gst_percent}%</td>
+                                            <td className="font-mono font-bold tabular-nums text-right text-slate-900 dark:text-slate-100">{fmt(it.total)}</td>
                                           </tr>
                                         ))}
                                       </tbody>
                                     </table>
                                   </div>
                                   {p.notes && (
-                                    <p className="mt-3 text-xs text-[var(--muted)] bg-[var(--surface)] p-2.5 rounded-xl border border-[var(--line-subtle)]">
-                                      <span className="font-semibold text-[var(--ink)]">Notes: </span>{p.notes}
+                                    <p className="mt-3 text-xs text-slate-700 dark:text-slate-300 bg-[var(--surface)] p-2.5 rounded-xl border border-[var(--line-subtle)] font-medium">
+                                      <span className="font-bold text-slate-900 dark:text-slate-100">Notes: </span>{p.notes}
                                     </p>
                                   )}
 
@@ -1774,7 +1788,7 @@ export default function Purchases() {
                     <Search size={14} strokeWidth={2.2} />
                   </div>
                   <input
-                    className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
+                    className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
                     placeholder="Search suppliers..."
                     value={supSearch}
                     onChange={e => setSupSearch(e.target.value)}
@@ -1923,7 +1937,7 @@ export default function Purchases() {
               {form.items.map((it, i) => (
                 <div key={i} className="flex flex-col gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 sm:flex-row sm:items-center">
                   <div className="flex-1 min-w-0">
-                    <label className="text-[10px] font-semibold text-[var(--muted)] block mb-1">Product *</label>
+                    <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 block mb-1">Product *</label>
                     <select
                       className={`${inputCls} text-xs`}
                       value={it.product}
@@ -1938,7 +1952,7 @@ export default function Purchases() {
                     </select>
                   </div>
                   <div className="w-full sm:w-20">
-                    <label className="text-[10px] font-semibold text-[var(--muted)] block mb-1">Qty *</label>
+                    <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 block mb-1">Qty *</label>
                     <input
                       type="number" min="0.01" step="0.01"
                       className={`${inputCls} text-xs`}
@@ -1947,7 +1961,7 @@ export default function Purchases() {
                     />
                   </div>
                   <div className="w-full sm:w-28">
-                    <label className="text-[10px] font-semibold text-[var(--muted)] block mb-1">Price (₹) *</label>
+                    <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 block mb-1">Price (₹) *</label>
                     <input
                       type="number" min="0" step="0.01"
                       className={`${inputCls} text-xs`}
@@ -1957,7 +1971,7 @@ export default function Purchases() {
                     />
                   </div>
                   <div className="w-full sm:w-20">
-                    <label className="text-[10px] font-semibold text-[var(--muted)] block mb-1">GST %</label>
+                    <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 block mb-1">GST %</label>
                     <input
                       type="number" min="0" max="100" step="0.1"
                       className={`${inputCls} text-xs`}
@@ -1966,8 +1980,8 @@ export default function Purchases() {
                     />
                   </div>
                   <div className="w-full sm:w-28 sm:text-right">
-                    <label className="text-[10px] font-semibold text-[var(--muted)] block mb-1">Total</label>
-                    <span className="font-mono font-bold text-sm text-[var(--ink)] block pt-1">
+                    <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 block mb-1">Total</label>
+                    <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100 block pt-1">
                       ₹{it.total || '0.00'}
                     </span>
                   </div>
@@ -1988,7 +2002,7 @@ export default function Purchases() {
           {/* Notes and summary */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="label text-xs font-semibold text-[var(--ink-secondary)]">Notes</label>
+              <label className="label text-xs font-bold text-slate-700 dark:text-slate-300">Notes</label>
               <textarea
                 className={`${inputCls} h-24 py-2`}
                 rows={3}
@@ -1998,24 +2012,24 @@ export default function Purchases() {
               />
             </div>
             <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4 space-y-2">
-              <div className="flex justify-between text-xs text-[var(--ink-secondary)]">
+              <div className="flex justify-between text-xs text-slate-700 dark:text-slate-300 font-medium">
                 <span>Subtotal (excl. GST)</span>
-                <span className="font-mono">₹{fmt2(subtotal)}</span>
+                <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">₹{fmt2(subtotal)}</span>
               </div>
-              <div className="flex justify-between text-xs text-[var(--ink-secondary)]">
+              <div className="flex justify-between text-xs text-slate-700 dark:text-slate-300 font-medium">
                 <span>GST Total</span>
-                <span className="font-mono">₹{fmt2(gstTotal)}</span>
+                <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">₹{fmt2(gstTotal)}</span>
               </div>
-              <div className="flex justify-between text-base font-bold text-[var(--ink)] border-t border-[var(--line)] pt-2">
+              <div className="flex justify-between text-base font-bold text-slate-900 dark:text-slate-100 border-t border-[var(--line)] pt-2">
                 <span>Grand Total</span>
-                <span className="font-mono text-[#1E3A5F] dark:text-slate-200">₹{fmt2(grandTotal)}</span>
+                <span className="font-mono text-[#1E3A5F] dark:text-blue-300">₹{fmt2(grandTotal)}</span>
               </div>
-              <div className="flex justify-between text-xs text-emerald-600 dark:text-emerald-400">
+              <div className="flex justify-between text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                 <span>Paid Now</span>
                 <span className="font-mono">₹{fmt2(paidNow)}</span>
               </div>
               {balanceDue > 0 && (
-                <div className="flex justify-between text-xs font-semibold text-rose-500">
+                <div className="flex justify-between text-xs font-bold text-rose-600 dark:text-rose-400">
                   <span>Balance Due</span>
                   <span className="font-mono">₹{fmt2(balanceDue)}</span>
                 </div>

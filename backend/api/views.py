@@ -2256,7 +2256,89 @@ class SettingViewSet(viewsets.ModelViewSet):
             merged['shop_state'] = merged['place_of_supply']
         elif merged.get('shop_state') and not merged.get('place_of_supply'):
             merged['place_of_supply'] = merged['shop_state']
+
+        # Include templates catalog and active selections
+        from .services.template_service import get_all_templates_summary, get_active_templates
+        merged['active_templates'] = get_active_templates(biz)
+        merged['template_settings'] = get_all_templates_summary(biz)
         return Response(merged)
+
+    @action(detail=False, methods=['get'], url_path='templates', permission_classes=[IsCashierOrAdmin])
+    def templates_list(self, request):
+        from .services.template_service import get_all_templates_summary
+        data = get_all_templates_summary(getattr(request.user, 'business', None))
+        return Response(data)
+
+    @action(detail=False, methods=['post'], url_path='templates/select-active', permission_classes=[IsManagerOrAbove])
+    def template_select_active(self, request):
+        from .services.template_service import set_active_template
+        biz = getattr(request.user, 'business', None)
+        format_name = request.data.get('format', 'default')
+        template_id = request.data.get('template_id')
+        if not template_id:
+            return Response({'error': 'template_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            active_map = set_active_template(biz, format_name, template_id)
+            audit_event(
+                request,
+                'SETTINGS_CHANGED',
+                'Setting',
+                request.user.business_id,
+                entity_name='Active Invoice Template',
+                after=active_map,
+                reason=f'Selected active template {template_id} for format {format_name}',
+            )
+            return Response(active_map)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get', 'post'], url_path=r'templates/(?P<template_id>[^/.]+)', permission_classes=[IsManagerOrAbove])
+    def template_detail(self, request, template_id=None):
+        if template_id == 'select-active':
+            return self.template_select_active(request)
+        from .services.template_service import get_template_config, save_template_config
+        biz = getattr(request.user, 'business', None)
+        if request.method == 'GET':
+            try:
+                cfg = get_template_config(biz, template_id)
+                return Response(cfg)
+            except ValueError as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        # POST - update template configuration
+        try:
+            saved = save_template_config(biz, template_id, request.data)
+            audit_event(
+                request,
+                'SETTINGS_CHANGED',
+                'InvoiceTemplateSetting',
+                request.user.business_id,
+                entity_name=f'Template Config: {template_id}',
+                after=saved,
+                reason=f'Updated configuration for template {template_id}',
+            )
+            return Response(saved)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], url_path=r'templates/(?P<template_id>[^/.]+)/reset', permission_classes=[IsManagerOrAbove])
+    def template_reset(self, request, template_id=None):
+        from .services.template_service import reset_template_config
+        biz = getattr(request.user, 'business', None)
+        try:
+            reset_cfg = reset_template_config(biz, template_id)
+            audit_event(
+                request,
+                'SETTINGS_CHANGED',
+                'InvoiceTemplateSetting',
+                request.user.business_id,
+                entity_name=f'Template Config: {template_id}',
+                after=reset_cfg,
+                reason=f'Reset configuration for template {template_id} to default',
+            )
+            return Response(reset_cfg)
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class DashboardView(APIView):
@@ -2875,32 +2957,61 @@ class InvoicePDFView(APIView):
             invoice,
             request.query_params.get('printer'),
             request.query_params.get('download') == '1',
+            template=request.query_params.get('template'),
         )
 
 
-def _invoice_pdf_response(invoice, printer=None, download=False):
-    """Generate an A4/thermal invoice PDF with an explicit browser disposition."""
+def _invoice_pdf_response(invoice, printer=None, download=False, template=None):
+    """Generate an A4/A5/thermal invoice PDF with an explicit browser disposition."""
     from .pdf_utils import generate_invoice_pdf, generate_thermal_invoice_pdf
+    from .services.template_service import get_active_templates
 
+    active_templates = get_active_templates(invoice.business)
     business_settings = {
         setting.key: setting.value
         for setting in Setting.objects.filter(
-            business=invoice.business, key__in=['printer_type', 'invoice_template']
+            business=invoice.business, key__in=['printer_type', 'invoice_template', 'invoice_paper_size']
         )
     }
     printer_setting = business_settings.get('printer_type', 'a4').lower()
-    template_setting = business_settings.get('invoice_template', 'gst_a4').lower()
-    requested_printer = (printer or '').lower()
-    use_thermal = requested_printer == 'thermal' or (
-        not requested_printer and (
-            printer_setting in ('thermal', 'thermal_80', 'thermal_58')
-            or template_setting.startswith('thermal')
+    global_template = business_settings.get('invoice_template', active_templates.get('invoice_template', 'gst_a4')).lower()
+    requested_printer = (printer or '').lower().strip()
+    requested_template = (template or '').lower().strip()
+
+    resolved_template = requested_template
+    if not resolved_template:
+        if requested_printer in ('half_a4', 'a5'):
+            resolved_template = active_templates.get('active_template_half_a4', 'half_a4')
+        elif requested_printer in ('thermal', 'thermal_80', 'thermal_58'):
+            resolved_template = active_templates.get('active_template_thermal', 'thermal_80')
+        elif requested_printer == 'a4':
+            resolved_template = active_templates.get('active_template_a4', 'gst_a4')
+        else:
+            resolved_template = global_template
+
+    use_thermal = (
+        resolved_template.startswith('thermal')
+        or requested_printer == 'thermal'
+        or (
+            not requested_printer
+            and not requested_template
+            and (
+                printer_setting in ('thermal', 'thermal_80', 'thermal_58')
+                or global_template.startswith('thermal')
+            )
         )
     )
-    # An explicit A4 request must work even when the business default is thermal.
-    buffer = generate_thermal_invoice_pdf(invoice) if use_thermal else generate_invoice_pdf(invoice, force_a4=True)
+    is_a5 = resolved_template in ('half_a4', 'advanced_gst_a5') or requested_printer in ('half_a4', 'a5')
+    req_paper = 'a5' if is_a5 else ('a4' if (requested_printer == 'a4' or resolved_template in ('gst_a4', 'luxury', 'stylish')) else None)
+
+    # An explicit A4/A5 request must work even when the business default is thermal.
+    buffer = (
+        generate_thermal_invoice_pdf(invoice, template=resolved_template)
+        if use_thermal
+        else generate_invoice_pdf(invoice, force_a4=True, paper_size=req_paper, template=resolved_template)
+    )
     response = HttpResponse(buffer, content_type='application/pdf')
-    suffix = 'thermal' if use_thermal else 'a4'
+    suffix = 'thermal' if use_thermal else ('a5' if is_a5 else 'a4')
     disposition = 'attachment' if download else 'inline'
     response['Content-Disposition'] = (
         f'{disposition}; filename="invoice-{invoice.invoice_number}-{suffix}.pdf"'
@@ -3117,6 +3228,7 @@ class PublicBillDocumentView(APIView):
             invoice,
             request.query_params.get('printer'),
             request.query_params.get('download') == '1',
+            template=request.query_params.get('template'),
         )
 
 

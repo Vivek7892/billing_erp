@@ -435,6 +435,23 @@ class Setting(models.Model):
         return self.key
 
 
+class InvoiceTemplateSetting(models.Model):
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='template_settings')
+    template_id = models.CharField(max_length=50)
+    config = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [('business', 'template_id')]
+        indexes = [
+            models.Index(fields=['business', 'template_id']),
+        ]
+
+    def __str__(self):
+        return f"{self.business_id} - {self.template_id}"
+
+
 class ExpenseCategory(models.Model):
     business = models.ForeignKey(Business, on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=100)

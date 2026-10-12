@@ -125,13 +125,18 @@ function formatTime(date) {
    SHARE MENU
 ========================================================= */
 
-function getPdfUrl(billId, printer = false) {
+function getPdfUrl(billId, printer = false, template = null) {
   const token = localStorage.getItem('access_token') || ''
-  return `${API_BASE_URL}/invoices/${billId}/pdf/?token=${token}${printer ? '&printer=thermal' : ''}`
+  let printerParam = ''
+  if (printer === true || printer === 'thermal') printerParam = '&printer=thermal'
+  else if (printer === 'half_a4' || printer === 'a5') printerParam = '&printer=half_a4'
+  else if (printer === 'a4') printerParam = '&printer=a4'
+  const tplParam = template ? `&template=${template}` : ''
+  return `${API_BASE_URL}/invoices/${billId}/pdf/?token=${token}${printerParam}${tplParam}`
 }
 
-function openPdf(billId, printer = false) {
-  const url = getPdfUrl(billId, printer)
+function openPdf(billId, printer = false, template = null) {
+  const url = getPdfUrl(billId, printer, template)
   const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
   if (isMobile) {
     window.open(url, '_blank', 'noopener,noreferrer')
@@ -577,8 +582,9 @@ function InvoiceModal({
   const modalRef = useRef(null)
   const [shareOpen, setShareOpen] = useState(false)
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false)
-  const [historyKey, setHistoryKey] = useState(0)
-  const defaultMode = settings?.invoice_template === 'thermal_80' ? 'thermal' : 'a4'
+  const defaultMode = settings?.invoice_template === 'thermal_80'
+    ? 'thermal'
+    : (settings?.invoice_template === 'half_a4' || settings?.invoice_template === 'advanced_gst_a5' ? 'half_a4' : 'a4')
   const [modalMode, setModalMode] = useState(defaultMode)
 
   useModalA11y(Boolean(selected), onClose, modalRef)
@@ -689,16 +695,25 @@ function InvoiceModal({
               </button>
 
               <button
-                onClick={() => openPdf(selected.id, false)}
+                onClick={() => openPdf(selected.id, modalMode)}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
-                title="Download A4 PDF"
+                title="Download PDF in current preview layout"
               >
                 <Download size={14} />
-                <span>PDF</span>
+                <span>PDF ({modalMode === 'half_a4' ? 'A5' : modalMode.startsWith('thermal') ? 'Thermal' : 'A4'})</span>
               </button>
 
               <button
-                onClick={() => openPdf(selected.id, true)}
+                onClick={() => openPdf(selected.id, 'half_a4')}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
+                title="Print Half-A4 (A5) bill"
+              >
+                <Printer size={14} />
+                <span>Half-A4</span>
+              </button>
+
+              <button
+                onClick={() => openPdf(selected.id, 'thermal')}
                 className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
                 title="Thermal receipt print"
               >

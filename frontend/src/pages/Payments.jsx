@@ -916,8 +916,7 @@ export default function Payments() {
                           <button
                             type="button"
                             onClick={() => setSelectedBill(bill)}
-                            className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1.5 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 dark:bg-blue-950/60 dark:text-blue-200 dark:hover:bg-blue-900/70"
-                          >
+                            className="inline-flex items-center gap-1 rounded-md bg-[var(--surface)] px-2 py-1 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)]" >
                             <Eye size={12} /> Details
                           </button>
                           <InvoiceActions bill={bill} />

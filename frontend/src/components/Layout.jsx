@@ -646,7 +646,7 @@ function ProfileMenu({ user, onLogout }) {
               <div className="min-w-0">
                 <div className="font-semibold text-[var(--ink)] text-sm truncate">{fullName}</div>
                 <div className="mt-0.5">
-                  <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold uppercase tracking-wider bg-teal-50 text-teal-800 border border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800">
+                  <span className=" text-[10px] text-[var(--muted)] capitalize font-medium flex items-center gap-1">
                     {user?.role || 'Staff'}
                   </span>
                 </div>
