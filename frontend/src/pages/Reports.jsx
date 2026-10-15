@@ -278,25 +278,27 @@ export default function Reports() {
         }
 
         .reports-page .erp-summary-table th {
-          background: linear-gradient(135deg, #eef4ff, #f8fafc);
-          color: #475569;
+          background: var(--surface-subtle);
+          color: var(--muted);
+          border-bottom: 1px solid var(--line);
         }
 
         .dark .reports-page .erp-summary-table th {
-          background: linear-gradient(135deg, #172554, #172033);
-          color: #cbd5e1;
+          background: var(--surface-subtle);
+          color: var(--muted);
+          border-bottom: 1px solid var(--line);
         }
 
         .reports-page .erp-report-table th {
-          padding: 11px 14px;
+          padding: 10px 14px;
           text-align: left;
           white-space: nowrap;
-          background: linear-gradient(135deg, #1e3a8a, #2563eb);
+          background: var(--surface-subtle);
           border-bottom: 1px solid var(--line);
-          color: #eff6ff;
-          font-size: 11px;
+          color: var(--muted);
+          font-size: 0.75rem;
           font-weight: 700;
-          letter-spacing: .05em;
+          letter-spacing: .04em;
           text-transform: uppercase;
         }
 

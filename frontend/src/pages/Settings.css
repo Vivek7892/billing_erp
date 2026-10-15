@@ -1,0 +1,165 @@
+.settings-template-miniature {
+  transform: scale(var(--preview-scale, 0.24));
+  transform-origin: top center;
+  pointer-events: none;
+  width: var(--miniature-width, 794px);
+  flex: 0 0 var(--miniature-width, 794px);
+  height: 780px;
+  overflow: hidden;
+  background: #fff;
+  color: #0f172a;
+}
+
+.settings-template-miniature .invoice-document-root {
+  width: var(--miniature-width, 794px);
+  max-width: 100%;
+  background: #fff;
+}
+
+.invoice-document-root .settings-corporate-table thead tr {
+  background: #1e3a5f !important;
+  border-color: #1e3a5f !important;
+}
+
+.invoice-document-root .settings-corporate-table thead th {
+  color: #fff !important;
+}
+
+.invoice-document-root .settings-corporate-table tbody tr:nth-child(even) {
+  background: #f1f5f9;
+}
+
+.settings-page {
+  color-scheme: inherit;
+}
+
+.dark .settings-page {
+  background-color: var(--app-bg);
+  color: var(--ink);
+}
+
+.dark .settings-page :not(.invoice-document-root *)[class~="bg-white"],
+.dark .settings-page :not(.invoice-document-root *)[class~="bg-slate-50"],
+.dark .settings-page :not(.invoice-document-root *)[class~="bg-slate-100"] {
+  background-color: var(--surface) !important;
+}
+
+.dark .settings-page :not(.invoice-document-root *)[class~="bg-slate-200"] {
+  background-color: var(--surface-hover) !important;
+}
+
+.dark .settings-page :not(.invoice-document-root *)[class*="bg-slate-50"],
+.dark .settings-page :not(.invoice-document-root *)[class*="bg-slate-100"],
+.dark .settings-page :not(.invoice-document-root *)[class*="bg-slate-200"] {
+  background-color: var(--surface) !important;
+}
+
+.dark .settings-page :not(.invoice-document-root *)[class*="bg-indigo-50"],
+.dark .settings-page :not(.invoice-document-root *)[class*="bg-indigo-100"] {
+  background-color: rgba(37, 99, 235, 0.18) !important;
+}
+
+.dark .settings-page :not(.invoice-document-root *)[class*="bg-teal-50"],
+.dark .settings-page :not(.invoice-document-root *)[class*="bg-emerald-50"] {
+  background-color: rgba(20, 184, 166, 0.15) !important;
+}
+
+.dark .settings-page :not(.invoice-document-root *)[class~="text-slate-900"],
+.dark .settings-page :not(.invoice-document-root *)[class~="text-slate-800"],
+.dark .settings-page :not(.invoice-document-root *)[class~="text-slate-700"] {
+  color: #e2e8f0 !important;
+}
+
+.dark .settings-page :not(.invoice-document-root *)[class~="text-slate-600"],
+.dark .settings-page :not(.invoice-document-root *)[class~="text-slate-500"] {
+  color: #a7b4c6 !important;
+}
+
+.dark .settings-page :not(.invoice-document-root *)[class~="text-slate-400"] {
+  color: #94a3b8 !important;
+}
+
+.dark .settings-page :not(.invoice-document-root *)[class*="text-indigo-600"],
+.dark .settings-page :not(.invoice-document-root *)[class*="text-indigo-700"] {
+  color: #a5b4fc !important;
+}
+
+.dark .settings-page :not(.invoice-document-root *)[class*="text-teal-600"],
+.dark .settings-page :not(.invoice-document-root *)[class*="text-emerald-600"] {
+  color: #5eead4 !important;
+}
+
+.dark .settings-page :not(.invoice-document-root *)[class~="border-slate-200"],
+.dark .settings-page :not(.invoice-document-root *)[class~="border-slate-300"],
+.dark .settings-page :not(.invoice-document-root *)[class~="border-[#DCE3EC]"] {
+  border-color: var(--line-strong) !important;
+}
+
+.dark .settings-page input:not([type="checkbox"]),
+.dark .settings-page select,
+.dark .settings-page textarea {
+  background-color: #111827;
+  color: #f8fafc;
+  border-color: #475569;
+  color-scheme: dark;
+}
+
+.dark .settings-page input::placeholder,
+.dark .settings-page textarea::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+.dark .settings-page option {
+  color: #f8fafc;
+  background: #111827;
+}
+
+.dark .settings-page :not(.invoice-document-root *)[class~="hover:bg-slate-50"]:hover,
+.dark .settings-page :not(.invoice-document-root *)[class~="hover:bg-slate-100"]:hover,
+.dark .settings-page :not(.invoice-document-root *)[class~="hover:bg-slate-200"]:hover {
+  background-color: #263244 !important;
+}
+
+.dark .settings-page .invoice-document-root,
+.dark .settings-page .invoice-document-root * {
+  color-scheme: light;
+}
+
+.dark .settings-page .invoice-document-root [class~="bg-white"],
+.settings-page .settings-template-miniature,
+.settings-page .settings-template-miniature * {
+  background-color: #fff;
+}
+
+
+@media print {
+  body.settings-invoice-print > * {
+    visibility: hidden !important;
+  }
+
+  body.settings-invoice-print .settings-page,
+  body.settings-invoice-print .settings-page * {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  body.settings-invoice-print .settings-print-invoice-target,
+  body.settings-invoice-print .settings-print-invoice-target * {
+    visibility: visible !important;
+  }
+
+  body.settings-invoice-print .settings-print-invoice-target {
+    position: fixed !important;
+    inset: 0 auto auto 0 !important;
+    z-index: 99999 !important;
+    width: max-content !important;
+    max-width: none !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+  }
+
+  body.settings-invoice-print .settings-print-invoice-target .overflow-x-auto {
+    overflow: visible !important;
+  }
+}

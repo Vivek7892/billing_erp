@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { CheckCircle2, XCircle, RefreshCw } from 'lucide-react'
+import { CheckCircle2, XCircle, RefreshCw, ShieldCheck, Smartphone, CreditCard, LockKeyhole } from 'lucide-react'
 import api from '../../api'
 import { Modal } from '../../components/UI'
 import toast from 'react-hot-toast'
@@ -26,12 +26,14 @@ export default function RazorpayPaymentModal({
   const [phase, setPhase] = useState('idle') // idle | creating | success | failed
   const [errorMsg, setErrorMsg] = useState('')
   const [paymentData, setPaymentData] = useState(null)
+  const [checkoutDismissed, setCheckoutDismissed] = useState(false)
 
   useEffect(() => {
     if (open) {
       setPhase('idle')
       setErrorMsg('')
       setPaymentData(null)
+      setCheckoutDismissed(false)
     }
   }, [open])
 
@@ -60,6 +62,7 @@ export default function RazorpayPaymentModal({
     }
     setPhase('creating')
     setErrorMsg('')
+    setCheckoutDismissed(false)
 
     const loaded = await loadRazorpayScript()
     if (!loaded) {
@@ -120,7 +123,10 @@ export default function RazorpayPaymentModal({
       },
       modal: {
         ondismiss: () => {
-          if (phaseRef.current !== 'success') setPhase('idle')
+          if (phaseRef.current !== 'success') {
+            setPhase('idle')
+            setCheckoutDismissed(true)
+          }
         },
       },
       theme: { color: '#4f46e5' },
@@ -142,35 +148,42 @@ export default function RazorpayPaymentModal({
   const fmt = v => `₹${Number(v || 0).toFixed(2)}`
 
   return (
-    <Modal open={open} onClose={handleClose} title="Pay with Razorpay" size="sm">
-      <div className="space-y-4">
+    <Modal open={open} onClose={handleClose} title="Secure online payment" size="sm">
+      <div className="space-y-4 sm:space-y-5">
 
         {/* Amount banner */}
-        <div className="rounded-xl border border-violet-200 bg-violet-50 p-3.5 dark:border-violet-800/60 dark:bg-violet-950/30">
+        <div className="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white p-4 dark:border-violet-800/60 dark:from-violet-950/40 dark:to-[var(--surface)] sm:p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 text-left">
-              <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-violet-700 dark:text-violet-300">
-                Razorpay payment
+              <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-violet-800 dark:bg-violet-900/60 dark:text-violet-200">
+                <ShieldCheck size={13} /> Razorpay checkout
               </div>
-              <div className="break-all font-mono text-sm font-extrabold text-[var(--ink)]">
+              <div className="truncate text-sm font-semibold text-[var(--ink)]">
                 {effectiveTitle}
               </div>
               <div className="mt-1 text-xs text-[var(--muted)]">
-                Amount to pay via Razorpay
+                Review the amount before continuing.
               </div>
             </div>
-            <div className="shrink-0 rounded-xl border border-violet-200 bg-white px-3 py-2 text-right shadow-sm dark:border-violet-800 dark:bg-slate-900">
-              <div className="text-xl font-mono font-extrabold text-violet-800 dark:text-violet-200">
+            <div className="shrink-0 text-right">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">Total</div>
+              <div className="mt-1 text-xl font-extrabold tabular-nums text-violet-800 dark:text-violet-200 sm:text-2xl">
                 {fmt(effectiveAmount)}
               </div>
             </div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-violet-200/80 pt-3 text-[11px] font-medium text-[var(--muted)] dark:border-violet-800/60">
+            <span className="inline-flex items-center gap-1.5"><Smartphone size={14} /> UPI &amp; wallets</span>
+            <span className="inline-flex items-center gap-1.5"><CreditCard size={14} /> Cards &amp; net banking</span>
+            <span className="inline-flex items-center gap-1.5"><LockKeyhole size={13} /> Verified checkout</span>
           </div>
         </div>
 
         {/* IDLE */}
         {phase === 'idle' && (
           <div className="space-y-3">
-            <div className="rounded-md bg-[var(--surface-elevated)] border border-[var(--line)] p-3 text-xs text-[var(--muted)] space-y-1">
+            {checkoutDismissed && <p role="status" className="m-0 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200">Checkout was closed. Your bill items and details are still here; you can try again whenever you’re ready.</p>}
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-3 text-xs leading-relaxed text-[var(--muted)]">
               <div>• Opens official Razorpay checkout popup.</div>
               <div>• Supports UPI, cards, net banking, and wallets.</div>
               <div>• Sale is confirmed only after payment verification.</div>
@@ -178,7 +191,7 @@ export default function RazorpayPaymentModal({
             <button
               type="button"
               onClick={initiatePayment}
-              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-violet-700 px-4 text-sm font-extrabold text-white shadow-md shadow-violet-700/20 transition hover:bg-violet-800 disabled:opacity-60 cursor-pointer"
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-violet-700 px-4 text-sm font-bold text-white shadow-lg shadow-violet-700/20 transition hover:bg-violet-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
             >
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15">₹</span>
               Pay {fmt(effectiveAmount)} with Razorpay

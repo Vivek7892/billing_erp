@@ -268,6 +268,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
 
 class CustomerPaymentSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='customer.name', read_only=True)
+    invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
 
     class Meta:
         model = CustomerPayment
@@ -275,11 +276,22 @@ class CustomerPaymentSerializer(serializers.ModelSerializer):
         read_only_fields = ['business', 'created_by']
 
     def validate(self, attrs):
-        if attrs['amount'] <= 0:
+        if attrs.get('amount') is not None and attrs['amount'] <= 0:
             raise serializers.ValidationError({'amount': 'Payment amount must be greater than zero.'})
         business = self.context['request'].user.business
-        if attrs['customer'].business_id != business.id:
+        customer = attrs.get('customer')
+        if customer and customer.business_id != business.id:
             raise serializers.ValidationError({'customer': 'Customer does not belong to this business.'})
+        invoice = attrs.get('invoice')
+        if invoice:
+            if invoice.business_id != business.id:
+                raise serializers.ValidationError({'invoice': 'Invoice does not belong to this business.'})
+            if customer and invoice.customer_id != customer.id:
+                raise serializers.ValidationError({'invoice': 'Invoice does not belong to the selected customer.'})
+            if invoice.status in ('cancelled', 'refunded'):
+                raise serializers.ValidationError({'invoice': f'Cannot collect payment on a {invoice.status} invoice.'})
+            if attrs.get('amount') and attrs['amount'] > invoice.balance_due:
+                raise serializers.ValidationError({'amount': f'Payment amount ({attrs["amount"]}) exceeds invoice balance due ({invoice.balance_due}).'})
         return attrs
 
 

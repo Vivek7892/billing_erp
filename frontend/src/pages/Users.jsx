@@ -237,8 +237,8 @@ export default function Users() {
             action={{ label: 'Clear Filters', onClick: () => { setSearch(''); setRoleFilter('all') } }}
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="table">
+          <div className="overflow-x-auto min-h-[180px] pb-4">
+            <table className="table min-w-[700px]">
               <thead>
                 <tr>
                   <th>Name</th>

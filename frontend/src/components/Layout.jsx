@@ -71,7 +71,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/users', icon: UserCog, label: 'Users', adminOnly: true },
       { to: '/settings', icon: Settings, label: 'Settings', adminOnly: true },
-      { to: '/audit-trail', icon: ShieldCheck, label: 'Audit Trail', adminOnly: true },
+      { to: '/audit-trail', icon: ShieldCheck, label: 'Business Activity', adminOnly: true },
       { to: '/recycle-bin', icon: Trash2, label: 'Recycle Bin', adminOnly: true },
       { to: '/payments/reconciliation', icon: ScanLine, label: 'Reconciliation', adminOnly: true },
       { to: '/support', icon: HelpCircle, label: 'Support' }
@@ -241,7 +241,7 @@ function Sidebar({ collapsed, mobile, user, shopName, logoSrc, onLogout, onNav, 
             </div>
             <div className="min-w-0 flex-1">
               <div className="font-bold text-[13.5px] text-white truncate leading-tight tracking-tight">{shopName}</div>
-              <div className="text-[10px] text-slate-400 uppercase tracking-[0.14em] font-semibold mt-0.5">ERP System</div>
+              <div className="text-[10px] text-slate-400 uppercase tracking-[0.14em] font-semibold mt-0.5"></div>
             </div>
             {!mobile && (
               <button
@@ -446,6 +446,29 @@ function NotificationBell() {
   const ref = useRef()
   const navigate = useNavigate()
 
+  const getNotificationDestination = notification => {
+    const data = notification.data || {}
+    const type = notification.notification_type
+    const actionParams = new URLSearchParams((notification.action_url || '').split('?')[1] || '')
+    if (type === 'low_stock' || type === 'batch_expiring') {
+      const query = data.sku || data.product_id || ''
+      return `/inventory/stock${query ? `?search=${encodeURIComponent(query)}` : ''}`
+    }
+    if (type === 'invoice_overdue' || type === 'approval_required' || type === 'quotation_expiring') {
+      const query = data.invoice_number || actionParams.get('search') || notification.reference_id || ''
+      return `/sales/invoices${query ? `?search=${encodeURIComponent(query)}` : ''}`
+    }
+    if (type === 'payment_received') {
+      const query = data.invoice_number || actionParams.get('search') || ''
+      return `/sales/payments${query ? `?search=${encodeURIComponent(query)}` : ''}`
+    }
+    if (type === 'purchase_order_pending') {
+      const purchaseId = data.purchase_id || actionParams.get('po')
+      return `/inventory/purchases${purchaseId ? `?po=${encodeURIComponent(purchaseId)}` : ''}`
+    }
+    return notification.action_url || '/notifications'
+  }
+
   useEffect(() => {
     const handleClickOutside = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
     document.addEventListener('mousedown', handleClickOutside)
@@ -483,7 +506,7 @@ function NotificationBell() {
       } catch {}
     }
     setOpen(false)
-    navigate(n.action_url || '/notifications')
+    navigate(getNotificationDestination(n))
   }
 
   return (
@@ -684,21 +707,38 @@ function ProfileMenu({ user, onLogout }) {
   )
 }
 
+function getPageMeta(pathname) {
+  if (PAGE_META[pathname]) return PAGE_META[pathname]
+  if (pathname.startsWith('/invoice/')) return { icon: FileText, group: 'Billing', label: 'Invoice Details' }
+  if (pathname.startsWith('/public-bill/') || pathname.startsWith('/bill/')) return { icon: FileText, group: 'Billing', label: 'Digital Bill' }
+  if (pathname.startsWith('/parties/customers/')) return { icon: Users, group: 'Contacts', label: 'Customer Details' }
+  if (pathname.startsWith('/parties/suppliers/')) return { icon: Building2, group: 'Contacts', label: 'Supplier Details' }
+  if (pathname.startsWith('/inventory/products/')) return { icon: Package, group: 'Inventory', label: 'Product Details' }
+  if (pathname.startsWith('/inventory/purchases/')) return { icon: ShoppingBag, group: 'Inventory', label: 'Purchases' }
+  if (pathname.startsWith('/sales/invoices')) return { icon: FileText, group: 'Billing', label: 'Billing & Invoices' }
+  if (pathname.startsWith('/audit-trail')) return { icon: ShieldCheck, group: 'Administration', label: 'Audit Trail' }
+  if (pathname.startsWith('/billing/new')) return { icon: ShoppingCart, group: 'Billing', label: 'New Sale' }
+  if (pathname.startsWith('/sales/payments')) return { icon: CreditCard, group: 'Billing', label: 'Payments' }
+  if (pathname.startsWith('/billing/drafts')) return { icon: Layers, group: 'Billing', label: 'Parked Bills' }
+  if (pathname.startsWith('/sales/returns')) return { icon: RotateCcw, group: 'Billing', label: 'Sales Returns' }
+  return { icon: LayoutDashboard, group: '', label: 'Billing ERP' }
+}
+
 function PageHeading({ shopName, pathname }) {
-  const meta = PAGE_META[pathname]
+  const meta = getPageMeta(pathname)
   const Icon = meta?.icon || LayoutDashboard
   const title = meta?.label || 'Dashboard'
 
   return (
-    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-[var(--surface-elevated)] border border-[var(--line)] text-[#1E3A5F] dark:text-sky-300 shadow-2xs">
+    <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-[var(--surface-elevated)] border border-[var(--line)] text-[#1E3A5F] dark:text-sky-300 shadow-2xs">
         <Icon size={16} strokeWidth={2.2} />
       </div>
       <div className="min-w-0 flex flex-col justify-center leading-tight">
-        <h1 className="font-bold text-[var(--ink)] text-[14px] sm:text-[16px] tracking-tight truncate">
+        <h1 className="font-bold text-[var(--ink)] text-[13px] sm:text-[15px] tracking-tight truncate">
           {title}
         </h1>
-        <div className="text-[10px] text-[var(--muted)] font-medium truncate hidden sm:block">
+        <div className="text-[10px] text-[var(--muted)] font-medium truncate">
           {meta?.group ? `${shopName} · ${meta.group}` : shopName}
         </div>
       </div>

@@ -405,5 +405,30 @@ class TransactionWorkflowTests(TestCase):
 		self.assertEqual(thermal_res['Content-Type'], 'application/pdf')
 		self.assertIn(b'%PDF', thermal_res.content[:10])
 
+		# 9. Test template with shop details disabled
+		disabled_shop_cfg = check_res.data
+		disabled_shop_cfg['business_info']['show_shop_details'] = False
+		disabled_shop_cfg['business_info']['show_name'] = False
+		disabled_shop_cfg['business_info']['show_logo'] = False
+		save_disabled = self.client.post('/api/settings/templates/half_a4/', disabled_shop_cfg, format='json')
+		self.assertEqual(save_disabled.status_code, 200)
+		self.assertFalse(save_disabled.data['business_info']['show_shop_details'])
+
+		# Generate PDF with shop disabled for Half-A4, A4, and Thermal
+		pdf_no_shop = self.client.get(f'/api/invoices/{invoice.id}/pdf/?template=half_a4')
+		self.assertEqual(pdf_no_shop.status_code, 200)
+		self.assertIn(b'%PDF', pdf_no_shop.content[:10])
+
+		# Test A4 with shop disabled globally
+		from .models import Setting
+		Setting.objects.update_or_create(business=self.business, key='show_shop_details', defaults={'value': 'false'})
+		pdf_a4_no_shop = self.client.get(f'/api/invoices/{invoice.id}/pdf/?template=gst_a4')
+		self.assertEqual(pdf_a4_no_shop.status_code, 200)
+		self.assertIn(b'%PDF', pdf_a4_no_shop.content[:10])
+
+		pdf_thermal_no_shop = self.client.get(f'/api/invoices/{invoice.id}/pdf/?template=thermal_80')
+		self.assertEqual(pdf_thermal_no_shop.status_code, 200)
+		self.assertIn(b'%PDF', pdf_thermal_no_shop.content[:10])
+
 
 # Create your tests here.

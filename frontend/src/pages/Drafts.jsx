@@ -314,7 +314,7 @@ export default function Drafts() {
         </div>
 
         {/* Desktop / Tablet Table */}
-        <div className="hidden md:block overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto min-h-[180px] pb-4">
           <table className="erp-table w-full text-left text-xs min-w-[760px]">
             <thead>
               <tr>

@@ -108,8 +108,9 @@ export default function RecycleBin() {
           transform: translateY(-1px);
         }
         .recycle-bin-page .recycle-table th {
-          background: linear-gradient(135deg, #1e3a8a, #2563eb);
-          color: #eff6ff;
+          background: var(--surface-subtle);
+          color: var(--muted);
+          border-bottom: 1px solid var(--line);
         }
         .recycle-bin-page .recycle-table td,
         .recycle-bin-page .recycle-table th {
@@ -281,7 +282,7 @@ export default function RecycleBin() {
           </div>
 
           {/* Desktop Table (hidden sm:block) */}
-          <div className="hidden sm:block overflow-x-auto">
+          <div className="hidden sm:block overflow-x-auto min-h-[180px] pb-4">
             <table className="recycle-table erp-table w-full text-left text-xs min-w-[680px]">
               <thead>
                 <tr className=" border-b border-[var(--line)] bg-[var(--surface-elevated)] font-semibold text-[var(--ink-secondary)]">
@@ -382,7 +383,7 @@ export default function RecycleBin() {
           </div>
 
           {/* Desktop Table (hidden sm:block) */}
-          <div className="hidden sm:block overflow-x-auto">
+          <div className="hidden sm:block overflow-x-auto min-h-[180px] pb-4">
             <table className="recycle-table erp-table w-full text-left text-xs min-w-[680px]">
               <thead>
                 <tr className="border-b border-[var(--line)] bg-[var(--surface-elevated)] font-semibold text-[var(--ink-secondary)]">
@@ -488,7 +489,7 @@ export default function RecycleBin() {
           </div>
 
           {/* Desktop Table (hidden sm:block) */}
-          <div className="hidden sm:block overflow-x-auto">
+          <div className="hidden sm:block overflow-x-auto min-h-[180px] pb-4">
             <table className="recycle-table erp-table w-full text-left text-xs min-w-[640px]">
               <thead>
                 <tr className="border-b border-[var(--line)] bg-[var(--surface-elevated)] font-semibold text-[var(--ink-secondary)]">

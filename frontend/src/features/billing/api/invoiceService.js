@@ -1,14 +1,13 @@
 import http, { listData, unwrapResponse } from '../../../services/http'
 
 export const invoiceService = {
-  async getInvoices(params = {}) {
+  async getInvoices(params = new URLSearchParams()) {
     const response = await http.get('/invoices/', { params })
     const payload = unwrapResponse(response)
-    const items = listData(response)
-    items.items = items
-    items.count = payload?.count ?? items.length
-    items.raw = payload
-    return items
+    return {
+      items: listData(response),
+      count: payload?.count ?? 0,
+    }
   },
 
   async getInvoice(invoiceId) {
@@ -28,6 +27,11 @@ export const invoiceService = {
 
   async refundInvoice(invoiceId, payload = {}) {
     const response = await http.post(`/invoices/${invoiceId}/refund/`, payload)
+    return unwrapResponse(response)
+  },
+
+  async collectPayment(invoiceId, payload) {
+    const response = await http.post(`/invoices/${invoiceId}/collect-payment/`, payload)
     return unwrapResponse(response)
   },
 

@@ -350,18 +350,18 @@ export function generatePrintStandHtml({
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 32px 16px;
+      padding: 24px 16px;
     }
     
     /* Professional Tabletop Acrylic Stand Card */
     .standee-card {
       width: 100%;
-      max-width: 380px;
+      max-width: 360px;
       background: #ffffff;
-      border: 3px solid #0F2744;
-      border-radius: 20px;
+      border: 1px solid #dbe3ec;
+      border-radius: 24px;
       overflow: hidden;
-      box-shadow: 0 20px 40px -10px rgba(15, 39, 68, 0.25), 0 1px 3px rgba(0,0,0,0.1);
+      box-shadow: 0 18px 48px -20px rgba(15, 39, 68, 0.42), 0 2px 8px rgba(0,0,0,0.08);
       text-align: center;
       position: relative;
     }
@@ -552,6 +552,19 @@ export function generatePrintStandHtml({
     .print-btn:hover {
       background: #152d4a;
     }
+    @media (max-width: 420px) {
+      .print-wrapper { padding: 14px 10px; }
+      .standee-card { border-radius: 18px; }
+      .header-banner { padding: 18px 12px 14px; }
+      .shop-title { font-size: 18px; }
+      .brand-row { gap: 12px; }
+      .brand-item svg { height: 22px; }
+      .qr-container { padding: 18px 12px 14px; }
+      .qr-frame { padding: 9px; border-radius: 12px; }
+      .qr-frame svg { width: min(220px, 68vw); height: min(220px, 68vw); max-width: 68vw; max-height: 68vw; }
+      .no-print-toolbar { width: 100%; justify-content: center; }
+      .print-btn { flex: 1; max-width: 240px; }
+    }
 
     @media print {
       @page {
@@ -570,7 +583,7 @@ export function generatePrintStandHtml({
         max-width: 360px !important;
         margin: 0 auto !important;
         page-break-inside: avoid !important;
-        border: 2.5px solid #0F2744 !important;
+        border: 1px solid #0F2744 !important;
       }
       .no-print-toolbar {
         display: none !important;
@@ -624,8 +637,7 @@ export function generatePrintStandHtml({
     </div>
 
     <div class="no-print-toolbar">
-      <button class="print-btn" onclick="window.print()">Print Counter Standee</button>
-      <button class="print-btn" style="background:#64748b" onclick="window.close()">Close</button>
+      <button class="print-btn" onclick="window.print()">Print QR stand</button>
     </div>
   </div>
 </body>

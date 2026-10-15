@@ -1,4 +1,5 @@
 import { Fragment, useState, useEffect, useMemo, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import api from '../api'
 import { Badge, PageHeader, Modal, Spinner, EmptyState, ConfirmDialog, TableSkeleton } from '../components/UI'
 import toast from 'react-hot-toast'
@@ -40,9 +41,7 @@ const cardCls =
   'rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-xs)]'
 const cardHover =
   'transition-all duration-150 hover:border-[var(--line-strong)]'
-const tableCls =
-  '[&_thead_tr]:!bg-[linear-gradient(135deg,#1e3a8a,#2563eb)] [&_th]:!text-[#eff6ff] [&_th]:text-[11px] [&_th]:font-bold [&_th]:uppercase [&_th]:tracking-wider ' +
-  '[&_th]:border-b [&_th]:border-blue-700 [&_td]:border-b [&_td]:border-[var(--line-subtle)] [&_td]:text-[var(--ink)]'
+
 
 /* ── Print purchase order ── */
 function printPO(purchase, suppliers) {
@@ -197,16 +196,16 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
           {supProducts.length === 0 ? (
             <p className="text-xs text-slate-600 dark:text-slate-400 py-2 font-medium">No products linked to this supplier.</p>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
+            <div className="overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--surface)]">
               <table className="erp-table w-full text-left text-xs">
-                <thead className="bg-[#1E3A5F] text-white">
+                <thead>
                   <tr>
-                    <th className="py-2.5 px-3 text-white font-bold">Product</th>
-                    <th className="py-2.5 px-3 text-white font-bold">SKU</th>
-                    <th className="py-2.5 px-3 text-white font-bold">Stock</th>
-                    <th className="text-right py-2.5 px-3 text-white font-bold">Purchase Price</th>
-                    <th className="text-right py-2.5 px-3 text-white font-bold">Selling Price</th>
-                    <th className="py-2.5 px-3 text-white font-bold">Status</th>
+                    <th>Product</th>
+                    <th>SKU</th>
+                    <th>Stock</th>
+                    <th className="text-right">Purchase Price</th>
+                    <th className="text-right">Selling Price</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -798,17 +797,17 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
             {mode === 'orders' ? (
               <div className="overflow-x-auto max-h-[340px] border border-[var(--line)] rounded-md bg-[var(--surface)]">
                 <table className="erp-table w-full text-xs min-w-[850px]">
-                  <thead className="sticky top-0 z-10 shadow-sm bg-[#1E3A5F] text-white">
+                  <thead className="sticky top-0 z-10 bg-[var(--surface-subtle)] border-b border-[var(--line)]">
                     <tr>
-                      <th className="w-10 text-center py-2.5 px-2 text-white font-bold">#</th>
-                      <th className="w-20 py-2.5 px-2 text-white font-bold">Status</th>
-                      <th className="py-2.5 px-2.5 text-white font-bold">Invoice / PO #</th>
-                      <th className="py-2.5 px-2.5 text-white font-bold">Supplier</th>
-                      <th className="py-2.5 px-2.5 text-white font-bold">Date</th>
-                      <th className="text-center py-2.5 px-2 text-white font-bold">Items</th>
-                      <th className="text-right py-2.5 px-2.5 text-white font-bold">Total</th>
-                      <th className="text-right py-2.5 px-2.5 text-white font-bold">Paid</th>
-                      <th className="py-2.5 px-2.5 text-white font-bold">Validation Issues</th>
+                      <th className="w-10 text-center">#</th>
+                      <th className="w-20">Status</th>
+                      <th>Invoice / PO #</th>
+                      <th>Supplier</th>
+                      <th>Date</th>
+                      <th className="text-center">Items</th>
+                      <th className="text-right">Total</th>
+                      <th className="text-right">Paid</th>
+                      <th>Validation Issues</th>
                     </tr>
                   </thead>
 
@@ -908,16 +907,16 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
                                     Line items for {ord.invoice_number} ({ord.items.length})
                                   </div>
                                   <table className="w-full text-xs border border-[var(--line)] bg-[var(--surface)] rounded overflow-hidden">
-                                    <thead className="bg-[#1E3A5F] text-white">
+                                    <thead className="bg-[var(--surface-subtle)] border-b border-[var(--line)] text-[var(--muted)]">
                                       <tr>
-                                        <th className="p-2 text-center text-white font-bold">Row</th>
-                                        <th className="p-2 text-left text-white font-bold">Product</th>
-                                        <th className="p-2 text-left text-white font-bold">SKU</th>
-                                        <th className="p-2 text-right text-white font-bold">Qty</th>
-                                        <th className="p-2 text-right text-white font-bold">Unit Price</th>
-                                        <th className="p-2 text-right text-white font-bold">GST %</th>
-                                        <th className="p-2 text-right text-white font-bold">Total</th>
-                                        <th className="p-2 text-left text-white font-bold">Issues</th>
+                                        <th className="p-2 text-center text-[10px] font-bold uppercase">Row</th>
+                                        <th className="p-2 text-left text-[10px] font-bold uppercase">Product</th>
+                                        <th className="p-2 text-left text-[10px] font-bold uppercase">SKU</th>
+                                        <th className="p-2 text-right text-[10px] font-bold uppercase">Qty</th>
+                                        <th className="p-2 text-right text-[10px] font-bold uppercase">Unit Price</th>
+                                        <th className="p-2 text-right text-[10px] font-bold uppercase">GST %</th>
+                                        <th className="p-2 text-right text-[10px] font-bold uppercase">Total</th>
+                                        <th className="p-2 text-left text-[10px] font-bold uppercase">Issues</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--line-subtle)]">
@@ -1199,6 +1198,7 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
 ============================================================ */
 
 export default function Purchases() {
+  const location = useLocation()
   const [tab, setTab] = useState('orders')
   const [purchases, setPurchases] = useState([])
   const [products, setProducts] = useState([])
@@ -1213,10 +1213,19 @@ export default function Purchases() {
   const [editSupplier, setEditSupplier] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [supSearch, setSupSearch] = useState('')
-  const [poSearch, setPoSearch] = useState('')
+  const [poSearch, setPoSearch] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    return params.has('po') ? `PO-${params.get('po')}` : (params.get('search') || '')
+  })
   const [expandedPO, setExpandedPO] = useState(null)
   const [sendingPO, setSendingPO] = useState(null)
   const [poCommsKey, setPoCommsKey] = useState(0)
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const purchaseId = params.get('po')
+    setPoSearch(purchaseId ? `PO-${purchaseId}` : (params.get('search') || ''))
+  }, [location.search])
 
   const sendConfirmation = async (p, channel = 'whatsapp') => {
     setSendingPO(p.id)
@@ -1617,7 +1626,7 @@ export default function Purchases() {
                               type="button"
                               onClick={() => sendConfirmation(p)}
                               disabled={sendingPO === p.id}
-                              className="btn-secondary min-h-[36px] text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/50 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold shadow-xs"
+                              className="min-h-[36px] bg-[#25D366] hover:bg-[#1EBE5D] text-white inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold shadow-xs transition"
                               title="Send Confirmation via WhatsApp"
                             >
                               <MessageCircle size={14} />
@@ -1661,19 +1670,30 @@ export default function Purchases() {
                   </div>
 
                   {/* Desktop Table View (>= 640px) */}
-                  <div className="hidden sm:block w-full max-w-full overflow-x-auto overscroll-x-contain">
-                    <table className="erp-table w-full text-left text-xs min-w-[900px]">
-                      <thead className="bg-[#1E3A5F] text-white">
+                  <div className="hidden sm:block w-full max-w-full overflow-x-auto overscroll-x-contain min-h-[220px] pb-4">
+                    <table className="erp-table w-full text-left text-xs min-w-[920px]">
+                      <colgroup>
+                        <col style={{ width: '10%' }} />
+                        <col style={{ width: '18%' }} />
+                        <col style={{ width: '12%' }} />
+                        <col style={{ width: '11%' }} />
+                        <col style={{ width: '11%' }} />
+                        <col style={{ width: '11%' }} />
+                        <col style={{ width: '11%' }} />
+                        <col style={{ width: '7%' }} />
+                        <col style={{ width: '9%' }} />
+                      </colgroup>
+                      <thead>
                         <tr>
-                          <th className="py-2.5 px-3 text-white font-bold">PO #</th>
-                          <th className="py-2.5 px-3 text-white font-bold">Supplier</th>
-                          <th className="py-2.5 px-3 text-white font-bold">Invoice</th>
-                          <th className="py-2.5 px-3 text-white font-bold">Date</th>
-                          <th className="text-right py-2.5 px-3 text-white font-bold">Total</th>
-                          <th className="text-right py-2.5 px-3 text-white font-bold">Paid</th>
-                          <th className="text-right py-2.5 px-3 text-white font-bold">Balance Due</th>
-                          <th className="py-2.5 px-3 text-white font-bold">Status</th>
-                          <th className="text-right py-2.5 px-3 text-white font-bold">Actions</th>
+                          <th>PO #</th>
+                          <th>Supplier</th>
+                          <th>Invoice</th>
+                          <th>Date</th>
+                          <th className="text-right">Total</th>
+                          <th className="text-right">Paid</th>
+                          <th className="text-right">Balance Due</th>
+                          <th>Status</th>
+                          <th className="text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1700,7 +1720,7 @@ export default function Purchases() {
                                     sendConfirmation(p)
                                   }}
                                   disabled={sendingPO === p.id}
-                                  className="btn-secondary text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800/50 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold mr-1.5"
+                                  className="bg-[#25D366] hover:bg-[#1EBE5D] text-white inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-bold mr-1.5 transition shadow-2xs"
                                   title="Send PO Confirmation via WhatsApp"
                                 >
                                   <MessageCircle size={13} />
@@ -1727,16 +1747,16 @@ export default function Purchases() {
                                       {(p.items || []).length} line item{(p.items || []).length !== 1 ? 's' : ''}
                                     </span>
                                   </div>
-                                  <div className="overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
+                                  <div className="overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--surface)]">
                                     <table className="erp-table w-full text-left text-xs min-w-[560px]">
-                                      <thead className="bg-[#1E3A5F] text-white">
+                                      <thead>
                                         <tr>
-                                          <th className="text-center w-10 py-2 px-3 text-white font-bold">#</th>
-                                          <th className="py-2 px-3 text-white font-bold">Product</th>
-                                          <th className="text-right py-2 px-3 text-white font-bold">Qty</th>
-                                          <th className="text-right py-2 px-3 text-white font-bold">Purchase Price</th>
-                                          <th className="text-right py-2 px-3 text-white font-bold">GST %</th>
-                                          <th className="text-right py-2 px-3 text-white font-bold">Line Total</th>
+                                          <th className="text-center w-10">#</th>
+                                          <th>Product</th>
+                                          <th className="text-right">Qty</th>
+                                          <th className="text-right">Purchase Price</th>
+                                          <th className="text-right">GST %</th>
+                                          <th className="text-right">Line Total</th>
                                         </tr>
                                       </thead>
                                       <tbody>
@@ -1852,8 +1872,8 @@ export default function Purchases() {
         <div className="space-y-5 p-4 sm:p-6 bg-[var(--surface)] text-[var(--ink)]">
 
           {/* Order details */}
-          <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4 sm:p-5 shadow-sm">
-            <h3 className="mb-3 text-sm font-bold text-[var(--ink)]">Order details</h3>
+          <section className="rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-4 sm:p-5 shadow-xs">
+            <h3 className="mb-3 text-sm font-bold text-[var(--ink)]">Order Details</h3>
             <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
               <div className="sm:col-span-2 lg:col-span-1">
                 <label className="label text-xs font-semibold text-[var(--ink-secondary)]">Supplier *</label>
@@ -1863,9 +1883,9 @@ export default function Purchases() {
                     value={form.supplier}
                     onChange={e => setForm(p => ({ ...p, supplier: e.target.value }))}
                   >
-                    <option className="bg-[var(--surface)] text-[var(--ink)]" value="">Select supplier</option>
+                    <option value="">Select supplier</option>
                     {suppliers.map(s => (
-                      <option className="bg-[var(--surface)] text-[var(--ink)]" key={s.id} value={s.id}>{s.name}</option>
+                      <option key={s.id} value={s.id}>{s.name}</option>
                     ))}
                   </select>
                   <button onClick={() => { setEditSupplier(null); setSupModal(true) }} className="btn-secondary px-3" title="Add new supplier">
@@ -1898,9 +1918,9 @@ export default function Purchases() {
                   value={form.payment_status}
                   onChange={e => setForm(p => ({ ...p, payment_status: e.target.value }))}
                 >
-                  <option className="bg-[var(--surface)] text-[var(--ink)]" value="paid">Paid</option>
-                  <option className="bg-[var(--surface)] text-[var(--ink)]" value="pending">Pending</option>
-                  <option className="bg-[var(--surface)] text-[var(--ink)]" value="partial">Partial</option>
+                  <option value="paid">Paid</option>
+                  <option value="pending">Pending</option>
+                  <option value="partial">Partial</option>
                 </select>
               </div>
             </div>
@@ -1926,7 +1946,7 @@ export default function Purchases() {
           </section>
 
           {/* Items */}
-          <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4 sm:p-5 shadow-sm">
+          <section className="rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-4 sm:p-5 shadow-xs">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-bold text-[var(--ink)]">Items</h3>
               <button onClick={addItem} className="btn-secondary h-8 px-3 text-xs flex items-center gap-1">
@@ -1935,24 +1955,24 @@ export default function Purchases() {
             </div>
             <div className="space-y-3">
               {form.items.map((it, i) => (
-                <div key={i} className="flex flex-col gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 sm:flex-row sm:items-center">
+                <div key={i} className="flex flex-col gap-2 rounded-md border border-[var(--line)] bg-[var(--surface)] p-3 sm:flex-row sm:items-center">
                   <div className="flex-1 min-w-0">
-                    <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 block mb-1">Product *</label>
+                    <label className="text-[10px] font-bold text-[var(--ink-secondary)] block mb-1">Product *</label>
                     <select
                       className={`${inputCls} text-xs`}
                       value={it.product}
                       onChange={e => updateItem(i, 'product', e.target.value)}
                     >
-                      <option className="bg-[var(--surface)] text-[var(--ink)]" value="">Select product</option>
+                      <option value="">Select product</option>
                       {products.map(p => (
-                        <option className="bg-[var(--surface)] text-[var(--ink)]" key={p.id} value={p.id}>
+                        <option key={p.id} value={p.id}>
                           {p.name} {p.sku ? `(${p.sku})` : ''} — Stock: {p.current_stock}
                         </option>
                       ))}
                     </select>
                   </div>
                   <div className="w-full sm:w-20">
-                    <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 block mb-1">Qty *</label>
+                    <label className="text-[10px] font-bold text-[var(--ink-secondary)] block mb-1">Qty *</label>
                     <input
                       type="number" min="0.01" step="0.01"
                       className={`${inputCls} text-xs`}
@@ -1961,7 +1981,7 @@ export default function Purchases() {
                     />
                   </div>
                   <div className="w-full sm:w-28">
-                    <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 block mb-1">Price (₹) *</label>
+                    <label className="text-[10px] font-bold text-[var(--ink-secondary)] block mb-1">Price (₹) *</label>
                     <input
                       type="number" min="0" step="0.01"
                       className={`${inputCls} text-xs`}
@@ -1971,7 +1991,7 @@ export default function Purchases() {
                     />
                   </div>
                   <div className="w-full sm:w-20">
-                    <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 block mb-1">GST %</label>
+                    <label className="text-[10px] font-bold text-[var(--ink-secondary)] block mb-1">GST %</label>
                     <input
                       type="number" min="0" max="100" step="0.1"
                       className={`${inputCls} text-xs`}
@@ -1980,8 +2000,8 @@ export default function Purchases() {
                     />
                   </div>
                   <div className="w-full sm:w-28 sm:text-right">
-                    <label className="text-[10px] font-bold text-slate-700 dark:text-slate-300 block mb-1">Total</label>
-                    <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100 block pt-1">
+                    <label className="text-[10px] font-bold text-[var(--ink-secondary)] block mb-1">Total</label>
+                    <span className="font-mono font-bold text-sm text-[var(--ink)] block pt-1">
                       ₹{it.total || '0.00'}
                     </span>
                   </div>
@@ -2002,7 +2022,7 @@ export default function Purchases() {
           {/* Notes and summary */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="label text-xs font-bold text-slate-700 dark:text-slate-300">Notes</label>
+              <label className="label text-xs font-semibold text-[var(--ink-secondary)]">Notes</label>
               <textarea
                 className={`${inputCls} h-24 py-2`}
                 rows={3}
@@ -2011,18 +2031,18 @@ export default function Purchases() {
                 onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
               />
             </div>
-            <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4 space-y-2">
-              <div className="flex justify-between text-xs text-slate-700 dark:text-slate-300 font-medium">
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-4 space-y-2">
+              <div className="flex justify-between text-xs text-[var(--ink-secondary)] font-medium">
                 <span>Subtotal (excl. GST)</span>
-                <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">₹{fmt2(subtotal)}</span>
+                <span className="font-mono font-semibold text-[var(--ink)]">₹{fmt2(subtotal)}</span>
               </div>
-              <div className="flex justify-between text-xs text-slate-700 dark:text-slate-300 font-medium">
+              <div className="flex justify-between text-xs text-[var(--ink-secondary)] font-medium">
                 <span>GST Total</span>
-                <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">₹{fmt2(gstTotal)}</span>
+                <span className="font-mono font-semibold text-[var(--ink)]">₹{fmt2(gstTotal)}</span>
               </div>
-              <div className="flex justify-between text-base font-bold text-slate-900 dark:text-slate-100 border-t border-[var(--line)] pt-2">
+              <div className="flex justify-between text-base font-bold text-[var(--ink)] border-t border-[var(--line)] pt-2">
                 <span>Grand Total</span>
-                <span className="font-mono text-[#1E3A5F] dark:text-blue-300">₹{fmt2(grandTotal)}</span>
+                <span className="font-mono text-[var(--primary)]">₹{fmt2(grandTotal)}</span>
               </div>
               <div className="flex justify-between text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                 <span>Paid Now</span>

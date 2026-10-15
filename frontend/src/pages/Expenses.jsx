@@ -356,8 +356,8 @@ export default function Expenses() {
             </div>
 
             {/* Desktop/tablet table */}
-            <div className="hidden overflow-x-auto sm:block">
-              <table className="table">
+            <div className="hidden overflow-x-auto sm:block min-h-[200px] pb-4">
+              <table className="table min-w-[760px]">
                 <thead>
                   <tr>
                     <th>Description</th>

@@ -270,8 +270,8 @@ export default function Inventory() {
                   {products.map(p => <MobileStockCard key={p.id} product={p} />)}
                 </div>
 
-                <div className="hidden overflow-x-auto sm:block">
-                  <table className="table">
+                <div className="hidden overflow-x-auto sm:block min-h-[200px] pb-4">
+                  <table className="table min-w-[760px]">
                     <thead><tr><th>Product</th><th>SKU</th><th>Current Stock</th><th>Min Stock</th><th>Purchase Price</th><th>Selling Price</th><th>Status</th></tr></thead>
                     <tbody>
                       {products.map(p => (
@@ -304,8 +304,8 @@ export default function Inventory() {
                 {transactions.map(t => <MobileTransactionCard key={t.id} transaction={t} />)}
               </div>
 
-              <div className="hidden overflow-x-auto sm:block">
-                <table className="table">
+              <div className="hidden overflow-x-auto sm:block min-h-[200px] pb-4">
+                <table className="table min-w-[760px]">
                   <thead><tr><th>Date</th><th>Product</th><th>Type</th><th>Qty</th><th>Before</th><th>After</th><th>Reference</th></tr></thead>
                   <tbody>
                     {transactions.map(t => (

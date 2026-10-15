@@ -484,3 +484,161 @@ class InvoiceNumberingTests(TransactionTestCase):
         with ThreadPoolExecutor(max_workers=2) as executor:
             invoices = list(executor.map(lambda _: self.make_invoice(self.business, self.user, self.product), range(2)))
         self.assertEqual(len({invoice.invoice_number for invoice in invoices}), 2)
+
+
+class CustomerCreditCollectionTests(TestCase):
+    def setUp(self):
+        self.business = Business.objects.create(name='Credit Biz')
+        self.other_business = Business.objects.create(name='Other Biz')
+        self.user = User.objects.create_user(username='credit-admin', password='password', role='admin', business=self.business)
+        self.other_user = User.objects.create_user(username='other-admin', password='password', role='admin', business=self.other_business)
+        self.product = Product.objects.create(
+            business=self.business, name='Credit Item', sku='CR-1',
+            purchase_price=Decimal('50'), selling_price=Decimal('100'),
+            current_stock=Decimal('100'), minimum_stock=Decimal('2'), gst_percent=Decimal('0'),
+        )
+        self.customer = Customer.objects.create(
+            business=self.business, name='Credit Customer', credit_limit=Decimal('1000'),
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(self.user)
+
+    def create_credit_invoice(self, grand_total=100, paid_amount=0):
+        return InvoiceService.create_invoice(
+            attributes={
+                'customer': self.customer,
+                'customer_name': self.customer.name,
+                'payment_status': 'paid' if paid_amount >= grand_total else ('partial' if paid_amount > 0 else 'credit'),
+                'payment_method': 'cash',
+            },
+            items_data=[{
+                'product_id': self.product.pk, 'quantity': '1', 'unit_price': str(grand_total),
+                'discount_percent': '0', 'gst_percent': '0',
+            }],
+            payments_data=[{'method': 'cash', 'amount': str(paid_amount)}] if paid_amount > 0 else [],
+            bill_discount=0, business=self.business, created_by=self.user,
+        )
+
+    def test_collect_full_payment_on_credit_invoice(self):
+        invoice = self.create_credit_invoice(grand_total=100, paid_amount=0)
+        self.customer.refresh_from_db()
+        self.assertEqual(invoice.balance_due, Decimal('100.00'))
+        self.assertEqual(invoice.payment_status, 'credit')
+        self.assertEqual(self.customer.outstanding_amount, Decimal('100.00'))
+
+        res = self.client.post(f'/api/invoices/{invoice.pk}/collect-payment/', {
+            'amount': '100.00', 'method': 'upi', 'reference': 'UPI-REF-1',
+        })
+        self.assertEqual(res.status_code, 200)
+        invoice.refresh_from_db()
+        self.customer.refresh_from_db()
+
+        self.assertEqual(invoice.paid_amount, Decimal('100.00'))
+        self.assertEqual(invoice.balance_due, Decimal('0.00'))
+        self.assertEqual(invoice.payment_status, 'paid')
+        self.assertEqual(self.customer.outstanding_amount, Decimal('0.00'))
+
+        payment = Payment.objects.filter(invoice=invoice).first()
+        self.assertIsNotNone(payment)
+        self.assertEqual(payment.amount, Decimal('100.00'))
+        self.assertEqual(payment.method, 'upi')
+        self.assertIsNotNone(payment.customer_payment)
+
+        cust_payment = CustomerPayment.objects.filter(invoice=invoice).first()
+        self.assertIsNotNone(cust_payment)
+        self.assertEqual(cust_payment.amount, Decimal('100.00'))
+
+        ledger = CustomerLedger.objects.filter(customer=self.customer, entry_type='payment').first()
+        self.assertIsNotNone(ledger)
+        self.assertEqual(ledger.credit, Decimal('100.00'))
+
+    def test_collect_partial_payment(self):
+        invoice = self.create_credit_invoice(grand_total=100, paid_amount=0)
+        res = self.client.post(f'/api/invoices/{invoice.pk}/collect-payment/', {
+            'amount': '40.00', 'method': 'cash',
+        })
+        self.assertEqual(res.status_code, 200)
+        invoice.refresh_from_db()
+        self.customer.refresh_from_db()
+
+        self.assertEqual(invoice.paid_amount, Decimal('40.00'))
+        self.assertEqual(invoice.balance_due, Decimal('60.00'))
+        self.assertEqual(invoice.payment_status, 'partial')
+        self.assertEqual(self.customer.outstanding_amount, Decimal('60.00'))
+
+    def test_reject_overpayment_and_negative_amounts(self):
+        invoice = self.create_credit_invoice(grand_total=100, paid_amount=0)
+
+        # Overpayment
+        res = self.client.post(f'/api/invoices/{invoice.pk}/collect-payment/', {
+            'amount': '150.00', 'method': 'cash',
+        })
+        self.assertEqual(res.status_code, 400)
+
+        # Negative amount
+        res = self.client.post(f'/api/invoices/{invoice.pk}/collect-payment/', {
+            'amount': '-10.00', 'method': 'cash',
+        })
+        self.assertEqual(res.status_code, 400)
+
+        # Zero amount
+        res = self.client.post(f'/api/invoices/{invoice.pk}/collect-payment/', {
+            'amount': '0.00', 'method': 'cash',
+        })
+        self.assertEqual(res.status_code, 400)
+
+    def test_fifo_account_payment_across_multiple_invoices(self):
+        inv1 = self.create_credit_invoice(grand_total=50, paid_amount=0)
+        inv2 = self.create_credit_invoice(grand_total=70, paid_amount=0)
+        self.customer.refresh_from_db()
+        self.assertEqual(self.customer.outstanding_amount, Decimal('120.00'))
+
+        # Pay 80 against customer account (no specific invoice)
+        res = self.client.post(f'/api/customers/{self.customer.pk}/payments/', {
+            'amount': '80.00', 'method': 'cash', 'reference': 'GEN-PAY-1',
+        })
+        self.assertEqual(res.status_code, 201)
+
+        inv1.refresh_from_db()
+        inv2.refresh_from_db()
+        self.customer.refresh_from_db()
+
+        # inv1: 50 -> paid
+        self.assertEqual(inv1.paid_amount, Decimal('50.00'))
+        self.assertEqual(inv1.balance_due, Decimal('0.00'))
+        self.assertEqual(inv1.payment_status, 'paid')
+
+        # inv2: 70 - 30 = 40 balance
+        self.assertEqual(inv2.paid_amount, Decimal('30.00'))
+        self.assertEqual(inv2.balance_due, Decimal('40.00'))
+        self.assertEqual(inv2.payment_status, 'partial')
+
+        # customer outstanding: 120 - 80 = 40
+        self.assertEqual(self.customer.outstanding_amount, Decimal('40.00'))
+
+    def test_customer_payments_and_transactions_endpoints(self):
+        self.create_credit_invoice(grand_total=50, paid_amount=0)
+        self.client.post(f'/api/customers/{self.customer.pk}/payments/', {
+            'amount': '25.00', 'method': 'cash',
+        })
+
+        # Test GET payments
+        res = self.client.get(f'/api/customers/{self.customer.pk}/payments/')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(len(res.data), 1)
+        self.assertEqual(float(res.data[0]['amount']), 25.00)
+
+        # Test GET transactions
+        res = self.client.get(f'/api/customers/{self.customer.pk}/transactions/')
+        self.assertEqual(res.status_code, 200)
+        self.assertTrue(len(res.data) >= 2)
+
+    def test_cross_tenant_business_isolation(self):
+        other_customer = Customer.objects.create(
+            business=self.other_business, name='Other Customer', credit_limit=Decimal('500'),
+        )
+        res = self.client.post(f'/api/customers/{other_customer.pk}/payments/', {
+            'amount': '50.00', 'method': 'cash',
+        })
+        self.assertEqual(res.status_code, 404)
+

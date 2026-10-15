@@ -548,7 +548,7 @@ export default function PublicBill() {
     const template = String(settings.invoice_template || '').toLowerCase()
     const printer = String(settings.printer_type || '').toLowerCase()
     if (template.startsWith('thermal') || printer.startsWith('thermal')) return 'thermal'
-    if (template === 'half_a4' || template === 'advanced_gst_a5' || printer === 'a5') return 'half_a4'
+    if (template === 'half_a4' || template === 'advanced_gst_a5' || printer === 'half_a4' || printer === 'a5') return 'half_a4'
     return 'a4'
   }, [data?.settings])
 
@@ -746,30 +746,30 @@ export default function PublicBill() {
 
           {/* Action Tools */}
           <div className="flex flex-wrap items-center gap-2">
-            {/* Format Toggle Pill */}
+            {/* Format Toggle Pill — Strictly two types: Sheet Bill vs Thermal Receipt */}
             <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs font-semibold text-slate-600" role="group" aria-label="Bill format">
               <button
                 type="button"
-                onClick={() => setSelectedPrinter('a4')}
-                className={`rounded-md px-2.5 py-1 text-xs transition ${
-                  selectedPrinter === 'a4'
+                onClick={() => setSelectedPrinter(s?.invoice_template === 'half_a4' || s?.printer_type === 'half_a4' ? 'half_a4' : 'a4')}
+                className={`rounded-md px-3 py-1 text-xs transition ${
+                  selectedPrinter !== 'thermal'
                     ? 'bg-[#1E3A5F] text-white shadow-xs font-bold'
                     : 'hover:text-slate-900'
                 }`}
               >
-                A4 Bill
+                {s?.invoice_template === 'half_a4' || s?.printer_type === 'half_a4' ? 'Tax Invoice (Half-A4)' : 'Tax Invoice (A4)'}
               </button>
-        
+
               <button
                 type="button"
                 onClick={() => setSelectedPrinter('thermal')}
-                className={`rounded-md px-2.5 py-1 text-xs transition ${
+                className={`rounded-md px-3 py-1 text-xs transition ${
                   selectedPrinter === 'thermal'
                     ? 'bg-[#1E3A5F] text-white shadow-xs font-bold'
                     : 'hover:text-slate-900'
                 }`}
               >
-                Thermal (80mm)
+                {s?.printer_type === 'thermal_58' || s?.invoice_template === 'thermal_58' ? 'Thermal Receipt (58mm)' : 'Thermal Receipt (80mm)'}
               </button>
             </div>
 
@@ -854,28 +854,21 @@ export default function PublicBill() {
           FIXED MOBILE BOTTOM ACTION BAR
       ============================================================ */}
       <aside className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-2 border-t border-slate-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-md sm:hidden print:hidden">
-        {/* Mobile Format Switcher */}
+        {/* Mobile Format Switcher — Two Types: Sheet vs Thermal */}
         <div className="flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-[11px] font-bold">
           <button
             type="button"
-            onClick={() => setSelectedPrinter('a4')}
-            className={`rounded px-2 py-1 ${selectedPrinter === 'a4' ? 'bg-[#1E3A5F] text-white shadow-xs' : 'text-slate-600'}`}
+            onClick={() => setSelectedPrinter(s?.invoice_template === 'half_a4' || s?.printer_type === 'half_a4' ? 'half_a4' : 'a4')}
+            className={`rounded px-2.5 py-1 ${selectedPrinter !== 'thermal' ? 'bg-[#1E3A5F] text-white shadow-xs' : 'text-slate-600'}`}
           >
-            A4
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedPrinter('half_a4')}
-            className={`rounded px-2 py-1 ${selectedPrinter === 'half_a4' ? 'bg-[#1E3A5F] text-white shadow-xs' : 'text-slate-600'}`}
-          >
-            A5
+            {s?.invoice_template === 'half_a4' || s?.printer_type === 'half_a4' ? 'Half-A4' : 'A4 Bill'}
           </button>
           <button
             type="button"
             onClick={() => setSelectedPrinter('thermal')}
-            className={`rounded px-2 py-1 ${selectedPrinter === 'thermal' ? 'bg-[#1E3A5F] text-white shadow-xs' : 'text-slate-600'}`}
+            className={`rounded px-2.5 py-1 ${selectedPrinter === 'thermal' ? 'bg-[#1E3A5F] text-white shadow-xs' : 'text-slate-600'}`}
           >
-            Thermal
+            {s?.printer_type === 'thermal_58' || s?.invoice_template === 'thermal_58' ? '58mm Roll' : 'Thermal'}
           </button>
         </div>
 

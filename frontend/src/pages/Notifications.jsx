@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../AuthContext'
+import { ROLES } from '../constants'
 import toast from 'react-hot-toast'
 import {
   AlertCircle,
@@ -86,29 +88,30 @@ function relativeTime(isoString) {
 }
 
 function getNotificationRoute(item) {
-  if (item.action_url) return item.action_url
-
   const type = item.notification_type
   const refId = item.reference_id
+  const data = item.data || {}
+  const actionParams = new URLSearchParams((item.action_url || '').split('?')[1] || '')
 
   switch (type) {
     case 'low_stock':
-      return refId ? `/inventory/stock?search=${encodeURIComponent(refId)}` : '/inventory/stock'
+      return `/inventory/stock?search=${encodeURIComponent(data.sku || data.product_id || refId || '')}`
     case 'batch_expiring':
-      return '/inventory/stock'
+      return `/inventory/stock?search=${encodeURIComponent(data.sku || data.product_id || '')}`
     case 'invoice_overdue':
-      return refId ? `/invoice/${refId}` : '/sales/invoices'
+      return `/sales/invoices?search=${encodeURIComponent(data.invoice_number || actionParams.get('search') || refId || '')}`
     case 'payment_received':
-      return '/payments'
+      return `/sales/payments${data.invoice_number || actionParams.get('search') ? `?search=${encodeURIComponent(data.invoice_number || actionParams.get('search'))}` : ''}`
     case 'purchase_order_pending':
-      return '/purchases'
+      return `/inventory/purchases${data.purchase_id || actionParams.get('po') ? `?po=${encodeURIComponent(data.purchase_id || actionParams.get('po'))}` : ''}`
     case 'quotation_expiring':
-      return '/reports'
+      return `/sales/invoices?search=${encodeURIComponent(data.invoice_number || actionParams.get('search') || '')}`
     case 'gst_submission_failed':
     case 'einvoice_failed':
     case 'eway_bill_expiring':
       return '/reports'
     default:
+      if (item.action_url) return item.action_url
       if (item.category === 'inventory') return '/inventory/stock'
       if (item.category === 'sales_finance') return refId ? `/invoice/${refId}` : '/sales/invoices'
       return null
@@ -157,6 +160,8 @@ function MetricCard({ label, value, sub, valueColor, icon: Icon, iconBg, iconCol
 
 export default function Notifications() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const canManageApprovals = [ROLES.OWNER, ROLES.ADMIN, ROLES.MANAGER].includes(user?.role)
 
   const [notifications, setNotifications] = useState([])
   const [counts, setCounts] = useState({ unread: 0, critical: 0, pending_approval: 0 })
@@ -242,12 +247,21 @@ export default function Notifications() {
       setActioningId(id)
       const res = await api.post(`/notifications/${id}/action/`, { action, notes: approvalNotes })
       setNotifications(prev =>
-        prev.map(n => n.id === id ? { ...n, status: res.data.notification_status, is_read: true } : n)
+        prev.map(n => n.id === id ? {
+          ...n,
+          status: res.data.notification_status,
+          is_read: true,
+          actioned_by_name: res.data.actioned_by || user?.username,
+          actioned_at: res.data.actioned_at || new Date().toISOString(),
+          action_notes: approvalNotes.trim(),
+        } : n)
       )
-      setCounts(c => ({ ...c, pending_approval: Math.max(0, c.pending_approval - 1) }))
+      if (notifications.find(n => n.id === id)?.status === 'active') {
+        setCounts(c => ({ ...c, pending_approval: Math.max(0, c.pending_approval - 1) }))
+      }
       setApprovalModal(null)
       setApprovalNotes('')
-      toast.success(`Action ${action}d successfully`)
+      toast.success(action === 'approve' ? 'Approval recorded' : 'Request rejected')
     } catch (err) {
       toast.error(err?.response?.data?.error || `Failed to ${action}`)
     } finally {
@@ -546,25 +560,27 @@ export default function Notifications() {
                       )}
 
                       <div className="flex items-center gap-1.5 ml-auto">
-                        {item.requires_approval && item.status === 'active' ? (
+                        {item.requires_approval && item.status === 'active' && canManageApprovals ? (
                           <>
                             <button
                               type="button"
-                              onClick={() => setApprovalModal({ id: item.id, title: item.title, type: 'approve' })}
-                              disabled={actioningId === item.id}
+                              onClick={() => { setApprovalNotes(''); setApprovalModal({ id: item.id, title: item.title, message: item.message, type: 'approve' }) }}
+                              disabled={Boolean(actioningId)}
                               className="btn-success min-h-[36px] px-2.5 text-xs inline-flex items-center gap-1"
                             >
                               <Check size={12} /> Approve
                             </button>
                             <button
                               type="button"
-                              onClick={() => setApprovalModal({ id: item.id, title: item.title, type: 'reject' })}
-                              disabled={actioningId === item.id}
+                              onClick={() => { setApprovalNotes(''); setApprovalModal({ id: item.id, title: item.title, message: item.message, type: 'reject' }) }}
+                              disabled={Boolean(actioningId)}
                               className="btn-danger min-h-[36px] px-2.5 text-xs inline-flex items-center gap-1"
                             >
                               <X size={12} /> Reject
                             </button>
                           </>
+                        ) : item.requires_approval && item.status === 'active' ? (
+                          <span className="ml-auto text-[10px] font-semibold text-[var(--muted)]">Manager or admin review</span>
                         ) : (
                           <>
                             {!item.is_read && (
@@ -700,25 +716,27 @@ export default function Notifications() {
                         {/* Controls */}
                         <td className="text-right">
                           <div className="inline-flex items-center justify-end gap-1">
-                            {item.requires_approval && item.status === 'active' ? (
+                            {item.requires_approval && item.status === 'active' && canManageApprovals ? (
                               <>
                                 <button
                                   type="button"
-                                  onClick={() => setApprovalModal({ id: item.id, title: item.title, type: 'approve' })}
-                                  disabled={actioningId === item.id}
+                                  onClick={() => { setApprovalNotes(''); setApprovalModal({ id: item.id, title: item.title, message: item.message, type: 'approve' }) }}
+                                  disabled={Boolean(actioningId)}
                                   className="btn-success btn-sm text-[11px] px-2 inline-flex items-center gap-1"
                                 >
                                   <Check size={11} /> Approve
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => setApprovalModal({ id: item.id, title: item.title, type: 'reject' })}
-                                  disabled={actioningId === item.id}
+                                  onClick={() => { setApprovalNotes(''); setApprovalModal({ id: item.id, title: item.title, message: item.message, type: 'reject' }) }}
+                                  disabled={Boolean(actioningId)}
                                   className="btn-danger btn-sm text-[11px] px-2 inline-flex items-center gap-1"
                                 >
                                   <X size={11} /> Reject
                                 </button>
                               </>
+                            ) : item.requires_approval && item.status === 'active' ? (
+                              <span className="text-[10px] font-semibold text-[var(--muted)]">Manager or admin review</span>
                             ) : (
                               <div className="inline-flex items-center gap-1">
                                 {!item.is_read && (
@@ -772,14 +790,15 @@ export default function Notifications() {
 
       {/* ── Approval Modal ── */}
       {approvalModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg border border-[var(--line)] bg-[var(--surface)] p-5 shadow-lg modal-shell">
-            <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="w-full max-w-lg rounded-t-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-2xl modal-shell sm:rounded-2xl sm:p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-bold text-[var(--ink)]">
-                  Confirm {approvalModal.type === 'approve' ? 'Approval' : 'Rejection'}
+                <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${approvalModal.type === 'approve' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300'}`}>Manager review</span>
+                <h3 className="mb-0 mt-2 text-base font-bold text-[var(--ink)]">
+                  {approvalModal.type === 'approve' ? 'Approve this request?' : 'Reject this request?'}
                 </h3>
-                <p className="mt-1 text-xs text-[var(--muted)]">{approvalModal.title}</p>
+                <p className="mb-0 mt-1 text-sm font-semibold text-[var(--ink-secondary)]">{approvalModal.title}</p>
               </div>
               <button
                 onClick={() => { setApprovalModal(null); setApprovalNotes('') }}
@@ -789,30 +808,34 @@ export default function Notifications() {
               </button>
             </div>
 
+            {approvalModal.message && <div className="mb-4 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-3 text-xs leading-relaxed text-[var(--ink-secondary)]">{approvalModal.message}</div>}
+
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-[var(--ink-secondary)]">
-                Notes (Optional)
+                Review note {approvalModal.type === 'reject' ? '(recommended)' : '(optional)'}
               </label>
               <textarea
                 value={approvalNotes}
                 onChange={e => setApprovalNotes(e.target.value)}
-                placeholder="Reason or authorization reference..."
+                placeholder="Add a short reason or authorization reference..."
                 rows={3}
                 className="w-full p-2 text-xs rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:border-[var(--primary)]"
               />
             </div>
 
-            <div className="mt-4 flex items-center justify-end gap-2">
+            <p className="mb-0 mt-2 text-[10px] leading-relaxed text-[var(--muted)]">This decision is recorded with your account and timestamp.</p>
+
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-end">
               <button
                 onClick={() => { setApprovalModal(null); setApprovalNotes('') }}
-                className="btn-secondary text-xs h-8 px-3"
+                className="btn-secondary min-h-10 text-xs px-3"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleApprovalAction(approvalModal.id, approvalModal.type)}
-                disabled={actioningId === approvalModal.id}
-                className={`text-xs h-8 px-4 font-semibold text-white rounded-md inline-flex items-center gap-1.5 ${
+                disabled={Boolean(actioningId)}
+                className={`min-h-10 text-xs px-4 font-semibold text-white rounded-md inline-flex items-center justify-center gap-1.5 disabled:cursor-wait disabled:opacity-60 ${
                   approvalModal.type === 'approve' ? 'bg-teal-600 hover:bg-teal-700' : 'bg-rose-600 hover:bg-rose-700'
                 }`}
               >

@@ -313,3 +313,78 @@ class InvoiceService:
                 )
 
         return invoice
+
+    @staticmethod
+    def collect_payment(*, invoice_id, amount, method, business, user, reference='', notes='', request=None):
+        amount = Decimal(str(amount))
+        if amount <= 0:
+            raise ValueError('Payment amount must be greater than zero.')
+
+        with transaction.atomic():
+            try:
+                invoice = Invoice.objects.select_for_update().get(pk=invoice_id, business=business)
+            except Invoice.DoesNotExist as exc:
+                raise LookupError('Invoice not found') from exc
+
+            if invoice.status in ('cancelled', 'refunded'):
+                raise ValueError(f'Cannot collect payment on a {invoice.status} invoice.')
+
+            if amount > invoice.balance_due:
+                raise ValueError(
+                    f'Payment amount ({amount:.2f}) exceeds invoice balance due ({invoice.balance_due:.2f}).'
+                )
+
+            valid_methods = {choice[0] for choice in Payment.METHOD_CHOICES}
+            pay_method = method if method in valid_methods else 'cash'
+
+            if invoice.customer_id:
+                from .payment_service import PaymentService
+                PaymentService.record_customer_payment(
+                    attributes={
+                        'customer': invoice.customer,
+                        'invoice': invoice,
+                        'amount': amount,
+                        'method': method,
+                        'reference': reference,
+                        'notes': notes,
+                    },
+                    business=business,
+                    created_by=user,
+                    request=request,
+                )
+                invoice.refresh_from_db()
+            else:
+                Payment.objects.create(
+                    invoice=invoice,
+                    customer_payment=None,
+                    method=pay_method,
+                    amount=amount,
+                    reference=reference,
+                )
+                invoice.paid_amount += amount
+                invoice.balance_due = max(Decimal('0'), invoice.grand_total - invoice.paid_amount)
+                if invoice.balance_due <= 0:
+                    invoice.payment_status = 'paid'
+                elif invoice.paid_amount > 0:
+                    invoice.payment_status = 'partial'
+                else:
+                    invoice.payment_status = 'credit'
+                invoice.save(update_fields=['paid_amount', 'balance_due', 'payment_status'])
+
+                if request is not None:
+                    audit_event(
+                        request,
+                        'PAYMENT_COLLECTED',
+                        'Invoice',
+                        invoice.id,
+                        entity_name=invoice.invoice_number,
+                        after={
+                            'amount': str(amount),
+                            'method': method,
+                            'paid_amount': str(invoice.paid_amount),
+                            'balance_due': str(invoice.balance_due),
+                            'payment_status': invoice.payment_status,
+                        },
+                    )
+
+        return invoice

@@ -67,8 +67,11 @@ LEGACY_TEMPLATE_ALIASES = {
 # Base defaults common to all templates
 _BASE_DEFAULTS: Dict[str, Any] = {
     # Business Info
-    'show_business_logo': 'true',
+    'show_shop_details': 'true',
+    'show_business_info': 'true',
     'show_business_name': 'true',
+    'show_shop_name': 'true',
+    'show_business_logo': 'true',
     'show_business_address': 'true',
     'show_business_phone': 'true',
     'show_business_email': 'true',
@@ -238,6 +241,8 @@ def _build_structured_sections(flat_cfg: Dict[str, Any], template_id: str) -> Di
     pay = deepcopy(flat_cfg.get('payment') or {})
     pg = deepcopy(flat_cfg.get('page') or {})
 
+    if 'show_shop_details' not in b_info: b_info['show_shop_details'] = _to_bool(flat_cfg.get('show_shop_details', flat_cfg.get('show_business_info', True)))
+    if 'show_name' not in b_info: b_info['show_name'] = _to_bool(flat_cfg.get('show_business_name', flat_cfg.get('show_shop_name', True)))
     if 'show_logo' not in b_info: b_info['show_logo'] = _to_bool(flat_cfg.get('show_business_logo', True))
     if 'show_address' not in b_info: b_info['show_address'] = _to_bool(flat_cfg.get('show_business_address', True))
     if 'show_phone' not in b_info: b_info['show_phone'] = _to_bool(flat_cfg.get('show_business_phone', True))
@@ -362,6 +367,18 @@ def save_template_config(business: Business, template_id: str, new_config: Dict[
 
     # 2. Translate structured sections to flat keys for ReportLab/pdf_utils
     b_info = clean_config.get('business_info') or new_config.get('business_info') or {}
+    if 'show_shop_details' in b_info:
+        v = 'true' if b_info['show_shop_details'] else 'false'
+        clean_config['show_shop_details'] = v
+        clean_config['show_business_info'] = v
+    if 'show_name' in b_info:
+        v = 'true' if b_info['show_name'] else 'false'
+        clean_config['show_business_name'] = v
+        clean_config['show_shop_name'] = v
+    elif 'show_business_name' in b_info:
+        v = 'true' if b_info['show_business_name'] else 'false'
+        clean_config['show_business_name'] = v
+        clean_config['show_shop_name'] = v
     if 'show_logo' in b_info: clean_config['show_business_logo'] = 'true' if b_info['show_logo'] else 'false'
     if 'show_address' in b_info: clean_config['show_business_address'] = 'true' if b_info['show_address'] else 'false'
     if 'show_phone' in b_info: clean_config['show_business_phone'] = 'true' if b_info['show_phone'] else 'false'

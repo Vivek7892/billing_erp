@@ -8,7 +8,7 @@ import { NetworkStatusProvider } from './context/NetworkStatusContext'
 import { ROLES } from './constants'
 
 import Layout from './components/Layout'
-import { PageSkeleton } from './components/UI'
+import { InlineSpinner } from './components/UI'
 import NetworkOfflineBanner from './components/NetworkOfflineBanner'
 import SessionExpiredModal from './components/SessionExpiredModal'
 
@@ -52,17 +52,10 @@ const OfflineState = lazy(() => import('./pages/errors/OfflineState'))
 
 function LoadingScreen() {
   return (
-    <div className="relative min-h-screen overflow-hidden">
-      <PageSkeleton />
-      <div
-        className="absolute inset-x-0 bottom-6 flex justify-center px-6"
-        role="status"
-        aria-live="polite"
-        aria-label="Loading your billing space"
-      >
-        <p className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-xs font-medium text-[var(--muted)] shadow-sm">
-          Loading your billing space...
-        </p>
+    <div className="flex min-h-screen items-center justify-center bg-[var(--surface)]" role="status" aria-live="polite" aria-label="Loading">
+      <div className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm font-medium text-[var(--muted)] shadow-sm">
+        <InlineSpinner className="h-5 w-5 text-[var(--primary)]" />
+        <span>Loading…</span>
       </div>
     </div>
   )

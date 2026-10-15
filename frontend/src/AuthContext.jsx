@@ -1,23 +1,15 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import http, { setOnUnauthorizedCallback } from './services/http'
+import { clearAuthSession, getAccessToken, getRememberMePreference, getStoredAuthUser, saveAuthSession, saveAuthUser } from './services/tokenStorage'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem('auth_user')
-      return stored ? JSON.parse(stored) : null
-    } catch {
-      return null
-    }
-  })
+  const [user, setUser] = useState(getStoredAuthUser)
   const [loading, setLoading] = useState(true)
 
   const logout = useCallback(() => {
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
-    localStorage.removeItem('auth_user')
+    clearAuthSession()
     setUser(null)
   }, [])
 
@@ -26,19 +18,17 @@ export function AuthProvider({ children }) {
     const handleAuthLogout = () => logout()
     window.addEventListener('auth:logout', handleAuthLogout)
 
-    const token = localStorage.getItem('access_token')
+    const token = getAccessToken()
     if (token) {
       http.get('/auth/me/')
         .then(r => {
           setUser(r.data)
-          if (r.data) localStorage.setItem('auth_user', JSON.stringify(r.data))
+          if (r.data) saveAuthUser(r.data)
         })
         .catch(error => {
           const status = error.response?.status
           if ([401, 403].includes(status)) {
-            localStorage.removeItem('access_token')
-            localStorage.removeItem('refresh_token')
-            localStorage.removeItem('auth_user')
+            clearAuthSession()
           }
         })
         .finally(() => setLoading(false))
@@ -52,11 +42,9 @@ export function AuthProvider({ children }) {
     }
   }, [logout])
 
-  const login = async (username, password) => {
+  const login = async (username, password, rememberMe = getRememberMePreference()) => {
     const { data } = await http.post('/auth/login/', { username, password })
-    localStorage.setItem('access_token', data.access)
-    localStorage.setItem('refresh_token', data.refresh)
-    if (data.user) localStorage.setItem('auth_user', JSON.stringify(data.user))
+    saveAuthSession(data, rememberMe)
     setUser(data.user)
     return data.user
   }

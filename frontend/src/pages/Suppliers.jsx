@@ -1775,7 +1775,7 @@ export default function Suppliers() {
             </div>
 
             {/* Desktop / Tablet Table (hidden lg:block) */}
-            <div className="hidden lg:block overflow-x-auto">
+            <div className="hidden lg:block overflow-x-auto min-h-[220px] pb-4">
               <table className="erp-table w-full text-left text-xs min-w-[1050px]">
                 <thead>
                   <tr>

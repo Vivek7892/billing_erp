@@ -879,6 +879,21 @@ class SupplierViewSet(viewsets.ModelViewSet):
             reason=reason,
         )
 
+    def perform_destroy(self, instance):
+        entity_id = instance.id
+        entity_name = instance.name
+        before = {'name': instance.name, 'phone': instance.phone, 'gstin': instance.gstin}
+        instance.delete()
+        audit_event(
+            self.request,
+            'SUPPLIER_DELETED',
+            'Supplier',
+            entity_id,
+            entity_name=entity_name,
+            before=before,
+            reason=self.request.data.get('reason', 'Supplier record deleted'),
+        )
+
     @action(detail=False, methods=['get'], url_path='import-template')
     def import_template(self, request):
         """Generate a downloadable, professionally formatted Excel template for bulk supplier import."""
@@ -1264,32 +1279,44 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         old_inst = serializer.instance
-        before_price = {
+        before_dict = {
+            'name': old_inst.name,
             'purchase_price': float(old_inst.purchase_price or 0),
             'selling_price': float(old_inst.selling_price or 0),
             'mrp': float(old_inst.mrp or 0),
+            'gst_percent': float(old_inst.gst_percent or 0),
+            'current_stock': float(old_inst.current_stock or 0),
         }
-        previous = f'{old_inst.purchase_price}|{old_inst.selling_price}|{old_inst.gst_percent}'
         product = serializer.save(business=self.request.user.business)
-        current = f'{product.purchase_price}|{product.selling_price}|{product.gst_percent}'
-        after_price = {
+        after_dict = {
+            'name': product.name,
             'purchase_price': float(product.purchase_price or 0),
             'selling_price': float(product.selling_price or 0),
             'mrp': float(product.mrp or 0),
+            'gst_percent': float(product.gst_percent or 0),
+            'current_stock': float(product.current_stock or 0),
         }
 
         reason = self.request.data.get('reason', '').strip()
-        if (before_price['selling_price'] != after_price['selling_price'] or
-                before_price['purchase_price'] != after_price['purchase_price'] or
-                before_price['mrp'] != after_price['mrp']):
+        if (before_dict['selling_price'] != after_dict['selling_price'] or
+                before_dict['purchase_price'] != after_dict['purchase_price'] or
+                before_dict['mrp'] != after_dict['mrp']):
             audit_event(
                 self.request,
                 'PRICE_CHANGED',
                 'Product',
                 product.id,
                 entity_name=product.name,
-                before=before_price,
-                after=after_price,
+                before={
+                    'purchase_price': before_dict['purchase_price'],
+                    'selling_price': before_dict['selling_price'],
+                    'mrp': before_dict['mrp'],
+                },
+                after={
+                    'purchase_price': after_dict['purchase_price'],
+                    'selling_price': after_dict['selling_price'],
+                    'mrp': after_dict['mrp'],
+                },
                 reason=reason or 'Product price changed',
             )
 
@@ -1299,8 +1326,8 @@ class ProductViewSet(viewsets.ModelViewSet):
             'Product',
             product.id,
             entity_name=product.name,
-            before=previous,
-            after=current,
+            before=before_dict,
+            after=after_dict,
             reason=reason or 'Product updated',
         )
 
@@ -1372,6 +1399,21 @@ class CustomerViewSet(viewsets.ModelViewSet):
             reason=reason,
         )
 
+    def perform_destroy(self, instance):
+        entity_id = instance.id
+        entity_name = instance.name
+        before = {'name': instance.name, 'mobile': instance.mobile, 'credit_limit': float(instance.credit_limit or 0), 'balance': float(instance.balance or 0)}
+        instance.delete()
+        audit_event(
+            self.request,
+            'CUSTOMER_DELETED',
+            'Customer',
+            entity_id,
+            entity_name=entity_name,
+            before=before,
+            reason=self.request.data.get('reason', 'Customer record deleted'),
+        )
+
     @action(detail=True, methods=['get'])
     def bills(self, request, pk=None):
         customer = self.get_object()
@@ -1412,6 +1454,55 @@ class CustomerViewSet(viewsets.ModelViewSet):
             return Response({'status': 'sent', 'sid': msg.sid, 'channel': channel})
         except Exception as e:
             return Response({'error': str(e)}, status=500)
+
+    @action(detail=True, methods=['get', 'post'], url_path='payments')
+    def payments(self, request, pk=None):
+        customer = self.get_object()
+        if request.method == 'GET':
+            payments = CustomerPayment.objects.filter(
+                customer=customer,
+                business=request.user.business,
+            ).order_by('-created_at')
+            return Response(CustomerPaymentSerializer(payments, many=True).data)
+
+        # POST
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+        data['customer'] = customer.pk
+        serializer = CustomerPaymentSerializer(data=data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        from .services.payment_service import PaymentService
+        try:
+            payment = PaymentService.record_customer_payment(
+                attributes=serializer.validated_data,
+                business=request.user.business,
+                created_by=request.user,
+                request=request,
+            )
+            return Response(CustomerPaymentSerializer(payment).data, status=status.HTTP_201_CREATED)
+        except ValueError as exc:
+            return Response({'detail': str(exc), 'error': 'invalid_payment'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get'], url_path='transactions')
+    def transactions(self, request, pk=None):
+        customer = self.get_object()
+        entries = CustomerLedger.objects.filter(
+            customer=customer,
+            business=request.user.business,
+        ).order_by('-created_at')[:50]
+        data = [
+            {
+                'id': entry.id,
+                'entry_type': entry.entry_type,
+                'debit': str(entry.debit),
+                'credit': str(entry.credit),
+                'reference_type': entry.reference_type,
+                'reference_id': entry.reference_id,
+                'description': entry.description,
+                'created_at': entry.created_at,
+            }
+            for entry in entries
+        ]
+        return Response(data)
 
 
 class PurchaseViewSet(viewsets.ModelViewSet):
@@ -2023,6 +2114,57 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 
         return Response(InvoiceSerializer(invoice, context=self.get_serializer_context()).data)
 
+    @action(detail=True, methods=['post'], url_path='collect-payment')
+    def collect_payment(self, request, pk=None):
+        return self._do_collect_payment(request)
+
+    @action(detail=True, methods=['get', 'post'], url_path='payments')
+    def payments(self, request, pk=None):
+        invoice = self.get_object()
+        if request.method == 'GET':
+            from .models import Payment
+            payments = Payment.objects.filter(invoice=invoice).order_by('-created_at')
+            return Response(PaymentSerializer(payments, many=True).data)
+        return self._do_collect_payment(request)
+
+    def _do_collect_payment(self, request):
+        from .services.invoice_service import InvoiceService
+        invoice = self.get_object()
+        raw_amount = request.data.get('amount')
+        if raw_amount is None or raw_amount == '':
+            return Response({'amount': 'Payment amount is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            amount = Decimal(str(raw_amount))
+        except (ValueError, TypeError):
+            return Response({'amount': 'Invalid payment amount.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if amount <= 0:
+            return Response({'amount': 'Payment amount must be greater than zero.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        method = request.data.get('method', 'cash')
+        reference = request.data.get('reference', '')
+        notes = request.data.get('notes', '')
+
+        try:
+            updated_invoice = InvoiceService.collect_payment(
+                invoice_id=invoice.pk,
+                amount=amount,
+                method=method,
+                business=request.user.business,
+                user=request.user,
+                reference=reference,
+                notes=notes,
+                request=request,
+            )
+            return Response(
+                InvoiceSerializer(updated_invoice, context=self.get_serializer_context()).data,
+                status=status.HTTP_200_OK,
+            )
+        except ValueError as exc:
+            return Response({'detail': str(exc), 'error': 'invalid_payment'}, status=status.HTTP_400_BAD_REQUEST)
+        except LookupError as exc:
+            return Response({'detail': str(exc), 'error': 'not_found'}, status=status.HTTP_404_NOT_FOUND)
+
     def destroy(self, request, *args, **kwargs):
         return Response({
             'detail': 'Financial transactions cannot be permanently deleted. Use cancel or refund for invoice reversal.',
@@ -2094,6 +2236,7 @@ class SettingViewSet(viewsets.ModelViewSet):
                 'shop_address': 'address',
                 'shop_gstin': 'gstin',
                 'shop_pan': 'pan',
+                'owner_name': 'owner_name',
                 'business_type': 'business_type',
                 'currency': 'currency',
                 'invoice_prefix': 'invoice_prefix',
@@ -2115,6 +2258,29 @@ class SettingViewSet(viewsets.ModelViewSet):
                     pass
             if changed_fields:
                 biz.save()
+
+        # Auto-compose shop_bank_details from individual bank fields for pdf_utils
+        bank_fields = ['shop_bank_name', 'shop_bank_account', 'shop_bank_ifsc', 'shop_bank_branch']
+        if any(k in request.data for k in bank_fields):
+            existing_bank = {s.key: s.value for s in Setting.objects.filter(
+                business=request.user.business, key__in=bank_fields
+            )}
+            merged_bank = {**existing_bank, **{k: str(request.data[k] or '') for k in bank_fields if k in request.data}}
+            parts = []
+            if merged_bank.get('shop_bank_name'):
+                parts.append(f"Bank: {merged_bank['shop_bank_name']}")
+            if merged_bank.get('shop_bank_account'):
+                parts.append(f"A/C: {merged_bank['shop_bank_account']}")
+            if merged_bank.get('shop_bank_ifsc'):
+                parts.append(f"IFSC: {merged_bank['shop_bank_ifsc']}")
+            if merged_bank.get('shop_bank_branch'):
+                parts.append(f"Branch: {merged_bank['shop_bank_branch']}")
+            composed = ' | '.join(parts)
+            Setting.objects.update_or_create(
+                business=request.user.business,
+                key='shop_bank_details',
+                defaults={'value': composed},
+            )
 
         # Update Setting table key-values
         for key, value in request.data.items():
@@ -2194,8 +2360,10 @@ class SettingViewSet(viewsets.ModelViewSet):
             'shop_email': biz.email if biz else '',
             'shop_gstin': biz.gstin if biz else '',
             'shop_pan': biz.pan if biz else '',
+            'owner_name': biz.owner_name if biz else '',
             'shop_logo': '',
             'shop_state': '',
+            'shop_city': '', 'shop_pincode': '', 'shop_country': 'India', 'shop_website': '',
             'business_type': (biz.business_type if biz and biz.business_type else 'retail_wholesale'),
             'cin': '', 'fssai_licence': '',
             'fy_start': 'april',
@@ -2209,7 +2377,7 @@ class SettingViewSet(viewsets.ModelViewSet):
             'show_batch_col': 'false', 'show_expiry_col': 'false',
             'show_tax_cols': 'true', 'show_signature_area': 'false',
             'show_fssai_on_invoice': 'false', 'show_cin_on_invoice': 'false',
-            'invoice_notes': '',
+            'invoice_notes': '', 'invoice_footer': '',
             'enable_invoice_qr': 'true',
             # Invoice display toggles
             'show_business_logo': 'true', 'show_business_address': 'true',
@@ -2231,7 +2399,7 @@ class SettingViewSet(viewsets.ModelViewSet):
             'einvoice_enabled': 'false', 'hsn_summary_on_invoice': 'true',
             'reverse_charge': 'false', 'cess_enabled': 'false',
             # Payment
-            'default_payment_method': 'cash', 'round_off': 'nearest',
+            'default_payment_method': 'cash', 'round_off': 'true',
             'credit_limit_alert': '', 'shop_upi_id': '',
             'shop_bank_details': '',
             # Legacy bank fields (kept for pdf_utils fallback)
@@ -2239,6 +2407,7 @@ class SettingViewSet(viewsets.ModelViewSet):
             'shop_bank_account': '', 'shop_bank_ifsc': '',
             'show_upi_qr_on_invoice': 'true', 'show_upi_qr_on_thermal': 'true',
             'upi_qr_enabled': 'true', 'advance_payment_enabled': 'false',
+            'upi_merchant_name': '',
             # Printer
             'printer_type': 'a4', 'default_printer': '', 'copies_per_bill': '1',
             'auto_print': 'no', 'receipt_footer': 'Thank you for shopping with us!',
@@ -2427,15 +2596,15 @@ class DashboardView(APIView):
         last_month_expenses = float(exp_agg['last_month_expenses'] or 0)
 
         # --- Payments / Collections today / month / last month ---
-        pay_today_inv = Payment.objects.filter(invoice__business=biz, invoice__status='completed', created_at__date=today).aggregate(s=Sum('amount'))['s'] or 0
+        pay_today_inv = Payment.objects.filter(invoice__business=biz, invoice__status='completed', customer_payment__isnull=True, created_at__date=today).aggregate(s=Sum('amount'))['s'] or 0
         pay_today_cust = CustomerPayment.objects.filter(business=biz, created_at__date=today).aggregate(s=Sum('amount'))['s'] or 0
         today_payments_total = float(pay_today_inv + pay_today_cust)
 
-        pay_month_inv = Payment.objects.filter(invoice__business=biz, invoice__status='completed', created_at__date__gte=month_start).aggregate(s=Sum('amount'))['s'] or 0
+        pay_month_inv = Payment.objects.filter(invoice__business=biz, invoice__status='completed', customer_payment__isnull=True, created_at__date__gte=month_start).aggregate(s=Sum('amount'))['s'] or 0
         pay_month_cust = CustomerPayment.objects.filter(business=biz, created_at__date__gte=month_start).aggregate(s=Sum('amount'))['s'] or 0
         month_payments_total = float(pay_month_inv + pay_month_cust)
 
-        pay_last_month_inv = Payment.objects.filter(invoice__business=biz, invoice__status='completed', created_at__date__gte=last_month_start, created_at__date__lte=last_month_end).aggregate(s=Sum('amount'))['s'] or 0
+        pay_last_month_inv = Payment.objects.filter(invoice__business=biz, invoice__status='completed', customer_payment__isnull=True, created_at__date__gte=last_month_start, created_at__date__lte=last_month_end).aggregate(s=Sum('amount'))['s'] or 0
         pay_last_month_cust = CustomerPayment.objects.filter(business=biz, created_at__date__gte=last_month_start, created_at__date__lte=last_month_end).aggregate(s=Sum('amount'))['s'] or 0
         last_month_payments_total = float(pay_last_month_inv + pay_last_month_cust)
 
@@ -2528,6 +2697,7 @@ class DashboardView(APIView):
         today_payments = Payment.objects.filter(
             invoice__business=biz,
             invoice__status='completed',
+            customer_payment__isnull=True,
             created_at__date=today,
         ).values('method').annotate(total=Sum('amount'), count=Count('id'))
         today_customer_payments = CustomerPayment.objects.filter(
@@ -2734,6 +2904,16 @@ def _serve_report(request, report_name):
     report = ReportService.build(report_name, request.user.business, request.query_params)
     period_label = _report_period_label(request.query_params)
     report_format = request.query_params.get('export', '').lower()
+    if report_format in ('pdf', 'xlsx'):
+        audit_event(
+            request,
+            'REPORT_EXPORTED',
+            'Report',
+            report_name,
+            entity_name=f'{report.title} ({report_format.upper()})',
+            after={'format': report_format, 'records': len(report.rows)},
+            reason=f'Exported {report.title} as {report_format.upper()}',
+        )
     if report_format == 'pdf':
         return _export_report_pdf(
             report.title, report.headers, report.rows,
@@ -2823,10 +3003,46 @@ class ExpenseViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         expense = serializer.save(business=self.request.user.business, created_by=self.request.user)
-        audit_event(self.request, 'EXPENSE_CREATED', 'Expense', expense.id, after={'amount': expense.amount})
+        audit_event(
+            self.request,
+            'EXPENSE_CREATED',
+            'Expense',
+            expense.id,
+            entity_name=expense.description[:50] if expense.description else f'Expense #{expense.id}',
+            after={'amount': float(expense.amount or 0), 'description': expense.description, 'payment_method': expense.payment_method},
+            reason=self.request.data.get('reason', 'Expense recorded'),
+        )
 
     def perform_update(self, serializer):
-        serializer.save(business=self.request.user.business)
+        old_inst = serializer.instance
+        before = {'amount': float(old_inst.amount or 0), 'description': old_inst.description, 'payment_method': old_inst.payment_method}
+        expense = serializer.save(business=self.request.user.business)
+        after = {'amount': float(expense.amount or 0), 'description': expense.description, 'payment_method': expense.payment_method}
+        audit_event(
+            self.request,
+            'EXPENSE_UPDATED',
+            'Expense',
+            expense.id,
+            entity_name=expense.description[:50] if expense.description else f'Expense #{expense.id}',
+            before=before,
+            after=after,
+            reason=self.request.data.get('reason', 'Expense updated'),
+        )
+
+    def perform_destroy(self, instance):
+        entity_id = instance.id
+        entity_name = instance.description[:50] if instance.description else f'Expense #{instance.id}'
+        before = {'amount': float(instance.amount or 0), 'description': instance.description}
+        instance.delete()
+        audit_event(
+            self.request,
+            'EXPENSE_DELETED',
+            'Expense',
+            entity_id,
+            entity_name=entity_name,
+            before=before,
+            reason=self.request.data.get('reason', 'Expense deleted'),
+        )
 
 
 class SupplierPaymentViewSet(viewsets.ModelViewSet):
@@ -2982,7 +3198,9 @@ def _invoice_pdf_response(invoice, printer=None, download=False, template=None):
     if not resolved_template:
         if requested_printer in ('half_a4', 'a5'):
             resolved_template = active_templates.get('active_template_half_a4', 'half_a4')
-        elif requested_printer in ('thermal', 'thermal_80', 'thermal_58'):
+        elif requested_printer in ('thermal_58', '58mm'):
+            resolved_template = 'thermal_58'
+        elif requested_printer in ('thermal', 'thermal_80', '80mm'):
             resolved_template = active_templates.get('active_template_thermal', 'thermal_80')
         elif requested_printer == 'a4':
             resolved_template = active_templates.get('active_template_a4', 'gst_a4')
@@ -2991,12 +3209,12 @@ def _invoice_pdf_response(invoice, printer=None, download=False, template=None):
 
     use_thermal = (
         resolved_template.startswith('thermal')
-        or requested_printer == 'thermal'
+        or requested_printer in ('thermal', 'thermal_80', 'thermal_58', '58mm', '80mm')
         or (
             not requested_printer
             and not requested_template
             and (
-                printer_setting in ('thermal', 'thermal_80', 'thermal_58')
+                printer_setting in ('thermal', 'thermal_80', 'thermal_58', '58mm', '80mm')
                 or global_template.startswith('thermal')
             )
         )
@@ -3011,7 +3229,7 @@ def _invoice_pdf_response(invoice, printer=None, download=False, template=None):
         else generate_invoice_pdf(invoice, force_a4=True, paper_size=req_paper, template=resolved_template)
     )
     response = HttpResponse(buffer, content_type='application/pdf')
-    suffix = 'thermal' if use_thermal else ('a5' if is_a5 else 'a4')
+    suffix = 'thermal-58' if (resolved_template == 'thermal_58' or requested_printer in ('thermal_58', '58mm')) else ('thermal' if use_thermal else ('a5' if is_a5 else 'a4'))
     disposition = 'attachment' if download else 'inline'
     response['Content-Disposition'] = (
         f'{disposition}; filename="invoice-{invoice.invoice_number}-{suffix}.pdf"'
@@ -3307,8 +3525,14 @@ class StockAdjustView(APIView):
             status_code = 404 if str(exc) == 'Product not found' else 400
             return Response({'error': str(exc)}, status=status_code)
         audit_event(
-            request, 'STOCK_ADJUSTED', 'Product', product.id,
-            after={'quantity': quantity, 'transaction_type': transaction_type},
+            request,
+            'STOCK_ADJUSTED',
+            'Product',
+            product.id,
+            entity_name=product.name,
+            before={'current_stock': float(product.current_stock - quantity)},
+            after={'current_stock': float(product.current_stock), 'adjustment': float(quantity), 'transaction_type': transaction_type},
+            reason=notes or f'Stock adjusted ({transaction_type})',
         )
         return Response(ProductSerializer(product).data)
 
@@ -3514,21 +3738,157 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AuditLogSerializer
     permission_classes = [IsManagerOrAbove]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['module', 'action', 'result']
-    search_fields = ['action', 'entity', 'entity_id', 'entity_name', 'reason', 'user__username', 'user__email', 'ip_address']
+    filterset_fields = ['module', 'action', 'result', 'entity']
+    search_fields = ['id', 'action', 'entity', 'entity_id', 'entity_name', 'reason', 'user__username', 'user__email', 'ip_address']
     ordering = ['-created_at']
+
+    HIGH_IMPACT_ACTIONS = [
+        'USER_PERMISSIONS_CHANGED', 'SETTINGS_CHANGED', 'INVOICE_CANCELLED',
+        'INVOICE_REFUNDED', 'PRODUCT_ARCHIVED', 'PRICE_CHANGED',
+        'FINANCIAL_RESTORE_BLOCKED', 'LOGIN_FAILED', 'CUSTOMER_DELETED',
+        'SUPPLIER_DELETED', 'EXPENSE_DELETED', 'PRODUCT_DELETED',
+        'PAYMENT_FAILED',
+    ]
 
     def get_queryset(self):
         qs = AuditLog.objects.select_related('user').filter(
             business=self.request.user.business
         ).exclude(action__in=['create', 'update', 'cancel', 'refund', 'adjust', 'archive'])
+
+        high_impact = self.request.query_params.get('high_impact')
+        if high_impact in ('true', '1', 'yes', True):
+            qs = qs.filter(action__in=self.HIGH_IMPACT_ACTIONS)
+
+        module = self.request.query_params.get('module')
+        if module and module != 'ALL':
+            qs = qs.filter(module__iexact=module)
+
+        action_param = self.request.query_params.get('action')
+        if action_param and action_param != 'ALL':
+            qs = qs.filter(action=action_param)
+
+        result_param = self.request.query_params.get('result')
+        if result_param and result_param != 'ALL':
+            qs = qs.filter(result=result_param)
+
         date_from = self.request.query_params.get('date_from')
         date_to = self.request.query_params.get('date_to')
         if date_from:
-            qs = qs.filter(created_at__date__gte=date_from)
+            from datetime import datetime, time
+            from django.utils.dateparse import parse_datetime, parse_date
+            parsed = parse_datetime(date_from)
+            if parsed:
+                if timezone.is_naive(parsed):
+                    parsed = timezone.make_aware(parsed)
+                qs = qs.filter(created_at__gte=parsed)
+            else:
+                parsed_date = parse_date(date_from)
+                if parsed_date:
+                    qs = qs.filter(created_at__gte=timezone.make_aware(datetime.combine(parsed_date, time.min)))
         if date_to:
-            qs = qs.filter(created_at__date__lte=date_to)
+            from datetime import datetime, time, timedelta
+            from django.utils.dateparse import parse_datetime, parse_date
+            parsed = parse_datetime(date_to)
+            if parsed:
+                if timezone.is_naive(parsed):
+                    parsed = timezone.make_aware(parsed)
+                qs = qs.filter(created_at__lte=parsed)
+            else:
+                parsed_date = parse_date(date_to)
+                if parsed_date:
+                    qs = qs.filter(created_at__lt=timezone.make_aware(datetime.combine(parsed_date + timedelta(days=1), time.min)))
+        operator = self.request.query_params.get('operator')
+        if operator:
+            qs = qs.filter(user_id=operator)
+        entity_type = self.request.query_params.get('entity_type') or self.request.query_params.get('entity')
+        if entity_type and entity_type != 'ALL':
+            qs = qs.filter(entity__iexact=entity_type)
         return qs
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        qs = self.filter_queryset(self.get_queryset())
+        unfiltered_qs = AuditLog.objects.filter(
+            business=request.user.business
+        ).exclude(action__in=['create', 'update', 'cancel', 'refund', 'adjust', 'archive'])
+
+        total_overall = unfiltered_qs.count()
+        total_matching = qs.count()
+        successful_count = qs.filter(result='success').count()
+        failed_count = qs.filter(result='failure').count()
+        unique_operators = qs.exclude(user__isnull=True).values('user').distinct().count()
+        high_impact_count = qs.filter(action__in=self.HIGH_IMPACT_ACTIONS).count()
+
+        from django.db.models import Count
+        by_module = list(qs.values('module').annotate(count=Count('id')).order_by('-count')[:10])
+        by_action = list(qs.values('action').annotate(count=Count('id')).order_by('-count')[:10])
+        by_operator = list(qs.exclude(user__isnull=True).values('user__username').annotate(count=Count('id')).order_by('-count')[:10])
+
+        return Response({
+            'total_overall': total_overall,
+            'total_matching': total_matching,
+            'successful_count': successful_count,
+            'failed_count': failed_count,
+            'unique_operators': unique_operators,
+            'high_impact_count': high_impact_count,
+            'by_module': by_module,
+            'by_action': by_action,
+            'by_operator': by_operator,
+        })
+
+    @action(detail=False, methods=['get'])
+    def export(self, request):
+        import csv
+        from django.http import HttpResponse
+
+        qs = self.filter_queryset(self.get_queryset())
+        response = HttpResponse(content_type='text/csv; charset=utf-8')
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        response['Content-Disposition'] = f'attachment; filename="audit_trail_{timestamp}.csv"'
+
+        def sanitize_cell(val):
+            if val is None:
+                return ''
+            s = str(val).strip()
+            if s and s[0] in ('=', '+', '-', '@', '\t', '\r'):
+                return "'" + s
+            return s
+
+        writer = csv.writer(response)
+        writer.writerow([
+            'Timestamp', 'Operator', 'Email', 'Role',
+            'Action', 'Module', 'Entity', 'Entity ID', 'Entity Name',
+            'Outcome', 'Reason', 'Previous Value', 'New Value',
+            'IP Address', 'User Agent'
+        ])
+
+        for log in qs[:5000]:
+            writer.writerow([
+                sanitize_cell(log.created_at.isoformat() if log.created_at else ''),
+                sanitize_cell(log.user.username if log.user else 'System'),
+                sanitize_cell(log.user.email if log.user else ''),
+                sanitize_cell(getattr(log.user, 'role', '') if log.user else ''),
+                sanitize_cell(log.action),
+                sanitize_cell(log.module),
+                sanitize_cell(log.entity),
+                sanitize_cell(log.entity_id),
+                sanitize_cell(log.entity_name),
+                sanitize_cell(log.result),
+                sanitize_cell(log.failure_reason if log.result == 'failure' else log.reason),
+                sanitize_cell(log.previous_value),
+                sanitize_cell(log.new_value),
+                sanitize_cell(log.ip_address),
+                sanitize_cell(log.user_agent),
+            ])
+
+        audit_event(
+            request,
+            'AUDIT_EXPORTED',
+            'AuditLog',
+            after={'count': qs.count()},
+            reason='Audit trail exported to CSV',
+        )
+        return response
 
 
 class RecycleBinView(APIView):
@@ -3610,6 +3970,15 @@ class RecycleBinRestoreView(APIView):
             return Response({'status': 'restored', 'message': f'Product "{product.name}" restored successfully.'})
 
         if entity_type in ('invoice', 'purchase', 'payment'):
+            audit_event(
+                request,
+                'FINANCIAL_RESTORE_BLOCKED',
+                entity_type.capitalize(),
+                pk,
+                entity_name=f'{entity_type.capitalize()} #{pk}',
+                result='failure',
+                reason='Statutory audit violation: Financial transactions cannot be restored or un-cancelled',
+            )
             return Response({
                 'detail': (
                     'Statutory audit violation: Financial transactions cannot be restored or un-cancelled. '
@@ -3898,17 +4267,20 @@ def _generate_barcode_label_pdf(product, copies, options=None):
         x = MARGIN_X + col * (LABEL_W + GAP_X)
         y = PAGE_H - MARGIN_Y - (row + 1) * LABEL_H - row * GAP_Y
 
-        # Label outline with rounded corners
+        # Clean, high-contrast label with a restrained brand accent.
+        c.setFillColor(rl_colors.white)
         c.setStrokeColor(rl_colors.HexColor('#CBD5E1'))
-        c.setLineWidth(0.5)
-        c.roundRect(x, y, LABEL_W, LABEL_H, radius=1.5 * mm, stroke=1, fill=0)
+        c.setLineWidth(0.45)
+        c.roundRect(x, y, LABEL_W, LABEL_H, radius=1.5 * mm, stroke=1, fill=1)
+        c.setFillColor(rl_colors.HexColor('#1E3A5F'))
+        c.roundRect(x, y + LABEL_H - (1.3 * mm), LABEL_W, 1.3 * mm, radius=0.6 * mm, stroke=0, fill=1)
 
         curr_top = y + LABEL_H
 
         # 1. Store Name
         if show_store and shop_name:
             c.setFont('Helvetica-Bold', 6 if is_compact else 7)
-            c.setFillColor(rl_colors.HexColor('#312E81'))
+            c.setFillColor(rl_colors.HexColor('#64748B'))
             curr_top -= (4 * mm if is_compact else 5 * mm)
             c.drawCentredString(x + LABEL_W / 2, curr_top, shop_name[:26].upper())
 
@@ -3925,7 +4297,7 @@ def _generate_barcode_label_pdf(product, copies, options=None):
             bc_w = LABEL_W - (6 * mm if is_compact else 8 * mm)
             bc_x = x + (LABEL_W - bc_w) / 2
             curr_top -= (bc_h + 1 * mm)
-            c.drawImage(bc_img_path, bc_x, curr_top, width=bc_w, height=bc_h, preserveAspectRatio=False, mask='auto')
+            c.drawImage(bc_img_path, bc_x, curr_top, width=bc_w, height=bc_h, preserveAspectRatio=True, anchor='c', mask='auto')
 
             if show_number:
                 curr_top -= 3 * mm
@@ -4165,6 +4537,16 @@ class RazorpayVerifyView(APIView):
             txn.failure_reason = 'SIGNATURE_MISMATCH'
             txn.response_data = 'SIGNATURE_MISMATCH'
             txn.save(update_fields=['status', 'failure_reason', 'response_data', 'updated_at'])
+            audit_event(
+                request,
+                'PAYMENT_FAILED',
+                'Payment',
+                txn.id,
+                entity_name=f'Order {order_id}',
+                result='failure',
+                reason='Payment signature verification failed',
+                after={'order_id': order_id, 'payment_id': payment_id, 'amount': float(txn.amount)},
+            )
             return Response({'error': 'Payment signature verification failed', 'success': False}, status=400)
 
         payment_result = fetch_payment(payment_id)
@@ -4190,6 +4572,16 @@ class RazorpayVerifyView(APIView):
                 txn.failure_reason = f'AMOUNT_MISMATCH expected={expected_paise} got={razorpay_amount}'
                 txn.response_data = txn.failure_reason
                 txn.save(update_fields=['status', 'failure_reason', 'response_data', 'updated_at'])
+                audit_event(
+                    request,
+                    'PAYMENT_FAILED',
+                    'Payment',
+                    txn.id,
+                    entity_name=f'Order {order_id}',
+                    result='failure',
+                    reason=f'AMOUNT_MISMATCH expected={expected_paise} got={razorpay_amount}',
+                    after={'order_id': order_id, 'payment_id': payment_id, 'amount': float(txn.amount)},
+                )
                 return Response({'error': 'Payment amount mismatch. Contact support.', 'success': False}, status=400)
 
             payment_data = payment_result.get('payment', {})
@@ -4218,6 +4610,16 @@ class RazorpayVerifyView(APIView):
                         defaults={'amount': txn.amount, 'reference': payment_id},
                     )
                     logger.info('Razorpay: invoice %s marked PAID via order %s', invoice.invoice_number, order_id)
+
+            audit_event(
+                request,
+                'PAYMENT_RECONCILED',
+                'Payment',
+                txn.id,
+                entity_name=f'Order {order_id}',
+                after={'order_id': order_id, 'payment_id': payment_id, 'amount': float(txn.amount), 'invoice_id': txn.invoice_id},
+                reason='Online payment verified and reconciled via Razorpay',
+            )
 
         return Response({
             'status': 'success', 'success': True,
@@ -4360,6 +4762,11 @@ class NotificationActionView(APIView):
             action_type = request.data.get('action')  # 'approve' | 'reject'
             notes = request.data.get('notes', '').strip()
 
+            if not notif.requires_approval:
+                return Response({'error': 'This notification does not require approval.'}, status=status.HTTP_400_BAD_REQUEST)
+            if notif.status != 'active':
+                return Response({'error': 'This approval request has already been resolved.'}, status=status.HTTP_409_CONFLICT)
+
             if action_type not in ('approve', 'reject'):
                 return Response(
                     {'error': 'Action must be "approve" or "reject"'},
@@ -4383,6 +4790,8 @@ class NotificationActionView(APIView):
                 'status': 'ok',
                 'notification_status': notif.status,
                 'actioned_by': request.user.username,
+                'actioned_at': notif.actioned_at,
+                'action_notes': notif.action_notes,
             })
         except Notification.DoesNotExist:
             return Response({'error': 'Notification not found'}, status=status.HTTP_404_NOT_FOUND)

@@ -4,6 +4,7 @@ import { useAuth } from '../AuthContext'
 import { useTheme } from '../ThemeContext'
 import toast from 'react-hot-toast'
 import { Moon, Sun } from 'lucide-react'
+import { getRememberMePreference } from '../services/tokenStorage'
 
 export default function Login() {
   const [form, setForm] = useState({
@@ -14,6 +15,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
+  const [rememberMe, setRememberMe] = useState(getRememberMePreference)
 
   const { login } = useAuth()
   const { isDark, toggleTheme } = useTheme()
@@ -79,10 +81,7 @@ export default function Login() {
     setErrors({})
 
     try {
-      await login(
-        form.username.trim(),
-        form.password
-      )
+      await login(form.username.trim(), form.password, rememberMe)
 
       toast.success('Welcome back!')
       navigate('/')
@@ -125,7 +124,9 @@ export default function Login() {
 
             <div className="flex items-start justify-between gap-4">
               <Brand />
-              <ThemeToggle isDark={isDark} toggleTheme={toggleTheme} />
+              <div className="flex items-center gap-2">
+                <ThemeToggle isDark={isDark} toggleTheme={toggleTheme} />
+              </div>
             </div>
 
 
@@ -272,13 +273,13 @@ export default function Login() {
           min-h-screen
           items-center
           justify-center
-          bg-[var(--surface)]
+          bg-[var(--surface-elevated)]
           px-5
           py-10
           sm:px-8
         ">
 
-          <div className="w-full max-w-[400px]">
+          <div className="w-full max-w-[440px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-sm sm:p-8">
 
             {/* ==================================================
                 MOBILE BRAND
@@ -286,7 +287,9 @@ export default function Login() {
 
             <div className="mb-10 flex items-start justify-between gap-4 lg:hidden">
               <Brand />
-              <ThemeToggle isDark={isDark} toggleTheme={toggleTheme} />
+              <div className="flex items-center gap-2">
+                <ThemeToggle isDark={isDark} toggleTheme={toggleTheme} />
+              </div>
             </div>
 
 
@@ -548,6 +551,10 @@ export default function Login() {
 
                   <input
                     type="checkbox"
+                    checked={rememberMe}
+                    onChange={event => setRememberMe(event.target.checked)}
+                    disabled={loading}
+                    aria-label="Remember me on this device"
                     className="
                       h-4
                       w-4
@@ -708,7 +715,7 @@ export default function Login() {
 
 function Brand() {
   return (
-    <div className=" mb-12 flex items-center gap-3">
+    <div className="flex items-center gap-3">
 
       {/* Square Logo */}
 
@@ -757,6 +764,8 @@ function Brand() {
     </div>
   )
 }
+
+
 
 function ThemeToggle({ isDark, toggleTheme }) {
   return (

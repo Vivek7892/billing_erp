@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import api from '../api'
-import { Badge, Spinner, Modal } from '../components/UI'
+import { Spinner, Modal, TableSkeleton, EmptyState, ErrorState, Pagination } from '../components/UI'
 import toast from 'react-hot-toast'
 import {
   Banknote,
@@ -11,9 +11,7 @@ import {
   Smartphone,
   Wallet,
   X,
-  ArrowUpRight,
   Receipt,
-  CircleDollarSign,
   SlidersHorizontal,
   Eye,
   UserRound,
@@ -23,7 +21,60 @@ import {
   ShieldCheck,
   ExternalLink,
   Plus,
+  IndianRupee,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  CircleDot,
+  RotateCcw,
+  Ban,
+  Phone,
+  Mail,
+  Calendar,
+  TrendingUp,
+  BarChart2,
+  ArrowDownRight,
+  ArrowUpRight,
+  ArrowUpDown,
+  MoreVertical,
+  Copy,
+  Check,
+  AlertCircle,
+  FileText,
 } from 'lucide-react'
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+} from 'recharts'
+import { CustomerCollectPaymentModal } from './Customers'
+import customerService from '../features/customers/api/customerService'
+import settingsService from '../features/settings/api/settingsService'
+
+const today = new Date().toISOString().slice(0, 10)
+const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
+
+const DATE_PRESETS = [
+  { key: 'today', label: 'Today', start: today, end: today },
+  {
+    key: 'yesterday',
+    label: 'Yesterday',
+    start: new Date(Date.now() - 86400000).toISOString().slice(0, 10),
+    end: new Date(Date.now() - 86400000).toISOString().slice(0, 10),
+  },
+  {
+    key: 'week',
+    label: 'Last 7 Days',
+    start: new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10),
+    end: today,
+  },
+  { key: 'month', label: 'This Month', start: monthStart, end: today },
+  {
+    key: 'last30',
+    label: 'Last 30 Days',
+    start: new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10),
+    end: today,
+  },
+  { key: 'all', label: 'All Time', start: '', end: '' },
+]
 
 const formatCurrency = value =>
   `₹${Number(value || 0).toLocaleString('en-IN', {
@@ -42,6 +93,35 @@ const formatDate = value => {
     month: 'short',
     year: 'numeric',
   })
+}
+
+const formatDateTime = value => {
+  if (!value) return '—'
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) return '—'
+
+  return `${date.toLocaleDateString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })} · ${date.toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })}`
+}
+
+const getPaymentRef = bill => {
+  if (!bill) return '—'
+  if (bill.razorpay_payment_id) return bill.razorpay_payment_id
+  if (Array.isArray(bill.payments) && bill.payments.length > 0) {
+    const p = bill.payments[0]
+    if (p.reference) return p.reference
+    if (p.transaction_id) return p.transaction_id
+    if (p.id) return `PMT-${p.id}`
+  }
+  return `PMT-${bill.id}`
 }
 
 const METHOD_META = {
@@ -186,60 +266,204 @@ function PaymentBadge({ method }) {
   )
 }
 
-function PaymentStatus({ status }) {
-  const normalized = String(status || 'pending').toLowerCase()
+function PaymentStatus({ status, showIcon = true }) {
+  const normalized = String(status || 'pending').toLowerCase().trim()
 
   const statusMap = {
     paid: {
       label: 'Paid',
+      icon: CheckCircle2,
       className:
-        'border-[var(--payment-cash-border)] bg-[var(--payment-cash-bg)] text-[var(--payment-cash-text)]',
+        'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
+      iconClass: 'text-emerald-600 dark:text-emerald-400',
     },
     completed: {
       label: 'Completed',
+      icon: CheckCircle2,
       className:
-        'border-[var(--payment-cash-border)] bg-[var(--payment-cash-bg)] text-[var(--payment-cash-text)]',
+        'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
+      iconClass: 'text-emerald-600 dark:text-emerald-400',
     },
     pending: {
       label: 'Pending',
+      icon: Clock,
       className:
-        'border-[var(--payment-warning-border)] bg-[var(--payment-warning-bg)] text-[var(--payment-warning-text)]',
+        'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
+      iconClass: 'text-amber-600 dark:text-amber-400',
+    },
+    partial: {
+      label: 'Partial',
+      icon: CircleDot,
+      className:
+        'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300',
+      iconClass: 'text-blue-600 dark:text-blue-400',
+    },
+    partially_paid: {
+      label: 'Partial',
+      icon: CircleDot,
+      className:
+        'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300',
+      iconClass: 'text-blue-600 dark:text-blue-400',
     },
     failed: {
       label: 'Failed',
+      icon: XCircle,
       className:
-        'border-[var(--payment-credit-border)] bg-[var(--payment-credit-bg)] text-[var(--payment-credit-text)]',
+        'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300',
+      iconClass: 'text-rose-600 dark:text-rose-400',
+    },
+    refunded: {
+      label: 'Refunded',
+      icon: RotateCcw,
+      className:
+        'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-300',
+      iconClass: 'text-orange-600 dark:text-orange-400',
     },
     cancelled: {
       label: 'Cancelled',
+      icon: Ban,
       className:
-        'border-[var(--payment-credit-border)] bg-[var(--payment-credit-bg)] text-[var(--payment-credit-text)]',
+        'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300',
+      iconClass: 'text-slate-500 dark:text-slate-400',
+    },
+    canceled: {
+      label: 'Cancelled',
+      icon: Ban,
+      className:
+        'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300',
+      iconClass: 'text-slate-500 dark:text-slate-400',
     },
   }
 
   const current = statusMap[normalized] || {
-    label: status || 'Unknown',
+    label: status ? String(status).charAt(0).toUpperCase() + String(status).slice(1) : 'Pending',
+    icon: Clock,
     className:
       'border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--muted)]',
+    iconClass: 'text-[var(--muted)]',
   }
+
+  const Icon = current.icon
 
   return (
     <span
-      className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold ${current.className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap ${current.className}`}
     >
-      {current.label}
+      {showIcon && <Icon size={12} strokeWidth={2.2} className={current.iconClass} />}
+      <span>{current.label}</span>
     </span>
   )
 }
 
 export default function Payments() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const [activeTab, setActiveTab] = useState('transactions')
   const [bills, setBills] = useState([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [error, setError] = useState(null)
   const [filter, setFilter] = useState('all')
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('search') || '')
   const [selectedBill, setSelectedBill] = useState(null)
   const [invoiceAction, setInvoiceAction] = useState(null)
+  const [copiedKey, setCopiedKey] = useState(null)
+  const [openActionMenuId, setOpenActionMenuId] = useState(null)
+
+  // Sorting and pagination state
+  const [sortBy, setSortBy] = useState('date') // 'date' | 'amount' | 'status' | 'invoice'
+  const [sortDir, setSortDir] = useState('desc') // 'asc' | 'desc'
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+
+  useEffect(() => {
+    const target = new URLSearchParams(location.search).get('search') || ''
+    setSearch(target)
+    if (target) setCurrentPage(1)
+  }, [location.search])
+
+  // Date filter state
+  const [datePreset, setDatePreset] = useState('month')
+  const [dateStart, setDateStart] = useState(monthStart)
+  const [dateEnd, setDateEnd] = useState(today)
+
+  const applyPreset = preset => {
+    setDatePreset(preset.key)
+    setDateStart(preset.start)
+    setDateEnd(preset.end)
+  }
+
+  // Customer Credit Collection State
+  const [customers, setCustomers] = useState([])
+  const [loadingCustomers, setLoadingCustomers] = useState(false)
+  const [collectionSearch, setCollectionSearch] = useState('')
+  const [onlyWithBalance, setOnlyWithBalance] = useState(true)
+  const [selectedCustomerForPay, setSelectedCustomerForPay] = useState(null)
+  const [shopSettings, setShopSettings] = useState({})
+  const [shopName, setShopName] = useState('')
+
+  const loadCustomers = useCallback(async () => {
+    setLoadingCustomers(true)
+    try {
+      const res = await customerService.getCustomers()
+      const rows = Array.isArray(res?.items) ? res.items : (Array.isArray(res) ? res : [])
+      setCustomers(rows)
+    } catch (err) {
+      console.error('Failed to load customers for collection:', err)
+      setCustomers([])
+    } finally {
+      setLoadingCustomers(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadCustomers()
+  }, [loadCustomers])
+
+  useEffect(() => {
+    settingsService
+      .getAll()
+      .then(settings => {
+        if (settings) {
+          setShopSettings(settings)
+          if (settings.shop_name) setShopName(settings.shop_name)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  const dueCustomers = useMemo(() => {
+    return customers.filter(c => Number(c.outstanding_amount || 0) > 0)
+  }, [customers])
+
+  const totalOutstandingReceivables = useMemo(() => {
+    return dueCustomers.reduce((sum, c) => sum + Number(c.outstanding_amount || 0), 0)
+  }, [dueCustomers])
+
+  const totalCreditLimitGiven = useMemo(() => {
+    return customers.reduce((sum, c) => sum + Number(c.credit_limit || 0), 0)
+  }, [customers])
+
+  const filteredCustomers = useMemo(() => {
+    const list = onlyWithBalance ? dueCustomers : customers
+    if (!collectionSearch.trim()) return list
+    const q = collectionSearch.toLowerCase().trim()
+    return list.filter(c =>
+      (c.name || '').toLowerCase().includes(q) ||
+      (c.mobile || '').includes(q) ||
+      (c.gstin || '').toLowerCase().includes(q)
+    )
+  }, [customers, dueCustomers, onlyWithBalance, collectionSearch])
+
+  const handleCopy = useCallback((text, key) => {
+    if (!text) return
+    navigator.clipboard?.writeText(String(text))
+    setCopiedKey(key)
+    toast.success('Copied to clipboard')
+    setTimeout(() => {
+      setCopiedKey(prev => (prev === key ? null : prev))
+    }, 2000)
+  }, [])
 
   const handleInvoiceAction = useCallback(async (bill, action) => {
     if (!bill?.id || invoiceAction) return
@@ -279,6 +503,31 @@ export default function Payments() {
     }
   }, [invoiceAction])
 
+  const handleReceiptAction = useCallback(async (bill) => {
+    if (!bill?.id || invoiceAction) return
+    setInvoiceAction(`${bill.id}:receipt`)
+    try {
+      const response = await api.get(`/invoices/${bill.id}/pdf/?printer=thermal`, {
+        responseType: 'blob',
+      })
+      const blobUrl = URL.createObjectURL(
+        new Blob([response.data], { type: 'application/pdf' }),
+      )
+      const printWindow = window.open(blobUrl, '_blank', 'noopener,noreferrer')
+      if (!printWindow) {
+        toast.error('Allow pop-ups to print the thermal receipt')
+      } else {
+        toast.success('Thermal receipt opened for printing')
+      }
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000)
+    } catch (error) {
+      console.error('Failed to generate thermal receipt:', error)
+      toast.error(error.response?.data?.detail || 'Could not generate thermal receipt')
+    } finally {
+      setInvoiceAction(null)
+    }
+  }, [invoiceAction])
+
   const InvoiceActions = ({ bill, compact = false }) => {
     const isBusy = invoiceAction?.startsWith(`${bill.id}:`)
     return (
@@ -306,24 +555,28 @@ export default function Payments() {
     )
   }
 
-  const loadPayments = useCallback(async () => {
-    setLoading(true)
-
+  const loadPayments = useCallback(async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true)
+    } else {
+      setLoading(true)
+    }
+    setError(null)
     try {
-      const response = await api.get(
-        '/invoices/?page_size=200&ordering=-created_at',
-      )
-
+      let url = '/invoices/?page_size=500&ordering=-created_at'
+      if (dateStart) url += `&start_date=${dateStart}`
+      if (dateEnd) url += `&end_date=${dateEnd}`
+      const response = await api.get(url)
       const data = response.data?.results || response.data || []
-
       setBills(Array.isArray(data) ? data : [])
-    } catch (error) {
-      console.error('Failed to load payment transactions:', error)
-      setBills([])
+    } catch (err) {
+      console.error('Failed to load payment transactions:', err)
+      setError('Unable to load payment transactions. Please check your network or try again.')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
-  }, [])
+  }, [dateStart, dateEnd])
 
   useEffect(() => {
     loadPayments()
@@ -393,7 +646,32 @@ export default function Payments() {
     outstanding: bills.reduce((sum, bill) => sum + Number(bill.balance_due || 0), 0),
     discounts: bills.reduce((sum, bill) => sum + Number(bill.discount_amount || 0), 0),
     tax: bills.reduce((sum, bill) => sum + Number(bill.tax_amount || 0), 0),
+    avgBill: bills.length > 0 ? bills.reduce((s, b) => s + Number(b.grand_total || 0), 0) / bills.length : 0,
   }), [bills])
+
+  // Daily totals for bar chart
+  const dailyChartData = useMemo(() => {
+    const map = {}
+    bills.forEach(bill => {
+      const d = (bill.created_at || '').slice(0, 10)
+      if (!d) return
+      if (!map[d]) map[d] = { date: d, total: 0, count: 0 }
+      map[d].total += Number(bill.grand_total || 0)
+      map[d].count += 1
+    })
+    return Object.values(map)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-14)
+      .map(r => ({ ...r, label: r.date.slice(5) }))
+  }, [bills])
+
+  // Method share for mini bar
+  const methodChartData = useMemo(() => {
+    return summary
+      .filter(s => s.total > 0)
+      .map(s => ({ name: s.label, value: s.total, count: s.count }))
+      .sort((a, b) => b.value - a.value)
+  }, [summary])
 
   const normalizedSearch = search.trim().toLowerCase()
 
@@ -405,6 +683,7 @@ export default function Payments() {
 
         if (!normalizedSearch) return matchesFilter
 
+        const paymentRef = getPaymentRef(bill)
         const searchableText = [
           bill.invoice_number,
           bill.customer_name,
@@ -413,6 +692,9 @@ export default function Payments() {
           bill.payment_method,
           bill.payment_status,
           bill.created_at,
+          bill.razorpay_payment_id,
+          bill.razorpay_order_id,
+          paymentRef,
         ]
           .filter(Boolean)
           .join(' ')
@@ -422,6 +704,68 @@ export default function Payments() {
       }),
     [bills, filter, normalizedSearch],
   )
+
+  const handleSort = key => {
+    if (sortBy === key) {
+      setSortDir(prev => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortBy(key)
+      setSortDir('desc')
+    }
+    setCurrentPage(1)
+  }
+
+  const sortedFilteredBills = useMemo(() => {
+    const list = [...filteredBills]
+    list.sort((a, b) => {
+      let valA, valB
+      if (sortBy === 'amount') {
+        valA = Number(a.paid_amount ?? a.grand_total ?? 0)
+        valB = Number(b.paid_amount ?? b.grand_total ?? 0)
+      } else if (sortBy === 'status') {
+        valA = String(a.payment_status || '').toLowerCase()
+        valB = String(b.payment_status || '').toLowerCase()
+      } else if (sortBy === 'invoice') {
+        valA = String(a.invoice_number || '').toLowerCase()
+        valB = String(b.invoice_number || '').toLowerCase()
+      } else {
+        // default: date
+        valA = new Date(a.created_at || a.date || 0).getTime()
+        valB = new Date(b.created_at || b.date || 0).getTime()
+      }
+
+      if (valA < valB) return sortDir === 'asc' ? -1 : 1
+      if (valA > valB) return sortDir === 'asc' ? 1 : -1
+      return 0
+    })
+    return list
+  }, [filteredBills, sortBy, sortDir])
+
+  const totalPages = Math.max(1, Math.ceil(sortedFilteredBills.length / pageSize))
+  const pagedBills = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return sortedFilteredBills.slice(start, start + pageSize)
+  }, [sortedFilteredBills, currentPage, pageSize])
+
+  // Reset pagination on filter or search changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filter, search, pageSize])
+
+  // Close menus on page/sort changes or outside click
+  useEffect(() => {
+    setOpenActionMenuId(null)
+  }, [currentPage, pageSize, filter, search, sortBy, sortDir])
+
+  useEffect(() => {
+    const handleClickOutside = e => {
+      if (!e.target.closest('.payment-action-menu-container')) {
+        setOpenActionMenuId(null)
+      }
+    }
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [])
 
   return (
     <div className="payments-page min-w-0 space-y-4 overflow-x-hidden pb-4 sm:space-y-6 sm:pb-6">
@@ -498,14 +842,14 @@ export default function Payments() {
         }
 
         .payments-page .payment-table th {
-          padding: 13px 18px;
+          padding: 10px 14px;
           text-align: left;
-          font-size: 10px;
-          font-weight: 800;
-          letter-spacing: .1em;
+          font-size: 0.75rem;
+          font-weight: 700;
+          letter-spacing: .04em;
           text-transform: uppercase;
-          color: #eff6ff;
-          background: linear-gradient(135deg, #1e3a8a, #2563eb);
+          color: var(--muted);
+          background: var(--surface-subtle);
           border-bottom: 1px solid var(--line);
           white-space: nowrap;
         }
@@ -567,82 +911,195 @@ export default function Payments() {
         </div>
       </header>
 
-      {/* =====================================================
-          ERP SUMMARY (Table-Based)
-      ====================================================== */}
-      <section className="erp-table-container">
-        <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-          Payment &amp; Collection Summary
-        </div>
-        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-3 lg:grid-cols-6 sm:divide-y-0 sm:divide-x">
-          <div className="p-3 sm:p-3.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-              Collected
-            </span>
-            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-teal-600 dark:text-teal-400">
-              {formatCurrency(totalCollected)}
-            </p>
-            <p className="text-[10px] text-[var(--muted)]">Non-credit receipts</p>
-          </div>
+      {/* View Switcher: Payment Transactions vs Customer Credit Collection */}
+      <div className="flex w-full max-w-full gap-1 overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] p-1 shadow-xs sm:inline-flex sm:w-auto">
+        <button
+          type="button"
+          onClick={() => setActiveTab('transactions')}
+          className={`flex items-center gap-2 whitespace-nowrap rounded-md px-3.5 py-2 text-xs font-semibold transition ${
+            activeTab === 'transactions'
+              ? 'bg-[var(--primary)] text-white shadow-xs'
+              : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
+          }`}
+        >
+          <Receipt size={14} />
+          <span>Payment Transactions ({bills.length})</span>
+        </button>
 
-          <div className="p-3 sm:p-3.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-              Credit Due
+        <button
+          type="button"
+          onClick={() => setActiveTab('collection')}
+          className={`flex items-center gap-2 whitespace-nowrap rounded-md px-3.5 py-2 text-xs font-semibold transition ${
+            activeTab === 'collection'
+              ? 'bg-[var(--primary)] text-white shadow-xs'
+              : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
+          }`}
+        >
+          <IndianRupee size={14} />
+          <span>Customer Credit Collection</span>
+          {dueCustomers.length > 0 && (
+            <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+              activeTab === 'collection'
+                ? 'bg-white/20 text-white'
+                : 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'
+            }`}>
+              {dueCustomers.length}
             </span>
-            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-rose-600 dark:text-rose-400">
-              {formatCurrency(totalCredit)}
-            </p>
-            <p className="text-[10px] text-[var(--muted)]">Receivable balances</p>
-          </div>
+          )}
+        </button>
+      </div>
 
-          <div className="p-3 sm:p-3.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-              Transactions
-            </span>
-            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[var(--ink)]">
-              {totalTransactions.toLocaleString('en-IN')}
-            </p>
-            <p className="text-[10px] text-[var(--muted)]">Total recorded bills</p>
-          </div>
-
-          {summary.filter(item => ['cash', 'upi', 'razorpay'].includes(item.key)).map(item => (
-            <div
-              key={item.key}
-              onClick={() => setFilter(c => (c === item.key ? 'all' : item.key))}
-              className={`p-3 sm:p-3.5 cursor-pointer transition ${
-                filter === item.key ? 'bg-[var(--surface-elevated)] border-l-2 border-[#1E3A5F]' : 'hover:bg-[var(--surface-elevated)]'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                  {item.label}
-                </span>
-                {filter === item.key && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#1E3A5F] dark:bg-slate-300"></span>
-                )}
+      {activeTab === 'transactions' && (
+        <>
+          {/* DATE FILTER BAR */}
+          <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-1.5 overflow-x-auto">
+                <Calendar size={13} className="shrink-0 text-[var(--muted)]" />
+                {DATE_PRESETS.map(preset => (
+                  <button
+                    key={preset.key}
+                    type="button"
+                    onClick={() => applyPreset(preset)}
+                    className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                      datePreset === preset.key
+                        ? 'bg-[#1E3A5F] text-white'
+                        : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
               </div>
-              <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[#1E3A5F] dark:text-slate-100">
-                {formatCurrency(item.total)}
-              </p>
-              <p className="text-[10px] text-[var(--muted)]">{item.count} bills ({item.label})</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={dateStart}
+                  max={dateEnd || today}
+                  onChange={e => { setDateStart(e.target.value); setDatePreset('custom') }}
+                  className="h-8 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 text-xs font-mono text-[var(--ink)] outline-none focus:border-[#1E3A5F]"
+                />
+                <span className="text-[10px] text-[var(--muted)] font-semibold">TO</span>
+                <input
+                  type="date"
+                  value={dateEnd}
+                  min={dateStart}
+                  max={today}
+                  onChange={e => { setDateEnd(e.target.value); setDatePreset('custom') }}
+                  className="h-8 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 text-xs font-mono text-[var(--ink)] outline-none focus:border-[#1E3A5F]"
+                />
+                <button
+                  type="button"
+                  onClick={() => loadPayments(false)}
+                  disabled={loading || refreshing}
+                  className="h-8 px-3 rounded-md bg-[#1E3A5F] text-white text-xs font-semibold hover:bg-[#162d4a] disabled:opacity-50 transition"
+                >
+                  Apply
+                </button>
+              </div>
             </div>
-          ))}
-        </div>
-      </section>
+          </section>
+          {/* SUMMARY STRIP */}
+          <section className="erp-table-container">
+            <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] flex items-center justify-between">
+              <span>Payment &amp; Collection Summary</span>
+              {datePreset !== 'all' && (
+                <span className="text-[10px] font-mono text-[var(--muted)]">
+                  {dateStart} → {dateEnd}
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-3 lg:grid-cols-6 sm:divide-y-0 sm:divide-x">
+              <div className="p-3 sm:p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Collected</span>
+                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-teal-600 dark:text-teal-400">{formatCurrency(totalCollected)}</p>
+                <p className="text-[10px] text-[var(--muted)]">Non-credit receipts</p>
+              </div>
+              <div className="p-3 sm:p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Credit Due</span>
+                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-rose-600 dark:text-rose-400">{formatCurrency(totalCredit)}</p>
+                <p className="text-[10px] text-[var(--muted)]">Receivable balances</p>
+              </div>
+              <div className="p-3 sm:p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Transactions</span>
+                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[var(--ink)]">{totalTransactions.toLocaleString('en-IN')}</p>
+                <p className="text-[10px] text-[var(--muted)]">Total recorded bills</p>
+              </div>
+              <div className="p-3 sm:p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Avg Bill</span>
+                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[var(--ink)]">{formatCurrency(paymentMetrics.avgBill)}</p>
+                <p className="text-[10px] text-[var(--muted)]">Per transaction</p>
+              </div>
+              <div className="p-3 sm:p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Tax Collected</span>
+                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-400">{formatCurrency(paymentMetrics.tax)}</p>
+                <p className="text-[10px] text-[var(--muted)]">Output GST</p>
+              </div>
+              <div className="p-3 sm:p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Discounts</span>
+                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-slate-600 dark:text-slate-300">{formatCurrency(paymentMetrics.discounts)}</p>
+                <p className="text-[10px] text-[var(--muted)]">Total given</p>
+              </div>
+            </div>
+          </section>
 
-      <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {[
-          ['Paid bills', paymentMetrics.paid, 'text-emerald-700 dark:text-emerald-300'],
-          ['Partial', paymentMetrics.partial, 'text-amber-700 dark:text-amber-300'],
-          ['Pending', paymentMetrics.pending, 'text-orange-700 dark:text-orange-300'],
-          ['Refunded', paymentMetrics.refunded, 'text-rose-700 dark:text-rose-300'],
-        ].map(([label, value, color]) => (
-          <div key={label} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">{label}</p>
-            <p className={`mt-1 font-mono text-xl font-bold ${color}`}>{value}</p>
+          {/* STATUS METRICS + METHOD BREAKDOWN */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Status pills */}
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Payment Status Breakdown</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  ['Paid', paymentMetrics.paid, 'text-emerald-700 dark:text-emerald-300', 'bg-emerald-50 dark:bg-emerald-950/40'],
+                  ['Partial', paymentMetrics.partial, 'text-amber-700 dark:text-amber-300', 'bg-amber-50 dark:bg-amber-950/40'],
+                  ['Pending', paymentMetrics.pending, 'text-orange-700 dark:text-orange-300', 'bg-orange-50 dark:bg-orange-950/40'],
+                  ['Refunded', paymentMetrics.refunded, 'text-rose-700 dark:text-rose-300', 'bg-rose-50 dark:bg-rose-950/40'],
+                ].map(([label, value, color, bg]) => (
+                  <div key={label} className={`rounded-lg p-2.5 ${bg}`}>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">{label}</p>
+                    <p className={`mt-0.5 font-mono text-xl font-bold ${color}`}>{value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-1 border-t border-[var(--line)]">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-[var(--muted)] font-semibold">Outstanding balance</span>
+                  <span className="font-mono font-bold text-rose-600 dark:text-rose-400">{formatCurrency(paymentMetrics.outstanding)}</span>
+                </div>
+              </div>
+            </div>
+
+           
+
+            {/* Daily trend chart */}
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] flex items-center gap-1.5">
+                <BarChart2 size={12} /> Daily Collections Trend
+              </p>
+              {dailyChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={110}>
+                  <BarChart data={dailyChartData} margin={{ top: 2, right: 2, left: -28, bottom: 0 }}>
+                    <XAxis dataKey="label" tick={{ fontSize: 9, fill: 'var(--muted)' }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 9, fill: 'var(--muted)' }} tickLine={false} axisLine={false} tickFormatter={v => `₹${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                    <Tooltip
+                      formatter={v => formatCurrency(v)}
+                      labelFormatter={l => `Date: ${l}`}
+                      contentStyle={{ fontSize: 11, borderRadius: 6, border: '1px solid var(--line)', background: 'var(--surface)' }}
+                    />
+                    <Bar dataKey="total" radius={[3, 3, 0, 0]}>
+                      {dailyChartData.map((_, i) => (
+                        <Cell key={i} fill={i === dailyChartData.length - 1 ? '#0F766E' : '#1E3A5F'} fillOpacity={0.85} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-[110px] items-center justify-center text-xs text-[var(--muted)]">
+                  No daily data for this period
+                </div>
+              )}
+            </div>
           </div>
-        ))}
-      </section>
 
       <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
         <div className="section-heading border-b border-[var(--line)] p-3 sm:p-3.5">
@@ -695,14 +1152,14 @@ export default function Payments() {
 
               <button
                 type="button"
-                onClick={loadPayments}
-                disabled={loading}
+                onClick={() => loadPayments(true)}
+                disabled={loading || refreshing}
                 aria-label="Refresh payment transactions"
                 className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] hover:border-slate-300 disabled:opacity-50 shadow-xs"
               >
                 <RefreshCw
                   size={14}
-                  className={loading ? 'animate-spin' : ''}
+                  className={refreshing || (loading && !bills.length) ? 'animate-spin text-[var(--primary)]' : ''}
                 />
               </button>
             </div>
@@ -726,338 +1183,1185 @@ export default function Payments() {
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex min-h-64 items-center justify-center">
-            <Spinner />
+        {loading && !refreshing ? (
+          <div className="p-4">
+            <TableSkeleton rows={8} cols={8} label="Loading payment transactions" />
           </div>
+        ) : error ? (
+          <ErrorState
+            title="Unable to load payments"
+            message={error}
+            onRetry={() => loadPayments(false)}
+          />
         ) : filteredBills.length === 0 ? (
-          <div className="flex min-h-72 flex-col items-center justify-center px-5 text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--surface-elevated)] text-[var(--muted-light)]">
-              <Wallet size={25} strokeWidth={1.5} />
-            </div>
-
-            <h3 className="mt-4 text-sm font-bold text-[var(--ink)]">
-              No payment transactions found
-            </h3>
-
-            <p className="mt-1 max-w-sm text-xs leading-5 text-[var(--muted-light)]">
-              Try changing the payment method filter or searching with another
-              invoice or customer name.
-            </p>
-
-            {(search || filter !== 'all') && (
-              <button
-                type="button"
-                onClick={() => {
-                  setSearch('')
-                  setFilter('all')
-                }}
-                className="mt-4 rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
-              >
-                Clear filters
-              </button>
-            )}
-          </div>
+          bills.length === 0 ? (
+            <EmptyState
+              icon={Wallet}
+              title="No payments recorded yet"
+              description="All invoice payments, customer credit settlements, and online gateway transactions will appear here."
+              action={{
+                label: 'Create First Bill',
+                onClick: () => navigate('/billing/new'),
+              }}
+            />
+          ) : search.trim() !== '' ? (
+            <EmptyState
+              icon={Search}
+              title="No payments match your search"
+              description={`No transactions found matching "${search}". Check for typos or search by invoice number, customer name, or payment ID.`}
+              action={{
+                label: 'Clear search',
+                onClick: () => setSearch(''),
+              }}
+            />
+          ) : (
+            <EmptyState
+              icon={SlidersHorizontal}
+              title="No transactions for this method"
+              description={`There are no ${METHOD_META[filter]?.label || filter} payment transactions recorded for the selected date range.`}
+              action={{
+                label: 'Show all payments',
+                onClick: () => setFilter('all'),
+              }}
+            />
+          )
         ) : (
           <>
+            {/* MOBILE CARDS VIEW (sm:hidden) */}
             <div className="divide-y divide-[var(--line-subtle)] sm:hidden">
-              {filteredBills.map(bill => (
-                <article key={bill.id} className="p-3 sm:p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="mb-1 text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--muted-light)]">
-                        Invoice number
-                      </p>
-                      <p
-                        className="max-w-[calc(100vw-9rem)] break-all font-mono text-sm font-extrabold leading-5 text-[var(--primary)]"
-                        title={bill.invoice_number || 'No invoice number'}
-                      >
-                        {bill.invoice_number || 'No invoice number'}
-                      </p>
+              {pagedBills.map((bill, idx) => {
+                const paymentRef = getPaymentRef(bill)
+                const isMenuOpen = openActionMenuId === `mobile-${bill.id}`
+                const isLastRows = pagedBills.length > 2 && idx >= pagedBills.length - 2
+                return (
+                  <article key={bill.id} className="p-3.5 space-y-2.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <PaymentStatus status={bill.payment_status} />
+                          <PaymentBadge method={bill.payment_method} />
+                        </div>
+                        <div className="mt-1.5 flex items-center gap-1.5 font-mono text-xs">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/sales/invoices?search=${encodeURIComponent(bill.invoice_number || '')}`)}
+                            className="font-bold text-[var(--primary)] hover:underline"
+                            title="View invoice"
+                          >
+                            {bill.invoice_number || 'No invoice #'}
+                          </button>
+                          <span className="text-[var(--muted-light)]">•</span>
+                          <span className="text-[11px] text-[var(--muted)] truncate max-w-[120px]" title={paymentRef}>
+                            {paymentRef}
+                          </span>
+                        </div>
+                      </div>
 
-                      <p className="mt-1 truncate text-sm font-semibold text-[var(--ink)]">
-                        {bill.customer_name || 'Walk-in customer'}
-                      </p>
-
-                      {bill.customer_phone && (
-                        <p className="mt-1 text-[11px] text-[var(--muted-light)]">
-                          {bill.customer_phone}
+                      <div className="text-right shrink-0">
+                        <p className="font-mono text-base font-bold text-[var(--ink)] tabular-nums">
+                          {formatCurrency(bill.paid_amount ?? bill.grand_total)}
                         </p>
-                      )}
-                    </div>
-
-                    <p className="shrink-0 text-base font-bold text-[var(--ink)]">
-                      {formatCurrency(bill.grand_total)}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4">
-                    <div className="rounded-xl bg-[var(--surface-elevated)] p-3">
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
-                        Payment method
-                      </p>
-
-                      <div className="mt-2">
-                        <PaymentBadge method={bill.payment_method} />
+                        {Number(bill.balance_due || 0) > 0 && (
+                          <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400">
+                            Due: {formatCurrency(bill.balance_due)}
+                          </span>
+                        )}
                       </div>
                     </div>
 
-                    <div className="rounded-xl bg-[var(--surface-elevated)] p-3">
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
-                        Date
-                      </p>
-
-                      <p className="mt-2 text-xs font-semibold text-[var(--ink-secondary)]">
-                        {formatDate(bill.created_at || bill.date)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {(bill.razorpay_payment_id || bill.payment_method === 'razorpay') && (
-                    <div className="mt-2.5 flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50/80 px-2.5 py-1.5 text-[11px] font-mono text-blue-800 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <ShieldCheck size={13} className="shrink-0 text-blue-600 dark:text-blue-400" />
-                        <span className="truncate">
-                          {bill.razorpay_payment_id ? `RZP: ${bill.razorpay_payment_id}` : 'Razorpay Verified'}
-                        </span>
+                    <div className="flex items-center justify-between text-xs text-[var(--muted)]">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-[var(--ink)] truncate">
+                          {bill.customer_name || 'Walk-in customer'}
+                        </p>
+                        {bill.customer_phone && (
+                          <p className="text-[11px] text-[var(--muted-light)] font-mono">{bill.customer_phone}</p>
+                        )}
                       </div>
-                      <span className="shrink-0 text-[10px] font-bold uppercase text-blue-600 dark:text-blue-400">
-                        Gateway
-                      </span>
+                      <div className="text-right font-mono text-[11px] text-[var(--muted)] shrink-0">
+                        {formatDateTime(bill.created_at || bill.date)}
+                      </div>
                     </div>
-                  )}
 
-                  <div className="mt-3 flex items-center justify-between">
-                    <PaymentStatus status={bill.payment_status} />
+                    <div className="flex items-center justify-between pt-1 border-t border-[var(--line-subtle)]">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBill(bill)}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        <span>View details</span>
+                        <span>→</span>
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedBill(bill)}
-                      className="inline-flex min-h-[38px] items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 dark:bg-blue-950/60 dark:text-blue-200 dark:hover:bg-blue-900/70"
-                    >
-                      <Eye size={13} /> View details
-                    </button>
-                  </div>
-                  <div className="mt-3">
-                    <InvoiceActions bill={bill} compact />
-                  </div>
-                </article>
-              ))}
+                      <div className="relative payment-action-menu-container flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          disabled={invoiceAction?.startsWith(`${bill.id}:`)}
+                          onClick={() => handleInvoiceAction(bill, 'print')}
+                          className="inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                        >
+                          <Printer size={12} />
+                          <span>Invoice</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={invoiceAction?.startsWith(`${bill.id}:`)}
+                          onClick={() => handleReceiptAction(bill)}
+                          className="inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                          title="Print thermal receipt"
+                        >
+                          <Receipt size={12} />
+                          <span>Receipt</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setOpenActionMenuId(isMenuOpen ? null : `mobile-${bill.id}`)}
+                          className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]"
+                          aria-label="More actions"
+                        >
+                          <MoreVertical size={13} />
+                        </button>
+
+                        {isMenuOpen && (
+                          <div
+                            className={`absolute right-0 z-30 w-44 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1 shadow-lg ${
+                              isLastRows ? 'bottom-full mb-1' : 'top-full mt-1'
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedBill(bill)
+                                setOpenActionMenuId(null)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
+                            >
+                              <Eye size={13} className="text-[var(--muted)]" />
+                              <span>View Details</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleInvoiceAction(bill, 'download')
+                                setOpenActionMenuId(null)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
+                            >
+                              <Download size={13} className="text-[var(--muted)]" />
+                              <span>Download PDF</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleCopy(paymentRef, `mobile-copy-${bill.id}`)
+                                setOpenActionMenuId(null)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
+                            >
+                              <Copy size={13} className="text-[var(--muted)]" />
+                              <span>Copy Ref ID</span>
+                            </button>
+                            {(bill.razorpay_payment_id || bill.payment_method === 'razorpay') && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigate('/payments/reconciliation')
+                                  setOpenActionMenuId(null)
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                              >
+                                <ShieldCheck size={13} />
+                                <span>Reconciliation</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                )
+              })}
             </div>
 
-            <div className="hidden overflow-x-auto sm:block">
-              <table className="payment-table">
-                <thead>
+            {/* DESKTOP TABLE VIEW (hidden sm:block) */}
+            <div className="hidden overflow-x-auto sm:block min-h-[280px]">
+              <table className="payment-table table-fixed w-full min-w-[840px]">
+                <colgroup>
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '12%' }} />
+                </colgroup>
+                <thead className="sticky top-0 z-10 bg-[var(--surface-subtle)] shadow-2xs">
                   <tr>
-                    <th>Invoice</th>
-                    <th>Customer</th>
-                    <th>Date</th>
-                    <th>Method</th>
-                    <th className="num-col">Amount</th>
-                    <th>Status</th>
-                    <th className="text-right">Actions</th>
+                    <th className="text-left font-bold text-xs uppercase tracking-wider text-[var(--muted)]">Payment</th>
+                    <th className="text-left font-bold text-xs uppercase tracking-wider text-[var(--muted)]">Invoice</th>
+                    <th className="text-left font-bold text-xs uppercase tracking-wider text-[var(--muted)]">Customer</th>
+                    <th className="text-left font-bold text-xs uppercase tracking-wider text-[var(--muted)]">Method</th>
+                    <th className="text-right font-bold text-xs uppercase tracking-wider text-[var(--muted)]">
+                      <button
+                        type="button"
+                        onClick={() => handleSort('amount')}
+                        className="inline-flex items-center gap-1 font-bold hover:text-[var(--ink)] transition ml-auto"
+                        title="Sort by amount"
+                      >
+                        <span>Amount</span>
+                        <ArrowUpDown size={11} className={sortBy === 'amount' ? 'text-[var(--primary)]' : 'opacity-40'} />
+                      </button>
+                    </th>
+                    <th className="text-center font-bold text-xs uppercase tracking-wider text-[var(--muted)]">
+                      <button
+                        type="button"
+                        onClick={() => handleSort('status')}
+                        className="inline-flex items-center gap-1 font-bold hover:text-[var(--ink)] transition mx-auto"
+                        title="Sort by status"
+                      >
+                        <span>Status</span>
+                        <ArrowUpDown size={11} className={sortBy === 'status' ? 'text-[var(--primary)]' : 'opacity-40'} />
+                      </button>
+                    </th>
+                    <th className="text-left font-bold text-xs uppercase tracking-wider text-[var(--muted)]">
+                      <button
+                        type="button"
+                        onClick={() => handleSort('date')}
+                        className="inline-flex items-center gap-1 font-bold hover:text-[var(--ink)] transition"
+                        title="Sort by date"
+                      >
+                        <span>Date</span>
+                        <ArrowUpDown size={11} className={sortBy === 'date' ? 'text-[var(--primary)]' : 'opacity-40'} />
+                      </button>
+                    </th>
+                    <th className="text-right font-bold text-xs uppercase tracking-wider text-[var(--muted)]">Actions</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {filteredBills.map(bill => (
-                    <tr key={bill.id}>
-                      <td>
-                        <span
-                          className="inline-flex max-w-44 break-all rounded-md border border-blue-200 bg-blue-50 px-2 py-1 font-mono text-xs font-extrabold leading-4 text-[#1E3A5F] dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-100"
-                          title={bill.invoice_number || 'Invoice number unavailable'}
-                        >
-                          {bill.invoice_number || '—'}
-                        </span>
-                      </td>
-
-                      <td>
-                        <div className="min-w-32">
-                          <p className="text-sm font-semibold text-[var(--ink)]">
-                            {bill.customer_name || 'Walk-in customer'}
-                          </p>
-
-                          {bill.customer_phone && (
-                            <p className="mt-1 text-[11px] text-[var(--muted-light)]">
-                              {bill.customer_phone}
-                            </p>
-                          )}
-                        </div>
-                      </td>
-
-                      <td>
-                        <span className="text-xs text-[var(--muted)] font-mono">
-                          {formatDate(bill.created_at || bill.date)}
-                        </span>
-                      </td>
-
-                      <td>
-                        <PaymentBadge method={bill.payment_method} />
-                        {bill.razorpay_payment_id && (
-                          <div className="mt-1 flex items-center gap-1 font-mono text-[10px] text-blue-600 dark:text-blue-400">
-                            <ShieldCheck size={11} className="shrink-0" />
-                            <span className="max-w-[130px] truncate" title={bill.razorpay_payment_id}>
-                              {bill.razorpay_payment_id}
+                  {pagedBills.map((bill, idx) => {
+                    const paymentRef = getPaymentRef(bill)
+                    const isMenuOpen = openActionMenuId === bill.id
+                    const isLastRows = pagedBills.length > 2 && idx >= pagedBills.length - 2
+                    return (
+                      <tr key={bill.id} className="transition-colors hover:bg-[var(--surface-elevated)]">
+                        {/* 1. PAYMENT ID */}
+                        <td>
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className="font-mono text-xs font-bold text-[var(--ink)] truncate max-w-[120px]"
+                              title={paymentRef}
+                            >
+                              {paymentRef}
                             </span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(paymentRef, `tbl-pmt-${bill.id}`)}
+                              className="p-1 rounded text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+                              title="Copy payment reference"
+                            >
+                              {copiedKey === `tbl-pmt-${bill.id}` ? (
+                                <Check size={12} className="text-emerald-600" />
+                              ) : (
+                                <Copy size={12} />
+                              )}
+                            </button>
                           </div>
-                        )}
-                      </td>
+                          {bill.razorpay_payment_id && (
+                            <div className="mt-0.5 flex items-center gap-1 font-mono text-[10px] text-blue-600 dark:text-blue-400">
+                              <ShieldCheck size={11} className="shrink-0" />
+                              <span className="truncate max-w-[120px]">Gateway</span>
+                            </div>
+                          )}
+                        </td>
 
-                      <td className="num-col font-mono text-sm font-bold text-[var(--ink)]">
-                        {formatCurrency(bill.grand_total)}
-                      </td>
-
-                      <td>
-                        <PaymentStatus status={bill.payment_status} />
-                      </td>
-
-                      <td className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        {/* 2. INVOICE */}
+                        <td>
                           <button
                             type="button"
-                            onClick={() => setSelectedBill(bill)}
-                            className="inline-flex items-center gap-1 rounded-md bg-[var(--surface)] px-2 py-1 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)]" >
-                            <Eye size={12} /> Details
+                            onClick={() => navigate(`/sales/invoices?search=${encodeURIComponent(bill.invoice_number || '')}`)}
+                            className="inline-flex max-w-36 truncate rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 font-mono text-xs font-extrabold text-[#1E3A5F] hover:underline dark:border-blue-800 dark:bg-blue-950/60 dark:text-blue-100"
+                            title={bill.invoice_number || 'View Invoice'}
+                          >
+                            {bill.invoice_number || '—'}
                           </button>
-                          <InvoiceActions bill={bill} />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                          {Number(bill.balance_due || 0) > 0 && (
+                            <p className="mt-0.5 font-mono text-[10px] font-semibold text-rose-600 dark:text-rose-400">
+                              Due: {formatCurrency(bill.balance_due)}
+                            </p>
+                          )}
+                        </td>
+
+                        {/* 3. CUSTOMER */}
+                        <td>
+                          <div className="min-w-0 max-w-[180px]">
+                            <p className="text-xs font-semibold text-[var(--ink)] truncate">
+                              {bill.customer_name || 'Walk-in customer'}
+                            </p>
+                            {bill.customer_phone ? (
+                              <p className="mt-0.5 text-[11px] text-[var(--muted-light)] font-mono flex items-center gap-1 truncate">
+                                <Phone size={10} className="shrink-0" />
+                                <span>{bill.customer_phone}</span>
+                              </p>
+                            ) : (
+                              <p className="mt-0.5 text-[10px] text-[var(--muted-light)]">No phone</p>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* 4. METHOD */}
+                        <td>
+                          <PaymentBadge method={bill.payment_method} />
+                        </td>
+
+                        {/* 5. AMOUNT */}
+                        <td className="text-right">
+                          <span className="font-mono text-xs font-bold text-[var(--ink)] tabular-nums">
+                            {formatCurrency(bill.paid_amount ?? bill.grand_total)}
+                          </span>
+                          {Number(bill.paid_amount) > 0 && Number(bill.paid_amount) < Number(bill.grand_total) && (
+                            <p className="text-[10px] text-[var(--muted)] font-mono">
+                              of {formatCurrency(bill.grand_total)}
+                            </p>
+                          )}
+                        </td>
+
+                        {/* 6. STATUS */}
+                        <td className="text-center">
+                          <PaymentStatus status={bill.payment_status} />
+                        </td>
+
+                        {/* 7. DATE */}
+                        <td>
+                          <span className="text-xs font-mono text-[var(--muted)]">
+                            {formatDateTime(bill.created_at || bill.date)}
+                          </span>
+                        </td>
+
+                        {/* 8. ACTIONS */}
+                        <td className="text-right">
+                          <div className="relative payment-action-menu-container inline-flex items-center justify-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedBill(bill)}
+                              className="inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+                              title="View transaction details"
+                            >
+                              <Eye size={12} />
+                              <span>View</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setOpenActionMenuId(isMenuOpen ? null : bill.id)}
+                              className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+                              title="More actions"
+                            >
+                              <MoreVertical size={13} />
+                            </button>
+
+                            {isMenuOpen && (
+                              <div
+                                className={`absolute right-0 z-30 w-48 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1 text-left shadow-lg ${
+                                  isLastRows ? 'bottom-full mb-1' : 'top-full mt-1'
+                                }`}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedBill(bill)
+                                    setOpenActionMenuId(null)
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
+                                >
+                                  <Eye size={13} className="text-[var(--muted)]" />
+                                  <span>View Details</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigate(`/sales/invoices?search=${encodeURIComponent(bill.invoice_number || '')}`)
+                                    setOpenActionMenuId(null)
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
+                                >
+                                  <FileText size={13} className="text-[var(--muted)]" />
+                                  <span>View Invoice</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={invoiceAction?.startsWith(`${bill.id}:`)}
+                                  onClick={() => {
+                                    handleInvoiceAction(bill, 'print')
+                                    setOpenActionMenuId(null)
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
+                                >
+                                  <Printer size={13} className="text-[var(--muted)]" />
+                                  <span>Print Invoice</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={invoiceAction?.startsWith(`${bill.id}:`)}
+                                  onClick={() => {
+                                    handleReceiptAction(bill)
+                                    setOpenActionMenuId(null)
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
+                                >
+                                  <Receipt size={13} className="text-[var(--muted)]" />
+                                  <span>Print Thermal Receipt</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={invoiceAction?.startsWith(`${bill.id}:`)}
+                                  onClick={() => {
+                                    handleInvoiceAction(bill, 'download')
+                                    setOpenActionMenuId(null)
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
+                                >
+                                  <Download size={13} className="text-[var(--muted)]" />
+                                  <span>Download PDF</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleCopy(paymentRef, `overflow-copy-${bill.id}`)
+                                    setOpenActionMenuId(null)
+                                  }}
+                                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
+                                >
+                                  <Copy size={13} className="text-[var(--muted)]" />
+                                  <span>Copy Payment ID</span>
+                                </button>
+                                {(bill.razorpay_payment_id || bill.payment_method === 'razorpay') && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      navigate('/payments/reconciliation')
+                                      setOpenActionMenuId(null)
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                                  >
+                                    <ShieldCheck size={13} />
+                                    <span>Reconciliation</span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
+            </div>
+
+            {/* PAGINATION TOOLBAR */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[var(--line)] bg-[var(--surface)] text-xs text-[var(--muted)]">
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+                <span>
+                  Showing <strong className="text-[var(--ink)] font-semibold">{sortedFilteredBills.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}</strong> to <strong className="text-[var(--ink)] font-semibold">{Math.min(currentPage * pageSize, sortedFilteredBills.length)}</strong> of <strong className="text-[var(--ink)] font-semibold">{sortedFilteredBills.length}</strong> payments
+                </span>
+                <div className="flex items-center gap-1.5 pl-2 border-l border-[var(--line)]">
+                  <span className="text-[11px] text-[var(--muted)]">Rows:</span>
+                  <select
+                    value={pageSize}
+                    onChange={e => {
+                      setPageSize(Number(e.target.value))
+                      setCurrentPage(1)
+                    }}
+                    className="h-7 rounded border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 text-xs font-semibold text-[var(--ink)] outline-none focus:border-[#1E3A5F]"
+                  >
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                  className="btn-secondary h-8 px-2.5 text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+
+                <span className="px-2 text-xs font-semibold text-[var(--ink)]">
+                  {currentPage} / {totalPages}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="btn-secondary h-8 px-2.5 text-xs disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </>
         )}
       </section>
+        </>
+      )}
+
+      {activeTab === 'collection' && (
+        <div className="space-y-4">
+          {/* Outstanding Receivables Metrics Strip */}
+          <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)]">
+            <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
+              <div className="p-3 sm:p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                  Total Receivables Due
+                </span>
+                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-rose-600 dark:text-rose-400">
+                  {formatCurrency(totalOutstandingReceivables)}
+                </p>
+                <p className="text-[10px] text-[var(--muted)]">{dueCustomers.length} customers with balance</p>
+              </div>
+
+              <div className="p-3 sm:p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                  Customers with Dues
+                </span>
+                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-400">
+                  {dueCustomers.length}
+                </p>
+                <p className="text-[10px] text-[var(--muted)]">Pending recovery</p>
+              </div>
+
+              <div className="p-3 sm:p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                  Credit Limit Extended
+                </span>
+                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[var(--ink)]">
+                  {formatCurrency(totalCreditLimitGiven)}
+                </p>
+                <p className="text-[10px] text-[var(--muted)]">Total allowed credit</p>
+              </div>
+
+              <div className="p-3 sm:p-3.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                  Total Customers
+                </span>
+                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[var(--primary)]">
+                  {customers.length}
+                </p>
+                <p className="text-[10px] text-[var(--muted)]">In store registry</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Collection Filter & Search Bar */}
+          <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3 space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="group relative flex min-w-0 flex-1 items-center min-h-[40px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-colors focus-within:border-[var(--primary)]">
+                <Search size={14} className="text-[var(--muted)] shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search customer by name, mobile, or GSTIN..."
+                  value={collectionSearch}
+                  onChange={e => setCollectionSearch(e.target.value)}
+                  className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
+                />
+                {collectionSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setCollectionSearch('')}
+                    className="text-[var(--muted)] hover:text-[var(--ink)]"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setOnlyWithBalance(v => !v)}
+                  className={`px-3 py-2 text-xs font-semibold rounded-md border transition ${
+                    onlyWithBalance
+                      ? 'border-rose-300 dark:border-rose-800 bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300'
+                      : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--ink)]'
+                  }`}
+                >
+                  {onlyWithBalance ? `Only Due (${dueCustomers.length})` : `All (${customers.length})`}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={loadCustomers}
+                  disabled={loadingCustomers}
+                  className="flex h-[38px] w-[38px] items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]"
+                  title="Refresh customers"
+                >
+                  <RefreshCw size={13} className={loadingCustomers ? 'animate-spin' : ''} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Customer Table / List */}
+          {loadingCustomers ? (
+            <div className="flex min-h-60 items-center justify-center">
+              <Spinner />
+            </div>
+          ) : filteredCustomers.length === 0 ? (
+            <div className="flex min-h-60 flex-col items-center justify-center p-6 text-center border border-[var(--line)] rounded-md bg-[var(--surface)]">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-[var(--muted)] mb-2">
+                <CheckCircle2 size={24} className="text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <h4 className="text-sm font-bold text-[var(--ink)]">No customer dues found</h4>
+              <p className="text-xs text-[var(--muted)] mt-0.5">
+                {collectionSearch ? 'No customer matches your search filter.' : 'All customer accounts are clear with zero outstanding balance.'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+              {/* Desktop Table View */}
+              <div className="hidden sm:block overflow-x-auto min-h-[220px] pb-4">
+                <table className="erp-table w-full text-left text-xs min-w-[760px]">
+                  <colgroup>
+                    <col style={{ width: '28%' }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: '12%' }} />
+                    <col style={{ width: '14%' }} />
+                    <col style={{ width: '15%' }} />
+                    <col style={{ width: '15%' }} />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Customer Name</th>
+                      <th>Mobile</th>
+                      <th>Bills</th>
+                      <th className="text-right">Credit Limit</th>
+                      <th className="text-right">Balance Due</th>
+                      <th className="text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredCustomers.map(customer => {
+                      const due = Number(customer.outstanding_amount || 0)
+                      return (
+                        <tr key={customer.id} className="hover:bg-[var(--surface-hover)] transition">
+                          <td>
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-[var(--primary)] border border-[var(--line)] font-bold">
+                                <UserRound size={12} />
+                              </div>
+                              <div>
+                                <span className="font-bold text-[var(--ink)]">{customer.name}</span>
+                                {customer.gstin && (
+                                  <span className="block font-mono text-[10px] text-[var(--muted)]">GSTIN: {customer.gstin}</span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            {customer.mobile ? (
+                              <a
+                                href={`tel:${customer.mobile}`}
+                                className="font-mono text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium"
+                              >
+                                <Phone size={11} />
+                                <span>{customer.mobile}</span>
+                              </a>
+                            ) : (
+                              <span className="text-[var(--muted)]">—</span>
+                            )}
+                          </td>
+                          <td className="font-mono text-[var(--muted)]">
+                            {customer.total_bills ?? 0} bills
+                          </td>
+                          <td className="text-right font-mono text-[var(--ink)]">
+                            {formatCurrency(customer.credit_limit || 0)}
+                          </td>
+                          <td className="text-right">
+                            <span className={`font-mono font-bold text-sm ${due > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                              {formatCurrency(due)}
+                            </span>
+                          </td>
+                          <td className="text-right">
+                            {due > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedCustomerForPay(customer)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs shadow-xs transition"
+                              >
+                                <IndianRupee size={12} />
+                                <span>Collect Payment</span>
+                              </button>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                                <CheckCircle2 size={11} />
+                                <span>Settled</span>
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards View */}
+              <div className="sm:hidden divide-y divide-[var(--line)]">
+                {filteredCustomers.map(customer => {
+                  const due = Number(customer.outstanding_amount || 0)
+                  return (
+                    <article key={customer.id} className="p-3.5 space-y-2.5 bg-[var(--surface)]">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-[var(--primary)] border border-[var(--line)]">
+                            <UserRound size={14} />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-sm text-[var(--ink)] truncate">{customer.name}</h4>
+                            <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+                              {customer.mobile ? (
+                                <a href={`tel:${customer.mobile}`} className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium">
+                                  <Phone size={10} />
+                                  <span>{customer.mobile}</span>
+                                </a>
+                              ) : <span>No phone</span>}
+                              <span>•</span>
+                              <span>{customer.total_bills ?? 0} bills</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <p className={`font-mono text-sm font-bold ${due > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                            {formatCurrency(due)}
+                          </p>
+                          <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.2 rounded ${
+                            due > 0 ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300' : 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300'
+                          }`}>
+                            {due > 0 ? 'Due' : 'Clear'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {due > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCustomerForPay(customer)}
+                          className="w-full inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs shadow-xs transition"
+                        >
+                          <IndianRupee size={13} />
+                          <span>Collect Payment</span>
+                        </button>
+                      )}
+                    </article>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {selectedBill && (
         <Modal
           open={Boolean(selectedBill)}
           onClose={() => setSelectedBill(null)}
-          title={`Payment details — ${selectedBill.invoice_number || 'Invoice'}`}
+          title={`Payment Transaction Details`}
           size="lg"
         >
           <div className="space-y-4 text-xs">
-            <div className="grid grid-cols-2 gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-3 sm:grid-cols-4">
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold uppercase text-[var(--muted)]">Invoice number</span>
-                <p
-                  className="mt-1 break-all font-mono text-sm font-extrabold leading-5 text-[var(--primary)]"
-                  title={selectedBill.invoice_number || 'Invoice number unavailable'}
-                >
-                  {selectedBill.invoice_number || '—'}
-                </p>
-              </div>
-              <div><span className="text-[10px] font-bold uppercase text-[var(--muted)]">Date</span><p className="mt-1 font-semibold text-[var(--ink)]">{formatDate(selectedBill.created_at)}</p></div>
-              <div><span className="text-[10px] font-bold uppercase text-[var(--muted)]">Payment status</span><div className="mt-1"><PaymentStatus status={selectedBill.payment_status} /></div></div>
-              <div><span className="text-[10px] font-bold uppercase text-[var(--muted)]">Method</span><div className="mt-1"><PaymentBadge method={selectedBill.payment_method} /></div></div>
-            </div>
+            {/* 1. PAYMENT OVERVIEW */}
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[var(--line)]">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                    Payment Reference ID
+                  </span>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="font-mono text-base font-bold text-[var(--primary)] select-all">
+                      {getPaymentRef(selectedBill)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(getPaymentRef(selectedBill), 'modal-pmt-ref')}
+                      className="inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11px] font-semibold text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+                      title="Copy Payment ID"
+                    >
+                      {copiedKey === 'modal-pmt-ref' ? (
+                        <>
+                          <Check size={12} className="text-emerald-600" />
+                          <span className="text-emerald-600 font-bold">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={12} />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {[
-                ['Subtotal', selectedBill.subtotal],
-                ['Discount', selectedBill.discount_amount],
-                ['Tax', selectedBill.tax_amount],
-                ['Grand total', selectedBill.grand_total],
-                ['Paid amount', selectedBill.paid_amount],
-                ['Balance due', selectedBill.balance_due],
-                ['Round off', selectedBill.round_off],
-                ['Items', selectedBill.items?.length || 0],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-lg border border-[var(--line)] p-2.5">
-                  <p className="text-[10px] font-bold uppercase text-[var(--muted)]">{label}</p>
-                  <p className="mt-1 font-mono font-bold text-[var(--ink)]">
-                    {label === 'Items' ? value : formatCurrency(value)}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <PaymentBadge method={selectedBill.payment_method} />
+                  <PaymentStatus status={selectedBill.payment_status} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3">
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-[var(--muted)]">Amount Paid</span>
+                  <p className="mt-0.5 font-mono text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                    {formatCurrency(selectedBill.paid_amount ?? (selectedBill.payment_method === 'credit' ? 0 : selectedBill.grand_total))}
                   </p>
                 </div>
-              ))}
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-xl border border-[var(--line)] p-3">
-                <h3 className="mb-2 flex items-center gap-1.5 font-bold text-[var(--ink)]"><UserRound size={14} /> Customer</h3>
-                <p className="font-semibold">{selectedBill.customer_name || 'Walk-in customer'}</p>
-                <p className="mt-1 text-[var(--muted)]">{selectedBill.customer_phone || 'No phone number'}</p>
-                <p className="mt-1 text-[var(--muted)]">{selectedBill.customer_email || 'No email address'}</p>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-[var(--muted)]">Payment Method</span>
+                  <p className="mt-0.5 font-semibold text-[var(--ink)] uppercase">
+                    {selectedBill.payment_method || 'Cash'}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-[var(--muted)]">Created Date &amp; Time</span>
+                  <p className="mt-0.5 font-mono text-xs text-[var(--ink)]">
+                    {formatDateTime(selectedBill.created_at || selectedBill.date)}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase text-[var(--muted)]">Settlement Status</span>
+                  <p className="mt-0.5 font-semibold text-[var(--ink)]">
+                    {['paid', 'completed'].includes(String(selectedBill.payment_status).toLowerCase())
+                      ? 'Captured / Settled'
+                      : String(selectedBill.payment_status || 'Pending')}
+                  </p>
+                </div>
               </div>
-              <div className="rounded-xl border border-[var(--line)] p-3">
-                <h3 className="mb-2 flex items-center gap-1.5 font-bold text-[var(--ink)]"><ReceiptText size={14} /> Notes & operator</h3>
-                <p className="text-[var(--muted)]">{selectedBill.notes || 'No notes recorded'}</p>
-                <p className="mt-2 text-[11px] text-[var(--muted)]">Created by: <span className="font-semibold text-[var(--ink)]">{selectedBill.created_by_name || 'System'}</span></p>
+            </div>
+
+            {/* 2. INVOICE RELATIONSHIP & FINANCIAL BREAKDOWN */}
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-[var(--line)]">
+                <div className="flex items-center gap-2">
+                  <Receipt className="text-[var(--primary)]" size={16} />
+                  <h3 className="font-bold text-sm text-[var(--ink)]">Associated Invoice Details</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedBill(null)
+                    navigate(`/sales/invoices?search=${encodeURIComponent(selectedBill.invoice_number || '')}`)
+                  }}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-[var(--primary)] hover:underline"
+                >
+                  <span>Open in Invoices</span>
+                  <ExternalLink size={12} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-2.5 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)]">
+                  <span className="text-[10px] font-bold uppercase text-[var(--muted)]">Invoice Number</span>
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="font-mono text-xs font-bold text-[var(--primary)] select-all truncate">
+                      {selectedBill.invoice_number || '—'}
+                    </span>
+                    {selectedBill.invoice_number && (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(selectedBill.invoice_number, 'modal-inv-num')}
+                        className="text-[var(--muted)] hover:text-[var(--ink)] p-0.5 shrink-0"
+                        title="Copy Invoice Number"
+                      >
+                        {copiedKey === 'modal-inv-num' ? (
+                          <Check size={11} className="text-emerald-600" />
+                        ) : (
+                          <Copy size={11} />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)]">
+                  <span className="text-[10px] font-bold uppercase text-[var(--muted)]">Invoice Total</span>
+                  <p className="mt-1 font-mono text-xs font-bold text-[var(--ink)]">
+                    {formatCurrency(selectedBill.grand_total)}
+                  </p>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)]">
+                  <span className="text-[10px] font-bold uppercase text-[var(--muted)]">Total Paid</span>
+                  <p className="mt-1 font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                    {formatCurrency(selectedBill.paid_amount ?? (selectedBill.payment_method === 'credit' ? 0 : selectedBill.grand_total))}
+                  </p>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)]">
+                  <span className="text-[10px] font-bold uppercase text-[var(--muted)]">Outstanding Balance</span>
+                  <p className={`mt-1 font-mono text-xs font-bold ${Number(selectedBill.balance_due || 0) > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                    {formatCurrency(selectedBill.balance_due || 0)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t border-[var(--line-subtle)]">
+                <div className="text-[var(--muted)]">
+                  Subtotal: <strong className="font-mono text-[var(--ink)]">{formatCurrency(selectedBill.subtotal)}</strong>
+                </div>
+                <div className="text-[var(--muted)]">
+                  Discount: <strong className="font-mono text-[var(--ink)]">{formatCurrency(selectedBill.discount_amount)}</strong>
+                </div>
+                <div className="text-[var(--muted)]">
+                  Tax (GST): <strong className="font-mono text-[var(--ink)]">{formatCurrency(selectedBill.tax_amount)}</strong>
+                </div>
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-              <table className="erp-table min-w-[560px] text-xs">
-                <thead><tr><th>Item</th><th>SKU</th><th className="text-right">Qty</th><th className="text-right">Unit price</th><th className="text-right">Total</th></tr></thead>
-                <tbody>
-                  {(selectedBill.items || []).map((item, index) => (
-                    <tr key={item.id || index}>
-                      <td className="font-semibold">{item.product_name || item.name || 'Item'}</td>
-                      <td className="font-mono text-[var(--muted)]">{item.sku || '—'}</td>
-                      <td className="text-right font-mono">{item.quantity || 0}</td>
-                      <td className="text-right font-mono">{formatCurrency(item.unit_price)}</td>
-                      <td className="text-right font-mono font-bold">{formatCurrency(item.total)}</td>
-                    </tr>
-                  ))}
-                  {!selectedBill.items?.length && <tr><td colSpan={5} className="py-6 text-center text-[var(--muted)]">No item details available.</td></tr>}
-                </tbody>
-              </table>
+            {/* 3. CUSTOMER INFORMATION */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
+                <h4 className="mb-2 flex items-center gap-1.5 font-bold text-[var(--ink)]">
+                  <UserRound size={14} className="text-[var(--primary)]" /> Customer Information
+                </h4>
+                <p className="font-semibold text-sm text-[var(--ink)]">{selectedBill.customer_name || 'Walk-in customer'}</p>
+                {selectedBill.customer_phone ? (
+                  <a
+                    href={`tel:${selectedBill.customer_phone}`}
+                    className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    <Phone size={12} />
+                    <span>{selectedBill.customer_phone}</span>
+                  </a>
+                ) : (
+                  <p className="mt-1.5 text-xs text-[var(--muted)]">No phone number recorded</p>
+                )}
+                {selectedBill.customer_email ? (
+                  <a
+                    href={`mailto:${selectedBill.customer_email}`}
+                    className="mt-1 block text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    <Mail size={12} className="inline mr-1" />
+                    <span>{selectedBill.customer_email}</span>
+                  </a>
+                ) : (
+                  <p className="mt-1 text-xs text-[var(--muted)]">No email recorded</p>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
+                <h4 className="mb-2 flex items-center gap-1.5 font-bold text-[var(--ink)]">
+                  <ReceiptText size={14} className="text-[var(--primary)]" /> Notes &amp; Biller
+                </h4>
+                <p className="text-xs text-[var(--muted)]">{selectedBill.notes || 'No notes attached to this transaction.'}</p>
+                <div className="mt-3 pt-2 border-t border-[var(--line)] flex items-center justify-between text-xs">
+                  <span className="text-[var(--muted)]">Billed by:</span>
+                  <span className="font-semibold text-[var(--ink)]">{selectedBill.created_by_name || 'System / Admin'}</span>
+                </div>
+              </div>
             </div>
 
+            {/* 4. GATEWAY DETAILS (For Razorpay / Online Payments) */}
             {(selectedBill.payment_method === 'razorpay' || selectedBill.razorpay_payment_id || selectedBill.razorpay_order_id) && (
               <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 dark:border-blue-900/60 dark:bg-blue-950/30">
-                <div className="flex items-center justify-between">
-                  <h3 className="flex items-center gap-1.5 font-bold text-blue-800 dark:text-blue-300">
+                <div className="flex items-center justify-between pb-2 border-b border-blue-200/60 dark:border-blue-900/40">
+                  <h4 className="flex items-center gap-1.5 font-bold text-blue-900 dark:text-blue-200">
                     <ShieldCheck size={16} className="text-blue-600 dark:text-blue-400" />
                     Razorpay Gateway Transaction Details
-                  </h3>
+                  </h4>
                   <button
                     type="button"
                     onClick={() => {
                       setSelectedBill(null)
-                      navigate('/reconciliation')
+                      navigate('/payments/reconciliation')
                     }}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
                   >
                     <span>Reconciliation</span>
-                    <ExternalLink size={11} />
+                    <ExternalLink size={12} />
                   </button>
                 </div>
-                <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+
+                <div className="mt-2.5 grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div className="rounded-lg border border-blue-100 bg-white p-2.5 dark:border-blue-900/40 dark:bg-slate-900/70">
                     <span className="text-[10px] font-bold uppercase text-[var(--muted)]">Payment ID</span>
-                    <p className="mt-0.5 select-all font-mono text-xs font-bold text-blue-700 dark:text-blue-300">
-                      {selectedBill.razorpay_payment_id || 'Direct Settlement / Captured'}
-                    </p>
+                    <div className="mt-0.5 flex items-center justify-between">
+                      <p className="select-all font-mono text-xs font-bold text-blue-700 dark:text-blue-300 truncate">
+                        {selectedBill.razorpay_payment_id || 'Direct Settlement / Captured'}
+                      </p>
+                      {selectedBill.razorpay_payment_id && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(selectedBill.razorpay_payment_id, 'modal-rzp-pmt')}
+                          className="shrink-0 p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                          title="Copy Payment ID"
+                        >
+                          {copiedKey === 'modal-rzp-pmt' ? (
+                            <Check size={11} className="text-emerald-600" />
+                          ) : (
+                            <Copy size={11} />
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="rounded-lg border border-blue-100 bg-white p-2.5 dark:border-blue-900/40 dark:bg-slate-900/70">
                     <span className="text-[10px] font-bold uppercase text-[var(--muted)]">Order ID</span>
-                    <p className="mt-0.5 select-all font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
-                      {selectedBill.razorpay_order_id || 'Standard Checkout'}
-                    </p>
+                    <div className="mt-0.5 flex items-center justify-between">
+                      <p className="select-all font-mono text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
+                        {selectedBill.razorpay_order_id || 'Standard Checkout'}
+                      </p>
+                      {selectedBill.razorpay_order_id && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(selectedBill.razorpay_order_id, 'modal-rzp-ord')}
+                          className="shrink-0 p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                          title="Copy Order ID"
+                        >
+                          {copiedKey === 'modal-rzp-ord' ? (
+                            <Check size={11} className="text-emerald-600" />
+                          ) : (
+                            <Copy size={11} />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                  <div>
+                    <span className="text-[10px] text-[var(--muted)]">Currency</span>
+                    <p className="font-mono font-bold text-[var(--ink)]">INR (₹)</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[var(--muted)]">Method</span>
+                    <p className="font-semibold text-[var(--ink)] uppercase">{selectedBill.payment_method || 'Razorpay'}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[var(--muted)]">Gateway Fee</span>
+                    <p className="font-mono text-[var(--ink)]">Direct Store Account</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[var(--muted)]">Capture Status</span>
+                    <p className="font-semibold text-emerald-600 dark:text-emerald-400">Captured (Auto)</p>
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="rounded-xl border border-[var(--line)] p-3">
-              <h3 className="mb-2 flex items-center gap-1.5 font-bold text-[var(--ink)]"><Banknote size={14} /> Payment entries</h3>
-              <div className="space-y-2">
-                {(selectedBill.payments || []).map((payment, index) => (
-                  <div key={payment.id || index} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--surface-elevated)] p-2.5">
-                    <span className="font-semibold">{payment.method || selectedBill.payment_method || 'Payment'}</span>
-                    <span className="font-mono font-bold">{formatCurrency(payment.amount)}</span>
-                    <span className="text-[var(--muted)]">{formatDate(payment.created_at)}</span>
-                    <span className="text-[var(--muted)]">{payment.reference || payment.transaction_id || 'No reference'}</span>
-                  </div>
-                ))}
-                {!selectedBill.payments?.length && <p className="text-[var(--muted)]">No separate payment entries available.</p>}
+            {/* 5. SEPARATE PAYMENT LEDGER ENTRIES */}
+            {selectedBill.payments && selectedBill.payments.length > 0 && (
+              <div className="rounded-xl border border-[var(--line)] p-3">
+                <h4 className="mb-2 flex items-center gap-1.5 font-bold text-[var(--ink)]">
+                  <Banknote size={14} className="text-[var(--primary)]" /> Payment Entries ({selectedBill.payments.length})
+                </h4>
+                <div className="space-y-1.5">
+                  {selectedBill.payments.map((payment, index) => (
+                    <div key={payment.id || index} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--surface-elevated)] p-2">
+                      <span className="font-semibold uppercase">{payment.method || selectedBill.payment_method || 'Payment'}</span>
+                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(payment.amount)}</span>
+                      <span className="text-[var(--muted)] font-mono">{formatDateTime(payment.created_at)}</span>
+                      <span className="text-[var(--muted)] font-mono">{payment.reference || payment.transaction_id || `ID: ${payment.id}`}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
+            )}
+
+            {/* 6. INVOICE ITEMS BREAKDOWN */}
+            {selectedBill.items && selectedBill.items.length > 0 && (
+              <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
+                <table className="erp-table min-w-[560px] text-xs">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th>SKU</th>
+                      <th className="text-right">Qty</th>
+                      <th className="text-right">Unit price</th>
+                      <th className="text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedBill.items.map((item, index) => (
+                      <tr key={item.id || index}>
+                        <td className="font-semibold">{item.product_name || item.name || 'Item'}</td>
+                        <td className="font-mono text-[var(--muted)]">{item.sku || '—'}</td>
+                        <td className="text-right font-mono">{item.quantity || 0}</td>
+                        <td className="text-right font-mono">{formatCurrency(item.unit_price)}</td>
+                        <td className="text-right font-mono font-bold">{formatCurrency(item.total)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* 7. QUICK ACTION BUTTONS */}
+            <div className="pt-3 border-t border-[var(--line)] flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  disabled={invoiceAction?.startsWith(`${selectedBill.id}:`)}
+                  onClick={() => handleInvoiceAction(selectedBill, 'print')}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-bold text-white shadow-xs hover:brightness-110 transition disabled:opacity-50"
+                >
+                  <Printer size={13} />
+                  <span>Print Invoice</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={invoiceAction?.startsWith(`${selectedBill.id}:`)}
+                  onClick={() => handleReceiptAction(selectedBill)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-elevated)] transition disabled:opacity-50"
+                >
+                  <Receipt size={13} />
+                  <span>Thermal Receipt</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={invoiceAction?.startsWith(`${selectedBill.id}:`)}
+                  onClick={() => handleInvoiceAction(selectedBill, 'download')}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-elevated)] transition disabled:opacity-50"
+                >
+                  <Download size={13} />
+                  <span>Download PDF</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedBill(null)}
+                className="btn-secondary h-8 px-3 text-xs"
+              >
+                Close
+              </button>
             </div>
           </div>
         </Modal>
+      )}
+
+      {selectedCustomerForPay && (
+        <CustomerCollectPaymentModal
+          customer={selectedCustomerForPay}
+          shopSettings={shopSettings}
+          shopName={shopName}
+          onClose={() => setSelectedCustomerForPay(null)}
+          onSuccess={() => {
+            loadCustomers()
+            loadPayments()
+            setSelectedCustomerForPay(null)
+          }}
+        />
       )}
     </div>
   )

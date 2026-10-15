@@ -185,9 +185,15 @@ class NotificationEngine:
                 title=title,
                 message=msg,
                 severity='success',
-                action_url='/sales/payments',
+                action_url=f"/sales/payments?search={inv_num}" if inv_num != 'Direct' else '/sales/payments',
                 action_label='View Ledger',
-                data={'payment_id': pay.id, 'amount': amt, 'method': method},
+                data={
+                    'payment_id': pay.id,
+                    'invoice_id': pay.invoice_id,
+                    'invoice_number': inv_num if inv_num != 'Direct' else '',
+                    'amount': amt,
+                    'method': method,
+                },
                 dedup_key=dedup,
             )
 
@@ -418,7 +424,12 @@ class NotificationEngine:
                     severity='warning',
                     action_url=f"/sales/invoices?search={inv.invoice_number}",
                     action_label='Review Approval',
-                    data={'invoice_id': inv.id, 'discount_pct': pct, 'discount_amount': disc},
+                    data={
+                        'invoice_id': inv.id,
+                        'invoice_number': inv.invoice_number,
+                        'discount_pct': pct,
+                        'discount_amount': disc,
+                    },
                     dedup_key=dedup,
                     requires_approval=True,
                 )

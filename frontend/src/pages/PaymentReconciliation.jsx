@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import api from '../api'
 import {
   RefreshCw,
-  Search,
   AlertCircle,
   CheckCircle2,
   XCircle,
@@ -19,7 +18,6 @@ import {
   Download,
   Eye,
   ChevronDown,
-  ExternalLink,
   ReceiptText,
   User,
   Mail,
@@ -32,6 +30,7 @@ import {
   Banknote,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { SearchBar } from '../components/UI'
 
 // --------------------------------------------------
 // CONSTANTS
@@ -79,6 +78,10 @@ const PAYMENT_METHODS = [
   'emi',
   'bank_transfer',
 ]
+
+// Planning estimate only. Razorpay's actual fee depends on merchant pricing
+// and payment method, so statement-reported fees take precedence when present.
+const ESTIMATED_GATEWAY_FEE_RATE = 0.02
 
 // --------------------------------------------------
 // FORMATTERS
@@ -231,13 +234,17 @@ const getAmount = (row) =>
   row.razorpay_amount ??
   0
 
-const getFee = (row) =>
-  row.fee ??
-  row.fees ??
-  row.razorpay_fee ??
-  row.details?.fee ??
-  row.payment_details?.fee ??
-  0
+const getReportedFee = (row) => {
+  const value = row.fee ?? row.fees ?? row.razorpay_fee ?? row.details?.fee ?? row.payment_details?.fee
+  return value === null || value === undefined || value === '' ? null : Number(value)
+}
+
+const getEstimatedFee = (row) => {
+  if (!['success', 'captured'].includes(getStatus(row))) return 0
+  return Math.round(Number(getAmount(row) || 0) * ESTIMATED_GATEWAY_FEE_RATE * 100) / 100
+}
+
+const getReconciliationFee = (row) => getReportedFee(row) ?? getEstimatedFee(row)
 
 const getTax = (row) =>
   row.tax ??
@@ -414,6 +421,7 @@ export default function PaymentReconciliation() {
   const [dateFilter, setDateFilter] = useState('')
   const [selectedRow, setSelectedRow] = useState(null)
   const [showFilters, setShowFilters] = useState(false)
+  const [reviewOnly, setReviewOnly] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -483,10 +491,12 @@ export default function PaymentReconciliation() {
       0
     )
 
-    const fees = rows.reduce(
-      (sum, row) => sum + Number(getFee(row) || 0),
+    const feeRows = successful.map(row => ({ row, reported: getReportedFee(row) }))
+    const fees = feeRows.reduce(
+      (sum, item) => sum + (item.reported ?? getEstimatedFee(item.row)),
       0
     )
+    const hasEstimatedFees = feeRows.some(item => item.reported === null)
 
     const tax = rows.reduce(
       (sum, row) => sum + Number(getTax(row) || 0),
@@ -498,11 +508,12 @@ export default function PaymentReconciliation() {
       0
     )
 
-    const net = amount - fees - tax
+    const net = amount - fees - tax - refunds
 
     const successRate = rows.length
       ? (successful.length / rows.length) * 100
       : 0
+    const unlinked = rows.filter(row => !getInvoiceNumber(row)).length
 
     return {
       total: rows.length,
@@ -512,10 +523,12 @@ export default function PaymentReconciliation() {
       refunded: refunded.length,
       amount,
       fees,
+      hasEstimatedFees,
       tax,
       refunds,
       net,
       successRate,
+      unlinked,
     }
   }, [rows])
 
@@ -554,9 +567,10 @@ export default function PaymentReconciliation() {
       const matchesMethod =
         !methodFilter || method === methodFilter
 
-      return matchesSearch && matchesStatus && matchesMethod
+      const needsReview = !getInvoiceNumber(row)
+      return matchesSearch && matchesStatus && matchesMethod && (!reviewOnly || needsReview)
     })
-  }, [rows, search, statusFilter, methodFilter])
+  }, [rows, search, statusFilter, methodFilter, reviewOnly])
 
   // --------------------------------------------------
   // CSV EXPORT
@@ -580,7 +594,7 @@ export default function PaymentReconciliation() {
       'Customer Name',
       'Email',
       'Contact',
-      'Fee',
+      'Gateway Fee (actual or estimated at 2%)',
       'Tax',
       'Refund Amount',
       'Failure Reason',
@@ -600,7 +614,7 @@ export default function PaymentReconciliation() {
       getCustomerName(row),
       getCustomerEmail(row),
       getCustomerPhone(row),
-      getFee(row),
+      getReconciliationFee(row),
       getTax(row),
       getRefundAmount(row),
       getFailureReason(row),
@@ -789,7 +803,7 @@ export default function PaymentReconciliation() {
 
             <div className="p-3 sm:px-4 sm:py-3">
               <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                Gateway Fees
+                Gateway Fee {summary.hasEstimatedFees ? '(Est. 2%)' : ''}
               </div>
               <div className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink-secondary)]">
                 {fmt(summary.fees)}
@@ -816,48 +830,33 @@ export default function PaymentReconciliation() {
 
             <div className="p-3 sm:px-4 sm:py-3">
               <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                Net Settled Amount
+                Net After Gateway Fees
               </div>
               <div className="mt-0.5 font-mono text-base sm:text-lg font-black text-[#15803D] dark:text-emerald-400">
                 {fmt(summary.net)}
               </div>
             </div>
           </div>
+          <div className="border-t border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-[11px] leading-relaxed text-[var(--muted)] sm:px-4">
+            Fee estimate uses 2% of successful payment amounts where no provider fee is recorded. Actual Razorpay charges can vary by account and payment method; check your Razorpay settlement report for the final fee and settlement value.
+          </div>
         </div>
 
         {/* FILTERS */}
         <div className="reconciliation-card p-3 sm:p-3.5">
           <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center">
-            <div className="group relative flex min-w-0 flex-1 items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-                <Search size={14} strokeWidth={2.2} />
-              </div>
-
-              <input
-                className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
-                placeholder="Search invoice, order ID, payment ID, customer..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-
-              {search ? (
-                <button
-                  type="button"
-                  onClick={() => setSearch('')}
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
-                  title="Clear search"
-                  aria-label="Clear search"
-                >
-                  <X size={13} strokeWidth={2.5} />
-                </button>
-              ) : (
-                <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
-                  Ctrl+K
-                </kbd>
-              )}
-            </div>
+            <SearchBar value={search} onChange={setSearch} placeholder="Search invoice, order ID, payment ID, customer..." className="min-w-0 flex-1" shortcut="Ctrl+K" />
 
             <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setReviewOnly(value => !value)}
+                aria-pressed={reviewOnly}
+                className={`inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors ${reviewOnly ? 'border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200' : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)]'}`}
+              >
+                <AlertCircle size={14} />
+                Needs review <span className="rounded-full bg-black/5 px-1.5 py-0.5 text-[10px] dark:bg-white/10">{summary.unlinked}</span>
+              </button>
               <select
                 className="h-9 min-w-[140px] rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs text-[var(--ink)] outline-none focus:border-[var(--primary)]"
                 value={statusFilter}
@@ -898,7 +897,7 @@ export default function PaymentReconciliation() {
                 />
               </button>
 
-              {(search || statusFilter || methodFilter || dateFilter) && (
+              {(search || statusFilter || methodFilter || dateFilter || reviewOnly) && (
                 <button
                   type="button"
                   onClick={() => {
@@ -906,6 +905,7 @@ export default function PaymentReconciliation() {
                     setStatus('')
                     setMethod('')
                     setDateFilter('')
+                    setReviewOnly(false)
                   }}
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold text-rose-400 hover:bg-rose-950/30"
                 >
@@ -980,12 +980,13 @@ export default function PaymentReconciliation() {
           </div>
 
           {/* DESKTOP TABLE VIEW */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="erp-table w-full text-xs">
+          <div className="hidden md:block overflow-x-auto min-h-[220px] pb-4">
+            <table className="erp-table w-full text-xs min-w-[900px]">
               <thead>
                 <tr className="text-left text-[11px] font-bold uppercase tracking-wider">
                   <th className="px-4 py-3">Transaction</th>
                   <th className="px-4 py-3 text-right">Amount</th>
+                  <th className="px-4 py-3 text-right">Fee · 2% est.</th>
                   <th className="px-4 py-3">Payment Method</th>
                   <th className="px-4 py-3">Razorpay IDs</th>
                   <th className="px-4 py-3">Customer</th>
@@ -998,7 +999,7 @@ export default function PaymentReconciliation() {
               <tbody className="divide-y divide-[var(--line-subtle)]">
                 {loading && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-16 text-center">
+                    <td colSpan={9} className="px-4 py-16 text-center">
                       <RefreshCw
                         size={24}
                         className="mx-auto mb-3 animate-spin text-[#1E3A5F]"
@@ -1017,7 +1018,7 @@ export default function PaymentReconciliation() {
 
                 {!loading && visibleRows.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-16 text-center">
+                    <td colSpan={9} className="px-4 py-16 text-center">
                       <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-elevated)]">
                         <AlertCircle
                           size={24}
@@ -1041,6 +1042,8 @@ export default function PaymentReconciliation() {
                     const status = getStatus(row)
                     const currency = getCurrency(row)
                     const amount = getAmount(row)
+                    const gatewayFee = getReconciliationFee(row)
+                    const feeIsEstimated = getReportedFee(row) === null && getEstimatedFee(row) > 0
                     const method = getPaymentMethod(row)
                     const orderId = getOrderId(row)
                     const paymentId = getPaymentId(row)
@@ -1080,6 +1083,11 @@ export default function PaymentReconciliation() {
                           <p className="mt-0.5 text-[10px] uppercase text-[var(--muted)] font-semibold">
                             {currency}
                           </p>
+                        </td>
+
+                        <td className="px-4 py-3.5 text-right">
+                          <p className="font-mono text-xs font-semibold tabular-nums text-[var(--ink-secondary)]">{fmt(gatewayFee, currency)}</p>
+                          <p className="mt-0.5 text-[10px] text-[var(--muted)]">{feeIsEstimated ? 'Estimated' : 'Provider fee'}</p>
                         </td>
 
                         {/* METHOD */}
@@ -1217,6 +1225,8 @@ export default function PaymentReconciliation() {
                 const status = getStatus(row)
                 const currency = getCurrency(row)
                 const amount = getAmount(row)
+                const gatewayFee = getReconciliationFee(row)
+                const feeIsEstimated = getReportedFee(row) === null && getEstimatedFee(row) > 0
                 const method = getPaymentMethod(row)
                 const orderId = getOrderId(row)
                 const paymentId = getPaymentId(row)
@@ -1248,6 +1258,10 @@ export default function PaymentReconciliation() {
                       <div>
                         <span className="text-[10px] uppercase font-bold text-[var(--muted)] block">Method</span>
                         <MethodBadge method={method} />
+                      </div>
+                      <div className="col-span-2 flex items-center justify-between border-t border-[var(--line-subtle)] pt-2">
+                        <span className="text-[10px] font-bold uppercase text-[var(--muted)]">Gateway fee {feeIsEstimated ? '(2% est.)' : ''}</span>
+                        <span className="font-mono text-xs font-semibold tabular-nums text-[var(--ink-secondary)]">{fmt(gatewayFee, currency)}</span>
                       </div>
                     </div>
 
@@ -1307,7 +1321,8 @@ function TransactionDrawer({ row, onClose }) {
   const paymentId = getPaymentId(row)
   const method = getPaymentMethod(row)
   const invoice = getInvoiceNumber(row)
-  const fee = getFee(row)
+  const fee = getReconciliationFee(row)
+  const feeIsEstimated = getReportedFee(row) === null && getEstimatedFee(row) > 0
   const tax = getTax(row)
   const failureReason = getFailureReason(row)
 
@@ -1442,7 +1457,7 @@ function TransactionDrawer({ row, onClose }) {
               />
 
               <DetailItem
-                label="Fee"
+                label={feeIsEstimated ? 'Estimated gateway fee (2%)' : 'Gateway fee'}
                 value={fmt(fee, currency)}
               />
 
@@ -1628,33 +1643,34 @@ function TransactionDrawer({ row, onClose }) {
                 />
               )}
 
-              {row.notes && (
-                <div className="rounded-xl bg-[var(--surface-elevated)] p-3">
-                  <pre className="whitespace-pre-wrap break-words text-xs text-[var(--ink-secondary)]">
-                    {typeof row.notes === 'object'
-                      ? JSON.stringify(row.notes, null, 2)
-                      : String(row.notes)}
-                  </pre>
+          {row.notes && (typeof row.notes === 'object' && Object.keys(row.notes).length ? (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {Object.entries(row.notes).filter(([, value]) => value !== null && value !== undefined && value !== '').map(([key, value]) => (
+                    <DetailItem key={key} label={titleCase(key)} value={typeof value === 'object' ? Object.entries(value).map(([nestedKey, nestedValue]) => `${titleCase(nestedKey)}: ${nestedValue}`).join(' · ') : value} />
+                  ))}
                 </div>
-              )}
+              ) : <DetailItem label="Gateway Notes" value={row.notes} />)}
             </section>
           )}
 
-          {/* RAW DATA */}
           <section className="space-y-4">
-            <SectionTitle icon={ExternalLink}>
-              Complete Backend Record
-            </SectionTitle>
-
-            <p className="text-xs text-[var(--muted)]">
-              Raw response returned by your reconciliation API.
-              Useful for auditing additional fields.
-            </p>
-
-            <div className="overflow-x-auto rounded-xl bg-[var(--surface-elevated)] p-3">
-              <pre className="whitespace-pre-wrap break-words text-[11px] leading-relaxed text-[var(--ink-secondary)]">
-                {JSON.stringify(row, null, 2)}
-              </pre>
+            <SectionTitle icon={ShieldCheck}>Reconciliation Check</SectionTitle>
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4">
+              <div className="flex items-start gap-3">
+                {invoice ? <CheckCircle2 size={18} className="mt-0.5 text-emerald-600" /> : <AlertCircle size={18} className="mt-0.5 text-amber-600" />}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[var(--ink)]">{invoice ? 'Invoice linked' : 'Invoice link needs review'}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-[var(--muted)]">{invoice ? `This gateway payment is associated with invoice ${invoice}.` : 'No invoice number was returned for this payment. Check the payment ID against your sales records.'}</p>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <DetailItem label="Gateway" value={row.provider || 'Razorpay'} />
+              <DetailItem label="Gateway Order Reference" value={orderId} mono copyable />
+              <DetailItem label="Gateway Payment Reference" value={paymentId} mono copyable />
+              <DetailItem label="Receipt / Reference" value={row.receipt || row.reference_id || row.reference} mono copyable />
+              <DetailItem label="Settlement ID" value={row.settlement_id || row.settlement?.id} mono copyable />
+              <DetailItem label="Description" value={row.description} />
             </div>
           </section>
         </div>

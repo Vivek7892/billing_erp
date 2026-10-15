@@ -57,32 +57,44 @@ export function isTrue(val, defaultVal = true) {
   return val === 'true' || val === true || val === 1 || val === '1'
 }
 
-function InvoiceModePicker({ mode, onModeChange }) {
-  const modes = [
-    { id: 'a4', label: 'A4 Tax Invoice' },
-    { id: 'half_a4', label: 'Half-A4 Bill (A5)' },
-    { id: 'thermal_80', label: 'Thermal Receipt (80mm)' },
-    { id: 'thermal_58', label: 'Thermal Receipt (58mm)' },
-  ]
+function InvoiceModePicker({ mode, onModeChange, settings = {} }) {
+  const isHalfA4 = settings.invoice_template === 'half_a4' || settings.printer_type === 'half_a4'
+  const isThermal58 = settings.printer_type === 'thermal_58' || settings.invoice_template === 'thermal_58'
+
+  const sheetId = isHalfA4 ? 'half_a4' : 'a4'
+  const sheetLabel = isHalfA4 ? 'Sheet Bill (Half-A4)' : 'Sheet Bill (A4)'
+
+  const thermalId = isThermal58 ? 'thermal_58' : 'thermal_80'
+  const thermalLabel = isThermal58 ? 'Thermal Receipt (58mm)' : 'Thermal Receipt (80mm)'
+
+  const isSheetSel = mode === sheetId || (sheetId === 'a4' && (mode === 'gst_a4' || mode === 'stylish'))
+  const isThermalSel = mode === thermalId || (thermalId === 'thermal_80' && (mode === 'thermal' || mode === 'thermal_80')) || (thermalId === 'thermal_58' && mode === 'thermal_58')
+
   return (
     <div className="flex flex-wrap items-center gap-2 mb-4 print:hidden">
-      {modes.map(m => {
-        const isSel = mode === m.id || (m.id === 'thermal_80' && mode === 'thermal')
-        return (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => onModeChange?.(m.id)}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-              isSel
-                ? 'bg-[#1E3A5F] text-white shadow-xs'
-                : 'border border-[#DCE3EC] bg-white text-slate-700 hover:bg-slate-50'
-            }`}
-          >
-            {m.label}
-          </button>
-        )
-      })}
+      <button
+        type="button"
+        onClick={() => onModeChange?.(sheetId)}
+        className={`min-h-9 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+          isSheetSel
+            ? 'bg-[#1E3A5F] text-white shadow-xs'
+            : 'border border-[#DCE3EC] bg-white text-slate-700 hover:bg-slate-50'
+        }`}
+      >
+        {sheetLabel}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onModeChange?.(thermalId)}
+        className={`min-h-9 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+          isThermalSel
+            ? 'bg-[#1E3A5F] text-white shadow-xs'
+            : 'border border-[#DCE3EC] bg-white text-slate-700 hover:bg-slate-50'
+        }`}
+      >
+        {thermalLabel}
+      </button>
     </div>
   )
 }
@@ -120,7 +132,10 @@ export default function InvoiceDocument({
       else if (mode === 'thermal_58') targetId = 'thermal_58'
       else if (mode === 'a4') targetId = activeMap.active_template_a4 || 'gst_a4'
 
-      const entry = s.template_settings[targetId] || s.template_settings[mode]
+      const templateSummary = s.template_settings
+      const entry = Array.isArray(templateSummary.templates)
+        ? templateSummary.templates.find(template => template.id === targetId || template.id === mode)
+        : templateSummary[targetId] || templateSummary[mode]
       return entry?.config || null
     }
     return null
@@ -156,7 +171,8 @@ export default function InvoiceDocument({
   }
 
   // Business profile
-  const shopName = tBiz.store_name_override || s.shop_name || 'SRI BALAJI STORE'
+  const rawShopName = tBiz.store_name_override || s.shop_name || ''
+  const shopName = rawShopName || 'SRI BALAJI STORE'
   const shopAddress = tBiz.address_override || s.shop_address || ''
   const shopPhone = tBiz.phone_override || s.shop_phone || ''
   const shopEmail = tBiz.email_override || s.shop_email || ''
@@ -167,14 +183,29 @@ export default function InvoiceDocument({
   const cin = s.cin || ''
 
   // Business display flags
-  const showLogo = (tBiz.show_logo !== undefined ? tBiz.show_logo : isTrue(s.show_business_logo, true)) && Boolean(shopLogo) && (tBiz.header_layout || s.invoice_header_layout) !== 'name_only'
-  const showAddress = (tBiz.show_address !== undefined ? tBiz.show_address : isTrue(s.show_business_address, true)) && Boolean(shopAddress)
-  const showPhone = (tBiz.show_phone !== undefined ? tBiz.show_phone : isTrue(s.show_business_phone, true)) && Boolean(shopPhone)
-  const showEmail = (tBiz.show_email !== undefined ? tBiz.show_email : isTrue(s.show_business_email, true)) && Boolean(shopEmail)
-  const showGstin = (tBiz.show_gstin !== undefined ? tBiz.show_gstin : isTrue(s.show_business_gstin, true)) && Boolean(shopGstin)
-  const showPan = (tBiz.show_pan !== undefined ? tBiz.show_pan : isTrue(s.show_business_pan, true)) && Boolean(shopPan)
-  const showFssai = isTrue(s.show_fssai_on_invoice, false) && Boolean(fssai)
-  const showCin = isTrue(s.show_cin_on_invoice, false) && Boolean(cin)
+  const showShopDetails = (
+    tBiz.show_shop_details !== undefined
+      ? Boolean(tBiz.show_shop_details)
+      : (tBiz.show_business_info !== undefined
+          ? Boolean(tBiz.show_business_info)
+          : isTrue(s.show_shop_details, isTrue(s.show_business_info, true)))
+  )
+  const showShopName = showShopDetails && (
+    tBiz.show_name !== undefined
+      ? Boolean(tBiz.show_name)
+      : (tBiz.show_business_name !== undefined
+          ? Boolean(tBiz.show_business_name)
+          : isTrue(s.show_business_name, isTrue(s.show_shop_name, true)))
+  ) && Boolean(rawShopName || shopName)
+  const showLogo = showShopDetails && (tBiz.show_logo !== undefined ? Boolean(tBiz.show_logo) : isTrue(s.show_business_logo, true)) && Boolean(shopLogo) && (tBiz.header_layout || s.invoice_header_layout) !== 'name_only'
+  const isCorporateA4 = effectiveMode === 'a4' && (tBiz.header_layout || s.invoice_header_layout) === 'corporate_bar'
+  const showAddress = showShopDetails && (tBiz.show_address !== undefined ? Boolean(tBiz.show_address) : isTrue(s.show_business_address, true)) && Boolean(shopAddress)
+  const showPhone = showShopDetails && (tBiz.show_phone !== undefined ? Boolean(tBiz.show_phone) : isTrue(s.show_business_phone, true)) && Boolean(shopPhone)
+  const showEmail = showShopDetails && (tBiz.show_email !== undefined ? Boolean(tBiz.show_email) : isTrue(s.show_business_email, true)) && Boolean(shopEmail)
+  const showGstin = showShopDetails && (tBiz.show_gstin !== undefined ? Boolean(tBiz.show_gstin) : isTrue(s.show_business_gstin, true)) && Boolean(shopGstin)
+  const showPan = showShopDetails && (tBiz.show_pan !== undefined ? Boolean(tBiz.show_pan) : isTrue(s.show_business_pan, true)) && Boolean(shopPan)
+  const showFssai = showShopDetails && isTrue(s.show_fssai_on_invoice, false) && Boolean(fssai)
+  const showCin = showShopDetails && isTrue(s.show_cin_on_invoice, false) && Boolean(cin)
 
   // Customer profile & flags
   const custName = inv.customer_name || inv.customer?.name || 'Walk-in Customer'
@@ -258,18 +289,28 @@ export default function InvoiceDocument({
   const showSubtotal = tTax.show_subtotal !== undefined ? tTax.show_subtotal : true
   const showDiscountTotal = tTax.show_discount_total !== undefined ? tTax.show_discount_total : true
   const showTaxSummary = tTax.show_tax_summary !== undefined ? tTax.show_tax_summary : true
-  const showRoundOff = tTax.show_round_off !== undefined ? tTax.show_round_off : true
+  const showRoundOff = tTax.show_round_off !== undefined ? tTax.show_round_off : isTrue(s.round_off, true)
   const showWords = (tTax.show_amount_in_words !== undefined ? tTax.show_amount_in_words : isTrue(s.show_amount_in_words, true))
 
   // Payment, QR & Bank
   const showPaymentSummary = tPayment.show_payment_summary !== undefined ? tPayment.show_payment_summary : isTrue(s.show_payment_summary, true)
   const showBalanceDue = tPayment.show_balance_due !== undefined ? tPayment.show_balance_due : isTrue(s.show_balance_due, true)
-  const showBankDetails = (tPayment.show_bank_details !== undefined ? tPayment.show_bank_details : isTrue(s.show_bank_details, true)) && Boolean(s.shop_bank_details)
+  const bankDetailsText = s.shop_bank_details || [
+    s.shop_bank_name ? `Bank: ${s.shop_bank_name}` : '',
+    s.shop_bank_account ? `A/C: ${s.shop_bank_account}` : '',
+    s.shop_bank_ifsc ? `IFSC: ${s.shop_bank_ifsc}` : '',
+    s.shop_bank_branch ? `Branch: ${s.shop_bank_branch}` : '',
+  ].filter(Boolean).join(' | ')
+  const showBankDetails = (tPayment.show_bank_details !== undefined ? tPayment.show_bank_details : isTrue(s.show_bank_details, true)) && Boolean(bankDetailsText)
   const upiId = s.shop_upi_id || ''
   const showUpiA4 = (tPayment.show_upi_qr !== undefined ? tPayment.show_upi_qr : isTrue(s.show_upi_qr_on_invoice, true)) && Boolean(upiId)
   const showUpiThermal = (tPayment.show_upi_qr !== undefined ? tPayment.show_upi_qr : isTrue(s.show_upi_qr_on_thermal, true)) && Boolean(upiId)
+  const is58mm = mode === 'thermal_58' || tPage.thermal_roll_width === '58mm' || (s.invoice_template === 'thermal_58' && mode !== 'thermal_80' && mode !== 'a4' && mode !== 'half_a4')
+
   const qrSizeA4 = ({ small: 64, medium: 78, large: 96 })[s.upi_qr_size_a4] || 78
-  const qrSizeThermal = ({ small: 72, medium: 96, large: 120 })[s.upi_qr_size_thermal] || 96
+  const qrSizeThermal = is58mm
+    ? ({ small: 64, medium: 78, large: 88 })[s.upi_qr_size_thermal] || 78
+    : ({ small: 72, medium: 92, large: 110 })[s.upi_qr_size_thermal] || 92
   const qrValue = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(shopName)}&am=${grandTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(invoiceNo)}`
 
   // Digital Bill QR Code ("Scan to View Bill")
@@ -298,138 +339,213 @@ export default function InvoiceDocument({
     ? '"Times New Roman", Times, serif'
     : 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
 
-  const is58mm = mode === 'thermal_58' || tPage.thermal_roll_width === '58mm' || (s.invoice_template === 'thermal_58' && mode !== 'thermal_80' && mode !== 'a4' && mode !== 'half_a4')
-
   // --------------------------------------------------------------------------
   // THERMAL RECEIPT MODE
   // --------------------------------------------------------------------------
   if (effectiveMode === 'thermal') {
     return (
       <div className={`invoice-document-root ${className}`}>
-        {showModePicker && <InvoiceModePicker mode={mode} onModeChange={onModeChange} />}
+        {showModePicker && <InvoiceModePicker mode={mode} onModeChange={onModeChange} settings={s} />}
 
         <div className="flex justify-center print:m-0">
           <div
             className="bg-white text-black border border-slate-300 shadow-sm print:shadow-none print:border-none"
             style={{
-              width: is58mm ? 220 : 302,
+              width: is58mm ? 216 : 302,
               fontFamily: 'Courier New, monospace',
-              fontSize: is58mm ? 9.5 : 11,
-              padding: is58mm ? '10px 8px' : '12px 10px',
-              lineHeight: 1.35,
+              fontSize: is58mm ? 9 : 10.5,
+              padding: is58mm ? '8px 6px' : '12px 10px',
+              lineHeight: 1.3,
             }}
           >
-            {/* Header */}
-            <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 13, marginBottom: 2 }}>
-              {shopName.toUpperCase()}
-            </div>
-            {showAddress && shopAddress.split('\n').map((l, i) => (
-              <div key={i} style={{ textAlign: 'center', fontSize: 9.5 }}>{l}</div>
-            ))}
-            {(showPhone || showEmail) && (
-              <div style={{ textAlign: 'center', fontSize: 9.5 }}>
-                {showPhone && `Ph: ${shopPhone}`}
-                {showPhone && showEmail && ' | '}
-                {showEmail && shopEmail}
-              </div>
-            )}
-            {showGstin && (
-              <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 9.5 }}>
-                GSTIN: {shopGstin}
-              </div>
-            )}
+            {/* Store Identity Header */}
+            {showShopDetails && (showLogo || showShopName || showAddress || showPhone || showEmail || showGstin) && (
+              <>
+                {/* Store Logo */}
+                {showLogo && shopLogo && (
+                  <div style={{ textAlign: 'center', marginBottom: 4 }}>
+                    <img
+                      src={shopLogo}
+                      alt="Store Logo"
+                      style={{
+                        maxHeight: is58mm ? 28 : 38,
+                        maxWidth: is58mm ? 120 : 160,
+                        objectFit: 'contain',
+                        margin: '0 auto',
+                        display: 'block',
+                      }}
+                    />
+                  </div>
+                )}
 
-            <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
+                {/* Header */}
+                {showShopName && shopName && (
+                  <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: is58mm ? 12 : 13.5, marginBottom: 1 }}>
+                    {shopName.toUpperCase()}
+                  </div>
+                )}
+                {showAddress && shopAddress && shopAddress.split('\n').map((l, i) => (
+                  <div key={i} style={{ textAlign: 'center', fontSize: is58mm ? 8.5 : 9.5 }}>{l}</div>
+                ))}
+                {(showPhone || showEmail) && (
+                  <div style={{ textAlign: 'center', fontSize: is58mm ? 8.5 : 9.5 }}>
+                    {showPhone && `Ph: ${shopPhone}`}
+                    {showPhone && showEmail && ' | '}
+                    {showEmail && shopEmail}
+                  </div>
+                )}
+                {showGstin && shopGstin && (
+                  <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: is58mm ? 8.5 : 9.5 }}>
+                    GSTIN: {shopGstin}
+                  </div>
+                )}
+
+                <div style={{ borderTop: '1px dashed #000', margin: '5px 0' }} />
+              </>
+            )}
 
             {/* Document Title & Number */}
-            <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: 12 }}>
+            <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: is58mm ? 10.5 : 12 }}>
               {docHeading}
             </div>
-            <div style={{ textAlign: 'center', fontSize: 10 }}>{invoiceNo}</div>
-            <div style={{ textAlign: 'center', fontSize: 10 }}>Date: {invoiceDate}</div>
+            <div style={{ textAlign: 'center', fontSize: is58mm ? 9 : 10, fontWeight: '600' }}>{invoiceNo}</div>
+            <div style={{ textAlign: 'center', fontSize: is58mm ? 8.5 : 9.5 }}>Date: {invoiceDate}</div>
             {showPaymentMode && (
-              <div style={{ textAlign: 'center', fontSize: 10 }}>Payment: {paymentMode}</div>
+              <div style={{ textAlign: 'center', fontSize: is58mm ? 8.5 : 9.5 }}>Payment: {paymentMode}</div>
             )}
             {showPlaceOfSupply && (
-              <div style={{ textAlign: 'center', fontSize: 9.5 }}>Place of Supply: {placeOfSupply}</div>
+              <div style={{ textAlign: 'center', fontSize: is58mm ? 8 : 9 }}>Place of Supply: {placeOfSupply}</div>
             )}
 
             {isCancelled && (
-              <div style={{ textAlign: 'center', color: '#dc2626', fontWeight: 'bold', fontSize: 10, marginTop: 2 }}>
+              <div style={{ textAlign: 'center', color: '#dc2626', fontWeight: 'bold', fontSize: 9.5, marginTop: 2 }}>
                 *** CANCELLED ***
               </div>
             )}
 
-            <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
+            <div style={{ borderTop: '1px dashed #000', margin: '5px 0' }} />
 
             {/* Customer */}
-            <div style={{ fontSize: 9.5, fontWeight: 'bold' }}>CUSTOMER: {custName}</div>
-            {showCustAddress && <div style={{ fontSize: 9 }}>{custAddress}</div>}
-            {showCustPhone && <div style={{ fontSize: 9 }}>Ph: {custPhone}</div>}
-            {showCustGstin && <div style={{ fontSize: 9 }}>GSTIN: {custGstin}</div>}
+            <div style={{ fontSize: is58mm ? 9 : 10, fontWeight: 'bold' }}>CUSTOMER: {custName}</div>
+            {showCustAddress && <div style={{ fontSize: is58mm ? 8 : 8.5 }}>{custAddress}</div>}
+            {showCustPhone && <div style={{ fontSize: is58mm ? 8 : 8.5 }}>Ph: {custPhone}</div>}
+            {showCustGstin && <div style={{ fontSize: is58mm ? 8 : 8.5 }}>GSTIN: {custGstin}</div>}
 
-            <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
+            <div style={{ borderTop: '1px dashed #000', margin: '5px 0' }} />
 
-            {/* Items Table */}
-            <table style={{ width: '100%', fontSize: 9.5, borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #000' }}>
-                  <th style={{ textAlign: 'left', paddingBottom: 3 }}>ITEM</th>
-                  <th style={{ textAlign: 'center', width: 28 }}>QTY</th>
-                  <th style={{ textAlign: 'right', width: 48 }}>RATE</th>
-                  <th style={{ textAlign: 'right', width: 56 }}>AMT</th>
-                </tr>
-              </thead>
-              <tbody>
+            {/* Items Section: Stacked 2-line layout for 58mm, 4-column layout for 80mm */}
+            {is58mm ? (
+              <div style={{ width: '100%', fontSize: 9 }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  borderBottom: '1px solid #000',
+                  paddingBottom: 2,
+                  fontWeight: 'bold',
+                  fontSize: 8.5,
+                  textTransform: 'uppercase',
+                }}>
+                  <span>ITEM / DETAILS</span>
+                  <span>AMOUNT</span>
+                </div>
                 {items.map((item, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px dotted #ccc' }}>
-                    <td style={{ paddingTop: 2, paddingBottom: 2 }}>
-                      <div>{item.name}</div>
-                      {showHsnCol && item.hsn && <div style={{ fontSize: 8.5, color: '#444' }}>HSN: {item.hsn}</div>}
-                    </td>
-                    <td style={{ textAlign: 'center', verticalAlign: 'top', paddingTop: 2 }}>{item.qty}</td>
-                    <td style={{ textAlign: 'right', verticalAlign: 'top', paddingTop: 2 }}>{item.rate.toFixed(2)}</td>
-                    <td style={{ textAlign: 'right', verticalAlign: 'top', paddingTop: 2, fontWeight: 'bold' }}>
-                      {item.total.toFixed(2)}
-                    </td>
-                  </tr>
+                  <div key={idx} style={{ padding: '3px 0', borderBottom: '1px dotted #ccc' }}>
+                    <div style={{ fontWeight: 'bold', fontSize: 9, lineHeight: 1.25 }}>
+                      {item.name}
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'baseline',
+                      fontSize: 8,
+                      color: '#222',
+                      marginTop: 1,
+                    }}>
+                      <span>
+                        {item.qty} {showUnitCol && item.unit ? item.unit : ''} × {item.rate.toFixed(2)}
+                        {showDiscCol && item.disc > 0 && ` (-${item.disc}%)`}
+                        {showHsnCol && item.hsn && ` [HSN:${item.hsn}]`}
+                      </span>
+                      <span style={{ fontWeight: 'bold', fontSize: 9, color: '#000' }}>
+                        {item.total.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            ) : (
+              <table style={{ width: '100%', fontSize: 9.5, borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #000' }}>
+                    <th style={{ textAlign: 'left', paddingBottom: 3 }}>ITEM</th>
+                    <th style={{ textAlign: 'center', width: 32 }}>QTY</th>
+                    <th style={{ textAlign: 'right', width: 50 }}>RATE</th>
+                    <th style={{ textAlign: 'right', width: 58 }}>AMT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px dotted #ccc' }}>
+                      <td style={{ paddingTop: 2, paddingBottom: 2 }}>
+                        <div style={{ fontWeight: '600' }}>{item.name}</div>
+                        <div style={{ fontSize: 8, color: '#444' }}>
+                          {showHsnCol && item.hsn && <span>HSN: {item.hsn} </span>}
+                          {showDiscCol && item.disc > 0 && <span>Disc: {item.disc}% </span>}
+                          {showUnitCol && item.unit && <span>({item.unit})</span>}
+                        </div>
+                      </td>
+                      <td style={{ textAlign: 'center', verticalAlign: 'top', paddingTop: 2 }}>{item.qty}</td>
+                      <td style={{ textAlign: 'right', verticalAlign: 'top', paddingTop: 2 }}>{item.rate.toFixed(2)}</td>
+                      <td style={{ textAlign: 'right', verticalAlign: 'top', paddingTop: 2, fontWeight: 'bold' }}>
+                        {item.total.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
 
-            <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
+            <div style={{ borderTop: '1px dashed #000', margin: '5px 0' }} />
 
             {/* Totals */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: is58mm ? 9 : 10 }}>
               <span>SUBTOTAL</span>
               <span>{fmt(subtotal)}</span>
             </div>
             {discountAmount > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: is58mm ? 9 : 10 }}>
                 <span>DISCOUNT</span>
                 <span>-{fmt(discountAmount)}</span>
               </div>
             )}
             {showTaxCols && taxAmount > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: is58mm ? 9 : 10 }}>
                 <span>GST</span>
                 <span>{fmt(taxAmount)}</span>
               </div>
             )}
             {roundOff !== 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: is58mm ? 9 : 10 }}>
                 <span>ROUND OFF</span>
                 <span>{fmt(roundOff)}</span>
               </div>
             )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: 12.5, marginTop: 4 }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontWeight: 'bold',
+              fontSize: is58mm ? 11.5 : 12.5,
+              marginTop: 4,
+              paddingTop: 3,
+              borderTop: '1px solid #000',
+            }}>
               <span>GRAND TOTAL</span>
               <span>{fmt(grandTotal)}</span>
             </div>
 
             {/* Amount in words */}
             {showWords && (
-              <div style={{ fontSize: 8.5, marginTop: 4, fontStyle: 'italic' }}>
+              <div style={{ fontSize: is58mm ? 7.5 : 8.5, marginTop: 3, fontStyle: 'italic', lineHeight: 1.2 }}>
                 {numberToIndianWords(grandTotal)}
               </div>
             )}
@@ -437,8 +553,8 @@ export default function InvoiceDocument({
             {/* Settlement */}
             {showPaymentSummary && (
               <>
-                <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
-                <div style={{ textAlign: 'center', fontSize: 9.5, fontWeight: 'bold' }}>
+                <div style={{ borderTop: '1px dashed #000', margin: '5px 0' }} />
+                <div style={{ textAlign: 'center', fontSize: is58mm ? 8.5 : 9.5, fontWeight: 'bold' }}>
                   {paymentStatus} | PAID: {fmt(paidAmount)}
                   {showBalanceDue && balanceDue > 0 && ` | DUE: ${fmt(balanceDue)}`}
                 </div>
@@ -448,40 +564,40 @@ export default function InvoiceDocument({
             {/* UPI QR */}
             {showUpiThermal && (
               <>
-                <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
-                <div style={{ textAlign: 'center', fontSize: 9.5, fontWeight: 'bold', marginBottom: 2 }}>
+                <div style={{ borderTop: '1px dashed #000', margin: '5px 0' }} />
+                <div style={{ textAlign: 'center', fontSize: is58mm ? 8.5 : 9.5, fontWeight: 'bold', marginBottom: 2 }}>
                   SCAN TO PAY
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', margin: '3px 0' }}>
                   <QRCodeSVG value={qrValue} size={qrSizeThermal} />
                 </div>
-                <div style={{ textAlign: 'center', fontSize: 9 }}>{upiId}</div>
+                <div style={{ textAlign: 'center', fontSize: is58mm ? 8 : 9, wordBreak: 'break-all' }}>{upiId}</div>
               </>
             )}
 
             {/* Terms */}
             {showTerms && (
-              <div style={{ fontSize: 8, marginTop: 6, color: '#333' }}>
+              <div style={{ fontSize: 7.5, marginTop: 5, color: '#333', lineHeight: 1.25 }}>
                 {termsText}
               </div>
             )}
 
             {/* Footer */}
             {showFooter && (
-              <div style={{ textAlign: 'center', fontSize: 9, marginTop: 6 }}>
+              <div style={{ textAlign: 'center', fontSize: is58mm ? 8 : 9, marginTop: 5 }}>
                 <b>{footerText}</b>
-                <div style={{ fontSize: 8, marginTop: 1 }}>Date: {invoiceDate} | Ref: {invoiceNo}</div>
+                <div style={{ fontSize: is58mm ? 7.5 : 8, marginTop: 1 }}>Date: {invoiceDate} | Ref: {invoiceNo}</div>
               </div>
             )}
 
             {/* Scan to View Bill QR */}
             {showDigitalBillQr && (
               <>
-                <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
-                <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0' }}>
+                <div style={{ borderTop: '1px dashed #000', margin: '5px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'center', margin: '3px 0' }}>
                   <QRCodeSVG value={digitalBillUrl} size={qrSizeThermal} />
                 </div>
-                <div style={{ textAlign: 'center', fontSize: 8.5, fontWeight: 'bold', marginTop: 1, letterSpacing: '0.02em' }}>
+                <div style={{ textAlign: 'center', fontSize: 8, fontWeight: 'bold', marginTop: 1, letterSpacing: '0.02em' }}>
                   Scan to View Bill
                 </div>
               </>
@@ -498,7 +614,7 @@ export default function InvoiceDocument({
   if (effectiveMode === 'half_a4') {
     return (
       <div className={`invoice-document-root ${className}`}>
-        {showModePicker && <InvoiceModePicker mode={mode} onModeChange={onModeChange} />}
+        {showModePicker && <InvoiceModePicker mode={mode} onModeChange={onModeChange} settings={s} />}
 
         <div className="overflow-x-auto print:overflow-visible flex justify-center">
           <div
@@ -517,33 +633,39 @@ export default function InvoiceDocument({
             {/* Header: Shop info left, invoice metadata right */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, gap: 12 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                {showLogo && (
-                  <img
-                    src={shopLogo}
-                    alt="Store Logo"
-                    style={{ maxHeight: 36, maxWidth: 110, objectFit: 'contain', marginBottom: 4 }}
-                  />
-                )}
-                <div style={{ fontWeight: '800', fontSize: 14.5, textTransform: 'uppercase', color: '#0F172A', letterSpacing: '0.02em', lineHeight: 1.2 }}>
-                  {shopName}
-                </div>
-                {showAddress && shopAddress.split('\n').map((line, idx) => (
-                  <div key={idx} style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}>{line}</div>
-                ))}
-                {(showPhone || showEmail) && (
-                  <div style={{ fontSize: 8.5, color: '#475569', marginTop: 1 }}>
-                    {showPhone && `Ph: ${shopPhone}`}
-                    {showPhone && showEmail && ' | '}
-                    {showEmail && shopEmail}
-                  </div>
-                )}
-                {(showGstin || showPan || showFssai || showCin) && (
-                  <div style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}>
-                    {showGstin && <span><b>GSTIN:</b> {shopGstin} </span>}
-                    {showPan && <span>| <b>PAN:</b> {shopPan} </span>}
-                    {showFssai && <span>| <b>FSSAI:</b> {fssai}</span>}
-                    {showCin && <span>| <b>CIN:</b> {cin}</span>}
-                  </div>
+                {showShopDetails && (
+                  <>
+                    {showLogo && (
+                      <img
+                        src={shopLogo}
+                        alt="Store Logo"
+                        style={{ maxHeight: 36, maxWidth: 110, objectFit: 'contain', marginBottom: 4 }}
+                      />
+                    )}
+                    {showShopName && shopName && (
+                      <div style={{ fontWeight: '800', fontSize: 14.5, textTransform: 'uppercase', color: '#0F172A', letterSpacing: '0.02em', lineHeight: 1.2 }}>
+                        {shopName}
+                      </div>
+                    )}
+                    {showAddress && shopAddress && shopAddress.split('\n').map((line, idx) => (
+                      <div key={idx} style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}>{line}</div>
+                    ))}
+                    {(showPhone || showEmail) && (
+                      <div style={{ fontSize: 8.5, color: '#475569', marginTop: 1 }}>
+                        {showPhone && `Ph: ${shopPhone}`}
+                        {showPhone && showEmail && ' | '}
+                        {showEmail && shopEmail}
+                      </div>
+                    )}
+                    {(showGstin || showPan || showFssai || showCin) && (
+                      <div style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}>
+                        {showGstin && <span><b>GSTIN:</b> {shopGstin} </span>}
+                        {showPan && <span>| <b>PAN:</b> {shopPan} </span>}
+                        {showFssai && <span>| <b>FSSAI:</b> {fssai}</span>}
+                        {showCin && <span>| <b>CIN:</b> {cin}</span>}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -794,7 +916,7 @@ export default function InvoiceDocument({
 
                 {showBankDetails && (
                   <div style={{ borderTop: '1px solid #E2E8F0', marginTop: 4, paddingTop: 4, fontSize: 8, color: '#475569' }}>
-                    <b>Bank Details:</b> {s.shop_bank_details}
+                    <b>Bank Details:</b> {bankDetailsText}
                   </div>
                 )}
               </div>
@@ -860,7 +982,7 @@ export default function InvoiceDocument({
   // --------------------------------------------------------------------------
   return (
     <div className={`invoice-document-root ${className}`}>
-      {showModePicker && <InvoiceModePicker mode={mode} onModeChange={onModeChange} />}
+      {showModePicker && <InvoiceModePicker mode={mode} onModeChange={onModeChange} settings={s} />}
 
       <div className="overflow-x-auto print:overflow-visible">
         <div
@@ -875,36 +997,54 @@ export default function InvoiceDocument({
           }}
         >
           {/* 1. TOP HEADER: Business info on Left, Invoice details on Right */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: 12,
+              padding: isCorporateA4 ? '12px 14px' : 0,
+              border: isCorporateA4 ? '1px solid #CBD5E1' : undefined,
+              borderTop: isCorporateA4 ? '4px solid #1E3A5F' : undefined,
+              background: isCorporateA4 ? '#F8FAFC' : undefined,
+              borderRadius: isCorporateA4 ? 4 : undefined,
+            }}
+          >
             <div style={{ flex: 1, paddingRight: 20 }}>
-              {showLogo && (
-                <img
-                  src={shopLogo}
-                  alt="Business Logo"
-                  style={{ maxHeight: 46, maxWidth: 140, objectFit: 'contain', marginBottom: 6 }}
-                />
-              )}
-              <div style={{ fontWeight: '800', fontSize: 17, textTransform: 'uppercase', color: '#0F172A', letterSpacing: '0.02em' }}>
-                {shopName}
-              </div>
-              {showAddress && shopAddress.split('\n').map((line, idx) => (
-                <div key={idx} style={{ fontSize: 9.5, color: '#334155', marginTop: 1 }}>{line}</div>
-              ))}
-              {(showPhone || showEmail) && (
-                <div style={{ fontSize: 9.5, color: '#475569', marginTop: 2 }}>
-                  {showPhone && `Mobile: ${shopPhone}`}
-                  {showPhone && showEmail && '  |  '}
-                  {showEmail && `Email: ${shopEmail}`}
-                </div>
-              )}
-              {(showGstin || showPan || showFssai || showCin) && (
-                <div style={{ fontSize: 9.5, color: '#334155', marginTop: 2 }}>
-                  {showGstin && <span><b>GSTIN:</b> {shopGstin}</span>}
-                  {showGstin && showPan && '  |  '}
-                  {showPan && <span><b>PAN:</b> {shopPan}</span>}
-                  {showFssai && <span>  |  <b>FSSAI:</b> {fssai}</span>}
-                  {showCin && <span>  |  <b>CIN:</b> {cin}</span>}
-                </div>
+              {showShopDetails && (
+                <>
+                  {showLogo && (
+                    <img
+                      src={shopLogo}
+                      alt="Business Logo"
+                      style={{ maxHeight: 46, maxWidth: 140, objectFit: 'contain', marginBottom: 6 }}
+                    />
+                  )}
+                  {showShopName && shopName && (
+                    <div style={{ fontWeight: '800', fontSize: 17, textTransform: 'uppercase', color: '#0F172A', letterSpacing: '0.02em' }}>
+                      {shopName}
+                    </div>
+                  )}
+                  {showAddress && shopAddress && shopAddress.split('\n').map((line, idx) => (
+                    <div key={idx} style={{ fontSize: 9.5, color: '#334155', marginTop: 1 }}>{line}</div>
+                  ))}
+                  {(showPhone || showEmail) && (
+                    <div style={{ fontSize: 9.5, color: '#475569', marginTop: 2 }}>
+                      {showPhone && `Mobile: ${shopPhone}`}
+                      {showPhone && showEmail && '  |  '}
+                      {showEmail && `Email: ${shopEmail}`}
+                    </div>
+                  )}
+                  {(showGstin || showPan || showFssai || showCin) && (
+                    <div style={{ fontSize: 9.5, color: '#334155', marginTop: 2 }}>
+                      {showGstin && <span><b>GSTIN:</b> {shopGstin}</span>}
+                      {showGstin && showPan && '  |  '}
+                      {showPan && <span><b>PAN:</b> {shopPan}</span>}
+                      {showFssai && <span>  |  <b>FSSAI:</b> {fssai}</span>}
+                      {showCin && <span>  |  <b>CIN:</b> {cin}</span>}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -913,7 +1053,7 @@ export default function InvoiceDocument({
                 fontWeight: '800',
                 fontSize: 18,
                 letterSpacing: '0.03em',
-                color: isCancelled ? '#DC2626' : '#0F172A',
+                color: isCancelled ? '#DC2626' : isCorporateA4 ? '#0F766E' : '#0F172A',
               }}>
                 {docHeading}
               </div>
@@ -978,7 +1118,7 @@ export default function InvoiceDocument({
           </div>
 
           {/* 3. DYNAMIC ITEM TABLE WITH LIGHT SHADED HEADER */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10.5, marginTop: 4 }}>
+          <table className={isCorporateA4 ? 'settings-corporate-table' : undefined} style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10.5, marginTop: 4 }}>
             <thead>
               <tr style={{ background: '#F8FAFC', borderTop: '1px solid #334155', borderBottom: '1px solid #334155' }}>
                 <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 34 }}>S.No</th>
@@ -1188,7 +1328,7 @@ export default function InvoiceDocument({
 
               {showBankDetails && (
                 <div style={{ borderTop: '1px solid #E2E8F0', marginTop: 6, paddingTop: 5, fontSize: 9, color: '#475569' }}>
-                  <b>Bank Details:</b> {s.shop_bank_details}
+                  <b>Bank Details:</b> {bankDetailsText}
                 </div>
               )}
             </div>

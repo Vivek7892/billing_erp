@@ -27,6 +27,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import api, { API_BASE_URL } from '../api'
 import invoiceService from '../features/billing/api/invoiceService'
+import { getAccessToken } from '../services/tokenStorage'
 import productService from '../features/inventory/api/productService'
 import customerService from '../features/customers/api/customerService'
 import settingsService from '../features/settings/api/settingsService'
@@ -41,14 +42,14 @@ import {
 } from '../components/UpiLogos'
 import './NewBill.css'
 import {
-  Search, Plus, Minus, Trash2, Printer, Download, RefreshCw, QrCode, Clock,
+  Plus, Minus, Trash2, Printer, Download, RefreshCw, QrCode, Clock,
   Keyboard, CheckCircle2, Share2, X, AlertTriangle, FileText,
   Maximize2, Minimize2, Layers, Receipt,
   Package, Banknote, Smartphone, CreditCard, BookOpen, Wallet,
   User, UserPlus, UserRound, ShoppingCart,
   MoreVertical, ArrowLeft, ArrowRight, Copy, Check, Sparkles,
 } from 'lucide-react'
-import { Modal } from '../components/UI'
+import { Modal, SearchBar } from '../components/UI'
 import { useNavigate } from 'react-router-dom'
 import RazorpayPaymentModal from '../features/billing/RazorpayPaymentModal'
 import { PAYMENT_METHODS, PAYMENT_STATUS, INVOICE_STATUS } from '../constants'
@@ -185,15 +186,13 @@ function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, on
   const basic = gross - discountAmount
   const gst = basic * item.gst_percent / 100
   const overStock = Number.isFinite(stock) && item.qty > stock
-  const codes = [item.sku, item.barcode, item.hsn_code ? `HSN ${item.hsn_code}` : ''].filter(Boolean)
-
   return (
     <tr className={`pb-bill-tr${overStock ? ' pb-tr-warn' : ''}${justAdded ? ' pb-tr-added' : ''}`}>
       <td className="pb-td-bitem">
         <div className="pb-item-name">
           <span className="pb-item-index">{index}. </span>
           <span className="pb-item-title" title={item.product_name}>{item.product_name}</span>
-          {codes.length > 0 && <span className="pb-item-code-inline" title={codes.join(' · ')}>{codes[0]}</span>}
+          {item.sku && <span className="pb-item-code-inline" title={`SKU: ${item.sku}`}>{item.sku}</span>}
         </div>
         {overStock && <div className="pb-item-sub pb-text-red">Available stock: {stock}</div>}
         <div className="pb-mobile-only pb-item-mobile-rate">
@@ -517,8 +516,9 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="UPI QR Payment" size="sm">
+    <Modal open={open} onClose={onClose} title="Collect payment by QR" size="md">
       <div className="pb-modal pb-stack pb-qr-modal-content">
+        <p className="pb-qr-intro">Show this code to your customer to pay using any supported UPI app.</p>
         {/* Top Header Card */}
         <div className="pb-qr-header-card">
           <div className="pb-qr-shop-title">
@@ -528,9 +528,9 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
               <Smartphone size={16} className="text-blue-600 shrink-0" />
             )}
             <span className="truncate">{shopName}</span>
-            <span className="pb-qr-verified-tag" title="Verified UPI Merchant">
+            <span className="pb-qr-verified-tag" title="Merchant UPI QR">
               <CheckCircle2 size={12} className="text-teal-600 dark:text-teal-400 shrink-0" />
-              <span>Verified</span>
+              <span>UPI enabled</span>
             </span>
           </div>
 
@@ -683,6 +683,11 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
           )}
         </div>
 
+        <div className="pb-qr-guidance" role="note">
+          <Smartphone size={16} />
+          <p>Confirm the payment in your UPI app or bank account before marking this bill paid. The QR code does not confirm payment automatically.</p>
+        </div>
+
         {/* Action Buttons for Proper Flow */}
         <div className="pb-qr-action-stack">
           {hasCart && billTotal > 0 && onCompleteSale ? (
@@ -750,9 +755,6 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
           </button>
         </div>
 
-        <div className="pb-sub text-center text-xs text-slate-500">
-          Verify the payment notification in your UPI app or bank before completing.
-        </div>
       </div>
     </Modal>
   )
@@ -1175,7 +1177,7 @@ export default function NewBill() {
   // -------------------------------------------------------------------------
   const getInvoicePdfUrl = (invoiceId, thermal = false) => {
     if (!invoiceId) return ''
-    const token = localStorage.getItem('access_token') || ''
+    const token = getAccessToken() || ''
     const params = new URLSearchParams()
     if (token) params.set('token', token)
     if (thermal) params.set('printer', 'thermal')
@@ -1245,7 +1247,7 @@ export default function NewBill() {
     }
 
     try {
-      const token = localStorage.getItem('access_token') || ''
+      const token = getAccessToken() || ''
       const params = new URLSearchParams()
       if (token) params.set('token', token)
       if (thermal) params.set('printer', 'thermal')
@@ -1750,7 +1752,7 @@ export default function NewBill() {
             {lastInvoice && (
               <div className="pb-last-bill-strip" aria-label="Last completed bill">
                 <div className="pb-last-bill-track">
-                  <div className="pb-last-bill-icon">
+                  <div className=" pb-last-bill">
                     <Receipt size={14} />
                   </div>
                   <div className="pb-last-bill-info">
@@ -1772,42 +1774,36 @@ export default function NewBill() {
                 </div>
               </div>
             )}
-            <div className="pb-search-field">
-              <Search size={18} className="pb-field-icon" />
-              <input
-                id="pb-search"
-                ref={searchRef}
-                className="pb-search-input"
-                placeholder="Search product name, SKU or scan barcode (Ctrl+K)"
-                value={search}
-                onClick={() => setSearchActive(true)}
-                onBlur={() => setTimeout(() => setSearchActive(false), 180)}
-                onChange={e => { setSearch(e.target.value); setSearchActive(true); setActiveIdx(-1) }}
-                onKeyDown={onSearchKeyDown}
-                role="combobox"
-                aria-expanded={searchActive}
-                aria-controls="pb-search-list"
-                aria-autocomplete="list"
-                autoFocus
-                inputMode="search"
-                autoComplete="off"
-                autoCapitalize="none"
-                spellCheck={false}
-              />
-              {search ? (
-                <button
-                  type="button"
-                  className="pb-search-clear"
-                  aria-label="Clear search"
-                  title="Clear search"
-                  onMouseDown={e => e.preventDefault()}
-                  onClick={() => { setSearch(''); setActiveIdx(-1); setSearchActive(true); searchRef.current?.focus() }}
-                >
-                  <X size={16} />
-                </button>
-              ) : null}
-              <span className="pb-kbd-hint">Ctrl+K</span>
-
+            <SearchBar
+              value={search}
+              onChange={value => { setSearch(value); setSearchActive(true); setActiveIdx(-1) }}
+              onClear={() => { setActiveIdx(-1); setSearchActive(true); searchRef.current?.focus() }}
+              inputRef={searchRef}
+              placeholder="Search products by name, SKU or barcode"
+              shortcut="Ctrl+K"
+              className="pb-search-field"
+              inputClassName="pb-search-input"
+              iconClassName="pb-field-icon"
+              clearButtonClassName="pb-search-clear"
+              shortcutClassName="pb-kbd-hint"
+              clearButtonProps={{ onMouseDown: event => event.preventDefault() }}
+              inputProps={{
+                id: 'pb-search',
+                'aria-label': 'Search products by name, SKU, or barcode',
+                onClick: () => setSearchActive(true),
+                onBlur: () => setTimeout(() => setSearchActive(false), 180),
+                onKeyDown: onSearchKeyDown,
+                role: 'combobox',
+                'aria-expanded': searchActive,
+                'aria-controls': 'pb-search-list',
+                'aria-autocomplete': 'list',
+                autoFocus: true,
+                inputMode: 'search',
+                autoComplete: 'off',
+                autoCapitalize: 'none',
+                spellCheck: false,
+              }}
+            >
               {/* Autocomplete Dropdown */}
               {searchActive && (
                 <div className="pb-dropdown" id="pb-search-list" role="listbox">
@@ -1906,7 +1902,7 @@ export default function NewBill() {
                   )}
                 </div>
               )}
-            </div>
+            </SearchBar>
 
             {/* Category Navigation Bar with smooth horizontal scrolling */}
             <div className="pb-cats-container">
@@ -1972,7 +1968,8 @@ export default function NewBill() {
                           <div className="pb-prod-name">{p.name}</div>
                           <div className="pb-prod-sub">
                             <span className="pb-mobile-only pb-sku-inline">{p.sku ? `SKU: ${p.sku} · ` : ''}</span>
-                            {[p.category_name, p.unit, p.barcode ? `Bar: ${p.barcode}` : ''].filter(Boolean).join(' · ')}
+                            {[p.category_name, p.unit].filter(Boolean).join(' · ')}
+                            {p.barcode && <span className="pb-barcode-inline"> · &#9641; {p.barcode}</span>}
                           </div>
                         </td>
                         <td>
@@ -1987,7 +1984,7 @@ export default function NewBill() {
                         <td className="pb-td-stock">
                           <span className={`pb-stock-badge ${out ? 'pb-stock-out' : low ? 'pb-stock-low' : 'pb-stock-normal'}`}>
                             <span className="pb-stock-dot" />
-                            {out ? 'Out' : stockLabel(p)}
+                            {out ? 'Out' : low ? `Low: ${stockLabel(p)}` : stockLabel(p)}
                           </span>
                         </td>
                         <td className="pb-td-action" onClick={e => e.stopPropagation()}>
@@ -2986,20 +2983,21 @@ export default function NewBill() {
 
       {/* ============================ MODALS ============================ */}
       <Modal open={showCustomerModal} onClose={() => setShowCustomerModal(false)} title="Add new customer" size="sm">
-        <div className="pb-modal pb-stack">
+        <div className="pb-modal pb-stack pb-customer-modal">
+          <p className="m-0 text-sm text-[var(--muted)]">Save contact details to find this customer quickly on future bills.</p>
           <div>
             <label className="pb-label" htmlFor="pb-nc-name">Name *</label>
-            <input id="pb-nc-name" className="pb-input" autoFocus value={newCustomer.name} onChange={e => setNewCustomer(x => ({ ...x, name: e.target.value }))} />
+            <input id="pb-nc-name" className="pb-input" autoFocus autoComplete="name" placeholder="Customer name" value={newCustomer.name} onChange={e => setNewCustomer(x => ({ ...x, name: e.target.value }))} />
           </div>
           <div>
-            <label className="pb-label" htmlFor="pb-nc-mobile">Mobile</label>
-            <input id="pb-nc-mobile" className="pb-input" inputMode="tel" value={newCustomer.mobile} onChange={e => setNewCustomer(x => ({ ...x, mobile: e.target.value }))} />
+            <label className="pb-label" htmlFor="pb-nc-mobile">Mobile number</label>
+            <input id="pb-nc-mobile" className="pb-input" type="tel" inputMode="tel" autoComplete="tel" placeholder="For receipts and account lookup" value={newCustomer.mobile} onChange={e => setNewCustomer(x => ({ ...x, mobile: e.target.value }))} />
           </div>
           <div>
-            <label className="pb-label" htmlFor="pb-nc-email">Email</label>
-            <input id="pb-nc-email" className="pb-input" type="email" value={newCustomer.email} onChange={e => setNewCustomer(x => ({ ...x, email: e.target.value }))} />
+            <label className="pb-label" htmlFor="pb-nc-email">Email address <span className="font-normal normal-case text-[var(--muted)]">(optional)</span></label>
+            <input id="pb-nc-email" className="pb-input" type="email" autoComplete="email" placeholder="name@example.com" value={newCustomer.email} onChange={e => setNewCustomer(x => ({ ...x, email: e.target.value }))} />
           </div>
-          <div className="pb-grid2">
+          <div className="pb-grid2 pb-customer-modal-actions">
             <button type="button" className="pb-btn" onClick={() => setShowCustomerModal(false)}>Cancel</button>
             <button type="button" className="pb-btn pb-btn-primary" onClick={addCustomer} disabled={addingCustomer}>{addingCustomer ? 'Adding…' : 'Add customer'}</button>
           </div>
@@ -3040,121 +3038,79 @@ export default function NewBill() {
         </div>
       </Modal>
 
-      <Modal open={showSuccess && Boolean(lastInvoice?.id)} onClose={() => setShowSuccess(false)} title="Sale Completed" size="md">
-        <div className="space-y-4 p-1">
-          {/* Header Card - Clean, elevated, light & dark theme compliant with soft emerald success badge */}
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] p-5 text-center shadow-xs">
-            <div className="mx-auto flex h-13 w-13 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-xs">
-              <CheckCircle2 size={28} className="stroke-[2.5]" />
-            </div>
-
-            <h3 className="mt-3 text-base sm:text-lg font-bold text-[var(--ink)] tracking-tight">
-              Sale Completed Successfully
-            </h3>
-
-            <div className="mt-1 font-mono text-3xl sm:text-4xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
-              {fmt(lastInvoice?.grand_total)}
-            </div>
-
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/80 bg-emerald-50 px-3 py-1 font-mono text-xs font-semibold text-emerald-800 dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300">
-                <Receipt size={13} className="text-emerald-600 dark:text-emerald-400" />
-                <span>Invoice #{lastInvoice?.invoice_number || '—'}</span>
-              </span>
-              {lastInvoice?.customer_name && lastInvoice?.customer_name !== 'Walk-in Customer' && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-xs font-medium text-[var(--ink)] shadow-xs">
-                  <UserRound size={12} className="text-[var(--muted)]" />
-                  <span>{lastInvoice.customer_name}</span>
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Transaction Summary Card - Clean key-value breakdown */}
-          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4 text-xs shadow-xs space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-[var(--muted)]">Payment Method</span>
-              <span className="inline-flex items-center rounded-md border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-700 uppercase tracking-wide dark:border-blue-800/60 dark:bg-blue-950/40 dark:text-blue-300">
-                {lastInvoice?.payment_method || 'Cash'}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-[var(--muted)]">Payment Status</span>
-              <span className="inline-flex items-center rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 uppercase tracking-wide dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300">
-                {lastInvoice?.payment_status || 'Paid'}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-[var(--muted)]">Amount Received</span>
-              <span className="font-mono text-xs sm:text-sm font-bold text-[var(--ink)]">
-                {fmt(lastPaidAmount(lastInvoice))}
-              </span>
-            </div>
-
-            {lastInvoice?.payment_method === 'cash' && (
-              <div className="flex items-center justify-between rounded-lg border border-emerald-200/80 bg-emerald-50/70 p-2.5 dark:border-emerald-800/60 dark:bg-emerald-950/40">
-                <span className="font-bold text-emerald-800 dark:text-emerald-200">Change Returned</span>
-                <span className="font-mono text-sm sm:text-base font-extrabold text-emerald-700 dark:text-emerald-300">
-                  {fmt(Math.max(0, Number(lastInvoice?.amount_received || 0) - Number(lastInvoice?.grand_total || 0)))}
-                </span>
+      <Modal open={showSuccess && Boolean(lastInvoice?.id)} onClose={() => setShowSuccess(false)} title="" size="md">
+        <div className="-mt-2 pb-sale-success">
+          {/* Hero success banner */}
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 p-5 text-white mb-4">
+            <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
+            <div className="absolute -bottom-4 -left-4 h-16 w-16 rounded-full bg-white/10" />
+            <div className="relative flex items-center gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
+                <CheckCircle2 size={28} strokeWidth={2.5} />
               </div>
-            )}
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold uppercase tracking-widest text-emerald-100">Sale Completed ✓</p>
+                <p className="mt-0.5 font-mono text-lg font-black tabular-nums">{fmt(lastInvoice?.grand_total)}</p>
+                <p className="mt-0.5 text-xs text-emerald-100 truncate">
+                  <span className="font-mono font-semibold">#{lastInvoice?.invoice_number || 'INV'}</span>
+                  {lastInvoice?.customer_name && lastInvoice.customer_name !== 'Walk-in Customer'
+                    ? ` · ${lastInvoice.customer_name}` : ' · Walk-in Customer'}
+                </p>
+              </div>
+            </div>
           </div>
 
-          {/* Action Buttons - Light, clean, professional POS print and sharing targets */}
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => printInvoiceDocument(lastInvoice?.id, false)}
-              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--ink)] shadow-xs transition hover:bg-[var(--surface-elevated)] hover:border-emerald-500/50 active:scale-[0.98]"
-            >
-              <Printer size={15} className="text-emerald-600 dark:text-emerald-400" />
-              <span>Print A4 Invoice</span>
+          {/* Payment summary row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
+            {[
+              { label: 'Method', value: String(lastInvoice?.payment_method || 'Cash').replace(/_/g, ' ') },
+              { label: 'Status', value: lastInvoice?.payment_status || 'Paid', highlight: ['paid','success','completed'].includes(String(lastInvoice?.payment_status||'paid').toLowerCase()) },
+              { label: 'Received', value: fmt(lastPaidAmount(lastInvoice)), mono: true },
+            ].map(({ label, value, highlight, mono }) => (
+              <div key={label} className="rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-2.5 text-center">
+                <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted)]">{label}</p>
+                <p className={`mt-1 text-xs font-bold capitalize truncate ${
+                  highlight === true ? 'text-emerald-600 dark:text-emerald-400'
+                  : highlight === false ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-[var(--ink)]'
+                } ${mono ? 'font-mono' : ''}`}>{value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Cash change row */}
+          {String(lastInvoice?.payment_method || '').toLowerCase() === 'cash' && Number(lastInvoice?.amount_received || 0) > Number(lastInvoice?.grand_total || 0) && (
+            <div className="mb-4 flex items-center justify-between rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/20 px-4 py-2.5">
+              <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">💵 Change to Return</span>
+              <span className="font-mono text-base font-black tabular-nums text-emerald-700 dark:text-emerald-300">
+                {fmt(Math.max(0, Number(lastInvoice?.amount_received || 0) - Number(lastInvoice?.grand_total || 0)))}
+              </span>
+            </div>
+          )}
+
+          {/* Action grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+            <button type="button" onClick={() => printInvoiceDocument(lastInvoice?.id, false)}
+              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-[#1E3A5F] hover:bg-[#162F4D] text-white text-xs font-bold transition shadow-sm">
+              <Printer size={15} /><span>Print A4 Invoice</span>
             </button>
-            <button
-              type="button"
-              onClick={() => printInvoiceDocument(lastInvoice?.id, true)}
-              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--ink)] shadow-xs transition hover:bg-[var(--surface-elevated)] hover:border-emerald-500/50 active:scale-[0.98]"
-            >
-              <Receipt size={15} className="text-emerald-600 dark:text-emerald-400" />
-              <span>Thermal Receipt</span>
+            <button type="button" onClick={() => printInvoiceDocument(lastInvoice?.id, true)}
+              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-xs font-semibold hover:bg-[var(--surface-hover)] transition">
+              <Receipt size={15} /><span>Thermal Receipt</span>
             </button>
-            <button
-              type="button"
-              onClick={() => downloadInvoiceDocument(lastInvoice?.id)}
-              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--ink)] shadow-xs transition hover:bg-[var(--surface-elevated)] hover:border-blue-500/50 active:scale-[0.98]"
-            >
-              <Download size={15} className="text-blue-600 dark:text-blue-400" />
-              <span>Download PDF</span>
+            <button type="button" onClick={() => downloadInvoiceDocument(lastInvoice?.id)}
+              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-xs font-semibold hover:bg-[var(--surface-hover)] transition">
+              <Download size={15} /><span>Download PDF</span>
             </button>
-            <button
-              type="button"
-              onClick={shareInvoice}
-              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-xs transition hover:bg-emerald-100 active:scale-[0.98] dark:border-emerald-800/60 dark:bg-emerald-950/40 dark:text-emerald-300"
-            >
-              <Share2 size={15} className="text-emerald-600 dark:text-emerald-400" />
-              <span>Share WhatsApp</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate(`/invoice/${lastInvoice?.id}`)}
-              className="col-span-2 flex min-h-[38px] items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--muted)] transition hover:text-[var(--ink)] hover:bg-[var(--surface-elevated)] active:scale-[0.98]"
-            >
-              <FileText size={14} />
-              <span>View Full Invoice Record</span>
+            <button type="button" onClick={shareInvoice}
+              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white text-xs font-bold transition shadow-sm">
+              <Share2 size={15} /><span>Share WhatsApp</span>
             </button>
           </div>
 
-          {/* Primary Action Button - Start New Bill */}
-          <button
-            type="button"
-            onClick={() => { setShowSuccess(false); startNewBill() }}
-            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 text-sm sm:text-base font-bold shadow-sm transition active:scale-[0.99]"
-          >
-            <RefreshCw size={17} />
-            <span>Start New Bill</span>
+          <button type="button" onClick={() => { setShowSuccess(false); startNewBill() }}
+            className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-bold transition shadow-sm">
+            <RefreshCw size={16} /><span>Start New Sale</span>
           </button>
         </div>
       </Modal>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import api, { API_BASE_URL } from '../api'
+import api from '../api'
 import productService from '../features/inventory/api/productService'
 import { STOCK_STATUS } from '../constants'
 import {
@@ -11,12 +11,12 @@ import {
   TableSkeleton,
   EmptyState,
   Pagination,
+  SearchBar,
 } from '../components/UI'
 import toast from 'react-hot-toast'
 import BarcodePrintModal from '../components/BarcodePrintModal'
 import {
   Plus,
-  Search,
   Edit2,
   Trash2,
   Barcode,
@@ -261,7 +261,6 @@ export default function Products() {
 
   // Barcode Print Modal State
   const [barcodeProduct, setBarcodeProduct] = useState(null)
-  const [barcodeCopies, setBarcodeCopies] = useState(1)
 
   // CSV Import State
   const [importFile, setImportFile] = useState(null)
@@ -684,23 +683,6 @@ export default function Products() {
   // Open Barcode Modal
   const openBarcode = product => {
     setBarcodeProduct(product)
-    setBarcodeCopies(1)
-    setModal('barcode')
-  }
-
-  const printBarcodeLabel = () => {
-    if (!barcodeProduct?.id) {
-      toast.error('Select a product first')
-      return
-    }
-    const quantity = Math.max(1, Math.min(500, Number(barcodeCopies) || 1))
-    const token = localStorage.getItem('access_token') || ''
-    const params = new URLSearchParams({ copies: String(quantity) })
-    if (token) params.set('token', token)
-
-    const url = `${API_BASE_URL}/products/${barcodeProduct.id}/barcode-label/?${params.toString()}`
-    window.open(url, '_blank', 'noopener,noreferrer')
-    setModal(null)
   }
 
   // Export Products to CSV
@@ -1023,20 +1005,20 @@ export default function Products() {
         }
 
         .products-module .erp-table th {
-          padding: 12px 14px;
+          padding: 10px 12px;
           text-align: left;
           white-space: nowrap;
-          background: linear-gradient(135deg, #1e3a8a, #2563eb);
+          background: var(--surface-subtle);
           border-bottom: 1px solid var(--line);
-          color: #eff6ff;
-          font-size: 11px;
+          color: var(--muted);
+          font-size: 0.75rem;
           font-weight: 700;
-          letter-spacing: .05em;
+          letter-spacing: .04em;
           text-transform: uppercase;
         }
 
         .products-module .erp-table td {
-          padding: 13px 14px;
+          padding: 10px 12px;
           border-bottom: 1px solid var(--line-subtle);
           vertical-align: middle;
         }
@@ -1046,7 +1028,7 @@ export default function Products() {
         }
 
         .products-module .erp-table tbody tr:hover {
-          background: var(--surface-elevated);
+          background: var(--surface-hover);
         }
       `}</style>
 
@@ -1183,7 +1165,7 @@ export default function Products() {
             <p className="text-[10px] text-[var(--muted)]">Zero balance</p>
           </div>
 
-          <div className="p-3">
+          <div className="p-3 col-span-2 sm:col-span-1 border-t sm:border-t-0 border-[var(--line)]">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Stock Valuation
@@ -1206,34 +1188,7 @@ export default function Products() {
       <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-3.5">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-12 lg:items-center">
           {/* Search bar */}
-          <div className="group relative flex min-w-0 sm:col-span-2 lg:col-span-4 items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-              <Search size={14} strokeWidth={2.2} />
-            </div>
-            <input
-              type="text"
-              className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
-              placeholder="Search name, SKU, barcode, brand..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              aria-label="Search products"
-            />
-            {search ? (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
-                title="Clear search"
-                aria-label="Clear search"
-              >
-                <X size={13} strokeWidth={2.5} />
-              </button>
-            ) : (
-              <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
-                Ctrl+K
-              </kbd>
-            )}
-          </div>
+          <SearchBar value={search} onChange={setSearch} placeholder="Search name, SKU, barcode, brand..." className="min-w-0 sm:col-span-2 lg:col-span-4" shortcut="Ctrl+K" />
 
           {/* Category Dropdown */}
           <div className="min-w-0 lg:col-span-2">
@@ -1365,7 +1320,7 @@ export default function Products() {
       {/* =====================================================
           PRODUCTS DATA TABLE & CARDS
       ====================================================== */}
-      <div className="  border border-[var(--line)] bg-[var(--surface)]">
+      <div className="rounded-xl overflow-hidden border border-[var(--line)] bg-[var(--surface)] shadow-xs">
         <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3 sm:px-5">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-bold text-[var(--ink)]">
@@ -1521,8 +1476,19 @@ export default function Products() {
             </div>
 
             {/* Desktop Table View (>= 768px) */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="erp-table">
+            <div className="hidden md:block overflow-x-auto min-h-[220px] pb-6">
+              <table className="erp-table w-full min-w-[960px]">
+                <colgroup>
+                  <col style={{ width: '22%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '5%' }} />
+                  <col style={{ width: '5%' }} />
+                  <col style={{ width: '5%' }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th
@@ -1578,7 +1544,8 @@ export default function Products() {
                 </thead>
 
                 <tbody>
-                  {pagedProducts.map(product => {
+                  {pagedProducts.map((product, idx) => {
+                    const isLastRows = pagedProducts.length > 2 && idx >= pagedProducts.length - 2
                     const stockAlert = getStockAlertState(product)
                     const StockIcon = stockAlert.icon
                     const margin =
@@ -1638,9 +1605,9 @@ export default function Products() {
                                 </button>
                               )}
                             </div>
-                            <span className="font-mono text-[10px] text-[var(--muted-light)] flex items-center gap-1 mt-0.5">
-                              <Barcode size={11} />
-                              {product.barcode || 'No barcode'}
+                            <span className={`mt-1 inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-[10px] ${product.barcode ? 'border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink-secondary)]' : 'border-dashed border-[var(--line)] text-[var(--muted)]'}`}>
+                              <Barcode size={11} className="shrink-0" />
+                              <span className="truncate">{product.barcode || 'Barcode not assigned'}</span>
                             </span>
                           </div>
                         </td>
@@ -1755,7 +1722,9 @@ export default function Products() {
 
                               {openActionMenuId === product.id && (
                                 <div
-                                  className="absolute right-0 top-full mt-1 z-30 w-44 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1 text-left shadow-lg"
+                                  className={`absolute right-0 z-30 w-44 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1 text-left shadow-lg ${
+                                    isLastRows ? 'bottom-full mb-1' : 'top-full mt-1'
+                                  }`}
                                   onClick={e => e.stopPropagation()}
                                 >
                                   <button
@@ -1814,8 +1783,7 @@ export default function Products() {
                                       setOpenActionMenuId(null)
                                       setDeleteId(product.id)
                                     }}
-                                    className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs text-[var(--danger)] hover:bg-red-50 dark:hover:bg-red-950/30"
-                                    className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs text-rose-400 hover:bg-rose-950/40"
+                                    className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40 transition"
                                   >
                                     <Trash2 size={13} />
                                     <span>Delete Product</span>
@@ -2407,7 +2375,7 @@ export default function Products() {
                     </div>
                     <div className="flex justify-between pt-2">
                       <span className="text-[var(--muted)]">Barcode</span>
-                      <span className="font-mono font-medium text-[var(--ink)]">
+                      <span className="max-w-[65%] break-all rounded-md bg-[var(--surface-elevated)] px-2 py-1 font-mono text-xs font-semibold text-[var(--ink)]">
                         {detailProduct.barcode || '—'}
                       </span>
                     </div>
@@ -2763,8 +2731,8 @@ export default function Products() {
           BARCODE PRINTING MODAL
       ====================================================== */}
       <BarcodePrintModal
-        open={modal === 'barcode'}
-        onClose={() => setModal(null)}
+        open={Boolean(barcodeProduct)}
+        onClose={() => setBarcodeProduct(null)}
         product={barcodeProduct}
       />
 

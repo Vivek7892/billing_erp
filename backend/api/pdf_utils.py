@@ -326,8 +326,10 @@ def _qr_size_a4(s):
     return _QR_SIZE_MAP_A4.get(str(s.get('upi_qr_size_a4', 'medium')).lower(), 22)
 
 
-def _qr_size_thermal(s):
-    return _QR_SIZE_MAP_THERMAL.get(str(s.get('upi_qr_size_thermal', 'medium')).lower(), 28)
+def _qr_size_thermal(s, is_58mm=False):
+    if is_58mm:
+        return {'small': 16, 'medium': 20, 'large': 24}.get(str(s.get('upi_qr_size_thermal', 'medium')).lower(), 20)
+    return {'small': 20, 'medium': 26, 'large': 32}.get(str(s.get('upi_qr_size_thermal', 'medium')).lower(), 26)
 
 
 def _basic_price(item):
@@ -478,8 +480,8 @@ def resolve_document_mode(s, invoice):
     return "TAX INVOICE", True
 
 
-def _logo_for_a4(s):
-    """Resolve the configured business logo for PDF output.
+def _logo_for_a4(s, max_width_mm=26, max_height_mm=22):
+    """Resolve the configured business logo for PDF output with proportional aspect-ratio scaling.
 
     Supports:
     - absolute filesystem paths
@@ -494,6 +496,7 @@ def _logo_for_a4(s):
     try:
         from reportlab.platypus import Image as RLImage
         from django.conf import settings as django_settings
+        from PIL import Image as PILImage
 
         candidates = []
 
@@ -527,7 +530,25 @@ def _logo_for_a4(s):
 
         for candidate in resolved:
             if os.path.isfile(candidate):
-                img = RLImage(candidate, width=25 * mm, height=25 * mm)
+                try:
+                    with PILImage.open(candidate) as pim:
+                        ow, oh = pim.size
+                    if ow > 0 and oh > 0:
+                        aspect = ow / float(oh)
+                        max_w = max_width_mm * mm
+                        max_h = max_height_mm * mm
+                        if aspect >= (max_width_mm / float(max_height_mm)):
+                            w = max_w
+                            h = max_w / aspect
+                        else:
+                            h = max_h
+                            w = max_h * aspect
+                        img = RLImage(candidate, width=w, height=h)
+                        img.hAlign = "LEFT"
+                        return img
+                except Exception:
+                    pass
+                img = RLImage(candidate, width=max_width_mm * mm, height=max_height_mm * mm)
                 img.hAlign = "LEFT"
                 return img
 
@@ -536,7 +557,26 @@ def _logo_for_a4(s):
             with urlopen(raw_text, timeout=8) as response:
                 image_data = BytesIO(response.read())
             if image_data.getbuffer().nbytes:
-                img = RLImage(image_data, width=25 * mm, height=25 * mm)
+                try:
+                    with PILImage.open(image_data) as pim:
+                        ow, oh = pim.size
+                    image_data.seek(0)
+                    if ow > 0 and oh > 0:
+                        aspect = ow / float(oh)
+                        max_w = max_width_mm * mm
+                        max_h = max_height_mm * mm
+                        if aspect >= (max_width_mm / float(max_height_mm)):
+                            w = max_w
+                            h = max_w / aspect
+                        else:
+                            h = max_h
+                            w = max_h * aspect
+                        img = RLImage(image_data, width=w, height=h)
+                        img.hAlign = "LEFT"
+                        return img
+                except Exception:
+                    image_data.seek(0)
+                img = RLImage(image_data, width=max_width_mm * mm, height=max_height_mm * mm)
                 img.hAlign = "LEFT"
                 return img
     except Exception:
@@ -550,51 +590,62 @@ def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
     Left: Brand name, address, contact (mobile, email), registrations (GSTIN, PAN).
     Right: TAX INVOICE heading, Invoice No, Date, Payment Mode, Place of Supply.
     """
-    brand = _fmt_value(s.shop_name, "SRI BALAJI STORE")
+    show_shop_details = s.flag("show_shop_details", True) and s.flag("show_business_info", True)
+    show_name = s.flag("show_business_name", True) and s.flag("show_shop_name", True)
+    brand = _fmt_value(s.shop_name, "")
 
     identity_rows = []
-    identity_rows.append([para(brand.upper(), size=14.5, bold=True, color=colors.HexColor("#0F172A"))])
+    if show_shop_details:
+        if show_name and brand:
+            identity_rows.append([para(brand.upper(), size=14.5, bold=True, color=colors.HexColor("#0F172A"))])
 
-    if has_val(s.shop_address) and s.flag("show_business_address", True):
-        for line in str(s.shop_address).splitlines():
-            if line.strip():
-                identity_rows.append([para(line.strip(), size=7.2, color=colors.HexColor("#334155"))])
+        if has_val(s.shop_address) and s.flag("show_business_address", True):
+            for line in str(s.shop_address).splitlines():
+                if line.strip():
+                    identity_rows.append([para(line.strip(), size=7.2, color=colors.HexColor("#334155"))])
 
-    contact = []
-    if has_val(s.shop_phone) and s.flag("show_business_phone", True):
-        contact.append(f"Mobile: {s.shop_phone}")
-    if has_val(s.shop_email) and s.flag("show_business_email", True):
-        contact.append(f"Email: {s.shop_email}")
-    if contact:
-        identity_rows.append([para("  |  ".join(contact), size=7.0, color=colors.HexColor("#475569"))])
+        contact = []
+        if has_val(s.shop_phone) and s.flag("show_business_phone", True):
+            contact.append(f"Mobile: {s.shop_phone}")
+        if has_val(s.shop_email) and s.flag("show_business_email", True):
+            contact.append(f"Email: {s.shop_email}")
+        if contact:
+            identity_rows.append([para("  |  ".join(contact), size=7.0, color=colors.HexColor("#475569"))])
 
-    registrations = []
-    if has_val(s.shop_gstin) and s.flag("show_business_gstin", True):
-        registrations.append(f"<b>GSTIN:</b> {s.shop_gstin}")
-    if has_val(s.shop_pan) and s.flag("show_business_pan", True):
-        registrations.append(f"<b>PAN:</b> {s.shop_pan}")
-    if has_val(s.fssai_licence) and s.flag("show_fssai_on_invoice", False):
-        registrations.append(f"<b>FSSAI:</b> {s.fssai_licence}")
-    if has_val(s.cin) and s.flag("show_cin_on_invoice", False):
-        registrations.append(f"<b>CIN:</b> {s.cin}")
-    if registrations:
-        identity_rows.append([para("  |  ".join(registrations), size=7.0, color=colors.HexColor("#334155"))])
+        registrations = []
+        if has_val(s.shop_gstin) and s.flag("show_business_gstin", True):
+            registrations.append(f"<b>GSTIN:</b> {s.shop_gstin}")
+        if has_val(s.shop_pan) and s.flag("show_business_pan", True):
+            registrations.append(f"<b>PAN:</b> {s.shop_pan}")
+        if has_val(s.fssai_licence) and s.flag("show_fssai_on_invoice", False):
+            registrations.append(f"<b>FSSAI:</b> {s.fssai_licence}")
+        if has_val(s.cin) and s.flag("show_cin_on_invoice", False):
+            registrations.append(f"<b>CIN:</b> {s.cin}")
+        if registrations:
+            identity_rows.append([para("  |  ".join(registrations), size=7.0, color=colors.HexColor("#334155"))])
 
-    details = _tbl(identity_rows, [None], [
-        ("LEFTPADDING", (0, 0), (-1, -1), 0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 0.4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 0.4),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-    ])
-    if logo_flowable is not None and s.flag("show_business_logo", True):
-        identity = _tbl([[logo_flowable, details]], [28 * mm, BODY_W * 0.60 - 28 * mm], [
+    if identity_rows:
+        details = _tbl(identity_rows, [None], [
             ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 2 * mm),
-            ("TOPPADDING", (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 0.4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0.4),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ])
+    else:
+        details = Spacer(1, 0.1 * mm)
+
+    if show_shop_details and logo_flowable is not None and s.flag("show_business_logo", True):
+        if identity_rows:
+            identity = _tbl([[logo_flowable, details]], [28 * mm, BODY_W * 0.60 - 28 * mm], [
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 2 * mm),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ])
+        else:
+            identity = logo_flowable
     else:
         identity = details
 
@@ -819,7 +870,8 @@ def build_totals(s, invoice, show_tax, interstate):
     discount = dec(invoice.discount_amount)
     sgst, cgst, igst = invoice_tax_breakup(invoice, interstate) if show_tax else (Decimal("0"), Decimal("0"), Decimal("0"))
     cess_amt = dec(getattr(invoice, "cess_amount", 0)) if show_tax and s.flag("cess_enabled", False) else Decimal("0")
-    round_off = dec(getattr(invoice, "round_off", 0)) if s.flag("round_off", True) else Decimal("0")
+    show_round_off = s.flag("show_round_off", s.flag("round_off", True))
+    round_off = dec(getattr(invoice, "round_off", 0)) if show_round_off else Decimal("0")
     other_charges = dec(getattr(invoice, "other_charges", 0))
     grand = dec(invoice.grand_total)
 
@@ -1218,9 +1270,20 @@ def _tpara(text, size=T_ITEM, align=TA_LEFT, bold=False, color=INK, leading=None
     ))
 
 
-def _tdashed(story, content_w, gap_above=1.0*mm, gap_below=1.0*mm):
-    story.append(Spacer(1, gap_above))
-    story.append(Spacer(1, gap_below))
+def _tdashed(story, content_w, gap_above=1.0 * mm, gap_below=1.0 * mm):
+    line_table = Table([[""]], colWidths=[content_w])
+    line_table.setStyle(TableStyle([
+        ("LINEBELOW", (0, 0), (-1, -1), 0.5, BORDER),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    if gap_above:
+        story.append(Spacer(1, gap_above))
+    story.append(line_table)
+    if gap_below:
+        story.append(Spacer(1, gap_below))
 
 
 def _thermal_bool(settings, key, default=True):
@@ -1270,30 +1333,31 @@ def generate_thermal_invoice_pdf(invoice, template=None):
     balance_due = max(Decimal("0.00"), grand - paid_amount)
     change_returned = max(Decimal("0.00"), paid_amount - grand)
     discount_amt = _thermal_discount_total(invoice)
-    round_off_amt = dec(getattr(invoice, "round_off", 0)) if s.flag("round_off", True) else Decimal("0.00")
+    show_round_off = s.flag("show_round_off", s.flag("round_off", True))
+    round_off_amt = dec(getattr(invoice, "round_off", 0)) if show_round_off else Decimal("0.00")
     payment_mode = (getattr(invoice, "payment_method", None) or s.get("default_payment_method", "cash")).upper()
     status = "CANCELLED" if getattr(invoice, "status", None) == "cancelled" else _fmt_value(getattr(invoice, "payment_status", None), "PAID").upper()
-
-    page_height = (
-        78
-        + len([l for l in (shop_address or "").split("\n") if l.strip()]) * 4
-        + (4 if shop_phone or shop_email else 0)
-        + (4 if shop_gstin else 0)
-        + (24 if s.flag("show_business_logo", True) and has_val(s.get("shop_logo")) else 0)
-        + len(items) * 10
-        + (45 if show_qr else 0)
-        + (38 if show_bill_qr else 0)
-        + (16 if show_terms else 0)
-        + (12 if show_signature else 0)
-        + (10 if cust_address or cust_gstin or place else 0)
-    ) * mm
-    page_height = max(100 * mm, page_height)
 
     tpl_name = str(template or s.get("invoice_template") or "").lower()
     is_58mm = tpl_name == "thermal_58" or str(s.get("printer_paper_width", "")).strip() == "58mm"
     roll_width_mm = 58 if is_58mm else 80
     margin_mm = 3 if is_58mm else 4
     content_w = (roll_width_mm - 2 * margin_mm) * mm
+
+    page_height = (
+        68
+        + len([l for l in (shop_address or "").split("\n") if l.strip()]) * 3.5
+        + (4 if shop_phone or shop_email else 0)
+        + (4 if shop_gstin else 0)
+        + (18 if s.flag("show_business_logo", True) and (s.get("shop_logo_path") or s.get("shop_logo")) else 0)
+        + len(items) * (14 if is_58mm else 9)
+        + (32 if show_qr else 0)
+        + (28 if show_bill_qr else 0)
+        + (14 if show_terms else 0)
+        + (10 if show_signature else 0)
+        + (8 if cust_address or cust_gstin or place else 0)
+    ) * mm
+    page_height = max(90 * mm, page_height)
 
     doc = SimpleDocTemplate(
         buffer,
@@ -1306,33 +1370,44 @@ def generate_thermal_invoice_pdf(invoice, template=None):
         author="Billing Application",
     )
 
-    content_w = 72 * mm
     story = []
 
     # 1. Store identity
-    if s.flag("show_business_logo", True):
-        logo = _logo_for_a4(s)
-        if logo is not None:
-            logo.hAlign = "CENTER"
-            logo.drawHeight = 15 * mm
-            logo.drawWidth = 15 * mm
-            story.append(logo)
-    story.append(_tpara(shop_name.upper(), size=T_NAME + 1, align=TA_CENTER, bold=True))
-    if s.flag("show_business_address", True):
-        for line in (shop_address or "").split("\n"):
-            if line.strip():
-                story.append(_tpara(line.strip(), size=T_META, align=TA_CENTER))
-    contact_bits = []
-    if has_val(shop_phone) and s.flag("show_business_phone", True):
-        contact_bits.append(f"Mobile: {shop_phone}")
-    if has_val(shop_email) and s.flag("show_business_email", True):
-        contact_bits.append(str(shop_email))
-    if contact_bits:
-        story.append(_tpara(" | ".join(contact_bits), size=T_META, align=TA_CENTER))
-    if has_val(shop_gstin) and s.flag("show_business_gstin", True):
-        story.append(_tpara(f"GSTIN: {shop_gstin}", size=T_META, align=TA_CENTER, bold=True))
+    show_shop_details = s.flag("show_shop_details", True) and s.flag("show_business_info", True)
+    has_identity_rendered = False
+    if show_shop_details:
+        if s.flag("show_business_logo", True):
+            max_logo_w = 28 if is_58mm else 40
+            max_logo_h = 13 if is_58mm else 18
+            logo = _logo_for_a4(s, max_width_mm=max_logo_w, max_height_mm=max_logo_h)
+            if logo is not None:
+                logo.hAlign = "CENTER"
+                story.append(logo)
+                story.append(Spacer(1, 1.0 * mm))
+                has_identity_rendered = True
+        show_name = s.flag("show_business_name", True) and s.flag("show_shop_name", True)
+        if show_name and has_val(shop_name):
+            story.append(_tpara(str(shop_name).strip().upper(), size=T_NAME + 1, align=TA_CENTER, bold=True))
+            has_identity_rendered = True
+        if s.flag("show_business_address", True) and has_val(shop_address):
+            for line in (shop_address or "").split("\n"):
+                if line.strip():
+                    story.append(_tpara(line.strip(), size=T_META, align=TA_CENTER))
+                    has_identity_rendered = True
+        contact_bits = []
+        if has_val(shop_phone) and s.flag("show_business_phone", True):
+            contact_bits.append(f"Mobile: {shop_phone}")
+        if has_val(shop_email) and s.flag("show_business_email", True):
+            contact_bits.append(str(shop_email))
+        if contact_bits:
+            story.append(_tpara(" | ".join(contact_bits), size=T_META, align=TA_CENTER))
+            has_identity_rendered = True
+        if has_val(shop_gstin) and s.flag("show_business_gstin", True):
+            story.append(_tpara(f"GSTIN: {shop_gstin}", size=T_META, align=TA_CENTER, bold=True))
+            has_identity_rendered = True
 
-    _tdashed(story, content_w, 1.2 * mm, 1.2 * mm)
+    if has_identity_rendered:
+        _tdashed(story, content_w, 1.0 * mm, 1.0 * mm)
 
     # 2. Invoice control
     is_cancelled = getattr(invoice, "status", None) == "cancelled"
@@ -1370,55 +1445,102 @@ def generate_thermal_invoice_pdf(invoice, template=None):
 
     _tdashed(story, content_w)
 
-    # 4. Items — same logical columns as A4, compressed for 80mm
+    # 4. Items — Space-efficient stacked layout for 58mm, 4-column layout for 80mm
     show_hsn = s.flag("show_hsn_col", True) and any_item_has(invoice, "hsn_code")
     show_discount = s.flag("show_discount_col", True) and discount_amt != 0
 
-    item_rows = [[
-        _tpara("ITEM", size=T_META, bold=True),
-        _tpara("QTY", size=T_META, align=TA_RIGHT, bold=True),
-        _tpara("RATE", size=T_META, align=TA_RIGHT, bold=True),
-        _tpara("AMOUNT", size=T_META, align=TA_RIGHT, bold=True),
-    ]]
+    if is_58mm:
+        item_rows = [[
+            _tpara("ITEM / DETAILS", size=T_META, bold=True),
+            _tpara("AMOUNT", size=T_META, align=TA_RIGHT, bold=True),
+        ]]
+        tbl_styles = [
+            ("LINEABOVE", (0, 0), (-1, 0), 0.65, BORDER),
+            ("LINEBELOW", (0, 0), (-1, 0), 0.65, BORDER),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0.5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0.5),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]
+        r_idx = 1
+        for item in items:
+            product = _fmt_value(item.product_name)
+            details = []
+            if show_hsn and has_val(getattr(item, "hsn_code", None)):
+                details.append(f"HSN:{item.hsn_code}")
+            if show_discount and dec(getattr(item, "discount_percent", 0)) != 0:
+                details.append(f"Disc:{dec(getattr(item, 'discount_percent', 0))}%")
+            if show_tax and dec(getattr(item, "gst_amount", 0)) != 0 and has_val(getattr(item, "gst_percent", None)):
+                details.append(f"GST:{dec(getattr(item, 'gst_percent', 0))}%")
 
-    for item in items:
-        product = _fmt_value(item.product_name)
-        details = []
-        if show_hsn and has_val(getattr(item, "hsn_code", None)):
-            details.append(f"HSN: {item.hsn_code}")
-        if show_discount and dec(getattr(item, "discount_percent", 0)) != 0:
-            details.append(f"Disc: {dec(getattr(item, 'discount_percent', 0))}%")
-        if show_tax and dec(getattr(item, "gst_amount", 0)) != 0 and has_val(getattr(item, "gst_percent", None)):
-            details.append(f"GST: {dec(getattr(item, 'gst_percent', 0))}%")
-        item_text = product + ("<br/><font size='5.2'>" + " | ".join(details) + "</font>" if details else "")
+            item_text = product + (" <font size='5.2'>(" + " ".join(details) + ")</font>" if details else "")
+            qty_rate = f"{_fmt_value(item.quantity)} x {currency(item.unit_price)}"
 
-        item_rows.append([
-            _tpara(item_text, size=T_ITEM),
-            _tpara(_fmt_value(item.quantity), size=T_ITEM, align=TA_RIGHT),
-            _tpara(currency(item.unit_price), size=T_ITEM, align=TA_RIGHT),
-            _tpara(currency(item.total), size=T_ITEM, align=TA_RIGHT, bold=True),
-        ])
+            item_rows.append([
+                _tpara(item_text, size=T_ITEM, bold=True),
+                _tpara("", size=T_ITEM),
+            ])
+            tbl_styles.append(("SPAN", (0, r_idx), (1, r_idx)))
+            tbl_styles.append(("TOPPADDING", (0, r_idx), (-1, r_idx), 1.5))
+            tbl_styles.append(("BOTTOMPADDING", (0, r_idx), (-1, r_idx), 0.5))
 
-    item_col_widths = [20 * mm, 7 * mm, 12 * mm, 13 * mm] if is_58mm else [31 * mm, 9 * mm, 15 * mm, 17 * mm]
-    item_tbl = Table(
-        item_rows,
-        colWidths=item_col_widths,
-        repeatRows=1,
-        hAlign="CENTER",
-    )
-    item_tbl.setStyle(TableStyle([
-        ("LINEABOVE", (0, 0), (-1, 0), 0.65, BORDER),
-        ("LINEBELOW", (0, 0), (-1, 0), 0.65, BORDER),
-        ("LINEBELOW", (0, 1), (-1, -1), 0.2, BORDER),
-        ("TOPPADDING", (0, 0), (-1, 0), 2.2),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 2.2),
-        ("TOPPADDING", (0, 1), (-1, -1), 1.7),
-        ("BOTTOMPADDING", (0, 1), (-1, -1), 1.7),
-        ("LEFTPADDING", (0, 0), (-1, -1), 1.0),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 1.0),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-    ]))
-    story.append(item_tbl)
+            item_rows.append([
+                _tpara(qty_rate, size=T_META),
+                _tpara(currency(item.total), size=T_ITEM, align=TA_RIGHT, bold=True),
+            ])
+            tbl_styles.append(("TOPPADDING", (0, r_idx + 1), (-1, r_idx + 1), 0.5))
+            tbl_styles.append(("BOTTOMPADDING", (0, r_idx + 1), (-1, r_idx + 1), 1.5))
+            tbl_styles.append(("LINEBELOW", (0, r_idx + 1), (-1, r_idx + 1), 0.2, BORDER))
+            r_idx += 2
+
+        item_tbl = Table(item_rows, colWidths=[34 * mm, 18 * mm], repeatRows=1, hAlign="CENTER")
+        item_tbl.setStyle(TableStyle(tbl_styles))
+        story.append(item_tbl)
+    else:
+        item_rows = [[
+            _tpara("ITEM", size=T_META, bold=True),
+            _tpara("QTY", size=T_META, align=TA_RIGHT, bold=True),
+            _tpara("RATE", size=T_META, align=TA_RIGHT, bold=True),
+            _tpara("AMOUNT", size=T_META, align=TA_RIGHT, bold=True),
+        ]]
+
+        for item in items:
+            product = _fmt_value(item.product_name)
+            details = []
+            if show_hsn and has_val(getattr(item, "hsn_code", None)):
+                details.append(f"HSN: {item.hsn_code}")
+            if show_discount and dec(getattr(item, "discount_percent", 0)) != 0:
+                details.append(f"Disc: {dec(getattr(item, 'discount_percent', 0))}%")
+            if show_tax and dec(getattr(item, "gst_amount", 0)) != 0 and has_val(getattr(item, "gst_percent", None)):
+                details.append(f"GST: {dec(getattr(item, 'gst_percent', 0))}%")
+            item_text = product + ("<br/><font size='5.2'>" + " | ".join(details) + "</font>" if details else "")
+
+            item_rows.append([
+                _tpara(item_text, size=T_ITEM),
+                _tpara(_fmt_value(item.quantity), size=T_ITEM, align=TA_RIGHT),
+                _tpara(currency(item.unit_price), size=T_ITEM, align=TA_RIGHT),
+                _tpara(currency(item.total), size=T_ITEM, align=TA_RIGHT, bold=True),
+            ])
+
+        item_col_widths = [31 * mm, 9 * mm, 15 * mm, 17 * mm]
+        item_tbl = Table(
+            item_rows,
+            colWidths=item_col_widths,
+            repeatRows=1,
+            hAlign="CENTER",
+        )
+        item_tbl.setStyle(TableStyle([
+            ("LINEABOVE", (0, 0), (-1, 0), 0.65, BORDER),
+            ("LINEBELOW", (0, 0), (-1, 0), 0.65, BORDER),
+            ("LINEBELOW", (0, 1), (-1, -1), 0.2, BORDER),
+            ("TOPPADDING", (0, 0), (-1, 0), 2.2),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 2.2),
+            ("TOPPADDING", (0, 1), (-1, -1), 1.7),
+            ("BOTTOMPADDING", (0, 1), (-1, -1), 1.7),
+            ("LEFTPADDING", (0, 0), (-1, -1), 1.0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 1.0),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ]))
+        story.append(item_tbl)
 
     # 5. Totals
     _tdashed(story, content_w)
@@ -1482,7 +1604,7 @@ def generate_thermal_invoice_pdf(invoice, template=None):
         upi_id,
         shop_name,
         grand,
-        size_mm=_qr_size_thermal(s),
+        size_mm=_qr_size_thermal(s, is_58mm=is_58mm),
         invoice_number=invoice.invoice_number,
     ) if show_qr else None
     if qr_img:
@@ -1495,7 +1617,7 @@ def generate_thermal_invoice_pdf(invoice, template=None):
         story.append(qr_wrap)
         story.append(_tpara(_fmt_value(upi_id), size=T_META, align=TA_CENTER))
 
-    bill_qr_img = make_bill_qr(invoice, size_mm=_qr_size_thermal(s)) if show_bill_qr else None
+    bill_qr_img = make_bill_qr(invoice, size_mm=_qr_size_thermal(s, is_58mm=is_58mm)) if show_bill_qr else None
     if bill_qr_img:
         _tdashed(story, content_w, 1.0 * mm, 0.8 * mm)
         story.append(_tpara("SCAN TO VIEW BILL", size=T_META, align=TA_CENTER, bold=True))

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { clearAuthSession, getAccessToken, getAuthValue, setAccessToken } from './tokenStorage'
 
 // ------------------------------------------------------
 // API BASE URL
@@ -36,8 +37,7 @@ const onRefreshFailed = error => {
 }
 
 export const forceLogout = (triggerRedirect = true) => {
-  localStorage.removeItem('access_token')
-  localStorage.removeItem('refresh_token')
+  clearAuthSession()
 
   if (typeof onUnauthorizedCallback === 'function') {
     try {
@@ -58,7 +58,7 @@ export const forceLogout = (triggerRedirect = true) => {
 }
 
 const refreshAccessToken = async () => {
-  const refreshToken = localStorage.getItem('refresh_token')
+  const refreshToken = getAuthValue('refresh_token')
 
   if (!refreshToken) {
     throw new Error('No refresh token available')
@@ -84,7 +84,7 @@ const refreshAccessToken = async () => {
     throw new Error('Refresh response did not contain an access token')
   }
 
-  localStorage.setItem('access_token', newAccessToken)
+  setAccessToken(newAccessToken)
   return newAccessToken
 }
 
@@ -103,7 +103,7 @@ export const http = axios.create({
 // Request interceptor: Inject Authorization header
 http.interceptors.request.use(
   config => {
-    const accessToken = localStorage.getItem('access_token')
+    const accessToken = getAccessToken()
     if (accessToken) {
       config.headers = config.headers || {}
       config.headers.Authorization = `Bearer ${accessToken}`

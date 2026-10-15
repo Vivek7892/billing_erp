@@ -385,6 +385,7 @@ class InvoiceItem(models.Model):
 class Payment(models.Model):
     METHOD_CHOICES = [('cash', 'Cash'), ('upi', 'UPI'), ('card', 'Card'), ('online', 'Online'), ('credit', 'Credit'), ('razorpay', 'Razorpay')]
     invoice = models.ForeignKey(Invoice, related_name='payments', on_delete=models.CASCADE)
+    customer_payment = models.ForeignKey('CustomerPayment', on_delete=models.SET_NULL, null=True, blank=True, related_name='invoice_payments')
     method = models.CharField(max_length=10, choices=METHOD_CHOICES)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     reference = models.CharField(max_length=100, blank=True)
@@ -485,6 +486,7 @@ class CustomerPayment(models.Model):
     METHOD_CHOICES = [('cash', 'Cash'), ('upi', 'UPI'), ('card', 'Card'), ('online', 'Online')]
     business = models.ForeignKey(Business, on_delete=models.CASCADE, null=True, blank=True)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='ledger_payments')
+    invoice = models.ForeignKey(Invoice, on_delete=models.SET_NULL, null=True, blank=True, related_name='customer_payments')
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     method = models.CharField(max_length=20, choices=METHOD_CHOICES, default='cash')
     reference = models.CharField(max_length=100, blank=True)

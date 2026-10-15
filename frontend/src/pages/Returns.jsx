@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api, { API_BASE_URL } from '../api'
+import { getAccessToken } from '../services/tokenStorage'
 import { Badge, Spinner, Modal } from '../components/UI'
 import {
   RotateCcw, RefreshCw, PackageX, IndianRupee, FileX, TrendingDown,
@@ -389,7 +390,7 @@ export default function Returns() {
   </div>
         {loading ? <Spinner /> : (
           <>
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto min-h-[180px] pb-4">
               <table className="table min-w-[900px] [&_th]:whitespace-nowrap [&_td]:align-middle">
                 <thead>
                   <tr><th>Return #</th><th>Invoice</th><th>Customer</th><th>Date</th><th>Refund Method</th><th>Refund Amt</th><th>Reason</th><th></th></tr>
@@ -494,7 +495,7 @@ export default function Returns() {
         </div>
         {loading ? <Spinner /> : (
           <>
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto min-h-[180px] pb-4">
               <table className="table min-w-[760px] [&_th]:whitespace-nowrap [&_td]:align-middle">
                 <thead>
                   <tr><th>Invoice</th><th>Customer</th><th>Date</th><th>Payment</th><th>Amount</th><th>Status</th><th>Actions</th></tr>
@@ -524,7 +525,7 @@ export default function Returns() {
                             <button onClick={() => setViewModal(b)} className="w-8 h-8 inline-flex items-center justify-center text-[var(--ink-secondary)] bg-[var(--surface)] border border-[var(--line)] rounded-md hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-all active:scale-95" title="View" aria-label="View invoice">
                               <Eye size={14} />
                             </button>
-                            <a href={`${API_BASE_URL}/invoices/${b.id}/pdf/?token=${localStorage.getItem('access_token')}`}
+                            <a href={`${API_BASE_URL}/invoices/${b.id}/pdf/?token=${getAccessToken()}`}
                               target="_blank" rel="noreferrer" className="w-8 h-8 inline-flex items-center justify-center text-[var(--ink-secondary)] bg-[var(--surface)] border border-[var(--line)] rounded-md hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-all active:scale-95" title="Print" aria-label="Print invoice">
                               <Printer size={14} />
                             </a>
@@ -571,7 +572,7 @@ export default function Returns() {
                           <Eye size={14} />
                           <span>View</span>
                         </button>
-                        <a href={`${API_BASE_URL}/invoices/${b.id}/pdf/?token=${localStorage.getItem('access_token')}`}
+                        <a href={`${API_BASE_URL}/invoices/${b.id}/pdf/?token=${getAccessToken()}`}
                           target="_blank" rel="noreferrer" className="min-h-[38px] px-2.5 inline-flex items-center justify-center gap-1 text-[var(--ink-secondary)] rounded-md bg-[var(--surface)] border border-[var(--line)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-all active:scale-95 text-xs font-semibold" title="Print" aria-label="Print invoice">
                           <Printer size={14} />
                           <span>Print</span>

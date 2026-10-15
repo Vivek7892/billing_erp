@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import api, { API_BASE_URL } from '../api'
 import productService from '../features/inventory/api/productService'
-import { Badge, PageHeader, Modal, Spinner, EmptyState, Pagination, TableSkeleton } from '../components/UI'
+import { Badge, PageHeader, Modal, Spinner, EmptyState, Pagination, TableSkeleton, SearchBar } from '../components/UI'
 import { STOCK_STATUS } from '../constants'
 import toast from 'react-hot-toast'
 import BarcodePrintModal from '../components/BarcodePrintModal'
@@ -11,7 +12,6 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
-  Search,
   SlidersHorizontal,
   PackageSearch,
   ChevronDown,
@@ -69,6 +69,7 @@ const fmtCurrency = val =>
   })}`
 
 export default function Stock() {
+  const location = useLocation()
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [suppliers, setSuppliers] = useState([])
@@ -76,13 +77,20 @@ export default function Stock() {
 
   // Filters
   const [filter, setFilter] = useState('all') // 'all' | 'in_stock' | 'low_stock' | 'out_of_stock'
-  const [q, setQ] = useState('')
+  const [q, setQ] = useState(() => new URLSearchParams(window.location.search).get('search') || '')
   const [selectedCat, setSelectedCat] = useState('')
   const [selectedSup, setSelectedSup] = useState('')
   const [sortBy, setSortBy] = useState('stock')
   const [sortDir, setSortDir] = useState('asc')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 20
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const target = params.get('search') || ''
+    setQ(target)
+    if (target) setCurrentPage(1)
+  }, [location.search])
 
   // Modals
   const [adjustModal, setAdjustModal] = useState(false)
@@ -169,6 +177,7 @@ export default function Stock() {
 
         if (search) {
           return [
+            p.id,
             p.name,
             p.sku,
             p.category_name,
@@ -374,26 +383,26 @@ export default function Stock() {
         }
 
         .stock-page .erp-table th {
-          padding: 12px 14px;
+          padding: 10px 12px;
           text-align: left;
           white-space: nowrap;
-          background: linear-gradient(135deg, #1e3a8a, #2563eb);
+          background: var(--surface-subtle);
           border-bottom: 1px solid var(--line);
-          color: #eff6ff;
-          font-size: 11px;
+          color: var(--muted);
+          font-size: 0.75rem;
           font-weight: 700;
-          letter-spacing: .05em;
+          letter-spacing: .04em;
           text-transform: uppercase;
         }
 
         .stock-page .erp-table td {
-          padding: 13px 14px;
+          padding: 10px 12px;
           border-bottom: 1px solid var(--line-subtle);
           vertical-align: middle;
         }
 
         .stock-page .erp-table tbody tr:hover {
-          background: var(--surface-elevated);
+          background: var(--surface-hover);
         }
       `}</style>
 
@@ -514,7 +523,7 @@ export default function Stock() {
             </p>
           </div>
 
-          <div className="p-3">
+          <div className="p-3 col-span-2 sm:col-span-1 border-t sm:border-t-0 border-[var(--line)]">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Stock Valuation
@@ -537,34 +546,7 @@ export default function Stock() {
       <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-3.5">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-12 lg:items-center">
           {/* Search bar */}
-          <div className="group relative flex min-w-0 sm:col-span-2 lg:col-span-5 items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-              <Search size={14} strokeWidth={2.2} />
-            </div>
-            <input
-              type="text"
-              className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
-              placeholder="Search product name, SKU, barcode, supplier..."
-              value={q}
-              onChange={e => setQ(e.target.value)}
-              aria-label="Search inventory"
-            />
-            {q ? (
-              <button
-                type="button"
-                onClick={() => setQ('')}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
-                title="Clear search"
-                aria-label="Clear search"
-              >
-                <X size={13} strokeWidth={2.5} />
-              </button>
-            ) : (
-              <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
-                Ctrl+K
-              </kbd>
-            )}
-          </div>
+          <SearchBar value={q} onChange={setQ} placeholder="Search product name, SKU, barcode, supplier..." className="min-w-0 sm:col-span-2 lg:col-span-5" shortcut="Ctrl+K" />
 
           {/* Category Filter */}
           <div className="min-w-0 lg:col-span-3">
@@ -805,8 +787,18 @@ export default function Stock() {
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="erp-table">
+            <div className="hidden md:block overflow-x-auto min-h-[220px] pb-4">
+              <table className="erp-table w-full min-w-[900px]">
+                <colgroup>
+                  <col style={{ width: '24%' }} />
+                  <col style={{ width: '16%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '11%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '8%' }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th

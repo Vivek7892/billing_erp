@@ -25,7 +25,7 @@ def build(business, params):
         business=business, created_at__date__gte=start, created_at__date__lte=end,
     ).aggregate(total=Sum('refund_amount'))['total'] or Decimal('0')
     collection = Payment.objects.filter(
-        invoice__business=business, invoice__status='completed',
+        invoice__business=business, invoice__status='completed', customer_payment__isnull=True,
         created_at__date__gte=start, created_at__date__lte=end,
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
     collection += CustomerPayment.objects.filter(

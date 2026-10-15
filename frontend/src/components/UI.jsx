@@ -15,13 +15,13 @@ export function Card({
   return (
     <div
       className={[
-        'rounded-[12px] border border-[var(--line)]',
+        'rounded-lg border border-[var(--line)]',
         'bg-[var(--surface)]',
-        'shadow-[0_1px_2px_rgba(15,23,42,0.04)]',
+        'shadow-none',
         'transition-all duration-150',
         padding ? 'p-5 sm:p-6' : '',
         hover
-          ? 'hover:border-[var(--line-strong)] hover:shadow-xs'
+          ? 'hover:border-[var(--line-strong)]'
           : '',
         className,
       ].join(' ')}
@@ -504,7 +504,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 backdrop-blur-xs sm:items-center sm:p-4"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
@@ -521,7 +521,7 @@ export function Modal({
         className={[
           'flex max-h-[95dvh] w-full flex-col outline-none',
           sizes[size] || sizes.md,
-          'overflow-hidden rounded-t-[12px] sm:max-h-[90vh] sm:rounded-[12px]',
+          'overflow-hidden rounded-t-lg sm:max-h-[90vh] sm:rounded-lg',
           'border border-[var(--line)]',
           'bg-[var(--surface)]',
           'shadow-[var(--shadow-modal)]',
@@ -609,14 +609,14 @@ export function ConfirmDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="w-full max-w-sm rounded-[12px] border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-modal)] sm:p-6 outline-none"
+        className="w-full max-w-sm rounded-lg border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-modal)] sm:p-6 outline-none"
       >
         <div
           className={[
-            'mb-4 flex h-11 w-11 items-center justify-center rounded-xl border',
+            'mb-4 flex h-11 w-11 items-center justify-center rounded-lg border',
             danger
               ? 'border-red-200 bg-red-50 text-[#B91C1C] dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-400'
-              : 'border-[#D7DEE7] bg-slate-100 text-[#1E3A5F] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200',
+              : 'border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--primary)] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200',
           ].join(' ')}
         >
           {danger ? (
@@ -1545,19 +1545,29 @@ export function SearchBar({
   className = '',
   onClear,
   shortcut = 'Ctrl+K',
+  inputRef,
+  inputProps = {},
+  inputClassName = '',
+  iconClassName = '',
+  clearButtonClassName = '',
+  clearButtonProps = {},
+  shortcutClassName = '',
+  children,
 }) {
   return (
     <div className={`group relative flex items-center min-h-[42px] w-full min-w-[200px] flex-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs ${className}`}>
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
+      <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300 ${iconClassName}`}>
         <Search size={14} strokeWidth={2.2} />
       </div>
 
       <input
+        {...inputProps}
+        ref={inputRef}
         type="text"
         value={value || ''}
         onChange={e => onChange?.(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
+        className={`w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none ${inputClassName}`}
       />
 
       {value ? (
@@ -1567,17 +1577,19 @@ export function SearchBar({
             onChange?.('')
             onClear?.()
           }}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
+          {...clearButtonProps}
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95 ${clearButtonClassName}`}
           aria-label="Clear search"
           title="Clear search"
         >
           <X size={13} strokeWidth={2.5} />
         </button>
       ) : shortcut ? (
-        <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
+        <kbd className={`hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs ${shortcutClassName}`}>
           {shortcut}
         </kbd>
       ) : null}
+      {children}
     </div>
   )
 }
@@ -1612,7 +1624,7 @@ export function DataTable({
   }
 
   return (
-    <div className={`overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] ${className}`}>
+    <div className={`overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] ${className}`}>
       <table className="table">
         <thead>
           <tr>
