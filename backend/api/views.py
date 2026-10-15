@@ -4228,7 +4228,7 @@ def _generate_barcode_label_pdf(product, copies, options=None):
             saved = bc.save(tmp_path, options={
                 'write_text': False,
                 'quiet_zone': 1.5,
-                'module_height': 10 if is_compact else 14,
+                'module_height': 9 if is_compact else 18,
                 'dpi': 300,
             })
             bc_img_path = saved
@@ -4249,14 +4249,27 @@ def _generate_barcode_label_pdf(product, copies, options=None):
         if not shop_name:
             shop_name = 'RETAIL STORE'
 
-    try:
-        sp_num = float(product.selling_price or 0)
-        price_text = f'Rs. {sp_num:,.2f}' if sp_num > 0 else 'Rs. 0.00'
-    except (ValueError, TypeError):
-        price_text = f'Rs. {product.selling_price}'
+    def format_price(value):
+        try:
+            amount = float(value or 0)
+            formatted = f'{amount:,.0f}' if amount.is_integer() else f'{amount:,.2f}'
+            return f'Rs. {formatted}'
+        except (ValueError, TypeError):
+            return f'Rs. {value}'
 
-    label_text = (product.name or 'Product')[:(22 if is_compact else 28)]
-    sku_text = f'SKU: {product.sku[:12]}' if (show_sku and product.sku) else ''
+    price_text = format_price(product.selling_price)
+    mrp_text = format_price(product.mrp)
+    label_text = (product.name or 'Product').strip()
+
+    def draw_fitted_center(text, center_x, baseline, max_width, font_name, font_size):
+        from reportlab.pdfbase import pdfmetrics
+        text = str(text or '')
+        if pdfmetrics.stringWidth(text, font_name, font_size) > max_width:
+            while text and pdfmetrics.stringWidth(text + '...', font_name, font_size) > max_width:
+                text = text[:-1]
+            text = text.rstrip() + '...' if text else ''
+        c.setFont(font_name, font_size)
+        c.drawCentredString(center_x, baseline, text)
 
     for i in range(copies):
         col = i % COLS
@@ -4275,88 +4288,56 @@ def _generate_barcode_label_pdf(product, copies, options=None):
         c.setFillColor(rl_colors.HexColor('#1E3A5F'))
         c.roundRect(x, y + LABEL_H - (1.3 * mm), LABEL_W, 1.3 * mm, radius=0.6 * mm, stroke=0, fill=1)
 
-        curr_top = y + LABEL_H
+        center_x = x + LABEL_W / 2
+        side_pad = (4 if is_compact else 5) * mm
+        max_text_width = LABEL_W - 2 * side_pad
 
-        # 1. Store Name
+        # Store and product details sit above the dedicated barcode area.
         if show_store and shop_name:
-            c.setFont('Helvetica-Bold', 6 if is_compact else 7)
             c.setFillColor(rl_colors.HexColor('#64748B'))
-            curr_top -= (4 * mm if is_compact else 5 * mm)
-            c.drawCentredString(x + LABEL_W / 2, curr_top, shop_name[:26].upper())
-
-        # 2. Product Name
+            draw_fitted_center(shop_name.upper(), center_x, y + LABEL_H - (4.2 if is_compact else 5.2) * mm,
+                               max_text_width, 'Helvetica-Bold', 5.8 if is_compact else 7)
         if show_name:
-            c.setFont('Helvetica-Bold', 7 if is_compact else 8.5)
             c.setFillColor(rl_colors.HexColor('#0F172A'))
-            curr_top -= (3.5 * mm if is_compact else 4.5 * mm)
-            c.drawCentredString(x + LABEL_W / 2, curr_top, label_text)
-
-        # 3. Barcode graphic & number
-        if show_barcode and bc_img_path and os.path.exists(bc_img_path):
-            bc_h = 10 * mm if is_compact else 15 * mm
-            bc_w = LABEL_W - (6 * mm if is_compact else 8 * mm)
-            bc_x = x + (LABEL_W - bc_w) / 2
-            curr_top -= (bc_h + 1 * mm)
-            c.drawImage(bc_img_path, bc_x, curr_top, width=bc_w, height=bc_h, preserveAspectRatio=True, anchor='c', mask='auto')
-
-            if show_number:
-                curr_top -= 3 * mm
-                c.setFont('Courier-Bold', 6 if is_compact else 7)
-                c.setFillColor(rl_colors.HexColor('#475569'))
-                c.drawCentredString(x + LABEL_W / 2, curr_top, barcode_value)
-        elif show_barcode:
-            # Fallback text
-            curr_top -= 5 * mm
-            c.setFont('Courier-Bold', 8 if is_compact else 9)
-            c.setFillColor(rl_colors.HexColor('#0F172A'))
-            c.drawCentredString(x + LABEL_W / 2, curr_top, barcode_value)
-        elif show_number:
-            curr_top -= 4 * mm
-            c.setFont('Courier-Bold', 7 if is_compact else 8)
-            c.setFillColor(rl_colors.HexColor('#475569'))
-            c.drawCentredString(x + LABEL_W / 2, curr_top, barcode_value)
-
-        # 4. Bottom details line: SKU, Unit, MRP, Price
-        has_bottom_info = show_sku or show_unit or show_mrp or show_price
-        if has_bottom_info:
-            sep_y = y + (7 * mm if is_compact else 9.5 * mm)
-            c.setStrokeColor(rl_colors.HexColor('#E2E8F0'))
-            c.setLineWidth(0.4)
-            c.line(x + 2.5 * mm, sep_y, x + LABEL_W - 2.5 * mm, sep_y)
-
-            bottom_y = y + (2 * mm if is_compact else 3.5 * mm)
-
-            # Left items: SKU, MRP, Unit
-            c.setFont('Helvetica', 5.5 if is_compact else 6.5)
+            draw_fitted_center(label_text, center_x, y + LABEL_H - (8.2 if is_compact else 10.2) * mm,
+                               max_text_width, 'Helvetica-Bold', 7.4 if is_compact else 10)
+        if show_unit and product.unit:
             c.setFillColor(rl_colors.HexColor('#64748B'))
-            left_strs = []
-            if sku_text:
-                left_strs.append(sku_text)
-            if show_unit and product.unit:
-                left_strs.append(f'Unit: {product.unit}')
-            if show_mrp and product.mrp and float(product.mrp or 0) > 0:
-                left_strs.append(f'MRP: Rs.{product.mrp}')
+            draw_fitted_center(product.unit, center_x, y + LABEL_H - (11.1 if is_compact else 13.5) * mm,
+                               max_text_width, 'Helvetica', 5.4 if is_compact else 6.5)
 
-            if left_strs:
-                c.drawString(x + 3 * mm, bottom_y, ' · '.join(left_strs)[:28])
+        # Pure white quiet area around the larger, high contrast barcode.
+        barcode_bottom = y + (13.4 if is_compact else 18.5) * mm
+        barcode_height = max(4, min(10.5, LABEL_H - 25.5) if is_compact else min(21, LABEL_H - 34)) * mm
+        barcode_width = LABEL_W - 2 * side_pad
+        if show_barcode and bc_img_path and os.path.exists(bc_img_path):
+            c.setFillColor(rl_colors.white)
+            c.rect(x + side_pad, barcode_bottom, barcode_width, barcode_height, stroke=0, fill=1)
+            c.drawImage(bc_img_path, x + side_pad, barcode_bottom, width=barcode_width,
+                        height=barcode_height, preserveAspectRatio=True, anchor='c', mask='auto')
+        elif show_barcode:
+            c.setFillColor(rl_colors.HexColor('#0F172A'))
+            draw_fitted_center(barcode_value, center_x, barcode_bottom + barcode_height / 2,
+                               barcode_width, 'Courier-Bold', 7 if is_compact else 9)
 
-            # Right item: Selling Price
-            if show_price:
-                c.setFont('Helvetica-Bold', 7.5 if is_compact else 9.5)
-                c.setFillColor(rl_colors.HexColor('#0F172A'))
-                c.drawRightString(x + LABEL_W - 3 * mm, bottom_y, price_text)
-                if show_mrp and product.mrp and float(product.mrp or 0) > 0:
-                    mrp_text = f'Rs.{product.mrp}'
-                    mrp_width = c.stringWidth(mrp_text, 'Helvetica', 5.5 if is_compact else 6.5)
-                    price_width = c.stringWidth(price_text, 'Helvetica-Bold', 7.5 if is_compact else 9.5)
-                    mrp_x = x + LABEL_W - 3 * mm - price_width - 2 * mm - mrp_width
-                    mrp_y = bottom_y + (1.2 * mm)
-                    c.setFont('Helvetica', 5.5 if is_compact else 6.5)
-                    c.setFillColor(rl_colors.HexColor('#94A3B8'))
-                    c.drawString(mrp_x, mrp_y, mrp_text)
-                    c.setStrokeColor(rl_colors.HexColor('#94A3B8'))
-                    c.setLineWidth(0.35)
-                    c.line(mrp_x, mrp_y + 1.2 * mm, mrp_x + mrp_width, mrp_y + 1.2 * mm)
+        if show_number:
+            c.setFillColor(rl_colors.HexColor('#111827'))
+            draw_fitted_center(barcode_value, center_x, y + (11.2 if is_compact else 16.1) * mm,
+                               max_text_width, 'Courier', 5.5 if is_compact else 7)
+
+        # Selling price is dominant; MRP and SKU stay secondary.
+        if show_price:
+            c.setFillColor(rl_colors.HexColor('#0F172A'))
+            draw_fitted_center(price_text, center_x, y + (7.4 if is_compact else 12.4) * mm,
+                               max_text_width, 'Helvetica-Bold', 9 if is_compact else 14)
+        if show_mrp and product.mrp and float(product.mrp or 0) > 0:
+            c.setFillColor(rl_colors.HexColor('#64748B'))
+            draw_fitted_center(f'MRP {mrp_text}', center_x, y + (5.0 if is_compact else 8.8) * mm,
+                               max_text_width, 'Helvetica', 5.5 if is_compact else 7)
+        if show_sku and product.sku:
+            c.setFillColor(rl_colors.HexColor('#64748B'))
+            draw_fitted_center(f'SKU: {product.sku}', center_x, y + (2.2 if is_compact else 3.4) * mm,
+                               max_text_width, 'Helvetica', 5.2 if is_compact else 6.5)
 
     c.save()
 

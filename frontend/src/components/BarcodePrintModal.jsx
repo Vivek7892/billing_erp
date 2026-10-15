@@ -24,7 +24,15 @@ const FIELD_LIST = [
   { key: 'unit',         label: 'Unit'          },
 ]
 
-export default function BarcodePrintModal({ open, onClose, product, shopName = 'RETAIL STORE' }) {
+function validRetailCheckDigit(value) {
+  const digits = String(value || '')
+  if (!/^\d+$/.test(digits) || ![8, 12, 13].includes(digits.length)) return null
+  const values = digits.slice(0, -1).split('').reverse().map(Number)
+  const sum = values.reduce((total, digit, index) => total + digit * (index % 2 === 0 ? 3 : 1), 0)
+  return (10 - (sum % 10)) % 10 === Number(digits[digits.length - 1])
+}
+
+export default function BarcodePrintModal({ open, onClose, product, shopName ={shopname}) {
   const [size, setSize]           = useState('a4_3x5')
   const [customCols, setCustomCols] = useState(3)
   const [customRows, setCustomRows] = useState(5)
@@ -81,6 +89,7 @@ export default function BarcodePrintModal({ open, onClose, product, shopName = '
   }
 
   const barcodeValue  = product?.barcode || product?.sku || '890123456789'
+  const retailCheckDigitValid = validRetailCheckDigit(product?.barcode)
   const formattedPrice = product?.selling_price != null
     ? `₹${Number(product.selling_price).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
     : '₹0.00'
@@ -111,6 +120,11 @@ export default function BarcodePrintModal({ open, onClose, product, shopName = '
               {formattedPrice}
             </span>
           </div>
+          {retailCheckDigitValid === false && (
+            <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+              This number fails the UPC/EAN check digit. It will print as Code 128; confirm the product barcode before printing a batch.
+            </p>
+          )}
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-5">
 
