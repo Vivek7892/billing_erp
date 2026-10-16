@@ -87,6 +87,75 @@ function relativeTime(isoString) {
   return `${Math.floor(diff / 86400)}d ago`
 }
 
+function DiffViewer({ currentData, proposedData }) {
+  if (!currentData && !proposedData) return null
+
+  const fmt = (val, key) => {
+    if (val === null || val === undefined) return '—'
+    if (typeof val === 'number') {
+      const k = (key || '').toLowerCase()
+      if (k.includes('price') || k.includes('amount') || k.includes('total') || k.includes('limit') || k.includes('balance')) {
+        return `₹${Number(val).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      }
+      return val.toString()
+    }
+    if (typeof val === 'object') {
+      if (Array.isArray(val)) {
+        return `${val.length} item(s) selected`
+      }
+      return JSON.stringify(val)
+    }
+    return String(val)
+  }
+
+  const currentEntries = Object.entries(currentData || {})
+  const proposedEntries = Object.entries(proposedData || {}).filter(([k]) => k !== 'other_fields')
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 my-3">
+      {/* Current Data Snapshot */}
+      <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] p-3">
+        <div className="flex items-center justify-between pb-1.5 border-b border-[var(--line)] mb-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Current Data</span>
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">Live DB</span>
+        </div>
+        <div className="space-y-1 text-xs">
+          {currentEntries.length === 0 ? (
+            <span className="text-[11px] text-[var(--muted)] italic">No previous state</span>
+          ) : (
+            currentEntries.map(([k, v]) => (
+              <div key={k} className="flex justify-between items-center text-[11px] gap-2">
+                <span className="text-[var(--muted)] capitalize truncate">{k.replace(/_/g, ' ')}:</span>
+                <span className="font-mono font-medium text-[var(--ink)] truncate">{fmt(v, k)}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Proposed Changes Diff */}
+      <div className="rounded-lg border border-teal-200 dark:border-teal-800/60 bg-teal-50/50 dark:bg-teal-950/20 p-3">
+        <div className="flex items-center justify-between pb-1.5 border-b border-teal-200 dark:border-teal-800/60 mb-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-teal-800 dark:text-teal-300">Proposed Changes</span>
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-teal-100 text-teal-800 dark:bg-teal-900/60 dark:text-teal-300">New Value</span>
+        </div>
+        <div className="space-y-1 text-xs">
+          {proposedEntries.length === 0 ? (
+            <span className="text-[11px] text-[var(--muted)] italic">No changes specified</span>
+          ) : (
+            proposedEntries.map(([k, v]) => (
+              <div key={k} className="flex justify-between items-center text-[11px] gap-2">
+                <span className="text-teal-950 dark:text-teal-200 capitalize truncate">{k.replace(/_/g, ' ')}:</span>
+                <span className="font-mono font-bold text-teal-700 dark:text-teal-300 truncate">{fmt(v, k)}</span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function getNotificationRoute(item) {
   const type = item.notification_type
   const refId = item.reference_id
@@ -680,14 +749,21 @@ export default function Notifications() {
                             {item.message}
                           </p>
                           {item.requires_approval && (
-                            <span className={`mt-1 inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              item.status === 'approved' ? 'bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300' :
-                              item.status === 'rejected' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300' :
-                              'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-                            }`}>
-                              {item.status?.toUpperCase()}
-                              {item.actioned_by_name ? ` · ${item.actioned_by_name}` : ''}
-                            </span>
+                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                              <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                item.status === 'approved' ? 'bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300' :
+                                item.status === 'rejected' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300' :
+                                'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                              }`}>
+                                {item.status?.toUpperCase()}
+                                {item.actioned_by_name ? ` · ${item.actioned_by_name}` : ''}
+                              </span>
+                              {item.data?.threshold_rule && (
+                                <span className="inline-block text-[10px] font-medium px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/40">
+                                  {item.data.threshold_rule}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </td>
 
@@ -708,6 +784,18 @@ export default function Notifications() {
                               <span>{actionLabel}</span>
                               <ArrowUpRight size={11} />
                             </button>
+                          ) : item.requires_approval && (item.data?.current_data || item.data?.proposed_data) ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setApprovalNotes('')
+                                setApprovalModal({ id: item.id, title: item.title, message: item.message, type: item.status === 'active' ? 'approve' : 'view', data: item.data })
+                              }}
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                            >
+                              <span>View Diff</span>
+                              <ArrowUpRight size={11} />
+                            </button>
                           ) : (
                             <span className="text-[11px] text-[var(--muted)]">—</span>
                           )}
@@ -720,7 +808,7 @@ export default function Notifications() {
                               <>
                                 <button
                                   type="button"
-                                  onClick={() => { setApprovalNotes(''); setApprovalModal({ id: item.id, title: item.title, message: item.message, type: 'approve' }) }}
+                                  onClick={() => { setApprovalNotes(''); setApprovalModal({ id: item.id, title: item.title, message: item.message, type: 'approve', data: item.data }) }}
                                   disabled={Boolean(actioningId)}
                                   className="btn-success btn-sm text-[11px] px-2 inline-flex items-center gap-1"
                                 >
@@ -728,7 +816,7 @@ export default function Notifications() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => { setApprovalNotes(''); setApprovalModal({ id: item.id, title: item.title, message: item.message, type: 'reject' }) }}
+                                  onClick={() => { setApprovalNotes(''); setApprovalModal({ id: item.id, title: item.title, message: item.message, type: 'reject', data: item.data }) }}
                                   disabled={Boolean(actioningId)}
                                   className="btn-danger btn-sm text-[11px] px-2 inline-flex items-center gap-1"
                                 >
@@ -791,12 +879,20 @@ export default function Notifications() {
       {/* ── Approval Modal ── */}
       {approvalModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-          <div className="w-full max-w-lg rounded-t-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-2xl modal-shell sm:rounded-2xl sm:p-5">
-            <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="w-full max-w-xl rounded-t-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-2xl modal-shell sm:rounded-2xl sm:p-5">
+            <div className="mb-3 flex items-start justify-between gap-3">
               <div>
-                <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${approvalModal.type === 'approve' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300'}`}>Manager review</span>
+                <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
+                  approvalModal.type === 'approve' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' :
+                  approvalModal.type === 'reject' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300' :
+                  'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300'
+                }`}>
+                  {approvalModal.type === 'view' ? 'Approval Details' : 'Administrator Authorization'}
+                </span>
                 <h3 className="mb-0 mt-2 text-base font-bold text-[var(--ink)]">
-                  {approvalModal.type === 'approve' ? 'Approve this request?' : 'Reject this request?'}
+                  {approvalModal.type === 'approve' ? 'Approve & Execute Request' :
+                   approvalModal.type === 'reject' ? 'Reject Authorization Request' :
+                   'Request Diff & Authorization Details'}
                 </h3>
                 <p className="mb-0 mt-1 text-sm font-semibold text-[var(--ink-secondary)]">{approvalModal.title}</p>
               </div>
@@ -808,40 +904,69 @@ export default function Notifications() {
               </button>
             </div>
 
-            {approvalModal.message && <div className="mb-4 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-3 text-xs leading-relaxed text-[var(--ink-secondary)]">{approvalModal.message}</div>}
+            {/* Threshold Rule Banner */}
+            {approvalModal.data?.threshold_rule && (
+              <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/50 p-2.5 flex items-center gap-2 text-xs text-amber-900 dark:text-amber-200">
+                <AlertCircle size={15} className="text-amber-600 shrink-0" />
+                <div>
+                  <span className="font-bold">Threshold Exceeded: </span>
+                  <span>{approvalModal.data.threshold_rule}</span>
+                </div>
+              </div>
+            )}
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[var(--ink-secondary)]">
-                Review note {approvalModal.type === 'reject' ? '(recommended)' : '(optional)'}
-              </label>
-              <textarea
-                value={approvalNotes}
-                onChange={e => setApprovalNotes(e.target.value)}
-                placeholder="Add a short reason or authorization reference..."
-                rows={3}
-                className="w-full p-2 text-xs rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:border-[var(--primary)]"
+            {/* Side-by-side Current vs Proposed Data Diff */}
+            {(approvalModal.data?.current_data || approvalModal.data?.proposed_data) && (
+              <DiffViewer
+                currentData={approvalModal.data.current_data}
+                proposedData={approvalModal.data.proposed_data}
               />
-            </div>
+            )}
 
-            <p className="mb-0 mt-2 text-[10px] leading-relaxed text-[var(--muted)]">This decision is recorded with your account and timestamp.</p>
+            {approvalModal.message && (
+              <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-2.5 text-xs leading-relaxed text-[var(--ink-secondary)]">
+                {approvalModal.message}
+              </div>
+            )}
+
+            {approvalModal.type !== 'view' && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-[var(--ink-secondary)]">
+                  Authorization note {approvalModal.type === 'reject' ? '(recommended)' : '(optional)'}
+                </label>
+                <textarea
+                  value={approvalNotes}
+                  onChange={e => setApprovalNotes(e.target.value)}
+                  placeholder="Add authorization reference or reason..."
+                  rows={2}
+                  className="w-full p-2 text-xs rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:border-[var(--primary)]"
+                />
+              </div>
+            )}
+
+            <p className="mb-0 mt-2 text-[10px] leading-relaxed text-[var(--muted)]">
+              This action is cryptographically recorded in the immutable audit log with your user identity and timestamp.
+            </p>
 
             <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-end">
               <button
                 onClick={() => { setApprovalModal(null); setApprovalNotes('') }}
                 className="btn-secondary min-h-10 text-xs px-3"
               >
-                Cancel
+                {approvalModal.type === 'view' ? 'Close' : 'Cancel'}
               </button>
-              <button
-                onClick={() => handleApprovalAction(approvalModal.id, approvalModal.type)}
-                disabled={Boolean(actioningId)}
-                className={`min-h-10 text-xs px-4 font-semibold text-white rounded-md inline-flex items-center justify-center gap-1.5 disabled:cursor-wait disabled:opacity-60 ${
-                  approvalModal.type === 'approve' ? 'bg-teal-600 hover:bg-teal-700' : 'bg-rose-600 hover:bg-rose-700'
-                }`}
-              >
-                {actioningId === approvalModal.id && <RefreshCw size={12} className="animate-spin" />}
-                Confirm {approvalModal.type === 'approve' ? 'Approval' : 'Rejection'}
-              </button>
+              {approvalModal.type !== 'view' && (
+                <button
+                  onClick={() => handleApprovalAction(approvalModal.id, approvalModal.type)}
+                  disabled={Boolean(actioningId)}
+                  className={`min-h-10 text-xs px-4 font-semibold text-white rounded-md inline-flex items-center justify-center gap-1.5 disabled:cursor-wait disabled:opacity-60 ${
+                    approvalModal.type === 'approve' ? 'bg-teal-600 hover:bg-teal-700' : 'bg-rose-600 hover:bg-rose-700'
+                  }`}
+                >
+                  {actioningId === approvalModal.id && <RefreshCw size={12} className="animate-spin" />}
+                  Confirm {approvalModal.type === 'approve' ? 'Approval & Execution' : 'Rejection'}
+                </button>
+              )}
             </div>
           </div>
         </div>

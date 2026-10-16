@@ -265,7 +265,7 @@ function SupplierProductsRow({ supplier, products, onClose }) {
                     <th className="text-right">Current Stock</th>
                     <th className="text-right">Purchase Price</th>
                     <th className="text-right">Selling Price</th>
-                    <th>Status</th>
+                    <th className="text-center">Status</th>
                   </tr>
                 </thead>
 
@@ -310,7 +310,7 @@ function SupplierProductsRow({ supplier, products, onClose }) {
                           {fmt(product.selling_price)}
                         </td>
 
-                        <td>
+                        <td className="text-center">
                           <Badge
                             status={
                               product.stock_status ||
@@ -1931,7 +1931,7 @@ export default function Suppliers() {
                           </td>
 
                           {/* Actions */}
-                          <td>
+                          <td className="text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               {due > 0 && (
                                 <button

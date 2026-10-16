@@ -769,3 +769,55 @@ class CommunicationLog(models.Model):
 
     def __str__(self):
         return f"{self.channel.upper()} | {self.message_type} -> {self.recipient_name} ({self.status})"
+
+
+class ApprovalRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending Approval'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('cancelled', 'Cancelled'),
+    ]
+    REQUEST_TYPE_CHOICES = [
+        ('price_change', 'Price Change'),
+        ('refund', 'Sales Return / Refund'),
+        ('stock_adjustment', 'Stock Adjustment'),
+        ('invoice_cancellation', 'Invoice Cancellation'),
+        ('user_role_change', 'User Role Change'),
+        ('credit_limit_increase', 'Credit Limit Increase'),
+    ]
+
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='approval_requests')
+    request_type = models.CharField(max_length=40, choices=REQUEST_TYPE_CHOICES)
+    entity_type = models.CharField(max_length=50)
+    entity_id = models.CharField(max_length=60, blank=True)
+    entity_name = models.CharField(max_length=255, blank=True, default='')
+
+    current_data = models.JSONField(default=dict, blank=True)
+    proposed_data = models.JSONField(default=dict, blank=True)
+
+    threshold_rule = models.CharField(max_length=255, blank=True, default='')
+    reason = models.TextField(blank=True, default='')
+
+    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='requested_approvals')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_approvals')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_notes = models.TextField(blank=True, default='')
+
+    applied_at = models.DateTimeField(null=True, blank=True)
+    execution_error = models.TextField(blank=True, default='')
+
+    notification = models.ForeignKey('Notification', on_delete=models.SET_NULL, null=True, blank=True, related_name='approval_request_ref')
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['business', 'status', 'created_at']),
+            models.Index(fields=['business', 'request_type']),
+        ]
+
+    def __str__(self):
+        return f"{self.get_request_type_display()} - {self.entity_name} ({self.status})"

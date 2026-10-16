@@ -164,215 +164,219 @@ def _export_report_xlsx(
     period_label='',
 ):
     """
-    Branded Excel report exporter.
-
-    - Uses the business shop logo from the `shop_logo` setting.
-    - Uses the same Indigo/Teal visual identity as PDF reports.
-    - Keeps report data/API behavior unchanged.
+    Clean, professional, unmerged Excel report exporter with native number formatting.
     """
     workbook = Workbook()
     sheet = workbook.active
-    sheet.title = title[:31]
+    sheet.title = (title or 'Report')[:31]
 
-    # Business identity
     profile = _get_report_business_profile(request_user)
-    logo_bytes = _download_report_logo(profile['shop_logo'])
 
-    # Theme
-    INDIGO = '1E3A8A'
-    INDIGO_2 = '2563EB'
-    TEAL = '0F766E'
-    LIGHT_INDIGO = 'EEF4FF'
-    LIGHT_TEAL = 'ECFDF5'
-    BORDER = 'CBD5E1'
-    TEXT = '1F2937'
-    MUTED = '64748B'
-    WHITE = 'FFFFFF'
-    ALT = 'F8FAFC'
+    FONT_FAMILY = 'Calibri'
+    C_TEXT = '111827'
+    C_MUTED = '4B5563'
+    C_HEADER_BG = 'F3F4F6'
+    C_ROW_ALT = 'F9FAFB'
+    C_BORDER = 'D1D5DB'
+    C_BORDER_LIGHT = 'E5E7EB'
 
-    max_cols = max(len(headers or []), 4)
-    last_col = max_cols
-
-    # Business header
-    sheet.merge_cells(start_row=1, start_column=2, end_row=1, end_column=last_col)
-    title_cell = sheet.cell(row=1, column=2, value=profile['shop_name'].upper())
-    title_cell.font = Font(name='Calibri', bold=True, size=18, color=WHITE)
-    title_cell.fill = PatternFill('solid', fgColor=INDIGO)
-    title_cell.alignment = Alignment(horizontal='left', vertical='center')
-
-    if logo_bytes:
-        try:
-            logo = XLImage(BytesIO(logo_bytes))
-            max_w, max_h = 58, 42
-            ratio = min(max_w / logo.width, max_h / logo.height)
-            logo.width = max(1, int(logo.width * ratio))
-            logo.height = max(1, int(logo.height * ratio))
-            sheet.add_image(logo, 'A1')
-        except Exception:
-            pass
-
-    sheet.row_dimensions[1].height = 45
-
-    # Business contact line
-    contact = ' | '.join(
-        part for part in [
-            profile['shop_address'],
-            f"Phone: {profile['shop_phone']}" if profile['shop_phone'] else '',
-            f"Email: {profile['shop_email']}" if profile['shop_email'] else '',
-            f"GSTIN: {profile['shop_gstin']}" if profile['shop_gstin'] else '',
-        ] if part
+    thin_border = Border(
+        left=Side(style='thin', color=C_BORDER),
+        right=Side(style='thin', color=C_BORDER),
+        top=Side(style='thin', color=C_BORDER),
+        bottom=Side(style='thin', color=C_BORDER),
     )
-    sheet.merge_cells(start_row=2, start_column=1, end_row=2, end_column=last_col)
-    meta = sheet.cell(row=2, column=1, value=contact or profile['shop_name'])
-    meta.font = Font(name='Calibri', size=9, color=MUTED)
-    meta.fill = PatternFill('solid', fgColor=LIGHT_INDIGO)
-    meta.alignment = Alignment(horizontal='left', vertical='center')
-    sheet.row_dimensions[2].height = 21
-
-    # Report title + generated time
-    sheet.merge_cells(start_row=3, start_column=1, end_row=3, end_column=last_col)
-    report_title = sheet.cell(row=3, column=1, value=title.upper())
-    report_title.font = Font(name='Calibri', bold=True, size=14, color=INDIGO)
-    report_title.alignment = Alignment(horizontal='left', vertical='center')
-
-    sheet.merge_cells(start_row=4, start_column=1, end_row=4, end_column=last_col)
-    generated_cell = sheet.cell(
-        row=4,
-        column=1,
-        value=(
-            f"Period: {period_label} | "
-            f"Generated: {timezone.localtime(timezone.now()).strftime('%d/%b/%Y %I:%M %p')}"
-            if period_label else
-            f"Generated: {timezone.localtime(timezone.now()).strftime('%d/%b/%Y %I:%M %p')}"
-        ),
+    data_border = Border(
+        bottom=Side(style='hair', color=C_BORDER_LIGHT),
     )
-    generated_cell.font = Font(name='Calibri', italic=True, size=9, color=MUTED)
-    generated_cell.alignment = Alignment(horizontal='left', vertical='center')
-    sheet.row_dimensions[4].height = 19
 
-    row_index = 6
+    # 1. Business Header Block
+    shop_name = (profile.get('shop_name') or 'ShopEase POS').upper()
+    c1 = sheet.cell(row=1, column=1, value=shop_name)
+    c1.font = Font(name=FONT_FAMILY, bold=True, size=14, color=C_TEXT)
 
-    # KPI / summary block
+    contact_parts = [
+        profile.get('shop_address'),
+        f"Phone: {profile['shop_phone']}" if profile.get('shop_phone') else '',
+        f"Email: {profile['shop_email']}" if profile.get('shop_email') else '',
+        f"GSTIN: {profile['shop_gstin']}" if profile.get('shop_gstin') else '',
+    ]
+    contact_str = ' | '.join(p for p in contact_parts if p)
+    c2 = sheet.cell(row=2, column=1, value=contact_str or shop_name)
+    c2.font = Font(name=FONT_FAMILY, size=9, color=C_MUTED)
+
+    # 2. Report Title & Metadata
+    c3 = sheet.cell(row=4, column=1, value=title.upper())
+    c3.font = Font(name=FONT_FAMILY, bold=True, size=12, color=C_TEXT)
+
+    gen_time = timezone.localtime(timezone.now()).strftime('%d/%b/%Y %I:%M %p')
+    period_str = f"Period: {period_label} | " if period_label else ""
+    c4 = sheet.cell(row=5, column=1, value=f"{period_str}Generated: {gen_time}")
+    c4.font = Font(name=FONT_FAMILY, italic=True, size=9, color=C_MUTED)
+
+    current_row = 7
+
+    def _is_money_header(header):
+        name = str(header or '').lower()
+        if any(token in name for token in ('count', 'qty', 'quantity', 'transactions', 'entries', 'share', '%', 'slab')):
+            return False
+        return any(token in name for token in (
+            'amount', 'revenue', 'cost', 'profit', 'total', 'sales', 'discount',
+            'tax', 'gst', 'outstanding', 'credit', 'expense', 'payment', 'price',
+            'value', 'collection', 'returns', 'net', 'balance', 'paid', 'due', 'limit', 'cogs'
+        ))
+
+    def _is_numeric_header(header):
+        name = str(header or '').lower()
+        return any(token in name for token in (
+            'amount', 'revenue', 'cost', 'profit', 'total', 'sales', 'discount',
+            'tax', 'gst', 'outstanding', 'credit', 'expense', 'payment', 'price',
+            'value', 'collection', 'returns', 'net', 'balance', 'paid', 'due', 'limit',
+            'cogs', 'qty', 'quantity', 'count', 'rate', 'share', '%', 'transactions', 'entries'
+        ))
+
+    # 3. Clean 2-column key-value summary table
     if summary_rows:
-        summary_count = len(summary_rows)
-        cards_per_row = min(4, max(1, last_col))
-        for offset in range(0, summary_count, cards_per_row):
-            group = summary_rows[offset:offset + cards_per_row]
-            group_width = max(1, last_col // len(group))
-            for i, (label, value) in enumerate(group):
-                col = 1 + i * group_width
-                end_col = last_col if i == len(group) - 1 else min(last_col, col + group_width - 1)
+        valid_summary = [s for s in summary_rows if isinstance(s, (list, tuple)) and len(s) >= 2]
+        if valid_summary:
+            s_head1 = sheet.cell(row=current_row, column=1, value="SUMMARY METRIC")
+            s_head2 = sheet.cell(row=current_row, column=2, value="VALUE")
+            for cell in (s_head1, s_head2):
+                cell.font = Font(name=FONT_FAMILY, bold=True, size=9, color=C_TEXT)
+                cell.fill = PatternFill('solid', fgColor=C_HEADER_BG)
+                cell.border = thin_border
+            current_row += 1
 
-                sheet.merge_cells(
-                    start_row=row_index,
-                    start_column=col,
-                    end_row=row_index,
-                    end_column=end_col,
-                )
-                label_cell = sheet.cell(row=row_index, column=col, value=str(label).upper())
-                label_cell.font = Font(bold=True, size=8, color=MUTED)
-                label_cell.fill = PatternFill('solid', fgColor=LIGHT_INDIGO)
-                label_cell.alignment = Alignment(horizontal='left', vertical='center')
+            for label, value in valid_summary:
+                lbl_cell = sheet.cell(row=current_row, column=1, value=str(label))
+                lbl_cell.font = Font(name=FONT_FAMILY, size=9, color=C_TEXT)
+                lbl_cell.border = thin_border
 
-                sheet.merge_cells(
-                    start_row=row_index + 1,
-                    start_column=col,
-                    end_row=row_index + 1,
-                    end_column=end_col,
-                )
-                value_cell = sheet.cell(
-                    row=row_index + 1,
-                    column=col,
-                    value=_format_report_summary_value(label, value),
-                )
-                value_cell.font = Font(bold=True, size=12, color=INDIGO)
-                value_cell.fill = PatternFill('solid', fgColor=WHITE)
-                value_cell.alignment = Alignment(horizontal='left', vertical='center')
+                val_cell = sheet.cell(row=current_row, column=2)
+                val_cell.font = Font(name=FONT_FAMILY, bold=True, size=9, color=C_TEXT)
+                val_cell.border = thin_border
 
-                for rr in (row_index, row_index + 1):
-                    for cc in range(col, end_col + 1):
-                        sheet.cell(row=rr, column=cc).border = Border(
-                            left=Side(style='thin', color=BORDER),
-                            right=Side(style='thin', color=BORDER),
-                            top=Side(style='thin', color=BORDER),
-                            bottom=Side(style='thin', color=BORDER),
-                        )
-            row_index += 3
+                val_str = str(value or '').strip()
+                label_lower = str(label or '').lower()
 
-    # Report table
-    header_row = row_index
-    for col_index, header in enumerate(headers or [], 1):
-        cell = sheet.cell(row=header_row, column=col_index, value=header)
-        cell.font = Font(bold=True, size=10, color=WHITE)
-        cell.fill = PatternFill('solid', fgColor=INDIGO)
-        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-        cell.border = Border(
-            left=Side(style='thin', color=WHITE),
-            right=Side(style='thin', color=WHITE),
-            top=Side(style='thin', color=WHITE),
-            bottom=Side(style='thin', color=WHITE),
+                if any(tok in label_lower for tok in ('count', 'qty', 'quantity', 'entries', 'invoices', 'customers', 'transactions')):
+                    try:
+                        val_cell.value = int(float(val_str.replace(',', '')))
+                        val_cell.number_format = '#,##0'
+                    except Exception:
+                        val_cell.value = val_str
+                elif '%' in label_lower or '%' in val_str:
+                    try:
+                        num = float(val_str.replace('%', '').strip()) / 100.0
+                        val_cell.value = num
+                        val_cell.number_format = '0.0%'
+                    except Exception:
+                        val_cell.value = val_str
+                else:
+                    try:
+                        num = float(val_str.replace(',', '').replace('Rs.', '').replace('₹', '').strip())
+                        val_cell.value = num
+                        val_cell.number_format = '#,##0.00'
+                    except Exception:
+                        val_cell.value = val_str
+
+                current_row += 1
+
+            current_row += 1  # Blank row after summary
+
+    # 4. Report Table Header
+    header_row = current_row
+    for col_idx, header in enumerate(headers or [], 1):
+        cell = sheet.cell(row=header_row, column=col_idx, value=header)
+        cell.font = Font(name=FONT_FAMILY, bold=True, size=10, color=C_TEXT)
+        cell.fill = PatternFill('solid', fgColor=C_HEADER_BG)
+        cell.alignment = Alignment(
+            horizontal='right' if _is_numeric_header(header) else 'left',
+            vertical='center',
+            wrap_text=True,
         )
-    sheet.row_dimensions[header_row].height = 25
-    row_index += 1
+        cell.border = thin_border
+    sheet.row_dimensions[header_row].height = 24
+    current_row += 1
 
-    currency_keywords = (
-        'amount', 'revenue', 'cost', 'profit', 'total', 'sales', 'discount',
-        'tax', 'gst', 'outstanding', 'credit', 'expense', 'payment', 'price',
-        'value', 'collection', 'returns', 'net', 'balance', 'paid', 'due',
-    )
+    # 5. Report Table Rows
+    data_rows = list(rows or [])
+    for row_idx, row in enumerate(data_rows):
+        is_alt = (row_idx % 2 == 1)
+        r_list = list(row or [])
+        for col_idx, header in enumerate(headers or [], 1):
+            val = r_list[col_idx - 1] if col_idx - 1 < len(r_list) else ''
+            cell = sheet.cell(row=current_row, column=col_idx)
+            cell.font = Font(name=FONT_FAMILY, size=9.5, color=C_TEXT)
+            cell.border = data_border
+            if is_alt:
+                cell.fill = PatternFill('solid', fgColor=C_ROW_ALT)
 
-    for data_index, row in enumerate(rows or []):
-        for col_index, value in enumerate(row, 1):
-            header_name = str(headers[col_index - 1]).lower() if col_index <= len(headers) else ''
-            display = (
-                _format_report_money(value)
-                if any(keyword in header_name for keyword in currency_keywords)
-                else _report_value(value)
-            )
-            cell = sheet.cell(row=row_index, column=col_index, value=display)
-            cell.font = Font(name='Calibri', size=10, color=TEXT)
-            cell.alignment = Alignment(
-                horizontal='left' if col_index == 1 else 'right',
-                vertical='center',
-                wrap_text=True,
-            )
-            if data_index % 2 == 1:
-                cell.fill = PatternFill('solid', fgColor=ALT)
-            cell.border = Border(bottom=Side(style='hair', color=BORDER))
-        sheet.row_dimensions[row_index].height = 21
-        row_index += 1
+            val_str = str(val or '').strip()
+            if _is_money_header(header):
+                try:
+                    num = float(val_str.replace(',', '').replace('Rs.', '').replace('₹', '').strip())
+                    cell.value = num
+                    cell.number_format = '#,##0.00'
+                    cell.alignment = Alignment(horizontal='right', vertical='center')
+                except Exception:
+                    cell.value = val_str
+                    cell.alignment = Alignment(horizontal='right', vertical='center')
+            elif any(tok in str(header).lower() for tok in ('count', 'qty', 'quantity', 'transactions', 'entries', 'invoices')):
+                try:
+                    cell.value = int(float(val_str.replace(',', '')))
+                    cell.number_format = '#,##0'
+                    cell.alignment = Alignment(horizontal='right', vertical='center')
+                except Exception:
+                    cell.value = val_str
+                    cell.alignment = Alignment(horizontal='right', vertical='center')
+            elif '%' in str(header) or '%' in val_str:
+                try:
+                    num = float(val_str.replace('%', '').strip()) / 100.0
+                    cell.value = num
+                    cell.number_format = '0.0%'
+                    cell.alignment = Alignment(horizontal='right', vertical='center')
+                except Exception:
+                    cell.value = val_str
+                    cell.alignment = Alignment(horizontal='right', vertical='center')
+            else:
+                cell.value = val_str
+                cell.alignment = Alignment(
+                    horizontal='right' if _is_numeric_header(header) else 'left',
+                    vertical='center',
+                )
+        sheet.row_dimensions[current_row].height = 20
+        current_row += 1
 
-    # Empty state
-    if not rows:
-        sheet.cell(row=row_index, column=1, value='No records found for this report.')
-        sheet.cell(row=row_index, column=1).font = Font(italic=True, color=MUTED)
-        row_index += 1
+    if not data_rows:
+        empty_cell = sheet.cell(row=current_row, column=1, value='No records found for this report period.')
+        empty_cell.font = Font(name=FONT_FAMILY, italic=True, size=9.5, color=C_MUTED)
+        sheet.row_dimensions[current_row].height = 22
+        current_row += 1
 
+    # Freeze panes and auto-filter
     sheet.freeze_panes = f'A{header_row + 1}'
     if headers:
         sheet.auto_filter.ref = (
-            f"A{header_row}:{sheet.cell(row=max(header_row, row_index - 1), column=last_col).coordinate}"
+            f"A{header_row}:{get_column_letter(len(headers))}{max(header_row, current_row - 1)}"
         )
 
-    sheet.sheet_view.showGridLines = False
+    sheet.sheet_view.showGridLines = True
     sheet.page_setup.orientation = 'landscape' if len(headers or []) >= 5 else 'portrait'
     sheet.page_setup.fitToWidth = 1
     sheet.page_setup.fitToHeight = 0
     sheet.sheet_properties.pageSetUpPr.fitToPage = True
     sheet.print_title_rows = f'{header_row}:{header_row}'
-    sheet.page_margins.left = 0.3
-    sheet.page_margins.right = 0.3
-    sheet.page_margins.top = 0.4
-    sheet.page_margins.bottom = 0.5
 
-    for col_index in range(1, last_col + 1):
-        values = [
-            _report_value(sheet.cell(row=r, column=col_index).value)
-            for r in range(header_row, row_index)
-        ]
-        width = max([len(v) for v in values if v] + [12])
-        width = min(max(width + 3, 12), 34 if col_index == 1 else 24)
-        sheet.column_dimensions[get_column_letter(col_index)].width = width
+    # Auto-size columns
+    for col_idx in range(1, max(len(headers or []), 2) + 1):
+        col_letter = get_column_letter(col_idx)
+        max_len = 12
+        for r in range(header_row, current_row):
+            cv = sheet.cell(row=r, column=col_idx).value
+            if cv is not None:
+                max_len = max(max_len, len(str(cv)))
+        sheet.column_dimensions[col_letter].width = min(max(max_len + 4, 12), 36)
 
     buffer = BytesIO()
     workbook.save(buffer)
@@ -381,7 +385,6 @@ def _export_report_xlsx(
         buffer.getvalue(),
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
-
 
 
 def _export_report_pdf(
@@ -393,282 +396,18 @@ def _export_report_pdf(
     request_user=None,
     period_label='',
 ):
-    """Simple business report PDF with optional shop logo and clean table layout."""
-    from reportlab.lib.pagesizes import A4, landscape
-    from reportlab.lib import colors as rl_colors
-    from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
-    from reportlab.lib.styles import ParagraphStyle
-    from reportlab.lib.units import mm
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as RLImage
-    from xml.sax.saxutils import escape as xml_escape
+    """Monochrome, professional business report PDF with clean table layout."""
+    from .pdf_utils import generate_report_pdf
 
     profile = _get_report_business_profile(request_user)
-
-    def plain_text(value):
-        if value is None:
-            return ''
-        text = str(value)
-        replacements = {
-            '₹': 'Rs.', '₨': 'Rs.', '•': '-', '·': '-', '–': '-',
-            '—': '-', '−': '-', '“': '"', '”': '"', '‘': "'",
-            '’': "'", '…': '...', '\u00a0': ' ', '\n': ' ', '\r': ' ', '\t': ' ',
-        }
-        for old, new in replacements.items():
-            text = text.replace(old, new)
-        return text.encode('latin-1', errors='replace').decode('latin-1')
-
-    def safe_text(value):
-        return xml_escape(plain_text(value))
-
-    def money_text(value):
-        return plain_text(_format_report_money(value))
-
-    def is_money_header(header):
-        name = str(header or '').lower()
-        keywords = (
-            'amount', 'revenue', 'cost', 'profit', 'total', 'sales', 'discount',
-            'tax', 'gst', 'outstanding', 'credit', 'expense', 'payment', 'price',
-            'value', 'collection', 'returns', 'return', 'net', 'balance', 'paid', 'due',
-            'purchase', 'mrp', 'subtotal', 'round off',
-        )
-        return any(k in name for k in keywords)
-
-    title_plain = plain_text(title) or 'Report'
-    shop_name = plain_text(profile.get('shop_name') or 'ShopEase POS')
-    generated_at = timezone.localtime(timezone.now()).strftime('%d/%b/%Y, %I:%M %p')
-
-    headers = list(headers or [])
-    normalized_rows = []
-    for row in rows or []:
-        row = list(row or [])
-        if len(row) < len(headers):
-            row.extend([''] * (len(headers) - len(row)))
-        normalized_rows.append(row[:len(headers)])
-
-    if not headers:
-        headers = ['Message']
-        normalized_rows = [['No report data available.']]
-
-    column_count = len(headers)
-    landscape_report = column_count >= 6
-    page_size = landscape(A4) if landscape_report else A4
-    page_width, page_height = page_size
-
-    left_margin = 12 * mm
-    right_margin = 12 * mm
-    top_margin = 10 * mm
-    bottom_margin = 17 * mm
-    body_width = page_width - left_margin - right_margin
-
-    INDIGO = rl_colors.HexColor('#1E3A8A')
-    TEAL = rl_colors.HexColor('#0F766E')
-    DARK = rl_colors.HexColor('#1F2937')
-    MUTED = rl_colors.HexColor('#64748B')
-    BORDER = rl_colors.HexColor('#CBD5E1')
-    LIGHT = rl_colors.HexColor('#EEF4FF')
-    ALT = rl_colors.HexColor('#F8FAFC')
-    WHITE = rl_colors.white
-
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=page_size,
-        leftMargin=left_margin,
-        rightMargin=right_margin,
-        topMargin=top_margin,
-        bottomMargin=bottom_margin,
-        title=title_plain,
-        author=shop_name,
+    buffer = generate_report_pdf(
+        title=title,
+        headers=headers,
+        rows=rows,
+        business_profile=profile,
+        summary_rows=summary_rows,
+        period_label=period_label,
     )
-
-    styles = {
-        'shop': ParagraphStyle('simple_shop', fontName='Helvetica-Bold', fontSize=14, leading=16, textColor=INDIGO, alignment=TA_LEFT),
-        'meta': ParagraphStyle('simple_meta', fontName='Helvetica', fontSize=7.5, leading=9, textColor=MUTED, alignment=TA_LEFT),
-        'title': ParagraphStyle('simple_title', fontName='Helvetica-Bold', fontSize=15, leading=17, textColor=INDIGO, alignment=TA_RIGHT),
-        'date': ParagraphStyle('simple_date', fontName='Helvetica', fontSize=7, leading=9, textColor=MUTED, alignment=TA_RIGHT),
-        'header': ParagraphStyle('simple_header', fontName='Helvetica-Bold', fontSize=7, leading=8.5, textColor=WHITE, alignment=TA_LEFT),
-        'left': ParagraphStyle('simple_left', fontName='Helvetica', fontSize=7.2, leading=8.8, textColor=DARK, alignment=TA_LEFT),
-        'right': ParagraphStyle('simple_right', fontName='Helvetica', fontSize=7.2, leading=8.8, textColor=DARK, alignment=TA_RIGHT),
-        'kpi_label': ParagraphStyle('simple_kpi_label', fontName='Helvetica-Bold', fontSize=6.5, leading=7.5, textColor=MUTED, alignment=TA_LEFT),
-        'kpi_value': ParagraphStyle('simple_kpi_value', fontName='Helvetica-Bold', fontSize=10, leading=12, textColor=INDIGO, alignment=TA_LEFT),
-        'empty': ParagraphStyle('simple_empty', fontName='Helvetica', fontSize=8, leading=10, textColor=MUTED, alignment=TA_CENTER),
-    }
-
-    story = []
-
-    # ---------------------------------------------------------
-    # Simple header: LOGO | BUSINESS | REPORT TITLE
-    # ---------------------------------------------------------
-    logo_cell = ''
-    logo_bytes = _download_report_logo(profile.get('shop_logo'))
-    if logo_bytes:
-        try:
-            logo_stream = BytesIO(logo_bytes)
-            logo = RLImage(logo_stream)
-            max_logo_w = 22 * mm
-            max_logo_h = 18 * mm
-            scale = min(max_logo_w / float(logo.imageWidth), max_logo_h / float(logo.imageHeight), 1)
-            logo.drawWidth = logo.imageWidth * scale
-            logo.drawHeight = logo.imageHeight * scale
-            logo_cell = logo
-        except Exception:
-            logo_cell = ''
-
-    contact = []
-    if profile.get('shop_address'):
-        contact.append(plain_text(profile['shop_address']))
-    if profile.get('shop_phone'):
-        contact.append(f"Phone: {plain_text(profile['shop_phone'])}")
-    if profile.get('shop_email'):
-        contact.append(f"Email: {plain_text(profile['shop_email'])}")
-    if profile.get('shop_gstin'):
-        contact.append(f"GSTIN: {plain_text(profile['shop_gstin'])}")
-
-    business_block = [Paragraph(safe_text(shop_name), styles['shop'])]
-    if contact:
-        business_block.append(Paragraph(safe_text(' | '.join(contact)), styles['meta']))
-
-    report_block = [
-        Paragraph(safe_text(title_plain.upper()), styles['title']),
-        Spacer(1, 1 * mm),
-        Paragraph(safe_text(period_label or 'All available records'), styles['meta']),
-        Spacer(1, 0.5 * mm),
-        Paragraph(safe_text(generated_at), styles['date']),
-    ]
-
-    header = Table(
-        [[logo_cell, business_block, report_block]],
-        colWidths=[24 * mm, body_width * 0.53, body_width * 0.47 - 24 * mm],
-        hAlign='LEFT',
-    )
-    header.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('ALIGN', (0, 0), (0, 0), 'LEFT'),
-        ('ALIGN', (2, 0), (2, 0), 'RIGHT'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ('TOPPADDING', (0, 0), (-1, -1), 0),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-    ]))
-    story.append(header)
-    story.append(Spacer(1, 2.5 * mm))
-
-    accent = Table([['']], colWidths=[body_width], rowHeights=[1.2 * mm])
-    accent.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), INDIGO),
-        ('LEFTPADDING', (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ('TOPPADDING', (0, 0), (-1, -1), 0),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-    ]))
-    story.append(accent)
-    story.append(Spacer(1, 3 * mm))
-
-    # ---------------------------------------------------------
-    # Small summary line instead of large modern cards
-    # ---------------------------------------------------------
-    if summary_rows:
-        summary = []
-        for item in summary_rows:
-            try:
-                label, value = item
-                summary.append(
-                    f"{plain_text(label)}: "
-                    f"{plain_text(_format_report_summary_value(label, value))}"
-                )
-            except Exception:
-                continue
-        if summary:
-            summary_table = Table(
-                [[Paragraph(safe_text('  |  '.join(summary)), styles['meta'])]],
-                colWidths=[body_width],
-            )
-            summary_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, -1), LIGHT),
-                ('BOX', (0, 0), (-1, -1), 0.4, BORDER),
-                ('LEFTPADDING', (0, 0), (-1, -1), 6),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-                ('TOPPADDING', (0, 0), (-1, -1), 5),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-            ]))
-            story.append(summary_table)
-            story.append(Spacer(1, 3 * mm))
-
-    # ---------------------------------------------------------
-    # Main report table
-    # ---------------------------------------------------------
-    table_data = [[Paragraph(safe_text(h), styles['header']) for h in headers]]
-    for row in normalized_rows:
-        rendered = []
-        for i, value in enumerate(row):
-            display = money_text(value) if is_money_header(headers[i]) else plain_text(value)
-            rendered.append(Paragraph(safe_text(display), styles['right'] if i > 0 and is_money_header(headers[i]) else styles['left']))
-        table_data.append(rendered)
-
-    if not normalized_rows:
-        empty = [Paragraph('', styles['left']) for _ in headers]
-        empty[0] = Paragraph('No records found for this report.', styles['empty'])
-        table_data.append(empty)
-
-    count = len(headers)
-    if count == 1:
-        widths = [body_width]
-    elif count == 2:
-        widths = [body_width * .58, body_width * .42]
-    elif count == 3:
-        widths = [body_width * .40, body_width * .30, body_width * .30]
-    elif count == 4:
-        widths = [body_width * .30, body_width * .23, body_width * .23, body_width * .24]
-    elif count == 5:
-        widths = [body_width * .26, body_width * .18, body_width * .18, body_width * .19, body_width * .19]
-    else:
-        first = body_width * .22
-        rest = (body_width - first) / (count - 1)
-        widths = [first] + [rest] * (count - 1)
-
-    report_table = Table(table_data, colWidths=widths, repeatRows=1, splitByRow=1, hAlign='LEFT')
-    table_style = [
-        ('BACKGROUND', (0, 0), (-1, 0), INDIGO),
-        ('TEXTCOLOR', (0, 0), (-1, 0), WHITE),
-        ('BOX', (0, 0), (-1, -1), .45, BORDER),
-        ('LINEBELOW', (0, 0), (-1, 0), .7, INDIGO),
-        ('LINEBELOW', (0, 1), (-1, -1), .25, BORDER),
-        ('LEFTPADDING', (0, 0), (-1, -1), 4),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-        ('TOPPADDING', (0, 0), (-1, -1), 3.5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-    ]
-    for r in range(1, len(table_data)):
-        if r % 2 == 0:
-            table_style.append(('BACKGROUND', (0, r), (-1, r), ALT))
-    report_table.setStyle(TableStyle(table_style))
-    story.append(report_table)
-
-    # ---------------------------------------------------------
-    # Footer
-    # ---------------------------------------------------------
-    footer_shop = shop_name[:120]
-    footer_phone = plain_text(profile.get('shop_phone')) if profile.get('shop_phone') else ''
-
-    def draw_footer(canvas, document):
-        canvas.saveState()
-        canvas.setStrokeColor(BORDER)
-        canvas.setLineWidth(.45)
-        canvas.line(left_margin, 10 * mm, page_width - right_margin, 10 * mm)
-        footer = footer_shop
-        if footer_phone:
-            footer += f' | {footer_phone}'
-        canvas.setFillColor(MUTED)
-        canvas.setFont('Helvetica', 6.5)
-        canvas.drawString(left_margin, 6.2 * mm, footer[:170])
-        canvas.setFillColor(INDIGO)
-        canvas.setFont('Helvetica-Bold', 6.5)
-        canvas.drawRightString(page_width - right_margin, 6.2 * mm, f'Page {document.page}')
-        canvas.restoreState()
-
-    doc.build(story, onFirstPage=draw_footer, onLaterPages=draw_footer)
-    buffer.seek(0)
     return _report_response(filename, buffer.getvalue(), 'application/pdf')
 
 
@@ -779,7 +518,7 @@ class ChangePasswordView(APIView):
 
 class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
-    permission_classes = [IsAdmin]
+    permission_classes = [IsManagerOrAdmin]
     filter_backends = [filters.SearchFilter]
     search_fields = ['username', 'email', 'first_name', 'last_name']
 
@@ -797,6 +536,53 @@ class UserViewSet(viewsets.ModelViewSet):
             after={'username': user.username, 'role': user.role, 'email': user.email},
             reason=self.request.data.get('reason', 'User created by administrator'),
         )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        new_role = request.data.get('role')
+
+        if new_role and new_role != instance.role:
+            from .services.approval_service import ApprovalService
+            req_appr, rule_desc = ApprovalService.should_require_approval(
+                instance.business,
+                request.user,
+                'user_role_change',
+                old_role=instance.role,
+                new_role=new_role,
+            )
+            if req_appr:
+                current_data = {
+                    'user_id': instance.id,
+                    'username': instance.username,
+                    'current_role': instance.role,
+                    'email': instance.email,
+                }
+                proposed_data = {
+                    'user_id': instance.id,
+                    'proposed_role': new_role,
+                    'reason': request.data.get('reason', ''),
+                }
+                appr_req = ApprovalService.create_approval_request(
+                    business=instance.business,
+                    requested_by=request.user,
+                    request_type='user_role_change',
+                    entity_type='User',
+                    entity_id=instance.id,
+                    entity_name=f"{instance.username} ({instance.role} -> {new_role})",
+                    current_data=current_data,
+                    proposed_data=proposed_data,
+                    threshold_rule=rule_desc,
+                    reason=request.data.get('reason', ''),
+                    request=request,
+                )
+                return Response({
+                    'requires_approval': True,
+                    'approval_request': ApprovalRequestSerializer(appr_req).data,
+                    'message': f"Role change requires admin approval ({rule_desc}). Request submitted for review.",
+                }, status=status.HTTP_202_ACCEPTED)
+
+        return super().update(request, *args, partial=partial, **kwargs)
 
     def perform_update(self, serializer):
         old_inst = serializer.instance
@@ -1277,6 +1063,62 @@ class ProductViewSet(viewsets.ModelViewSet):
             reason=self.request.data.get('reason', 'New product created'),
         )
 
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+
+        # Check if price change requires admin approval
+        new_price = request.data.get('selling_price')
+        if new_price is not None:
+            try:
+                new_dec = Decimal(str(new_price))
+                old_dec = instance.selling_price
+                from .services.approval_service import ApprovalService
+                req_appr, rule_desc = ApprovalService.should_require_approval(
+                    instance.business,
+                    request.user,
+                    'price_change',
+                    old_price=old_dec,
+                    new_price=new_dec,
+                )
+                if req_appr:
+                    current_data = {
+                        'product_id': instance.id,
+                        'name': instance.name,
+                        'sku': instance.sku,
+                        'selling_price': float(instance.selling_price),
+                        'mrp': float(instance.mrp or 0),
+                        'purchase_price': float(instance.purchase_price or 0),
+                    }
+                    proposed_data = {
+                        'selling_price': float(new_dec),
+                        'mrp': float(request.data.get('mrp', instance.mrp or 0)) if request.data.get('mrp') is not None else float(instance.mrp or 0),
+                        'purchase_price': float(request.data.get('purchase_price', instance.purchase_price or 0)) if request.data.get('purchase_price') is not None else float(instance.purchase_price or 0),
+                        'other_fields': {k: v for k, v in request.data.items() if k not in ('selling_price', 'mrp', 'purchase_price', 'reason')},
+                    }
+                    appr_req = ApprovalService.create_approval_request(
+                        business=instance.business,
+                        requested_by=request.user,
+                        request_type='price_change',
+                        entity_type='Product',
+                        entity_id=instance.id,
+                        entity_name=instance.name,
+                        current_data=current_data,
+                        proposed_data=proposed_data,
+                        threshold_rule=rule_desc,
+                        reason=request.data.get('reason', ''),
+                        request=request,
+                    )
+                    return Response({
+                        'requires_approval': True,
+                        'approval_request': ApprovalRequestSerializer(appr_req).data,
+                        'message': f"Price change requires admin approval: {rule_desc}. Request submitted for review.",
+                    }, status=status.HTTP_202_ACCEPTED)
+            except (ValueError, TypeError):
+                pass
+
+        return super().update(request, *args, partial=partial, **kwargs)
+
     def perform_update(self, serializer):
         old_inst = serializer.instance
         before_dict = {
@@ -1373,6 +1215,60 @@ class CustomerViewSet(viewsets.ModelViewSet):
             after={'name': customer.name, 'mobile': customer.mobile, 'credit_limit': float(customer.credit_limit or 0)},
             reason=self.request.data.get('reason', 'Customer record created'),
         )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        raw_limit = request.data.get('credit_limit')
+
+        if raw_limit is not None:
+            try:
+                new_limit = Decimal(str(raw_limit))
+                old_limit = instance.credit_limit or Decimal('0')
+                if new_limit > old_limit:
+                    from .services.approval_service import ApprovalService
+                    req_appr, rule_desc = ApprovalService.should_require_approval(
+                        instance.business,
+                        request.user,
+                        'credit_limit_increase',
+                        old_limit=old_limit,
+                        new_limit=new_limit,
+                    )
+                    if req_appr:
+                        current_data = {
+                            'customer_id': instance.id,
+                            'name': instance.name,
+                            'mobile': instance.mobile,
+                            'current_credit_limit': float(old_limit),
+                        }
+                        proposed_data = {
+                            'customer_id': instance.id,
+                            'proposed_credit_limit': float(new_limit),
+                            'increase': float(new_limit - old_limit),
+                            'reason': request.data.get('reason', ''),
+                        }
+                        appr_req = ApprovalService.create_approval_request(
+                            business=instance.business,
+                            requested_by=request.user,
+                            request_type='credit_limit_increase',
+                            entity_type='Customer',
+                            entity_id=instance.id,
+                            entity_name=f"{instance.name} (INR {old_limit:,.2f} -> INR {new_limit:,.2f})",
+                            current_data=current_data,
+                            proposed_data=proposed_data,
+                            threshold_rule=rule_desc,
+                            reason=request.data.get('reason', ''),
+                            request=request,
+                        )
+                        return Response({
+                            'requires_approval': True,
+                            'approval_request': ApprovalRequestSerializer(appr_req).data,
+                            'message': f"Credit limit increase requires admin approval ({rule_desc}). Request submitted for review.",
+                        }, status=status.HTTP_202_ACCEPTED)
+            except (ValueError, TypeError):
+                pass
+
+        return super().update(request, *args, partial=partial, **kwargs)
 
     def perform_update(self, serializer):
         old_inst = serializer.instance
@@ -3107,12 +3003,69 @@ class SalesReturnViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         from .services.sales_return_service import SalesReturnService
+        from .services.approval_service import ApprovalService
+        invoice_id = request.data.get('invoice')
+        reason = request.data.get('reason', '')
+        refund_method = request.data.get('refund_method', 'cash')
+        items_data = request.data.get('items', [])
+
+        try:
+            invoice = Invoice.objects.get(pk=invoice_id, business=request.user.business)
+            refund_total = Decimal('0')
+            for row in items_data:
+                inv_item = InvoiceItem.objects.get(pk=row.get('invoice_item_id'), invoice=invoice)
+                ret_qty = Decimal(str(row.get('quantity', inv_item.quantity)))
+                line_total = (inv_item.total / inv_item.quantity * ret_qty).quantize(Decimal('0.01'))
+                refund_total += line_total
+
+            req_appr, rule_desc = ApprovalService.should_require_approval(
+                request.user.business,
+                request.user,
+                'refund',
+                refund_amount=refund_total,
+            )
+            if req_appr:
+                current_data = {
+                    'invoice_id': invoice.id,
+                    'invoice_number': invoice.invoice_number,
+                    'customer_name': invoice.customer_name or (invoice.customer.name if invoice.customer else ''),
+                    'grand_total': float(invoice.grand_total),
+                    'payment_status': invoice.payment_status,
+                }
+                proposed_data = {
+                    'invoice_id': invoice.id,
+                    'refund_amount': float(refund_total),
+                    'refund_method': refund_method,
+                    'reason': reason,
+                    'items': items_data,
+                }
+                appr_req = ApprovalService.create_approval_request(
+                    business=request.user.business,
+                    requested_by=request.user,
+                    request_type='refund',
+                    entity_type='SalesReturn',
+                    entity_id=invoice.id,
+                    entity_name=f"Return #{invoice.invoice_number} (INR {refund_total:,.2f})",
+                    current_data=current_data,
+                    proposed_data=proposed_data,
+                    threshold_rule=rule_desc,
+                    reason=reason,
+                    request=request,
+                )
+                return Response({
+                    'requires_approval': True,
+                    'approval_request': ApprovalRequestSerializer(appr_req).data,
+                    'message': f"Refund requires admin approval: {rule_desc}. Request submitted for review.",
+                }, status=status.HTTP_202_ACCEPTED)
+        except (Invoice.DoesNotExist, InvoiceItem.DoesNotExist, KeyError):
+            pass
+
         try:
             return_obj = SalesReturnService.create_sales_return(
-                invoice_id=request.data.get('invoice'),
-                reason=request.data.get('reason', ''),
-                refund_method=request.data.get('refund_method', 'cash'),
-                items_data=request.data.get('items', []),
+                invoice_id=invoice_id,
+                reason=reason,
+                refund_method=refund_method,
+                items_data=items_data,
                 business=request.user.business,
                 created_by=request.user,
             )
@@ -3451,11 +3404,58 @@ class PublicBillDocumentView(APIView):
 
 
 class CancelInvoiceView(APIView):
-    permission_classes = [IsAdmin]
+    permission_classes = [IsCashierOrAdmin]
 
     def post(self, request, pk):
         from .services.invoice_service import InvoiceService
+        from .services.approval_service import ApprovalService
         reason = request.data.get('reason', '').strip() or 'Customer requested cancellation'
+        try:
+            invoice = Invoice.objects.get(pk=pk, business=request.user.business)
+        except Invoice.DoesNotExist:
+            return Response({'error': 'Invoice not found'}, status=404)
+
+        if invoice.status in ('cancelled', 'refunded'):
+            return Response({'error': f'Invoice is already {invoice.status}.'}, status=400)
+
+        req_appr, rule_desc = ApprovalService.should_require_approval(
+            request.user.business,
+            request.user,
+            'invoice_cancellation',
+        )
+        if req_appr:
+            current_data = {
+                'invoice_id': invoice.id,
+                'invoice_number': invoice.invoice_number,
+                'customer_name': invoice.customer_name or (invoice.customer.name if invoice.customer else ''),
+                'grand_total': float(invoice.grand_total),
+                'payment_status': invoice.payment_status,
+                'status': invoice.status,
+            }
+            proposed_data = {
+                'invoice_id': invoice.id,
+                'proposed_status': 'cancelled',
+                'reason': reason,
+            }
+            appr_req = ApprovalService.create_approval_request(
+                business=request.user.business,
+                requested_by=request.user,
+                request_type='invoice_cancellation',
+                entity_type='Invoice',
+                entity_id=invoice.id,
+                entity_name=f"Invoice #{invoice.invoice_number}",
+                current_data=current_data,
+                proposed_data=proposed_data,
+                threshold_rule=rule_desc,
+                reason=reason,
+                request=request,
+            )
+            return Response({
+                'requires_approval': True,
+                'approval_request': ApprovalRequestSerializer(appr_req).data,
+                'message': f"Invoice cancellation requires admin approval. Request submitted for review.",
+            }, status=status.HTTP_202_ACCEPTED)
+
         try:
             invoice = InvoiceService.cancel_invoice(
                 invoice_id=pk,
@@ -3464,10 +3464,9 @@ class CancelInvoiceView(APIView):
                 reason=reason,
                 request=request,
             )
-        except LookupError as exc:
-            return Response({'error': str(exc)}, status=404)
         except ValueError as exc:
             return Response({'error': str(exc)}, status=400)
+
         return Response({
             'status': 'cancelled',
             'invoice_number': invoice.invoice_number,
@@ -3499,10 +3498,11 @@ class RefundInvoiceView(APIView):
 
 
 class StockAdjustView(APIView):
-    permission_classes = [IsAdmin]
+    permission_classes = [IsCashierOrAdmin]
 
     def post(self, request):
         from .services.inventory_service import InventoryService
+        from .services.approval_service import ApprovalService
         product_id = request.data.get('product_id')
         try:
             quantity = Decimal(str(request.data.get('quantity', 0)))
@@ -3512,6 +3512,51 @@ class StockAdjustView(APIView):
             return Response({'error': 'Quantity cannot be zero.'}, status=400)
         transaction_type = request.data.get('transaction_type', 'adjustment')
         notes = request.data.get('notes', '')
+
+        try:
+            product = Product.objects.get(pk=product_id, business=request.user.business)
+        except Product.DoesNotExist:
+            return Response({'error': 'Product not found'}, status=404)
+
+        req_appr, rule_desc = ApprovalService.should_require_approval(
+            request.user.business,
+            request.user,
+            'stock_adjustment',
+            quantity=quantity,
+        )
+        if req_appr:
+            current_data = {
+                'product_id': product.id,
+                'product_name': product.name,
+                'sku': product.sku,
+                'current_stock': float(product.current_stock),
+            }
+            proposed_data = {
+                'product_id': product.id,
+                'quantity': float(quantity),
+                'transaction_type': transaction_type,
+                'notes': notes,
+                'expected_stock': float(product.current_stock + quantity if transaction_type != 'stock_out' else product.current_stock - abs(quantity)),
+            }
+            appr_req = ApprovalService.create_approval_request(
+                business=request.user.business,
+                requested_by=request.user,
+                request_type='stock_adjustment',
+                entity_type='Product',
+                entity_id=product.id,
+                entity_name=f"{product.name} ({'+' if quantity > 0 else ''}{quantity})",
+                current_data=current_data,
+                proposed_data=proposed_data,
+                threshold_rule=rule_desc,
+                reason=notes,
+                request=request,
+            )
+            return Response({
+                'requires_approval': True,
+                'approval_request': ApprovalRequestSerializer(appr_req).data,
+                'message': f"Stock adjustment requires admin approval: {rule_desc}. Request submitted for review.",
+            }, status=status.HTTP_202_ACCEPTED)
+
         try:
             product = InventoryService.adjust_stock(
                 product_id=product_id,
@@ -3522,8 +3567,8 @@ class StockAdjustView(APIView):
                 created_by=request.user,
             )
         except ValueError as exc:
-            status_code = 404 if str(exc) == 'Product not found' else 400
-            return Response({'error': str(exc)}, status=status_code)
+            return Response({'error': str(exc)}, status=400)
+
         audit_event(
             request,
             'STOCK_ADJUSTED',
@@ -4911,18 +4956,40 @@ class NotificationActionView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            notif.status = 'approved' if action_type == 'approve' else 'rejected'
-            notif.actioned_by = request.user
-            notif.actioned_at = timezone.now()
-            notif.action_notes = notes
-            notif.is_read = True
-            notif.save()
+            appr_id = (notif.data or {}).get('approval_request_id')
+            if appr_id:
+                from .services.approval_service import ApprovalService
+                try:
+                    if action_type == 'approve':
+                        ApprovalService.approve_request(
+                            approval_request_id=appr_id,
+                            admin_user=request.user,
+                            review_notes=notes,
+                            request=request,
+                        )
+                    else:
+                        ApprovalService.reject_request(
+                            approval_request_id=appr_id,
+                            admin_user=request.user,
+                            review_notes=notes,
+                            request=request,
+                        )
+                    notif.refresh_from_db()
+                except Exception as exc:
+                    return Response({'error': str(exc)}, status=400)
+            else:
+                notif.status = 'approved' if action_type == 'approve' else 'rejected'
+                notif.actioned_by = request.user
+                notif.actioned_at = timezone.now()
+                notif.action_notes = notes
+                notif.is_read = True
+                notif.save()
 
-            audit_event(request, 'update', 'Notification', notif.id, {
-                'action': action_type,
-                'notes': notes,
-                'type': notif.notification_type,
-            })
+                audit_event(request, 'update', 'Notification', notif.id, {
+                    'action': action_type,
+                    'notes': notes,
+                    'type': notif.notification_type,
+                })
 
             return Response({
                 'status': 'ok',
@@ -5394,3 +5461,87 @@ class CommunicationLogViewSet(viewsets.ReadOnlyModelViewSet):
         if channel:
             qs = qs.filter(channel=channel)
         return qs
+
+
+class ApprovalRequestViewSet(viewsets.ModelViewSet):
+    """Maker-checker approval management viewset for multi-threshold business workflows."""
+    serializer_class = ApprovalRequestSerializer
+    permission_classes = [IsCashierOrAdmin]
+    pagination_class = StandardPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['status', 'request_type']
+    search_fields = ['entity_name', 'threshold_rule', 'reason', 'requested_by__username']
+    ordering_fields = ['created_at', 'status', 'request_type']
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        user = self.request.user
+        biz = getattr(user, 'business', None)
+        qs = ApprovalRequest.objects.select_related('requested_by', 'reviewed_by', 'notification').filter(business=biz)
+        if getattr(user, 'role', '') not in ('owner', 'admin', 'manager') and not user.is_superuser:
+            qs = qs.filter(requested_by=user)
+        return qs
+
+    @action(detail=True, methods=['post'], permission_classes=[IsManagerOrAdmin])
+    def approve(self, request, pk=None):
+        from .services.approval_service import ApprovalService
+        notes = request.data.get('notes', '').strip()
+        try:
+            req = ApprovalService.approve_request(
+                approval_request_id=pk,
+                admin_user=request.user,
+                review_notes=notes,
+                request=request,
+            )
+            return Response(ApprovalRequestSerializer(req).data)
+        except (ValueError, PermissionError) as exc:
+            return Response({'error': str(exc)}, status=400)
+        except Exception as exc:
+            return Response({'error': f"Execution failed: {str(exc)}"}, status=500)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsManagerOrAdmin])
+    def reject(self, request, pk=None):
+        from .services.approval_service import ApprovalService
+        notes = request.data.get('notes', '').strip()
+        try:
+            req = ApprovalService.reject_request(
+                approval_request_id=pk,
+                admin_user=request.user,
+                review_notes=notes,
+                request=request,
+            )
+            return Response(ApprovalRequestSerializer(req).data)
+        except (ValueError, PermissionError) as exc:
+            return Response({'error': str(exc)}, status=400)
+
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        from .services.approval_service import ApprovalService
+        reason = request.data.get('reason', '').strip()
+        try:
+            req = ApprovalService.cancel_request(
+                approval_request_id=pk,
+                user=request.user,
+                reason=reason,
+                request=request,
+            )
+            return Response(ApprovalRequestSerializer(req).data)
+        except (ValueError, PermissionError) as exc:
+            return Response({'error': str(exc)}, status=400)
+
+    @action(detail=False, methods=['get', 'post'], url_path='settings', permission_classes=[IsManagerOrAdmin])
+    def approval_settings(self, request):
+        from .services.approval_service import ApprovalService
+        biz = request.user.business
+        if request.method == 'GET':
+            return Response(ApprovalService.get_approval_settings(biz))
+
+        allowed_keys = list(ApprovalService.DEFAULT_SETTINGS.keys())
+        for k, v in request.data.items():
+            if k in allowed_keys:
+                Setting.objects.update_or_create(
+                    business=biz,
+                    key=k,
+                    defaults={'value': str(v)},
+                )
+        return Response(ApprovalService.get_approval_settings(biz))

@@ -357,7 +357,16 @@ export default function Expenses() {
 
             {/* Desktop/tablet table */}
             <div className="hidden overflow-x-auto sm:block min-h-[200px] pb-4">
-              <table className="table min-w-[760px]">
+              <table className="table w-full min-w-[760px]">
+                <colgroup>
+                  <col style={{ width: '26%' }} />
+                  <col style={{ width: '16%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '10%' }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Description</th>
@@ -365,7 +374,7 @@ export default function Expenses() {
                     <th>Date</th>
                     <th>Method</th>
                     <th>Notes</th>
-                    <th className="num-col">Amount</th>
+                    <th className="text-right num-col">Amount</th>
                     <th className="text-right">Actions</th>
                   </tr>
                 </thead>
@@ -404,7 +413,7 @@ export default function Expenses() {
                           {e.notes || '—'}
                         </td>
 
-                        <td className="num-col font-mono text-sm font-bold text-red-600">
+                        <td className="text-right num-col font-mono text-sm font-bold text-red-600">
                           {fmt(e.amount)}
                         </td>
 

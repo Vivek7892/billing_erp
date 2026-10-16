@@ -392,3 +392,32 @@ class CommunicationLogSerializer(serializers.ModelSerializer):
             'content', 'status', 'sent_by', 'sent_by_name', 'sent_at', 'error_message',
         ]
         read_only_fields = ['id', 'sent_at']
+
+
+class ApprovalRequestSerializer(serializers.ModelSerializer):
+    requested_by_name = serializers.CharField(source='requested_by.username', read_only=True)
+    requested_by_full_name = serializers.SerializerMethodField()
+    reviewed_by_name = serializers.CharField(source='reviewed_by.username', read_only=True)
+    request_type_display = serializers.CharField(source='get_request_type_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = ApprovalRequest
+        fields = [
+            'id', 'business', 'request_type', 'request_type_display',
+            'entity_type', 'entity_id', 'entity_name',
+            'current_data', 'proposed_data', 'threshold_rule', 'reason',
+            'requested_by', 'requested_by_name', 'requested_by_full_name',
+            'created_at', 'status', 'status_display',
+            'reviewed_by', 'reviewed_by_name', 'reviewed_at', 'review_notes',
+            'applied_at', 'execution_error', 'notification',
+        ]
+        read_only_fields = [
+            'id', 'business', 'created_at', 'status',
+            'reviewed_by', 'reviewed_at', 'applied_at', 'execution_error',
+        ]
+
+    def get_requested_by_full_name(self, obj):
+        if not obj.requested_by:
+            return ''
+        return obj.requested_by.get_full_name() or obj.requested_by.username

@@ -1821,8 +1821,12 @@ export default function Bills() {
   ------------------------------------------------------- */
   const cancel = useCallback(async (id, reason) => {
     try {
-      await invoiceService.cancelInvoice(id, reason || cancelReason || 'Customer requested cancellation')
-      toast.success('Invoice cancelled and preserved in records')
+      const res = await invoiceService.cancelInvoice(id, reason || cancelReason || 'Customer requested cancellation')
+      if (res?.requires_approval) {
+        toast.success(res.message || 'Invoice cancellation submitted for Admin approval')
+      } else {
+        toast.success('Invoice cancelled and preserved in records')
+      }
       setConfirm(null)
       setCancelReason('Customer requested cancellation')
       load(page)
@@ -1836,8 +1840,12 @@ export default function Bills() {
   ------------------------------------------------------- */
   const refund = useCallback(async id => {
     try {
-      await invoiceService.refundInvoice(id)
-      toast.success('Invoice refunded')
+      const res = await invoiceService.refundInvoice(id)
+      if (res?.requires_approval) {
+        toast.success(res.message || 'Refund submitted for Admin approval')
+      } else {
+        toast.success('Invoice refunded')
+      }
       setConfirm(null)
       load(page)
     } catch (e) {

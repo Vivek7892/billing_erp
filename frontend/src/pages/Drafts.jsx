@@ -412,7 +412,7 @@ export default function Drafts() {
                     </td>
 
                     {/* Actions */}
-                    <td>
+                    <td className="text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => resume(draft)}

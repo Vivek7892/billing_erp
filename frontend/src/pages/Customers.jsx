@@ -526,8 +526,12 @@ export default function Customers() {
       }
 
       if (editId) {
-        await customerService.updateCustomer(editId, payload)
-        toast.success('Customer updated successfully')
+        const res = await customerService.updateCustomer(editId, payload)
+        if (res?.requires_approval) {
+          toast.success(res.message || 'Credit limit increase submitted for Admin approval')
+        } else {
+          toast.success('Customer updated successfully')
+        }
       } else {
         await customerService.createCustomer(payload)
         toast.success('Customer added successfully')
@@ -855,7 +859,16 @@ export default function Customers() {
             ================================================== */}
 
             <div className="hidden lg:block overflow-x-auto min-h-[220px] pb-4">
-              <table className="w-full text-left border-collapse min-w-[850px]">
+              <table className="erp-table table-fixed w-full text-left border-collapse min-w-[850px]">
+                <colgroup>
+                  <col style={{ width: '26%' }} />
+                  <col style={{ width: '20%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '6%' }} />
+                  <col style={{ width: '10%' }} />
+                </colgroup>
                 <thead className="bg-[var(--surface-subtle)] border-b border-[var(--line)] text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
                   <tr>
                     <th className="px-4 py-3.5">Customer</th>
@@ -1699,8 +1712,8 @@ export default function Customers() {
                       {customerBills.map(bill => (
                         <tr key={bill.id}>
                           <td className="font-mono text-blue-600 dark:text-blue-400 text-xs">{bill.invoice_number}</td>
-                          <td className="text-xs">{new Date(bill.created_at).toLocaleDateString('en-IN')}</td>
-                          <td className="text-right font-semibold text-xs">{currency(bill.grand_total)}</td>
+                          <td className="text-xs font-mono">{new Date(bill.created_at).toLocaleDateString('en-IN')}</td>
+                          <td className="text-right font-semibold text-xs font-mono">{currency(bill.grand_total)}</td>
                           <td className="text-center">
                             <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
                               String(bill.payment_status).toLowerCase() === 'paid'

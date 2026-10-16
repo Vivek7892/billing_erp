@@ -1390,13 +1390,13 @@ export default function Payments() {
               <table className="payment-table table-fixed w-full min-w-[840px]">
                 <colgroup>
                   <col style={{ width: '15%' }} />
-                  <col style={{ width: '14%' }} />
-                  <col style={{ width: '18%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '17%' }} />
+                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '12%' }} />
                   <col style={{ width: '11%' }} />
                   <col style={{ width: '13%' }} />
-                  <col style={{ width: '12%' }} />
-                  <col style={{ width: '15%' }} />
-                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '9%' }} />
                 </colgroup>
                 <thead className="sticky top-0 z-10 bg-[var(--surface-subtle)] shadow-2xs">
                   <tr>

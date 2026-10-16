@@ -32,6 +32,7 @@ def build(business, params):
         business=business, created_at__date__gte=start, created_at__date__lte=end,
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
     summary.update({
+        'gross_sales': summary['total_sales'] or Decimal('0'),
         'returns': returns_total,
         'net_sales': (summary['total_sales'] or Decimal('0')) - returns_total,
         'collection': collection,
@@ -41,15 +42,15 @@ def build(business, params):
         total=Sum('grand_total'), count=Count('id'),
     ).order_by('created_at__date'))
     payload = {'summary': summary, 'daily': daily}
-    rows = [[row['created_at__date'], row['count'], row['total']] for row in daily]
+    rows = [[str(row['created_at__date']), int(row['count'] or 0), float(row['total'] or 0)] for row in daily]
     summary_rows = [
-        ('Total Sales', summary['total_sales'] or 0),
-        ('Total Discount', summary['total_discount'] or 0),
-        ('Returns', summary['returns'] or 0),
-        ('Net Sales', summary['net_sales'] or 0),
-        ('Total Tax', summary['total_tax'] or 0),
-        ('Collection', summary['collection'] or 0),
-        ('Outstanding', summary['outstanding'] or 0),
-        ('Invoice Count', summary['count'] or 0),
+        ('Gross Invoiced Sales', float(summary['total_sales'] or 0)),
+        ('Total Discounts', float(summary['total_discount'] or 0)),
+        ('Sales Returns', float(summary['returns'] or 0)),
+        ('Net Sales Revenue', float(summary['net_sales'] or 0)),
+        ('Output GST Tax', float(summary['total_tax'] or 0)),
+        ('Total Collections', float(summary['collection'] or 0)),
+        ('Outstanding Balance', float(summary['outstanding'] or 0)),
+        ('Completed Invoices', int(summary['count'] or 0)),
     ]
-    return ReportData('Sales Report', 'sales-report', payload, ['Date', 'Invoices', 'Total Sales'], rows, summary_rows)
+    return ReportData('Sales Summary Report', 'sales-summary-report', payload, ['Date', 'Invoice Count', 'Total Sales'], rows, summary_rows)

@@ -100,7 +100,7 @@ export default function AppFooter({ shopName }) {
 
         {/* Copyright */}
         <p className="hidden text-center text-[10px] sm:block sm:text-[11px]">
-          Â© {currentYear} {brandName}. All rights reserved.
+          @{currentYear} {brandName}. All rights reserved.
         </p>
 
         {/* Powered By */}

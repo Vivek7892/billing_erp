@@ -515,8 +515,12 @@ export default function Products() {
       }
 
       if (editId) {
-        await productService.updateProduct(editId, payload)
-        toast.success('Product updated successfully')
+        const res = await productService.updateProduct(editId, payload)
+        if (res?.requires_approval) {
+          toast.success(res.message || 'Price change submitted for Admin approval')
+        } else {
+          toast.success('Product updated successfully')
+        }
       } else {
         const saved = await productService.createProduct(payload)
         if (!saved?.barcode && saved?.id) {
@@ -686,22 +690,26 @@ export default function Products() {
 
     setAdjusting(true)
     try {
-      await productService.adjustStock({
+      const res = await productService.adjustStock({
         product_id: adjustProduct.id,
         quantity: delta,
         transaction_type: adjustReason,
         notes: adjustNotes.trim(),
       })
-      toast.success('Stock adjusted successfully')
+      if (res?.requires_approval) {
+        toast.success(res.message || 'Stock adjustment submitted for Admin approval')
+      } else {
+        toast.success('Stock adjusted successfully')
+        if (detailProduct?.id === adjustProduct.id) {
+          setDetailProduct(prev => ({
+            ...prev,
+            current_stock: current + delta,
+          }))
+          loadProductHistory(adjustProduct.id, detailTab)
+        }
+      }
       setModal(null)
       await load(search, catFilter)
-      if (detailProduct?.id === adjustProduct.id) {
-        setDetailProduct(prev => ({
-          ...prev,
-          current_stock: current + delta,
-        }))
-        loadProductHistory(adjustProduct.id, detailTab)
-      }
     } catch (error) {
       console.error('Stock adjustment error, falling back to direct update:', error)
       // Fallback direct stock patch if adjust endpoint has permission limitation

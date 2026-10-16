@@ -82,8 +82,12 @@ export default function Users() {
       const payload = { ...form }
       if (!payload.password) delete payload.password
       if (editId) {
-        await api.patch(`/users/${editId}/`, payload)
-        toast.success('User updated successfully')
+        const res = await api.patch(`/users/${editId}/`, payload)
+        if (res?.status === 202 || res?.data?.requires_approval) {
+          toast.success(res?.data?.message || 'Role change submitted for Admin approval')
+        } else {
+          toast.success('User updated successfully')
+        }
       } else {
         await api.post('/users/', payload)
         toast.success('User created successfully')
@@ -238,15 +242,23 @@ export default function Users() {
           />
         ) : (
           <div className="overflow-x-auto min-h-[180px] pb-4">
-            <table className="table min-w-[700px]">
+            <table className="table w-full min-w-[700px]">
+              <colgroup>
+                <col style={{ width: '25%' }} />
+                <col style={{ width: '20%' }} />
+                <col style={{ width: '23%' }} />
+                <col style={{ width: '12%' }} />
+                <col style={{ width: '10%' }} />
+                <col style={{ width: '10%' }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Name</th>
                   <th>Username</th>
                   <th>Email</th>
                   <th>Role</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th className="text-center">Status</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -265,11 +277,11 @@ export default function Users() {
                           {u.role || 'Staff'}
                         </span>
                       </td>
-                      <td>
+                      <td className="text-center">
                         <Badge status={u.is_active ? 'active' : 'inactive'} />
                       </td>
-                      <td>
-                        <div className="flex gap-1">
+                      <td className="text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <button onClick={() => openEdit(u)} className="icon-btn" title="Edit User">
                             <Edit2 size={14} />
                           </button>

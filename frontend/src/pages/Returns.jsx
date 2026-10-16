@@ -57,17 +57,21 @@ function ReturnModal({ open, onClose, invoice, onDone }) {
     if (!selectedItems.length) return toast.error('Select at least one item')
     setSaving(true)
     try {
-      await api.post('/sales-returns/', {
+      const res = await api.post('/sales-returns/', {
         invoice: invoice.id,
         reason,
         refund_method: refundMethod,
         items: selectedItems.map(it => ({ invoice_item_id: it.id, quantity: it.return_qty })),
       })
-      toast.success('Return processed successfully')
+      if (res?.status === 202 || res?.data?.requires_approval) {
+        toast.success(res?.data?.message || 'Refund submitted for Admin approval')
+      } else {
+        toast.success('Return processed successfully')
+      }
       onDone()
       onClose()
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to process return')
+      toast.error(err.response?.data?.detail || err.response?.data?.error || 'Failed to process return')
     } finally {
       setSaving(false)
     }
@@ -180,11 +184,11 @@ function ViewModal({ open, onClose, invoice }) {
                   <td className="font-medium">{it.product_name}</td>
                   <td className="text-[var(--muted)] font-mono">{it.sku || '—'}</td>
                   <td className="text-[var(--muted)] font-mono">{it.hsn_code || '—'}</td>
-                  <td className="text-center">{it.quantity}</td>
-                  <td className="text-right">{fmt(it.unit_price)}</td>
-                  <td className="text-right">{it.discount_percent > 0 ? `${it.discount_percent}%` : '—'}</td>
-                  <td className="text-right">{it.gst_percent > 0 ? `${it.gst_percent}%` : '—'}</td>
-                  <td className="text-right font-semibold">{fmt(it.total)}</td>
+                  <td className="text-center font-mono">{it.quantity}</td>
+                  <td className="text-right font-mono">{fmt(it.unit_price)}</td>
+                  <td className="text-right font-mono">{it.discount_percent > 0 ? `${it.discount_percent}%` : '—'}</td>
+                  <td className="text-right font-mono">{it.gst_percent > 0 ? `${it.gst_percent}%` : '—'}</td>
+                  <td className="text-right font-mono font-semibold">{fmt(it.total)}</td>
                 </tr>
               ))}
             </tbody>
@@ -420,7 +424,18 @@ export default function Returns() {
             <div className="hidden md:block overflow-x-auto min-h-[180px] pb-4">
               <table className="table min-w-[1180px] [&_th]:whitespace-nowrap [&_td]:align-middle">
                 <thead>
-                  <tr><th>Return #</th><th>Invoice</th><th>Customer</th><th>Returned At</th><th>Items</th><th>Refund Method</th><th>Refund Amount</th><th>Reason</th><th>Processed By</th><th>Details</th></tr>
+                  <tr>
+                    <th>Return #</th>
+                    <th>Invoice</th>
+                    <th>Customer</th>
+                    <th>Returned At</th>
+                    <th className="text-center">Items</th>
+                    <th>Refund Method</th>
+                    <th className="text-right">Refund Amount</th>
+                    <th>Reason</th>
+                    <th>Processed By</th>
+                    <th className="text-center">Details</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {filteredReturns.length === 0 ? (
@@ -432,12 +447,12 @@ export default function Returns() {
                         <td className="font-mono text-sm text-[var(--muted)]">{r.invoice_number || `#${r.invoice}`}</td>
                         <td className="text-sm text-[var(--ink-secondary)]">{r.customer_name || '—'}</td>
                         <td className="text-sm text-[var(--muted)]">{r.created_at ? new Date(r.created_at).toLocaleString('en-IN') : '—'}</td>
-                        <td className="text-center text-sm text-[var(--muted)]">{(r.items || []).length}</td>
+                        <td className="text-center text-sm font-mono text-[var(--muted)]">{(r.items || []).length}</td>
                         <td className="text-sm text-[var(--muted)] capitalize">{r.refund_method || '—'}</td>
-                        <td className="font-bold text-[var(--ink)] text-sm">{fmt(r.refund_amount)}</td>
+                        <td className="text-right font-mono font-bold text-[var(--ink)] text-sm">{fmt(r.refund_amount)}</td>
                         <td className="text-xs text-[var(--muted-light)] max-w-[180px] truncate" title={r.reason}>{r.reason || '—'}</td>
                         <td className="text-sm text-[var(--muted)]">{r.created_by_name || (r.created_by ? `User #${r.created_by}` : '—')}</td>
-                        <td>
+                        <td className="text-center">
                           <button onClick={() => toggleExpand(r.id)} className="w-8 h-8 inline-flex items-center justify-center text-[var(--ink-secondary)] bg-[var(--surface)] border border-[var(--line)] rounded-md hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-all active:scale-95" aria-label="Toggle return details">
                             {expandedReturns[r.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                           </button>
@@ -550,7 +565,7 @@ export default function Returns() {
                     <th>Invoice</th><th>Customer</th><th>Date</th><th>Payment</th>
                     <th className="text-right">Subtotal</th><th className="text-right">Discount</th>
                     <th className="text-right">GST</th><th className="text-right">Grand Total</th>
-                    <th>Status</th><th>Cancelled By</th><th>Reason</th><th>Actions</th>
+                    <th>Status</th><th>Cancelled By</th><th>Reason</th><th className="text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -571,15 +586,15 @@ export default function Returns() {
                         <td className="text-sm text-[var(--ink-secondary)]">{b.customer_name || 'Walk-in'}</td>
                         <td className="text-sm text-[var(--muted)]">{new Date(b.created_at).toLocaleDateString('en-IN')}</td>
                         <td className="text-sm text-[var(--muted)] capitalize">{b.payment_method}</td>
-                        <td className="text-right text-sm text-[var(--muted)]">{fmt(b.subtotal)}</td>
-                        <td className="text-right text-sm text-green-600 dark:text-green-400">{Number(b.discount_amount) > 0 ? fmt(b.discount_amount) : '—'}</td>
-                        <td className="text-right text-sm text-[var(--muted)]">{Number(b.tax_amount) > 0 ? fmt(b.tax_amount) : '—'}</td>
-                        <td className="text-right font-bold text-[var(--ink)] text-sm">{fmt(b.grand_total)}</td>
+                        <td className="text-right font-mono text-sm text-[var(--muted)]">{fmt(b.subtotal)}</td>
+                        <td className="text-right font-mono text-sm text-green-600 dark:text-green-400">{Number(b.discount_amount) > 0 ? fmt(b.discount_amount) : '—'}</td>
+                        <td className="text-right font-mono text-sm text-[var(--muted)]">{Number(b.tax_amount) > 0 ? fmt(b.tax_amount) : '—'}</td>
+                        <td className="text-right font-mono font-bold text-[var(--ink)] text-sm">{fmt(b.grand_total)}</td>
                         <td><Badge status={b.status} /></td>
                         <td className="text-sm text-[var(--muted)]">{b.cancelled_by_name || '—'}</td>
                         <td className="text-xs text-[var(--muted-light)] max-w-[160px] truncate" title={b.cancel_reason}>{b.cancel_reason || '—'}</td>
-                        <td>
-                          <div className="flex items-center gap-1">
+                        <td className="text-right">
+                          <div className="flex items-center justify-end gap-1">
                             <button onClick={() => setViewModal(b)} className="w-8 h-8 inline-flex items-center justify-center text-[var(--ink-secondary)] bg-[var(--surface)] border border-[var(--line)] rounded-md hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-all active:scale-95" title="View" aria-label="View invoice">
                               <Eye size={14} />
                             </button>
@@ -669,7 +684,7 @@ export default function Returns() {
                     <th>Invoice</th><th>Customer</th><th>Date</th><th>Payment</th>
                     <th className="text-center">Items</th><th className="text-right">Discount</th>
                     <th className="text-right">GST</th><th className="text-right">Grand Total</th>
-                    <th>Pay Status</th><th>Action</th>
+                    <th>Pay Status</th><th className="text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -681,12 +696,12 @@ export default function Returns() {
                       <td className="text-sm text-[var(--ink-secondary)]">{b.customer_name || 'Walk-in'}</td>
                       <td className="text-sm text-[var(--muted)]">{new Date(b.created_at).toLocaleDateString('en-IN')}</td>
                       <td className="text-sm text-[var(--muted)] capitalize">{b.payment_method}</td>
-                      <td className="text-center text-sm text-[var(--muted)]">{(b.items || []).length}</td>
-                      <td className="text-right text-sm text-green-600 dark:text-green-400">{Number(b.discount_amount) > 0 ? fmt(b.discount_amount) : '—'}</td>
-                      <td className="text-right text-sm text-[var(--muted)]">{Number(b.tax_amount) > 0 ? fmt(b.tax_amount) : '—'}</td>
-                      <td className="text-right font-bold text-[var(--ink)] text-sm">{fmt(b.grand_total)}</td>
+                      <td className="text-center text-sm font-mono text-[var(--muted)]">{(b.items || []).length}</td>
+                      <td className="text-right font-mono text-sm text-green-600 dark:text-green-400">{Number(b.discount_amount) > 0 ? fmt(b.discount_amount) : '—'}</td>
+                      <td className="text-right font-mono text-sm text-[var(--muted)]">{Number(b.tax_amount) > 0 ? fmt(b.tax_amount) : '—'}</td>
+                      <td className="text-right font-mono font-bold text-[var(--ink)] text-sm">{fmt(b.grand_total)}</td>
                       <td><Badge status={b.payment_status} /></td>
-                      <td>
+                      <td className="text-right">
                         <button onClick={() => setReturnModal(b)}
                           className="btn-danger min-h-8 text-xs px-2.5 py-1 rounded-md font-semibold inline-flex items-center justify-center gap-1.5">
                           <RotateCcw size={12} /> Return

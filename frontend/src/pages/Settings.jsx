@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Building2,
@@ -22,6 +22,10 @@ import {
   ZoomOut,
   RotateCcw,
   Maximize2,
+  ShieldCheck,
+  ArrowRight,
+  Lock,
+  AlertCircle,
 } from 'lucide-react'
 import api from '../api'
 import toast from 'react-hot-toast'
@@ -80,6 +84,7 @@ const INDIAN_STATES = [
 const SECTIONS = [
   { id: 'business', label: 'Business Profile', icon: Building2, desc: 'Store details, GSTIN & branding' },
   { id: 'billing', label: 'Billing & Invoice', icon: Receipt, desc: 'Numbering, terms, notes & columns' },
+  { id: 'approvals', label: 'Approval Settings', icon: ShieldCheck, desc: 'Thresholds & rules requiring manager approval' },
   { id: 'templates', label: 'Invoice Templates & Printing', icon: FileText },
   { id: 'tax', label: 'Tax & GST', icon: Percent, desc: 'GST rules, rates & tax modes' },
   { id: 'payments', label: 'Payment & Bank Details', icon: CreditCard, desc: 'Payment collection, UPI & bank account' },
@@ -1909,6 +1914,225 @@ export default function Settings() {
               <SectionFooterActions
                 onSave={() => saveCurrentSettings('Updated bank details')}
                 onCancel={loadSettings}
+                saving={saving}
+                isDirty={isDirty}
+              />
+            </div>
+          )}
+
+          {/* ==========================================================
+              APPROVAL SETTINGS (MAKER-CHECKER WORKFLOW)
+          ========================================================== */}
+          {activeSection === 'approvals' && (
+            <div className="space-y-6">
+              <SectionHeading
+                title="Approval Settings & Thresholds"
+                description="Configure maker-checker rules requiring administrator authorization before committing sensitive financial and inventory changes."
+                badge="Dual-Control Compliance"
+              />
+
+              {/* Visual Approval Architecture Workflow Banner */}
+              <div className="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50/70 via-blue-50/50 to-indigo-50/70 p-4 sm:p-5 shadow-xs">
+                <div className="flex items-center gap-2 mb-3">
+                  <ShieldCheck size={18} className="text-indigo-600" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-900">
+                    Two-Phase Maker-Checker Architecture
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-center text-xs">
+                  <div className="bg-white/80 backdrop-blur-xs rounded-lg border border-indigo-100 p-2.5 shadow-xs">
+                    <span className="block font-bold text-slate-800 text-[11px]">1. Current Data</span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">+ Proposed Diff</span>
+                  </div>
+                  <div className="bg-white/80 backdrop-blur-xs rounded-lg border border-indigo-100 p-2.5 shadow-xs">
+                    <span className="block font-bold text-slate-800 text-[11px]">2. ApprovalRequest</span>
+                    <span className="text-[10px] text-amber-600 font-semibold block mt-0.5">Status: Pending</span>
+                  </div>
+                  <div className="bg-white/80 backdrop-blur-xs rounded-lg border border-indigo-100 p-2.5 shadow-xs">
+                    <span className="block font-bold text-slate-800 text-[11px]">3. Admin Review</span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">Approve or Reject</span>
+                  </div>
+                  <div className="bg-white/80 backdrop-blur-xs rounded-lg border border-indigo-100 p-2.5 shadow-xs">
+                    <span className="block font-bold text-slate-800 text-[11px]">4. DB Transaction</span>
+                    <span className="text-[10px] text-indigo-600 font-semibold block mt-0.5">Atomic Commit</span>
+                  </div>
+                  <div className="bg-white/80 backdrop-blur-xs rounded-lg border border-indigo-100 p-2.5 shadow-xs">
+                    <span className="block font-bold text-slate-800 text-[11px]">5. Actual Data</span>
+                    <span className="text-[10px] text-emerald-600 font-semibold block mt-0.5">Live Updated</span>
+                  </div>
+                  <div className="bg-white/80 backdrop-blur-xs rounded-lg border border-indigo-100 p-2.5 shadow-xs">
+                    <span className="block font-bold text-slate-800 text-[11px]">6. Audit Trail</span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">Immutable AuditLog</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Threshold Rule 1: Price Change */}
+              <SettingRow
+                id="approval_price_change"
+                label="Price Change Threshold"
+                description="Require Admin approval when a product selling price changes by more than this percentage."
+              >
+                <div className="space-y-3">
+                  <CheckboxField
+                    checked={isTrue(settings.approval_price_change_enabled ?? true)}
+                    onChange={v => setField('approval_price_change_enabled', v ? 'true' : 'false')}
+                    label="Enable Price Change Threshold Rule"
+                    description="When enabled, price changes exceeding the threshold below create an ApprovalRequest and do not update the catalog until approved."
+                  />
+                  {isTrue(settings.approval_price_change_enabled ?? true) && (
+                    <div className="flex items-center gap-2 max-w-xs">
+                      <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">Price change &gt;</span>
+                      <TextInput
+                        id="approval_price_change_pct"
+                        type="number"
+                        mono
+                        value={settings.approval_price_change_pct ?? '10'}
+                        onChange={v => setField('approval_price_change_pct', v)}
+                        placeholder="10"
+                      />
+                      <span className="text-xs font-bold text-slate-500">%</span>
+                    </div>
+                  )}
+                  <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded p-2">
+                    <span className="font-semibold text-slate-700">Example:</span> If set to 10%, changing ₹100 to ₹115 (15% increase) requires Admin approval. Changing to ₹105 (5%) applies immediately.
+                  </p>
+                </div>
+              </SettingRow>
+
+              {/* Threshold Rule 2: Refund */}
+              <SettingRow
+                id="approval_refund"
+                label="Sales Return / Refund Threshold"
+                description="Require Admin approval for any customer return or cash refund exceeding this amount."
+              >
+                <div className="space-y-3">
+                  <CheckboxField
+                    checked={isTrue(settings.approval_refund_enabled ?? true)}
+                    onChange={v => setField('approval_refund_enabled', v ? 'true' : 'false')}
+                    label="Enable Refund Threshold Rule"
+                    description="When enabled, returns exceeding this threshold generate an approval request before stock is returned or payments are reversed."
+                  />
+                  {isTrue(settings.approval_refund_enabled ?? true) && (
+                    <div className="flex items-center gap-2 max-w-xs">
+                      <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">Refund &gt;</span>
+                      <span className="text-xs font-bold text-slate-500">₹</span>
+                      <TextInput
+                        id="approval_refund_threshold"
+                        type="number"
+                        mono
+                        value={settings.approval_refund_threshold ?? '1000'}
+                        onChange={v => setField('approval_refund_threshold', v)}
+                        placeholder="1000"
+                      />
+                    </div>
+                  )}
+                  <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded p-2">
+                    <span className="font-semibold text-slate-700">Example:</span> If set to ₹1,000, returns of ₹1,000 or less process immediately. Returns of ₹1,001+ require Admin approval.
+                  </p>
+                </div>
+              </SettingRow>
+
+              {/* Threshold Rule 3: Stock Adjustment */}
+              <SettingRow
+                id="approval_stock_adjustment"
+                label="Stock Adjustment Threshold"
+                description="Require Admin approval for manual stock adjustments exceeding this quantity."
+              >
+                <div className="space-y-3">
+                  <CheckboxField
+                    checked={isTrue(settings.approval_stock_adjustment_enabled ?? true)}
+                    onChange={v => setField('approval_stock_adjustment_enabled', v ? 'true' : 'false')}
+                    label="Enable Stock Adjustment Threshold Rule"
+                    description="When enabled, large manual inventory increases, deductions, or damaged write-offs require Admin authorization."
+                  />
+                  {isTrue(settings.approval_stock_adjustment_enabled ?? true) && (
+                    <div className="flex items-center gap-2 max-w-xs">
+                      <span className="text-xs font-semibold text-slate-600 whitespace-nowrap">Adjustment &gt;</span>
+                      <TextInput
+                        id="approval_stock_adjustment_qty"
+                        type="number"
+                        mono
+                        value={settings.approval_stock_adjustment_qty ?? '10'}
+                        onChange={v => setField('approval_stock_adjustment_qty', v)}
+                        placeholder="10"
+                      />
+                      <span className="text-xs font-bold text-slate-500">Units</span>
+                    </div>
+                  )}
+                  <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded p-2">
+                    <span className="font-semibold text-slate-700">Example:</span> Adjusting inventory by 10 units or fewer applies instantly. Adjusting 11+ units creates a pending approval request.
+                  </p>
+                </div>
+              </SettingRow>
+
+              {/* Threshold Rule 4: Invoice Cancellation */}
+              <SettingRow
+                id="approval_invoice_cancellation"
+                label="Invoice Cancellation"
+                description="Require Admin approval before any completed bill or tax invoice can be cancelled."
+              >
+                <div className="space-y-3">
+                  <CheckboxField
+                    checked={isTrue(settings.approval_invoice_cancellation_enabled ?? true)}
+                    onChange={v => setField('approval_invoice_cancellation_enabled', v ? 'true' : 'false')}
+                    label="Require Admin approval for all Invoice Cancellations"
+                    description="Protects against fraudulent cash cancellations. Invoices remain active until authorized by an Administrator."
+                  />
+                </div>
+              </SettingRow>
+
+              {/* Threshold Rule 5: User Role Change */}
+              <SettingRow
+                id="approval_user_role_change"
+                label="User Role & Permission Change"
+                description="Require Admin approval when promoting or altering employee roles."
+              >
+                <div className="space-y-3">
+                  <CheckboxField
+                    checked={isTrue(settings.approval_user_role_change_enabled ?? true)}
+                    onChange={v => setField('approval_user_role_change_enabled', v ? 'true' : 'false')}
+                    label="Require Admin approval for User Role Changes"
+                    description="Staff promotions or role modifications will require secondary administrator confirmation."
+                  />
+                </div>
+              </SettingRow>
+
+              {/* Threshold Rule 6: Credit Limit Increase */}
+              <SettingRow
+                id="approval_credit_limit_increase"
+                label="Credit Limit Increase"
+                description="Require Admin approval when increasing customer khata credit limits."
+              >
+                <div className="space-y-3">
+                  <CheckboxField
+                    checked={isTrue(settings.approval_credit_limit_increase_enabled ?? true)}
+                    onChange={v => setField('approval_credit_limit_increase_enabled', v ? 'true' : 'false')}
+                    label="Require Admin approval for Customer Credit Limit Increases"
+                    description="Prevents unauthorized extension of credit exposure beyond store policy."
+                  />
+                </div>
+              </SettingRow>
+
+              {/* Dual Control Admin Bypass */}
+              <SettingRow
+                id="approval_admin_bypass"
+                label="Administrator Direct Bypass"
+                description="Allow store Owners and Administrators to execute actions directly without creating approval requests."
+              >
+                <div className="space-y-3">
+                  <CheckboxField
+                    checked={isTrue(settings.approval_admin_bypass ?? true)}
+                    onChange={v => setField('approval_admin_bypass', v ? 'true' : 'false')}
+                    label="Allow Admin & Owner Direct Execution (Recommended for single-owner stores)"
+                    description="When enabled, Admins bypass approval requests and changes take effect immediately. Disable to enforce strict dual-control (all actions require secondary authorization)."
+                  />
+                </div>
+              </SettingRow>
+
+              <SectionFooterActions
+                onSave={() => saveCurrentSettings('Approval settings updated')}
+                onCancel={() => setSettings({ ...initialSettings })}
                 saving={saving}
                 isDirty={isDirty}
               />

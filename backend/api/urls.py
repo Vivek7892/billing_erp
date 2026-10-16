@@ -21,6 +21,7 @@ router.register('customer-payments', views.CustomerPaymentViewSet, basename='cus
 router.register('supplier-payments', views.SupplierPaymentViewSet, basename='supplier-payment')
 router.register('audit-logs', views.AuditLogViewSet, basename='audit-log')
 router.register('communication-logs', views.CommunicationLogViewSet, basename='communication-log')
+router.register('approval-requests', views.ApprovalRequestViewSet, basename='approval-request')
 
 urlpatterns = [
     path('auth/login/', views.LoginView.as_view(), name='login'),

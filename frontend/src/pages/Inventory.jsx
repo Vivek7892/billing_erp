@@ -140,8 +140,12 @@ export default function Inventory() {
 
   const adjust = async () => {
     try {
-      await inventoryService.adjustStock(adjustForm)
-      toast.success('Stock adjusted')
+      const res = await inventoryService.adjustStock(adjustForm)
+      if (res?.requires_approval) {
+        toast.success(res.message || 'Stock adjustment submitted for Admin approval')
+      } else {
+        toast.success('Stock adjusted')
+      }
       setAdjustModal(false)
       setAdjustForm({ product_id: '', quantity: '', transaction_type: 'stock_in', notes: '' })
       loadProducts()
@@ -272,19 +276,19 @@ export default function Inventory() {
 
                 <div className="hidden overflow-x-auto sm:block min-h-[200px] pb-4">
                   <table className="table min-w-[760px]">
-                    <thead><tr><th>Product</th><th>SKU</th><th>Current Stock</th><th>Min Stock</th><th>Purchase Price</th><th>Selling Price</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Product</th><th>SKU</th><th className="text-right">Current Stock</th><th className="text-right">Min Stock</th><th className="text-right">Purchase Price</th><th className="text-right">Selling Price</th><th className="text-center">Status</th></tr></thead>
                     <tbody>
                       {products.map(p => (
                         <tr key={p.id}>
                           <td className="font-medium">{p.name}</td>
                           <td className="font-mono text-sm">{p.sku}</td>
-                          <td className={`font-bold ${p.current_stock <= 0 ? 'text-red-600 dark:text-red-400' : p.current_stock <= p.minimum_stock ? 'text-yellow-600' : 'text-green-600 dark:text-green-400'}`}>
+                          <td className={`text-right font-mono font-bold ${p.current_stock <= 0 ? 'text-red-600 dark:text-red-400' : p.current_stock <= p.minimum_stock ? 'text-yellow-600' : 'text-green-600 dark:text-green-400'}`}>
                             {p.current_stock} {p.unit}
                           </td>
-                          <td>{p.minimum_stock}</td>
-                          <td>₹{p.purchase_price}</td>
-                          <td>₹{p.selling_price}</td>
-                          <td><Badge status={p.stock_status} /></td>
+                          <td className="text-right font-mono">{p.minimum_stock}</td>
+                          <td className="text-right font-mono font-medium">₹{p.purchase_price}</td>
+                          <td className="text-right font-mono font-medium">₹{p.selling_price}</td>
+                          <td className="text-center"><Badge status={p.stock_status} /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -306,11 +310,11 @@ export default function Inventory() {
 
               <div className="hidden overflow-x-auto sm:block min-h-[200px] pb-4">
                 <table className="table min-w-[760px]">
-                  <thead><tr><th>Date</th><th>Product</th><th>Type</th><th>Qty</th><th>Before</th><th>After</th><th>Reference</th></tr></thead>
+                  <thead><tr><th>Date</th><th>Product</th><th>Type</th><th className="text-right">Qty</th><th className="text-right">Before</th><th className="text-right">After</th><th>Reference</th></tr></thead>
                   <tbody>
                     {transactions.map(t => (
                       <tr key={t.id}>
-                        <td className="text-sm text-[var(--muted)]">{new Date(t.created_at).toLocaleDateString('en-IN')}</td>
+                        <td className="text-sm text-[var(--muted)] font-mono">{new Date(t.created_at).toLocaleDateString('en-IN')}</td>
                         <td className="font-medium text-sm">{t.product_name}</td>
                         <td>
                           <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded border ${
@@ -321,9 +325,9 @@ export default function Inventory() {
                             {t.transaction_type.replace('_', ' ')}
                           </span>
                         </td>
-                        <td className={`font-semibold ${t.quantity < 0 ? 'text-[#B91C1C] dark:text-red-400' : 'text-[#0F766E] dark:text-teal-400'}`}>{t.quantity > 0 ? '+' : ''}{t.quantity}</td>
-                        <td className="text-sm">{t.before_stock}</td>
-                        <td className="text-sm font-medium">{t.after_stock}</td>
+                        <td className={`text-right font-mono font-semibold ${t.quantity < 0 ? 'text-[#B91C1C] dark:text-red-400' : 'text-[#0F766E] dark:text-teal-400'}`}>{t.quantity > 0 ? '+' : ''}{t.quantity}</td>
+                        <td className="text-right font-mono text-sm">{t.before_stock}</td>
+                        <td className="text-right font-mono text-sm font-medium">{t.after_stock}</td>
                         <td className="text-xs text-[var(--muted)]">{t.reference}</td>
                       </tr>
                     ))}
@@ -393,9 +397,9 @@ export default function Inventory() {
                 {products.map(product => (
                   <tr key={product.id}>
                     <td className="font-medium">{product.name}</td>
-                    <td className="text-xs text-[var(--muted)]">{product.sku}</td>
-                    <td className="text-right">{product.current_stock} {product.unit}</td>
-                    <td>
+                    <td className="text-xs text-[var(--muted)] font-mono">{product.sku}</td>
+                    <td className="text-right font-mono">{product.current_stock} {product.unit}</td>
+                    <td className="text-right">
                       <input
                         aria-label={`Stock adjustment for ${product.name}`}
                         type="number"

@@ -1665,3 +1665,352 @@ def generate_thermal_invoice_pdf(invoice, template=None):
     doc.build(story)
     buffer.seek(0)
     return buffer
+
+
+def generate_report_pdf(
+    title,
+    headers,
+    rows,
+    business_profile=None,
+    summary_rows=None,
+    period_label='',
+    logo_bytes=None,
+):
+    """
+    Monochrome, professional, print-friendly business report PDF generator.
+
+    - Palette: Strict grayscale/monochrome (black, dark gray, subtle borders, white/light gray fills).
+    - Page size: Portrait for <= 4 columns, Landscape for >= 5 columns.
+    - Header: Shop name, address, contact, GSTIN, report title, date range, timestamp.
+    - Summary: Compact key-value summary table.
+    - Table: Header with repeatRows=1, auto-sized columns, right-aligned monetary/numeric cells.
+    - Footer: Two-sided footer with shop details and page numbers.
+    """
+    from reportlab.lib.pagesizes import landscape
+    from xml.sax.saxutils import escape as xml_escape
+    from django.utils import timezone
+
+    profile = business_profile or {}
+
+    def _clean_str(val):
+        if val is None:
+            return ''
+        s = str(val)
+        replacements = {
+            '₹': 'Rs.', '₨': 'Rs.', '•': '-', '·': '-', '–': '-',
+            '—': '-', '−': '-', '“': '"', '”': '"', '‘': "'",
+            '’': "'", '…': '...', '\u00a0': ' ', '\n': ' ', '\r': ' ', '\t': ' ',
+        }
+        for old, new in replacements.items():
+            s = s.replace(old, new)
+        return s.encode('latin-1', errors='replace').decode('latin-1').strip()
+
+    def _esc(val):
+        return xml_escape(_clean_str(val))
+
+    def _is_money_header(header):
+        name = str(header or '').lower()
+        if any(token in name for token in ('count', 'qty', 'quantity', 'transactions', 'entries', 'share', '%', 'slab')):
+            return False
+        return any(token in name for token in (
+            'amount', 'revenue', 'cost', 'profit', 'total', 'sales', 'discount',
+            'tax', 'gst', 'outstanding', 'credit', 'expense', 'payment', 'price',
+            'value', 'collection', 'returns', 'net', 'balance', 'paid', 'due', 'limit', 'cogs'
+        ))
+
+    def _is_numeric_header(header):
+        name = str(header or '').lower()
+        return any(token in name for token in (
+            'amount', 'revenue', 'cost', 'profit', 'total', 'sales', 'discount',
+            'tax', 'gst', 'outstanding', 'credit', 'expense', 'payment', 'price',
+            'value', 'collection', 'returns', 'net', 'balance', 'paid', 'due', 'limit',
+            'cogs', 'qty', 'quantity', 'count', 'rate', 'share', '%', 'transactions', 'entries'
+        ))
+
+    def _format_cell_value(val, header):
+        if val is None or val == '':
+            return '—'
+        s = _clean_str(val)
+        if _is_money_header(header):
+            try:
+                dec_val = Decimal(s.replace(',', '').replace('Rs.', '').replace('Rs', '').strip())
+                return f"Rs. {dec_val:,.2f}"
+            except Exception:
+                return s
+        if any(tok in str(header).lower() for tok in ('count', 'transactions', 'entries', 'invoices')):
+            try:
+                int_val = int(float(s))
+                return f"{int_val:,}"
+            except Exception:
+                return s
+        return s
+
+    def _format_summary_value(label, val):
+        if val is None or val == '':
+            return '—'
+        s = _clean_str(val)
+        label_lower = str(label or '').lower()
+        if any(tok in label_lower for tok in ('count', 'qty', 'quantity', 'entries', 'invoices', 'customers', 'transactions')):
+            try:
+                int_val = int(float(s))
+                return f"{int_val:,}"
+            except Exception:
+                return s
+        if '%' in label_lower or '%' in s:
+            return s
+        try:
+            dec_val = Decimal(s.replace(',', '').replace('Rs.', '').replace('Rs', '').strip())
+            return f"Rs. {dec_val:,.2f}"
+        except Exception:
+            return s
+
+    raw_headers = list(headers or [])
+    if not raw_headers:
+        raw_headers = ['Item', 'Value']
+
+    col_count = len(raw_headers)
+    is_landscape = col_count >= 5
+    page_size = landscape(A4) if is_landscape else A4
+    page_w, page_h = page_size
+
+    margin_l = 12 * mm
+    margin_r = 12 * mm
+    margin_t = 10 * mm
+    margin_b = 15 * mm
+    printable_w = page_w - margin_l - margin_r
+
+    # Monochrome Palette
+    C_BLACK = colors.HexColor('#000000')
+    C_TEXT = colors.HexColor('#111827')
+    C_MUTED = colors.HexColor('#4B5563')
+    C_BORDER = colors.HexColor('#D1D5DB')
+    C_BORDER_LIGHT = colors.HexColor('#E5E7EB')
+    C_HEADER_BG = colors.HexColor('#F3F4F6')
+    C_ROW_ALT = colors.HexColor('#F9FAFB')
+    C_WHITE = colors.white
+
+    font_r = FONT_R
+    font_b = FONT_B
+
+    styles = {
+        'shop_name': ParagraphStyle('RptShop', fontName=font_b, fontSize=13, leading=16, textColor=C_BLACK, alignment=TA_LEFT),
+        'shop_meta': ParagraphStyle('RptShopMeta', fontName=font_r, fontSize=7.5, leading=10, textColor=C_MUTED, alignment=TA_LEFT),
+        'title': ParagraphStyle('RptTitle', fontName=font_b, fontSize=13, leading=16, textColor=C_BLACK, alignment=TA_RIGHT),
+        'title_meta': ParagraphStyle('RptTitleMeta', fontName=font_r, fontSize=7.5, leading=10, textColor=C_MUTED, alignment=TA_RIGHT),
+        'th_left': ParagraphStyle('RptThL', fontName=font_b, fontSize=7.5, leading=9.5, textColor=C_BLACK, alignment=TA_LEFT),
+        'th_right': ParagraphStyle('RptThR', fontName=font_b, fontSize=7.5, leading=9.5, textColor=C_BLACK, alignment=TA_RIGHT),
+        'td_left': ParagraphStyle('RptTdL', fontName=font_r, fontSize=7.5, leading=9.5, textColor=C_TEXT, alignment=TA_LEFT),
+        'td_right': ParagraphStyle('RptTdR', fontName=font_r, fontSize=7.5, leading=9.5, textColor=C_TEXT, alignment=TA_RIGHT),
+        'sum_label': ParagraphStyle('RptSumLbl', fontName=font_b, fontSize=6.5, leading=8, textColor=C_MUTED, alignment=TA_LEFT),
+        'sum_val': ParagraphStyle('RptSumVal', fontName=font_b, fontSize=8.5, leading=10.5, textColor=C_BLACK, alignment=TA_LEFT),
+        'empty': ParagraphStyle('RptEmpty', fontName=font_r, fontSize=8.5, leading=11, textColor=C_MUTED, alignment=TA_CENTER),
+    }
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=page_size,
+        leftMargin=margin_l,
+        rightMargin=margin_r,
+        topMargin=margin_t,
+        bottomMargin=margin_b,
+        title=_clean_str(title),
+        author=_clean_str(profile.get('shop_name') or 'Billing ERP'),
+    )
+
+    story = []
+
+    # 1. Business & Report Header
+    shop_name = _clean_str(profile.get('shop_name') or 'ShopEase POS').upper()
+    shop_phone = _clean_str(profile.get('shop_phone'))
+    shop_email = _clean_str(profile.get('shop_email'))
+    shop_gstin = _clean_str(profile.get('shop_gstin'))
+    shop_addr = _clean_str(profile.get('shop_address'))
+
+    meta_parts = []
+    if shop_addr:
+        meta_parts.append(shop_addr)
+    if shop_phone:
+        meta_parts.append(f"Phone: {shop_phone}")
+    if shop_email:
+        meta_parts.append(f"Email: {shop_email}")
+    if shop_gstin:
+        meta_parts.append(f"GSTIN: {shop_gstin}")
+
+    left_flow = [Paragraph(_esc(shop_name), styles['shop_name'])]
+    if meta_parts:
+        left_flow.append(Spacer(1, 1 * mm))
+        left_flow.append(Paragraph(_esc('  |  '.join(meta_parts)), styles['shop_meta']))
+
+    gen_time = timezone.localtime(timezone.now()).strftime('%d/%b/%Y, %I:%M %p')
+    period_str = period_label or 'All available records'
+
+    right_flow = [
+        Paragraph(_esc(title.upper()), styles['title']),
+        Spacer(1, 1 * mm),
+        Paragraph(_esc(f"Period: {period_str}"), styles['title_meta']),
+        Paragraph(_esc(f"Generated: {gen_time}"), styles['title_meta']),
+    ]
+
+    header_cols = [printable_w * 0.58, printable_w * 0.42]
+    header_table = Table([[left_flow, right_flow]], colWidths=header_cols, hAlign='LEFT')
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    story.append(header_table)
+    story.append(Spacer(1, 2.5 * mm))
+
+    # Thin monochrome rule under header
+    divider = Table([['']], colWidths=[printable_w], rowHeights=[0.8 * mm])
+    divider.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), C_BLACK),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    story.append(divider)
+    story.append(Spacer(1, 3 * mm))
+
+    # 2. Key-Value Summary Block
+    if summary_rows:
+        valid_summary = [s for s in summary_rows if isinstance(s, (list, tuple)) and len(s) >= 2]
+        if valid_summary:
+            cards_per_row = 4 if len(valid_summary) >= 4 else len(valid_summary)
+            card_w = printable_w / cards_per_row
+            summary_table_data = []
+
+            for offset in range(0, len(valid_summary), cards_per_row):
+                group = valid_summary[offset:offset + cards_per_row]
+                row_cells = []
+                for item in group:
+                    lbl, val = item[0], item[1]
+                    cell_flow = [
+                        Paragraph(_esc(str(lbl).upper()), styles['sum_label']),
+                        Spacer(1, 0.6 * mm),
+                        Paragraph(_esc(_format_summary_value(lbl, val)), styles['sum_val']),
+                    ]
+                    row_cells.append(cell_flow)
+                # Pad row if less than cards_per_row
+                while len(row_cells) < cards_per_row:
+                    row_cells.append('')
+                summary_table_data.append(row_cells)
+
+            col_widths = [card_w] * cards_per_row
+            sum_tbl = Table(summary_table_data, colWidths=col_widths, hAlign='LEFT')
+            sum_tbl.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), C_ROW_ALT),
+                ('BOX', (0, 0), (-1, -1), 0.5, C_BORDER),
+                ('INNERGRID', (0, 0), (-1, -1), 0.5, C_BORDER_LIGHT),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ]))
+            story.append(sum_tbl)
+            story.append(Spacer(1, 3 * mm))
+
+    # 3. Main Data Table
+    table_data = []
+    # Header row
+    th_cells = []
+    for h in raw_headers:
+        style_key = 'th_right' if _is_numeric_header(h) else 'th_left'
+        th_cells.append(Paragraph(_esc(h), styles[style_key]))
+    table_data.append(th_cells)
+
+    # Data rows
+    norm_rows = list(rows or [])
+    if norm_rows:
+        for r_idx, row in enumerate(norm_rows):
+            r_list = list(row or [])
+            row_cells = []
+            for c_idx, h in enumerate(raw_headers):
+                raw_v = r_list[c_idx] if c_idx < len(r_list) else ''
+                disp = _format_cell_value(raw_v, h)
+                style_key = 'td_right' if _is_numeric_header(h) else 'td_left'
+                row_cells.append(Paragraph(_esc(disp), styles[style_key]))
+            table_data.append(row_cells)
+    else:
+        empty_cells = [''] * col_count
+        empty_cells[0] = Paragraph('No records found for this report period.', styles['empty'])
+        table_data.append(empty_cells)
+
+    # Calculate proportional column widths
+    if col_count == 1:
+        col_widths = [printable_w]
+    elif col_count == 2:
+        col_widths = [printable_w * 0.60, printable_w * 0.40]
+    elif col_count == 3:
+        col_widths = [printable_w * 0.44, printable_w * 0.28, printable_w * 0.28]
+    elif col_count == 4:
+        col_widths = [printable_w * 0.34, printable_w * 0.22, printable_w * 0.22, printable_w * 0.22]
+    elif col_count == 5:
+        col_widths = [printable_w * 0.28, printable_w * 0.18, printable_w * 0.18, printable_w * 0.18, printable_w * 0.18]
+    elif col_count == 6:
+        col_widths = [printable_w * 0.25, printable_w * 0.15, printable_w * 0.15, printable_w * 0.15, printable_w * 0.15, printable_w * 0.15]
+    else:
+        first_w = printable_w * 0.24
+        rest_w = (printable_w - first_w) / (col_count - 1)
+        col_widths = [first_w] + [rest_w] * (col_count - 1)
+
+    rpt_table = Table(
+        table_data,
+        colWidths=col_widths,
+        repeatRows=1,
+        splitByRow=1,
+        hAlign='LEFT',
+    )
+    rpt_style = [
+        ('BACKGROUND', (0, 0), (-1, 0), C_HEADER_BG),
+        ('LINEABOVE', (0, 0), (-1, 0), 0.6, C_BORDER),
+        ('LINEBELOW', (0, 0), (-1, 0), 0.75, C_BLACK),
+        ('LINEBELOW', (0, 1), (-1, -1), 0.25, C_BORDER_LIGHT),
+        ('BOX', (0, 0), (-1, -1), 0.5, C_BORDER),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 4.5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4.5),
+        ('TOPPADDING', (0, 0), (-1, -1), 3.5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
+    ]
+    if norm_rows:
+        for r_idx in range(1, len(table_data)):
+            if r_idx % 2 == 0:
+                rpt_style.append(('BACKGROUND', (0, r_idx), (-1, r_idx), C_ROW_ALT))
+    else:
+        rpt_style.append(('SPAN', (0, 1), (-1, 1)))
+        rpt_style.append(('TOPPADDING', (0, 1), (-1, 1), 14))
+        rpt_style.append(('BOTTOMPADDING', (0, 1), (-1, 1), 14))
+
+    rpt_table.setStyle(TableStyle(rpt_style))
+    story.append(rpt_table)
+
+    # 4. Footer callback with page numbers
+    footer_shop = shop_name[:90]
+    footer_contact = f" | Phone: {shop_phone}" if shop_phone else ""
+
+    def _draw_page_footer(canvas, document):
+        canvas.saveState()
+        canvas.setStrokeColor(C_BORDER)
+        canvas.setLineWidth(0.4)
+        canvas.line(margin_l, 9.5 * mm, page_w - margin_r, 9.5 * mm)
+
+        canvas.setFillColor(C_MUTED)
+        canvas.setFont(font_r, 6.8)
+        left_text = f"{footer_shop}{footer_contact}"
+        canvas.drawString(margin_l, 6 * mm, left_text[:110])
+
+        canvas.setFillColor(C_BLACK)
+        canvas.setFont(font_b, 6.8)
+        canvas.drawRightString(page_w - margin_r, 6 * mm, f"Page {document.page}")
+        canvas.restoreState()
+
+    doc.build(story, onFirstPage=_draw_page_footer, onLaterPages=_draw_page_footer)
+    buffer.seek(0)
+    return buffer
+

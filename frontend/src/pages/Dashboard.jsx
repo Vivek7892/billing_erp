@@ -572,9 +572,9 @@ export default function Dashboard() {
             <thead>
               <tr>
                 <th className="w-1/3">Financial Metric</th>
-                <th className="num-col">Today</th>
-                <th className="num-col">This Month</th>
-                <th className="num-col">Previous Month</th>
+                <th className="text-right num-col">Today</th>
+                <th className="text-right num-col">This Month</th>
+                <th className="text-right num-col">Previous Month</th>
               </tr>
             </thead>
             <tbody>
@@ -583,13 +583,13 @@ export default function Dashboard() {
                   <td className="font-semibold text-[var(--ink)]">
                     {row.metric}
                   </td>
-                  <td className="num-col font-bold font-mono text-[var(--ink)]">
+                  <td className="text-right num-col font-bold font-mono text-[var(--ink)]">
                     {row.today}
                   </td>
-                  <td className="num-col font-mono text-[var(--ink-secondary)]">
+                  <td className="text-right num-col font-mono text-[var(--ink-secondary)]">
                     {row.month}
                   </td>
-                  <td className="num-col font-mono text-[var(--muted)]">
+                  <td className="text-right num-col font-mono text-[var(--muted)]">
                     {row.prevMonth}
                   </td>
                 </tr>
@@ -794,7 +794,7 @@ export default function Dashboard() {
                     <th>Invoice #</th>
                     <th>Customer</th>
                     <th>Date</th>
-                    <th className="num-col">Grand Total</th>
+                    <th className="text-right num-col">Grand Total</th>
                     <th>Status</th>
                     <th className="text-right">Action</th>
                   </tr>
@@ -821,7 +821,7 @@ export default function Dashboard() {
                       <td className="text-xs text-[var(--muted)] font-mono">
                         {formatDateShort(bill.created_at)}
                       </td>
-                      <td className="num-col font-bold text-[var(--ink)] font-mono">
+                      <td className="text-right num-col font-bold text-[var(--ink)] font-mono">
                         {fmtCurrency(bill.grand_total)}
                       </td>
                       <td>
@@ -882,8 +882,8 @@ export default function Dashboard() {
                   <tr>
                     <th>#</th>
                     <th>Product</th>
-                    <th className="num-col">Qty Sold</th>
-                    <th className="num-col">Revenue</th>
+                    <th className="text-right num-col">Qty Sold</th>
+                    <th className="text-right num-col">Revenue</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -897,10 +897,10 @@ export default function Dashboard() {
                           {prod.product_name}
                         </span>
                       </td>
-                      <td className="num-col font-mono text-xs text-[var(--ink-secondary)]">
+                      <td className="text-right num-col font-mono text-xs text-[var(--ink-secondary)]">
                         {prod.total_qty} units
                       </td>
-                      <td className="num-col font-mono font-bold text-[var(--ink)]">
+                      <td className="text-right num-col font-mono font-bold text-[var(--ink)]">
                         {fmtCurrency(prod.total_revenue)}
                       </td>
                     </tr>
@@ -942,9 +942,9 @@ export default function Dashboard() {
                 <thead>
                   <tr>
                     <th>Product Name</th>
-                    <th className="num-col">Stock</th>
-                    <th className="num-col">Min</th>
-                    <th>Status</th>
+                    <th className="text-right num-col">Stock</th>
+                    <th className="text-right num-col">Min</th>
+                    <th className="text-center">Status</th>
                     <th className="text-right">Action</th>
                   </tr>
                 </thead>
@@ -957,7 +957,7 @@ export default function Dashboard() {
                         </span>
                       </td>
                       <td
-                        className={`num-col font-bold font-mono ${
+                        className={`text-right num-col font-bold font-mono ${
                           Number(prod.current_stock) <= 0
                             ? 'text-red-600'
                             : 'text-amber-600'
@@ -965,10 +965,10 @@ export default function Dashboard() {
                       >
                         {prod.current_stock}
                       </td>
-                      <td className="num-col text-xs text-[var(--muted)] font-mono">
+                      <td className="text-right num-col text-xs text-[var(--muted)] font-mono">
                         {prod.minimum_stock}
                       </td>
-                      <td>
+                      <td className="text-center">
                         <Badge
                           status={
                             Number(prod.current_stock) <= 0
@@ -1021,7 +1021,7 @@ export default function Dashboard() {
                 <tr>
                   <th>Category</th>
                   <th>Status Detail</th>
-                  <th className="num-col">Pending Count</th>
+                  <th className="text-right num-col">Pending Count</th>
                   <th className="text-right">Quick Navigation</th>
                 </tr>
               </thead>
@@ -1037,7 +1037,7 @@ export default function Dashboard() {
                     <td className="text-[var(--ink-secondary)]">
                       {item.label}
                     </td>
-                    <td className="num-col font-mono font-bold">
+                    <td className="text-right num-col font-mono font-bold">
                       <span
                         className={
                           item.count > 0

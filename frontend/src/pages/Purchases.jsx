@@ -202,10 +202,10 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
                   <tr>
                     <th>Product</th>
                     <th>SKU</th>
-                    <th>Stock</th>
+                    <th className="text-right">Stock</th>
                     <th className="text-right">Purchase Price</th>
                     <th className="text-right">Selling Price</th>
-                    <th>Status</th>
+                    <th className="text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -213,12 +213,12 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
                     <tr key={p.id} className="hover:bg-[var(--surface-hover)]">
                       <td className="font-semibold text-slate-900 dark:text-slate-100">{p.name}</td>
                       <td className="font-mono text-slate-600 dark:text-slate-400">{p.sku || '—'}</td>
-                      <td className={`font-semibold tabular-nums ${p.current_stock <= 0 ? 'text-rose-600 dark:text-rose-400' : p.current_stock <= p.minimum_stock ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                      <td className={`text-right font-mono font-semibold tabular-nums ${p.current_stock <= 0 ? 'text-rose-600 dark:text-rose-400' : p.current_stock <= p.minimum_stock ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                         {p.current_stock}
                       </td>
                       <td className="tabular-nums font-mono text-right text-slate-800 dark:text-slate-200">{fmt(p.purchase_price)}</td>
                       <td className="tabular-nums font-mono text-right text-slate-800 dark:text-slate-200">{fmt(p.selling_price)}</td>
-                      <td><Badge status={p.stock_status} /></td>
+                      <td className="text-center"><Badge status={p.stock_status} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -1692,7 +1692,7 @@ export default function Purchases() {
                           <th className="text-right">Total</th>
                           <th className="text-right">Paid</th>
                           <th className="text-right">Balance Due</th>
-                          <th>Status</th>
+                          <th className="text-center">Status</th>
                           <th className="text-right">Actions</th>
                         </tr>
                       </thead>
@@ -1712,7 +1712,7 @@ export default function Purchases() {
                               <td className={`text-xs font-bold whitespace-nowrap tabular-nums text-right font-mono ${dueOf(p) > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-slate-600 dark:text-slate-400'}`}>
                                 {fmt(dueOf(p))}
                               </td>
-                              <td><Badge status={p.payment_status} /></td>
+                              <td className="text-center"><Badge status={p.payment_status} /></td>
                               <td className="text-right whitespace-nowrap">
                                 <button
                                   onClick={e => {

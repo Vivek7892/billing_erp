@@ -1781,14 +1781,17 @@ export function DataTable({
       <table className="table">
         <thead>
           <tr>
-            {columns.map((col, idx) => (
-              <th
-                key={col.key || idx}
-                className={[col.align === 'right' ? 'num-col' : '', col.className || ''].join(' ')}
-              >
-                {col.header}
-              </th>
-            ))}
+            {columns.map((col, idx) => {
+              const alignClass = col.align === 'right' ? 'text-right num-col' : col.align === 'center' ? 'text-center' : 'text-left'
+              return (
+                <th
+                  key={col.key || idx}
+                  className={[alignClass, col.className || ''].join(' ')}
+                >
+                  {col.header}
+                </th>
+              )
+            })}
           </tr>
         </thead>
         <tbody>
@@ -1802,17 +1805,20 @@ export function DataTable({
                   typeof rowClassName === 'function' ? rowClassName(row) : (rowClassName || ''),
                 ].join(' ')}
               >
-                {columns.map((col, cIdx) => (
-                  <td
-                    key={col.key || cIdx}
-                    className={[
-                      col.align === 'right' ? 'num-col' : '',
-                      col.cellClassName || col.className || '',
-                    ].join(' ')}
-                  >
-                    {col.render ? col.render(row[col.key], row, rIdx) : row[col.key]}
-                  </td>
-                ))}
+                {columns.map((col, cIdx) => {
+                  const alignClass = col.align === 'right' ? 'text-right num-col font-mono' : col.align === 'center' ? 'text-center' : 'text-left'
+                  return (
+                    <td
+                      key={col.key || cIdx}
+                      className={[
+                        alignClass,
+                        col.cellClassName || col.className || '',
+                      ].join(' ')}
+                    >
+                      {col.render ? col.render(row[col.key], row, rIdx) : row[col.key]}
+                    </td>
+                  )
+                })}
               </tr>
             ))
           ) : (

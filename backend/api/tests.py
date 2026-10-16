@@ -246,12 +246,14 @@ class TransactionWorkflowTests(TestCase):
 			response = self.client.get(f'/api/reports/{path}/')
 			self.assertEqual(response.status_code, 200, path)
 
-		xlsx_response = self.client.get('/api/reports/sales/?export=xlsx')
-		self.assertEqual(xlsx_response.status_code, 200)
-		self.assertIn('spreadsheetml', xlsx_response['Content-Type'])
-		pdf_response = self.client.get('/api/reports/sales/?export=pdf')
-		self.assertEqual(pdf_response.status_code, 200)
-		self.assertEqual(pdf_response['Content-Type'], 'application/pdf')
+			xlsx_response = self.client.get(f'/api/reports/{path}/?export=xlsx')
+			self.assertEqual(xlsx_response.status_code, 200, f"{path} xlsx")
+			self.assertIn('spreadsheetml', xlsx_response['Content-Type'], f"{path} xlsx type")
+
+			pdf_response = self.client.get(f'/api/reports/{path}/?export=pdf')
+			self.assertEqual(pdf_response.status_code, 200, f"{path} pdf")
+			self.assertEqual(pdf_response['Content-Type'], 'application/pdf', f"{path} pdf type")
+
 
 	def test_dashboard_collection_and_action_counts_use_database_data(self):
 		response = self.client.get('/api/dashboard/')
@@ -431,4 +433,154 @@ class TransactionWorkflowTests(TestCase):
 		self.assertIn(b'%PDF', pdf_thermal_no_shop.content[:10])
 
 
-# Create your tests here.
+class ApprovalSystemTests(TestCase):
+	def setUp(self):
+		self.client = APIClient()
+		self.business = Business.objects.create(name='Test Store', invoice_prefix='TST')
+		self.admin = User.objects.create_user(
+			username='admin_boss', password='password123', role='admin', is_staff=True, business=self.business
+		)
+		self.cashier = User.objects.create_user(
+			username='cashier_joe', password='password123', role='cashier', business=self.business
+		)
+		self.product = Product.objects.create(
+			business=self.business,
+			name='Organic Coffee 250g',
+			sku='COF-001',
+			purchase_price=Decimal('100.00'),
+			selling_price=Decimal('150.00'),
+			mrp=Decimal('160.00'),
+			current_stock=Decimal('50.00'),
+		)
+		self.customer = Customer.objects.create(
+			business=self.business,
+			name='Ramesh Kumar',
+			mobile='9876543210',
+			credit_limit=Decimal('2000.00'),
+		)
+
+	def test_approval_settings_endpoint(self):
+		self.client.force_authenticate(user=self.admin)
+		res = self.client.get('/api/approval-requests/settings/')
+		self.assertEqual(res.status_code, 200)
+		self.assertEqual(res.data['approval_price_change_pct'], Decimal('10'))
+		self.assertEqual(res.data['approval_refund_threshold'], Decimal('1000'))
+		self.assertEqual(res.data['approval_stock_adjustment_qty'], Decimal('10'))
+		self.assertTrue(res.data['approval_invoice_cancellation_enabled'])
+
+		# Update settings
+		update_res = self.client.post('/api/approval-requests/settings/', {
+			'approval_price_change_pct': '15',
+			'approval_refund_threshold': '2000',
+		}, format='json')
+		self.assertEqual(update_res.status_code, 200)
+		self.assertEqual(update_res.data['approval_price_change_pct'], Decimal('15'))
+		self.assertEqual(update_res.data['approval_refund_threshold'], Decimal('2000'))
+
+	def test_price_change_approval_workflow(self):
+		from .models import ApprovalRequest, Notification
+		self.client.force_authenticate(user=self.cashier)
+
+		# 1. Price change <= 10% (150 -> 160 is 6.67%)
+		# Cashiers typically read-only on product, so let's test with manager or admin bypass false
+		manager = User.objects.create_user(
+			username='manager_sue', password='password123', role='manager', business=self.business
+		)
+		self.client.force_authenticate(user=manager)
+
+		# Change price to 160 (6.67% increase, <= 10%)
+		res_small = self.client.patch(f'/api/products/{self.product.id}/', {'selling_price': '160.00'}, format='json')
+		self.assertEqual(res_small.status_code, 200)
+		self.product.refresh_from_db()
+		self.assertEqual(self.product.selling_price, Decimal('160.00'))
+
+		# 2. Price change > 10% (160 -> 200 is 25% change)
+		res_large = self.client.patch(f'/api/products/{self.product.id}/', {'selling_price': '200.00'}, format='json')
+		self.assertEqual(res_large.status_code, 202)
+		self.assertTrue(res_large.data['requires_approval'])
+
+		# Product price in database should remain 160 until approved!
+		self.product.refresh_from_db()
+		self.assertEqual(self.product.selling_price, Decimal('160.00'))
+
+		# Verify ApprovalRequest and Notification created
+		appr = ApprovalRequest.objects.get(id=res_large.data['approval_request']['id'])
+		self.assertEqual(appr.status, 'pending')
+		self.assertEqual(appr.request_type, 'price_change')
+		self.assertIsNotNone(appr.notification)
+		self.assertTrue(appr.notification.requires_approval)
+
+		# 3. Admin approves
+		self.client.force_authenticate(user=self.admin)
+		approve_res = self.client.post(f'/api/approval-requests/{appr.id}/approve/', {'notes': 'Authorized holiday markup'})
+		self.assertEqual(approve_res.status_code, 200)
+		self.assertEqual(approve_res.data['status'], 'approved')
+
+		# 4. Product price in database must now be 200.00!
+		self.product.refresh_from_db()
+		self.assertEqual(self.product.selling_price, Decimal('200.00'))
+
+		# Verify AuditLog created
+		audit = AuditLog.objects.filter(entity='Product', entity_id=str(self.product.id), action='PRICE_CHANGE_APPROVED').first()
+		self.assertIsNotNone(audit)
+
+	def test_stock_adjustment_approval_and_rejection(self):
+		from .models import ApprovalRequest
+		self.client.force_authenticate(user=self.cashier)
+
+		# Adjust stock by 25 units (> 10 threshold)
+		res = self.client.post('/api/inventory/adjust/', {
+			'product_id': self.product.id,
+			'quantity': '25',
+			'transaction_type': 'stock_in',
+			'notes': 'Supplier surprise delivery',
+		}, format='json')
+		self.assertEqual(res.status_code, 202)
+		self.assertTrue(res.data['requires_approval'])
+
+		# Product stock must NOT change yet
+		self.product.refresh_from_db()
+		self.assertEqual(self.product.current_stock, Decimal('50.00'))
+
+		appr_id = res.data['approval_request']['id']
+
+		# Admin rejects
+		self.client.force_authenticate(user=self.admin)
+		reject_res = self.client.post(f'/api/approval-requests/{appr_id}/reject/', {'notes': 'Count mismatch'})
+		self.assertEqual(reject_res.status_code, 200)
+		self.assertEqual(reject_res.data['status'], 'rejected')
+
+		# Stock still 50
+		self.product.refresh_from_db()
+		self.assertEqual(self.product.current_stock, Decimal('50.00'))
+
+	def test_user_role_change_and_notification_action(self):
+		from .models import ApprovalRequest, Notification
+		# Manager wants to promote cashier to manager
+		manager = User.objects.create_user(
+			username='manager_bob', password='password123', role='manager', business=self.business
+		)
+		self.client.force_authenticate(user=manager)
+
+		res = self.client.patch(f'/api/users/{self.cashier.id}/', {'role': 'manager'}, format='json')
+		self.assertEqual(res.status_code, 202)
+		self.assertTrue(res.data['requires_approval'])
+
+		# User role in DB remains cashier
+		self.cashier.refresh_from_db()
+		self.assertEqual(self.cashier.role, 'cashier')
+
+		notif = Notification.objects.filter(requires_approval=True, status='active').first()
+		self.assertIsNotNone(notif)
+
+		# Admin approves through notification action endpoint
+		self.client.force_authenticate(user=self.admin)
+		action_res = self.client.post(f'/api/notifications/{notif.id}/action/', {
+			'action': 'approve',
+			'notes': 'Promoted per performance evaluation',
+		}, format='json')
+		self.assertEqual(action_res.status_code, 200)
+
+		# Cashier is now manager!
+		self.cashier.refresh_from_db()
+		self.assertEqual(self.cashier.role, 'manager')
