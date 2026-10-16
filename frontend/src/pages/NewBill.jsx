@@ -49,7 +49,7 @@ import {
   User, UserPlus, UserRound, ShoppingCart,
   MoreVertical, ArrowLeft, ArrowRight, Copy, Check, Sparkles,
 } from 'lucide-react'
-import { Modal, SearchBar } from '../components/UI'
+import { Modal, ConfirmDialog, SearchBar } from '../components/UI'
 import { useNavigate } from 'react-router-dom'
 import RazorpayPaymentModal from '../features/billing/RazorpayPaymentModal'
 import { PAYMENT_METHODS, PAYMENT_STATUS, INVOICE_STATUS } from '../constants'
@@ -2535,9 +2535,19 @@ export default function NewBill() {
             </div>
           </div>
 
-          {/* Bottom Row: Secondary Actions + Single Large Green Complete Sale Action */}
+          {/* Bottom Row: Organized Action Groups (Lifecycle on left, Payment on right) */}
           <div className="pb-dock-actions-row">
             <div className="pb-dock-left-actions">
+              <button
+                type="button"
+                className="pb-btn-dock"
+                title="Start a fresh bill (F1)"
+                onClick={startNewBill}
+                disabled={saving || (!cart.length && !lastInvoice)}
+              >
+                <RefreshCw size={13} />
+                <span>New Bill</span>
+              </button>
               <button
                 type="button"
                 className="pb-btn-dock"
@@ -2545,7 +2555,7 @@ export default function NewBill() {
                 onClick={saveDraft}
                 disabled={saving || !cart.length}
               >
-                <Layers size={14} />
+                <Layers size={13} />
                 <span>Save Draft</span>
               </button>
               <button
@@ -2555,21 +2565,9 @@ export default function NewBill() {
                 onClick={openQuickPayment}
                 disabled={grandTotal <= 0 || !cart.length}
               >
-                <QrCode size={14} />
+                <QrCode size={13} />
                 <span>Quick QR</span>
               </button>
-              {payment.method !== 'razorpay' && (
-                <button
-                  type="button"
-                  className="pb-btn-dock"
-                  title="Complete Sale &amp; Print Bill (Ctrl+P / F7)"
-                  onClick={() => saveBill(true)}
-                  disabled={!canAttemptComplete}
-                >
-                  <Printer size={14} />
-                  <span>Complete &amp; Print</span>
-                </button>
-              )}
               <button
                 type="button"
                 className="pb-btn-dock pb-btn-danger"
@@ -2577,45 +2575,60 @@ export default function NewBill() {
                 onClick={() => setShowClearConfirm(true)}
                 disabled={!cart.length}
               >
-                <Trash2 size={14} />
+                <Trash2 size={13} />
                 <span>Clear</span>
-              </button>
-              <button
-                type="button"
-                className="pb-btn-dock"
-                title="Start a fresh bill (F1)"
-                onClick={startNewBill}
-                disabled={saving || (!cart.length && !lastInvoice)}
-              >
-                <RefreshCw size={14} />
-                <span>New Bill</span>
               </button>
             </div>
 
-            {/* Primary Action: Pay with Razorpay OR Complete Sale */}
-            {payment.method === 'razorpay' ? (
+            <div className="pb-dock-right-actions">
               <button
                 type="button"
-                className="pb-btn-razorpay-pay"
-                title={canAttemptComplete ? `Pay ${fmt(grandTotal)} with Razorpay` : completeTitle}
-                onClick={openRazorpayCheckout}
-                disabled={!canAttemptComplete}
+                className="pb-btn-dock pb-btn-modal-trigger"
+                title="Open detailed payment screen (split pay / ledger balance / change)"
+                onClick={() => setMobilePaymentOpen(true)}
+                disabled={!cart.length || grandTotal <= 0}
               >
-                <CreditCard size={18} />
-                <span>{saving ? 'Processing…' : `Pay with Razorpay · ${fmt(grandTotal)}`}</span>
+                <Banknote size={13} />
+                <span>Pay Details</span>
               </button>
-            ) : (
-              <button
-                type="button"
-                className="pb-btn-complete-sale"
-                title={completeTitle}
-                onClick={() => saveBill(false)}
-                disabled={!canAttemptComplete}
-              >
-                <CheckCircle2 size={18} />
-                <span>{saving ? 'Processing…' : `✓ COMPLETE SALE · ${fmt(grandTotal)}`}</span>
-              </button>
-            )}
+              {payment.method !== 'razorpay' && (
+                <button
+                  type="button"
+                  className="pb-btn-dock pb-btn-print"
+                  title="Complete Sale &amp; Print Bill (Ctrl+P / F7)"
+                  onClick={() => saveBill(true)}
+                  disabled={!canAttemptComplete}
+                >
+                  <Printer size={13} />
+                  <span>Complete &amp; Print</span>
+                </button>
+              )}
+
+              {/* Primary Action: Pay with Razorpay OR Complete Sale */}
+              {payment.method === 'razorpay' ? (
+                <button
+                  type="button"
+                  className="pb-btn-razorpay-pay"
+                  title={canAttemptComplete ? `Pay ${fmt(grandTotal)} with Razorpay` : completeTitle}
+                  onClick={openRazorpayCheckout}
+                  disabled={!canAttemptComplete}
+                >
+                  <CreditCard size={15} />
+                  <span>{saving ? 'Processing…' : `Pay with Razorpay · ${fmt(grandTotal)}`}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="pb-btn-complete-sale"
+                  title={completeTitle}
+                  onClick={() => saveBill(false)}
+                  disabled={!canAttemptComplete}
+                >
+                  <CheckCircle2 size={15} />
+                  <span>{saving ? 'Processing…' : `✓ COMPLETE SALE · ${fmt(grandTotal)}`}</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </footer>
@@ -2646,320 +2659,57 @@ export default function NewBill() {
         </aside>
       )}
 
-      {/* ============================ MOBILE PAYMENT BOTTOM SHEET ============================ */}
-      {mobilePaymentOpen && (
-        <div className="pb-mobile-only pb-mobile-sheet-overlay" onClick={() => setMobilePaymentOpen(false)}>
-          <div
-            className="pb-mobile-sheet-content"
-            onClick={e => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Payment and Checkout"
-          >
-            {/* Sheet Handle & Header */}
-            <div className="pb-mobile-sheet-header">
-              <div className="pb-mobile-sheet-handle" />
-              <div className="pb-mobile-sheet-title-bar">
+      {/* ============================ DEDICATED COLLECT PAYMENT SCREEN (RESPONSIVE) ============================ */}
+      <Modal
+        open={mobilePaymentOpen}
+        onClose={() => setMobilePaymentOpen(false)}
+        title="Collect Payment"
+        subtitle={`${cart.length} item${cart.length === 1 ? '' : 's'} (${totalQty} units) · ${customer ? customer.name : 'Walk-in Customer'}`}
+        size="lg"
+        footer={
+          <div className="flex w-full flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-2">
+              {payment.method !== 'razorpay' && (
                 <button
                   type="button"
-                  className="pb-mobile-sheet-back-btn"
-                  onClick={() => setMobilePaymentOpen(false)}
-                  aria-label="Back to bill"
+                  className="flex min-h-[44px] flex-1 sm:flex-initial items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] px-4 py-2 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition disabled:opacity-50"
+                  onClick={() => saveBill(true)}
+                  disabled={!canAttemptComplete || saving}
                 >
-                  <ArrowLeft size={16} />
-                  <span>Back to Bill</span>
+                  <Printer size={15} />
+                  <span>Complete &amp; Print</span>
                 </button>
-                <span className="pb-mobile-sheet-heading">Payment</span>
-                <button
-                  type="button"
-                  className="pb-mobile-sheet-close-btn"
-                  onClick={() => setMobilePaymentOpen(false)}
-                  aria-label="Close payment"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Grand Total Banner at Top */}
-              <div className="pb-mobile-sheet-total-banner">
-                <div className="pb-mobile-sheet-total-label">Grand Total to Collect</div>
-                <div className="pb-mobile-sheet-total-val">{fmt(grandTotal)}</div>
-                <div className="pb-mobile-sheet-total-meta">
-                  {cart.length} {cart.length === 1 ? 'item' : 'items'} ({totalQty} units)
-                  {customer ? ` · ${customer.name}` : ' · Walk-in Customer'}
-                </div>
-              </div>
-            </div>
-
-            {/* Sheet Scrollable Body */}
-            <div className="pb-mobile-sheet-body">
-              {/* Payment Methods Selector */}
-              <div className="pb-mobile-methods-label">Payment Method</div>
-              <div className="pb-mobile-methods-grid" role="radiogroup" aria-label="Payment method">
-                {PAYMENT_METHOD_OPTIONS.map(({ id, label, icon: Icon }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    role="radio"
-                    aria-checked={payment.method === id}
-                    className={`pb-mobile-method-chip${payment.method === id ? ' active' : ''}`}
-                    onClick={() => selectPayment(id)}
-                  >
-                    <Icon size={15} />
-                    <span>{label}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Method-specific Form Controls */}
-              <div className="pb-mobile-sheet-context">
-                {payment.method === 'cash' && (
-                  <div className="pb-mobile-cash-panel">
-                    <label className="pb-mobile-field-label" htmlFor="pb-mobile-cash">Cash Received (₹)</label>
-                    <div className="pb-mobile-money-input-wrap">
-                      <span className="pb-curr-sym">₹</span>
-                      <input
-                        id="pb-mobile-cash"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        inputMode="decimal"
-                        className="pb-mobile-cash-input"
-                        value={payment.amount}
-                        placeholder={grandTotal > 0 ? grandTotal.toFixed(2) : '0.00'}
-                        onChange={e => setPayment(x => ({ ...x, amount: e.target.value, status: 'paid', autoAmount: false }))}
-                      />
-                    </div>
-
-                    {/* Quick Cash Chips */}
-                    <div className="pb-mobile-cash-chips">
-                      <button type="button" className="pb-mobile-chip pb-mobile-chip-exact" onClick={setExactCash}>
-                        Exact
-                      </button>
-                      {CASH_CHIPS.map(v => (
-                        <button key={v} type="button" className="pb-mobile-chip" onClick={() => addCashChip(v)}>
-                          +{v}
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        className="pb-mobile-chip"
-                        onClick={() => setPayment(x => ({ ...x, amount: grandTotal > 0 ? grandTotal.toFixed(2) : '', autoAmount: true }))}
-                      >
-                        Reset
-                      </button>
-                    </div>
-
-                    {/* Change / Due Feedback */}
-                    <div className={`pb-mobile-cash-feedback ${cashShort ? 'is-due' : 'is-change'}`}>
-                      {cashShort ? (
-                        <>
-                          <span className="pb-feedback-label">Balance Due:</span>
-                          <span className="pb-feedback-val pb-text-red">{fmt(cashBalanceDue)}</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="pb-feedback-label">Change to Return:</span>
-                          <span className="pb-feedback-val pb-text-green">{fmt(cashChange)}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {payment.method === 'upi' && (
-                  <div className="pb-mobile-upi-panel">
-                    <div className="pb-mobile-qr-hero">
-                      <button
-                        type="button"
-                        className="pb-mobile-qr-launch-btn"
-                        onClick={openQuickPayment}
-                        disabled={grandTotal <= 0}
-                      >
-                        <div className="pb-qr-launch-icon">
-                          <QrCode size={22} />
-                        </div>
-                        <div className="pb-qr-launch-info">
-                          <span className="pb-qr-launch-title">Show UPI QR to Customer</span>
-                          <span className="pb-qr-launch-sub">
-                            {!upiId
-                              ? '⚠️ Configure shop UPI ID in Settings'
-                              : `Customer scans with any UPI app to pay ${fmt(grandTotal)}`}
-                          </span>
-                        </div>
-                        <ArrowRight size={18} className="pb-qr-launch-arrow" />
-                      </button>
-                    </div>
-
-                    <div className="pb-mobile-field-group">
-                      <label className="pb-mobile-field-label">Amount (₹)</label>
-                      <div className="pb-mobile-money-input-wrap">
-                        <span className="pb-curr-sym">₹</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          className="pb-mobile-cash-input"
-                          value={payment.amount}
-                          onChange={e => setPayment(x => ({ ...x, amount: e.target.value, autoAmount: false }))}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="pb-mobile-field-group">
-                      <label className="pb-mobile-field-label">UTR / Transaction Reference</label>
-                      <input
-                        className="pb-mobile-text-input"
-                        placeholder="Optional reference / UTR"
-                        value={payment.reference}
-                        onChange={e => setPayment(x => ({ ...x, reference: e.target.value }))}
-                      />
-                    </div>
-
-                    <div className="pb-mobile-field-group">
-                      <label className="pb-mobile-field-label">Payment Status</label>
-                      <div className="pb-mobile-status-toggle">
-                        <button
-                          type="button"
-                          className={`pb-mobile-status-btn ${payment.status === 'paid' ? 'active' : ''}`}
-                          onClick={() => setPayment(x => ({ ...x, status: 'paid' }))}
-                        >
-                          <CheckCircle2 size={14} /> <span>Paid</span>
-                        </button>
-                        <button
-                          type="button"
-                          className={`pb-mobile-status-btn ${payment.status === 'pending' ? 'active' : ''}`}
-                          onClick={() => setPayment(x => ({ ...x, status: 'pending' }))}
-                        >
-                          <Clock size={14} /> <span>Pending</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {['card', 'online'].includes(payment.method) && (
-                  <div className="pb-mobile-card-panel">
-                    <div className="pb-mobile-field-group">
-                      <label className="pb-mobile-field-label">Amount (₹)</label>
-                      <div className="pb-mobile-money-input-wrap">
-                        <span className="pb-curr-sym">₹</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          className="pb-mobile-cash-input"
-                          value={payment.amount}
-                          onChange={e => setPayment(x => ({ ...x, amount: e.target.value, autoAmount: false }))}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="pb-mobile-field-group">
-                      <label className="pb-mobile-field-label">Approval Code / Reference</label>
-                      <input
-                        className="pb-mobile-text-input"
-                        placeholder="Optional approval code"
-                        value={payment.reference}
-                        onChange={e => setPayment(x => ({ ...x, reference: e.target.value }))}
-                      />
-                    </div>
-
-                    <div className="pb-mobile-field-group">
-                      <label className="pb-mobile-field-label">Payment Status</label>
-                      <div className="pb-mobile-status-toggle">
-                        <button
-                          type="button"
-                          className={`pb-mobile-status-btn ${payment.status === 'paid' ? 'active' : ''}`}
-                          onClick={() => setPayment(x => ({ ...x, status: 'paid' }))}
-                        >
-                          <CheckCircle2 size={14} /> <span>Paid</span>
-                        </button>
-                        <button
-                          type="button"
-                          className={`pb-mobile-status-btn ${payment.status === 'pending' ? 'active' : ''}`}
-                          onClick={() => setPayment(x => ({ ...x, status: 'pending' }))}
-                        >
-                          <Clock size={14} /> <span>Pending</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {payment.method === 'credit' && (
-                  <div className="pb-mobile-credit-panel">
-                    <div className="font-semibold text-sm">Credit Sale / Account Khata</div>
-                    {CREDIT_REQUIRES_CUSTOMER && !customer ? (
-                      <div className="pb-note pb-note-warn mt-2">
-                        <AlertTriangle size={14} />
-                        <span>A named customer is required for credit sales. Please select or add a customer in the bill tab.</span>
-                      </div>
-                    ) : (
-                      <div className="pb-sub mt-1">This sale will be recorded against {customer?.name || 'the customer'}'s credit ledger.</div>
-                    )}
-                  </div>
-                )}
-
-                {payment.method === 'razorpay' && (
-                  <div className="pb-mobile-razorpay-panel">
-                    <div className="flex items-center gap-2 font-semibold text-sm text-blue-600 dark:text-blue-400">
-                      <CreditCard size={16} />
-                      <span>Razorpay Online Gateway</span>
-                    </div>
-                    <div className="pb-sub mt-1">
-                      Customer pays {fmt(grandTotal)} via UPI, Cards, NetBanking, or Wallets.
-                    </div>
-                    <div className="p-2 rounded border bg-amber-50 text-amber-900 border-amber-200 dark:bg-amber-950/30 dark:text-amber-200 dark:border-amber-900/50 text-xs">
-                      ⚠️ Sale will be confirmed only after online payment succeeds.
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Validation errors in bottom sheet if any */}
-              {billIssues.length > 0 && (
-                <ul className="pb-errors mt-2" role="alert">
-                  {billIssues.map((m, i) => <li key={i}>{m}</li>)}
-                </ul>
               )}
+              <button
+                type="button"
+                className="flex min-h-[44px] flex-1 sm:flex-initial items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] px-4 py-2 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition disabled:opacity-50"
+                onClick={saveDraft}
+                disabled={saving || !cart.length}
+              >
+                <Layers size={15} />
+                <span>Save Draft</span>
+              </button>
             </div>
 
-            {/* Sheet Footer with Razorpay Pay OR Complete Sale Action */}
-            <div className="pb-mobile-sheet-footer">
-              <div className="pb-mobile-sheet-actions-grid">
-                {payment.method !== 'razorpay' && (
-                  <button
-                    type="button"
-                    className="pb-mobile-sheet-btn-secondary"
-                    onClick={() => saveBill(true)}
-                    disabled={!canAttemptComplete}
-                  >
-                    <Printer size={15} />
-                    <span>Complete &amp; Print</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className={`pb-mobile-sheet-btn-secondary ${payment.method === 'razorpay' ? 'col-span-2' : ''}`}
-                  onClick={saveDraft}
-                  disabled={saving || !cart.length}
-                >
-                  <Layers size={15} />
-                  <span>Save Draft</span>
-                </button>
-              </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="hidden sm:inline-flex min-h-[44px] items-center justify-center px-4 py-2 text-xs font-semibold text-[var(--muted)] hover:text-[var(--ink)] transition"
+                onClick={() => setMobilePaymentOpen(false)}
+              >
+                Back to Bill
+              </button>
 
               {payment.method === 'razorpay' ? (
                 <button
                   type="button"
-                  className="pb-mobile-sheet-razorpay-btn"
+                  className="flex min-h-[48px] w-full sm:w-auto flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-bold text-white shadow hover:bg-blue-700 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   title={canAttemptComplete ? `Pay ${fmt(grandTotal)} with Razorpay` : completeTitle}
                   onClick={() => {
                     setMobilePaymentOpen(false)
                     openRazorpayCheckout()
                   }}
-                  disabled={!canAttemptComplete}
+                  disabled={!canAttemptComplete || saving}
                 >
                   <CreditCard size={18} />
                   <span>{saving ? 'Processing…' : `Pay with Razorpay · ${fmt(grandTotal)}`}</span>
@@ -2967,10 +2717,10 @@ export default function NewBill() {
               ) : (
                 <button
                   type="button"
-                  className="pb-mobile-sheet-complete-btn"
+                  className="flex min-h-[48px] w-full sm:w-auto flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-emerald-700 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   title={completeTitle}
                   onClick={() => saveBill(false)}
-                  disabled={!canAttemptComplete}
+                  disabled={!canAttemptComplete || saving}
                 >
                   <CheckCircle2 size={18} />
                   <span>{saving ? 'Processing Sale…' : `Complete Sale · ${fmt(grandTotal)}`}</span>
@@ -2978,59 +2728,467 @@ export default function NewBill() {
               )}
             </div>
           </div>
+        }
+      >
+        <div className="space-y-4">
+          {/* Order Summary & Total to Pay Card */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-[#1E3A5F] p-4 text-white shadow-md dark:from-slate-950 dark:to-slate-900">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Total to Collect</span>
+                <div className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-white">{fmt(grandTotal)}</div>
+                <div className="mt-0.5 text-xs text-slate-300">
+                  {cart.length} {cart.length === 1 ? 'item' : 'items'} ({totalQty} units)
+                  {customer ? ` · ${customer.name}` : ' · Walk-in Customer'}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/10 text-xs text-slate-200">
+                <div className="rounded-lg bg-white/10 p-2">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 block">Subtotal</span>
+                  <span className="font-mono font-semibold">{fmt(subtotal)}</span>
+                </div>
+                {billDiscount > 0 && (
+                  <div className="rounded-lg bg-white/10 p-2">
+                    <span className="text-[9px] uppercase tracking-wider text-amber-300 block">Discount</span>
+                    <span className="font-mono font-semibold text-amber-300">-{fmt(billDiscount)}</span>
+                  </div>
+                )}
+                {showGst && (
+                  <div className="rounded-lg bg-white/10 p-2">
+                    <span className="text-[9px] uppercase tracking-wider text-slate-400 block">GST / Tax</span>
+                    <span className="font-mono font-semibold">{fmt(tax)}</span>
+                  </div>
+                )}
+                <div className="rounded-lg bg-white/10 p-2">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-400 block">Round Off</span>
+                  <span className="font-mono font-semibold">{fmtSigned(roundOff)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Method Selector Cards */}
+          <div>
+            <label className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] mb-2 block">
+              Choose Payment Method
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2" role="radiogroup" aria-label="Payment method">
+              {PAYMENT_METHOD_OPTIONS.map(({ id, label, icon: Icon }) => {
+                const isSelected = payment.method === id
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    className={`flex min-h-[52px] items-center justify-center gap-2 rounded-xl border p-2.5 text-xs font-bold transition-all ${
+                      isSelected
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-800 shadow-sm dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-300'
+                        : 'border-[var(--line)] bg-[var(--surface-subtle)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+                    }`}
+                    onClick={() => selectPayment(id)}
+                  >
+                    <Icon size={18} className={isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-[var(--muted)]'} />
+                    <span>{label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Contextual Form Controls for Chosen Payment Method */}
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface-subtle)] p-4">
+            {payment.method === 'cash' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]" htmlFor="pb-modal-cash">
+                    Cash Tendered / Received (₹)
+                  </label>
+                  <button
+                    type="button"
+                    className="text-xs font-bold text-emerald-600 hover:underline dark:text-emerald-400"
+                    onClick={setExactCash}
+                  >
+                    Set Exact ({fmt(grandTotal)})
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-lg font-bold text-[var(--muted)]">₹</span>
+                  <input
+                    id="pb-modal-cash"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputMode="decimal"
+                    className="w-full min-h-[48px] rounded-xl border border-[var(--line)] bg-[var(--surface)] pl-8 pr-4 font-mono text-xl font-bold text-[var(--ink)] shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    value={payment.amount}
+                    placeholder={grandTotal > 0 ? grandTotal.toFixed(2) : '0.00'}
+                    onChange={e => setPayment(x => ({ ...x, amount: e.target.value, status: 'paid', autoAmount: false }))}
+                  />
+                </div>
+
+                {/* Quick Cash Chips */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <button
+                    type="button"
+                    className="min-h-[38px] rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 transition"
+                    onClick={setExactCash}
+                  >
+                    Exact
+                  </button>
+                  {CASH_CHIPS.map(v => (
+                    <button
+                      key={v}
+                      type="button"
+                      className="min-h-[38px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 font-mono text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+                      onClick={() => addCashChip(v)}
+                    >
+                      +{v}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className="min-h-[38px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-medium text-[var(--muted)] hover:text-[var(--ink)] transition"
+                    onClick={() => setPayment(x => ({ ...x, amount: grandTotal > 0 ? grandTotal.toFixed(2) : '', autoAmount: true }))}
+                  >
+                    Reset
+                  </button>
+                </div>
+
+                {/* Auto Calculated Change / Due Banner */}
+                <div className={`flex items-center justify-between rounded-xl p-3 border ${
+                  cashShort
+                    ? 'border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300'
+                    : 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300'
+                }`}>
+                  <span className="text-xs font-bold uppercase tracking-wider">
+                    {cashShort ? '⚠️ Balance Due from Customer:' : '💵 Change to Return to Customer:'}
+                  </span>
+                  <span className="font-mono text-lg font-black tabular-nums">
+                    {cashShort ? fmt(cashBalanceDue) : fmt(cashChange)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {payment.method === 'upi' && (
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-blue-200 dark:border-blue-900/50 bg-blue-50 dark:bg-blue-950/30 p-3.5 text-left text-blue-900 dark:text-blue-200 hover:bg-blue-100 transition"
+                  onClick={openQuickPayment}
+                  disabled={grandTotal <= 0}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
+                      <QrCode size={20} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">Show UPI QR Standee</div>
+                      <div className="text-xs text-blue-800/80 dark:text-blue-200/80">
+                        {!upiId ? '⚠️ Configure shop UPI ID in Settings' : `Customer scans with PhonePe, GPay, Paytm to pay ${fmt(grandTotal)}`}
+                      </div>
+                    </div>
+                  </div>
+                  <ArrowRight size={18} className="text-blue-600 shrink-0" />
+                </button>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-[var(--muted)] mb-1 block">Amount (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="w-full min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 font-mono text-sm font-semibold text-[var(--ink)]"
+                      value={payment.amount}
+                      onChange={e => setPayment(x => ({ ...x, amount: e.target.value, autoAmount: false }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-[var(--muted)] mb-1 block">UTR / Transaction Reference</label>
+                    <input
+                      className="w-full min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-sm text-[var(--ink)] placeholder:text-[var(--muted)]"
+                      placeholder="Optional reference / UTR"
+                      value={payment.reference}
+                      onChange={e => setPayment(x => ({ ...x, reference: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-[var(--muted)] mb-1 block">Payment Status</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className={`flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg border text-xs font-bold transition ${
+                        payment.status === 'paid'
+                          ? 'border-emerald-600 bg-emerald-600 text-white'
+                          : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+                      }`}
+                      onClick={() => setPayment(x => ({ ...x, status: 'paid' }))}
+                    >
+                      <CheckCircle2 size={14} /> <span>Paid</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg border text-xs font-bold transition ${
+                        payment.status === 'pending'
+                          ? 'border-amber-600 bg-amber-600 text-white'
+                          : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+                      }`}
+                      onClick={() => setPayment(x => ({ ...x, status: 'pending' }))}
+                    >
+                      <Clock size={14} /> <span>Pending</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {['card', 'online'].includes(payment.method) && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-bold text-[var(--muted)] mb-1 block">Amount (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="w-full min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 font-mono text-sm font-semibold text-[var(--ink)]"
+                      value={payment.amount}
+                      onChange={e => setPayment(x => ({ ...x, amount: e.target.value, autoAmount: false }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-[var(--muted)] mb-1 block">Approval Code / Reference</label>
+                    <input
+                      className="w-full min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-sm text-[var(--ink)] placeholder:text-[var(--muted)]"
+                      placeholder="Optional authorization / swipe code"
+                      value={payment.reference}
+                      onChange={e => setPayment(x => ({ ...x, reference: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-[var(--muted)] mb-1 block">Payment Status</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className={`flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg border text-xs font-bold transition ${
+                        payment.status === 'paid'
+                          ? 'border-emerald-600 bg-emerald-600 text-white'
+                          : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+                      }`}
+                      onClick={() => setPayment(x => ({ ...x, status: 'paid' }))}
+                    >
+                      <CheckCircle2 size={14} /> <span>Paid</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg border text-xs font-bold transition ${
+                        payment.status === 'pending'
+                          ? 'border-amber-600 bg-amber-600 text-white'
+                          : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+                      }`}
+                      onClick={() => setPayment(x => ({ ...x, status: 'pending' }))}
+                    >
+                      <Clock size={14} /> <span>Pending</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {payment.method === 'credit' && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 font-bold text-sm text-[var(--ink)]">
+                  <BookOpen size={16} className="text-amber-500" />
+                  <span>Credit Sale / Customer Khata Account</span>
+                </div>
+
+                {CREDIT_REQUIRES_CUSTOMER && !customer ? (
+                  <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs text-amber-800 dark:text-amber-300">
+                    <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                    <span>A named customer is required for credit sales. Please select or add a customer in the bill tab.</span>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 space-y-2 text-xs">
+                    <div className="flex justify-between items-center text-[var(--muted)]">
+                      <span>Customer:</span>
+                      <span className="font-semibold text-[var(--ink)]">{customer?.name}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[var(--muted)]">
+                      <span>Current Ledger Balance:</span>
+                      <span className="font-mono font-semibold text-amber-600 dark:text-amber-400">
+                        {fmt(customer?.outstanding_amount || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-[var(--muted)]">
+                      <span>This Sale (Credit):</span>
+                      <span className="font-mono font-semibold text-[var(--ink)]">+{fmt(grandTotal)}</span>
+                    </div>
+                    <div className="pt-2 border-t border-[var(--line)] flex justify-between items-center font-bold">
+                      <span className="text-[var(--ink)]">New Ledger Balance:</span>
+                      <span className="font-mono text-sm text-rose-600 dark:text-rose-400">
+                        {fmt(Number(customer?.outstanding_amount || 0) + Number(grandTotal || 0))}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {payment.method === 'razorpay' && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 font-semibold text-sm text-blue-600 dark:text-blue-400">
+                  <Wallet size={16} />
+                  <span>Razorpay Online Gateway</span>
+                </div>
+                <p className="text-xs text-[var(--muted)]">
+                  Customer will pay {fmt(grandTotal)} securely via UPI, Credit/Debit Cards, NetBanking, or Digital Wallets.
+                </p>
+                <div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 p-2.5 text-xs text-amber-800 dark:text-amber-300">
+                  ⚠️ The sale will only be finalized once Razorpay confirms payment completion.
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Validation Warnings */}
+          {billIssues.length > 0 && (
+            <div className="rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 p-3 text-xs text-rose-700 dark:text-rose-300">
+              <div className="font-bold mb-1">Please address before completing sale:</div>
+              <ul className="list-disc pl-4 space-y-0.5">
+                {billIssues.map((m, i) => <li key={i}>{m}</li>)}
+              </ul>
+            </div>
+          )}
         </div>
-      )}
+      </Modal>
 
       {/* ============================ MODALS ============================ */}
-      <Modal open={showCustomerModal} onClose={() => setShowCustomerModal(false)} title="Add new customer" size="sm">
-        <div className="pb-modal pb-stack pb-customer-modal">
-          <p className="m-0 text-sm text-[var(--muted)]">Save contact details to find this customer quickly on future bills.</p>
+      <Modal
+        open={showCustomerModal}
+        onClose={() => setShowCustomerModal(false)}
+        title="Add New Customer"
+        subtitle="Quickly register customer details for this invoice"
+        size="sm"
+        footer={
+          <div className="flex w-full items-center justify-end gap-2">
+            <button
+              type="button"
+              className="min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-2.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+              onClick={() => setShowCustomerModal(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="min-h-[44px] rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 transition disabled:opacity-50"
+              onClick={addCustomer}
+              disabled={addingCustomer}
+            >
+              {addingCustomer ? 'Adding…' : 'Add Customer'}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
           <div>
-            <label className="pb-label" htmlFor="pb-nc-name">Name *</label>
-            <input id="pb-nc-name" className="pb-input" autoFocus autoComplete="name" placeholder="Customer name" value={newCustomer.name} onChange={e => setNewCustomer(x => ({ ...x, name: e.target.value }))} />
+            <label className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] mb-1 block" htmlFor="pb-nc-name">
+              Full Name *
+            </label>
+            <input
+              id="pb-nc-name"
+              className="w-full min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--ink)] focus:border-emerald-500 focus:outline-none"
+              autoFocus
+              autoComplete="name"
+              placeholder="e.g. Rajesh Kumar"
+              value={newCustomer.name}
+              onChange={e => setNewCustomer(x => ({ ...x, name: e.target.value }))}
+            />
           </div>
           <div>
-            <label className="pb-label" htmlFor="pb-nc-mobile">Mobile number</label>
-            <input id="pb-nc-mobile" className="pb-input" type="tel" inputMode="tel" autoComplete="tel" placeholder="For receipts and account lookup" value={newCustomer.mobile} onChange={e => setNewCustomer(x => ({ ...x, mobile: e.target.value }))} />
+            <label className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] mb-1 block" htmlFor="pb-nc-mobile">
+              Mobile Number
+            </label>
+            <input
+              id="pb-nc-mobile"
+              className="w-full min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--ink)] focus:border-emerald-500 focus:outline-none"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              placeholder="10-digit mobile number"
+              value={newCustomer.mobile}
+              onChange={e => setNewCustomer(x => ({ ...x, mobile: e.target.value }))}
+            />
           </div>
           <div>
-            <label className="pb-label" htmlFor="pb-nc-email">Email address <span className="font-normal normal-case text-[var(--muted)]">(optional)</span></label>
-            <input id="pb-nc-email" className="pb-input" type="email" autoComplete="email" placeholder="name@example.com" value={newCustomer.email} onChange={e => setNewCustomer(x => ({ ...x, email: e.target.value }))} />
-          </div>
-          <div className="pb-grid2 pb-customer-modal-actions">
-            <button type="button" className="pb-btn" onClick={() => setShowCustomerModal(false)}>Cancel</button>
-            <button type="button" className="pb-btn pb-btn-primary" onClick={addCustomer} disabled={addingCustomer}>{addingCustomer ? 'Adding…' : 'Add customer'}</button>
+            <label className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] mb-1 block" htmlFor="pb-nc-email">
+              Email Address <span className="font-normal normal-case text-[var(--muted)]">(optional)</span>
+            </label>
+            <input
+              id="pb-nc-email"
+              className="w-full min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-sm font-medium text-[var(--ink)] focus:border-emerald-500 focus:outline-none"
+              type="email"
+              autoComplete="email"
+              placeholder="customer@example.com"
+              value={newCustomer.email}
+              onChange={e => setNewCustomer(x => ({ ...x, email: e.target.value }))}
+            />
           </div>
         </div>
       </Modal>
 
-      <Modal open={showClearConfirm} onClose={() => setShowClearConfirm(false)} title="Clear cart?" size="sm">
-        <div className="pb-modal pb-stack">
-          <p className="m-0">Remove all {cart.length} item{cart.length === 1 ? '' : 's'} from this bill? This cannot be undone.</p>
-          <div className="pb-grid2">
-            <button type="button" className="pb-btn" onClick={() => setShowClearConfirm(false)}>Cancel</button>
-            <button type="button" className="pb-btn pb-btn-primary" onClick={() => { setCart([]); setShowClearConfirm(false); searchRef.current?.focus() }}>Clear Cart</button>
-          </div>
-        </div>
-      </Modal>
+      <ConfirmDialog
+        open={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        onConfirm={() => {
+          setCart([])
+          setShowClearConfirm(false)
+          searchRef.current?.focus()
+        }}
+        title="Clear Current Bill?"
+        message={`Are you sure you want to remove all ${cart.length} item${cart.length === 1 ? '' : 's'} from this bill? This cannot be undone.`}
+        confirmText="Clear Cart"
+        cancelText="Keep Items"
+        isDestructive={true}
+      />
 
-      <Modal open={showDrafts} onClose={() => setShowDrafts(false)} title="Draft bills" size="md">
-        <div className="pb-modal">
+      <Modal open={showDrafts} onClose={() => setShowDrafts(false)} title="Draft Bills" subtitle={`${drafts.length} parked bill${drafts.length === 1 ? '' : 's'}`} size="md">
+        <div className="space-y-3">
           {drafts.length === 0 ? (
-            <p className="pb-sub m-0">No draft bills saved. Use “Save Draft” to park a bill and resume it later.</p>
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-6 text-center text-sm text-[var(--muted)]">
+              No draft bills saved. Use “Save Draft” during checkout to park a bill and resume it anytime.
+            </div>
           ) : drafts.map(d => {
             const draftTotal = (d.cart || []).reduce((s, i) => s + Number(i.total || 0), 0)
             return (
-              <div key={d.id} className="pb-draft">
+              <div key={d.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3.5">
                 <div>
-                  <div className="pb-strong">{d.customerName || 'Walk-in Customer'}</div>
-                  <div className="pb-sub">
-                    {new Date(d.savedAt).toLocaleString('en-IN')} | {(d.cart || []).length} item(s) | Items total {fmt(draftTotal)}
+                  <div className="font-bold text-sm text-[var(--ink)]">{d.customerName || 'Walk-in Customer'}</div>
+                  <div className="text-xs text-[var(--muted)] mt-0.5">
+                    {new Date(d.savedAt).toLocaleString('en-IN')} · {(d.cart || []).length} item(s) · Total {fmt(draftTotal)}
                   </div>
                 </div>
-                <div className="flex gap-1.5">
-                  <button type="button" className="pb-btn pb-btn-sm pb-btn-primary" onClick={() => resumeDraft(d)}>Resume</button>
-                  <button type="button" className="pb-btn pb-btn-sm pb-btn-danger" onClick={() => deleteDraft(d.id)}>Delete</button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="min-h-[38px] flex-1 sm:flex-initial rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition"
+                    onClick={() => resumeDraft(d)}
+                  >
+                    Resume
+                  </button>
+                  <button
+                    type="button"
+                    className="min-h-[38px] flex-1 sm:flex-initial rounded-lg border border-rose-300 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/30 px-3.5 py-1.5 text-xs font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-100 transition"
+                    onClick={() => deleteDraft(d.id)}
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             )
@@ -3038,21 +3196,25 @@ export default function NewBill() {
         </div>
       </Modal>
 
+      {/* ============================ DEDICATED SALE COMPLETED SCREEN ============================ */}
       <Modal open={showSuccess && Boolean(lastInvoice?.id)} onClose={() => setShowSuccess(false)} title="" size="md">
-        <div className="-mt-2 pb-sale-success">
+        <div className="-mt-2 pb-sale-success space-y-4">
           {/* Hero success banner */}
-          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 p-5 text-white mb-4">
-            <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
-            <div className="absolute -bottom-4 -left-4 h-16 w-16 rounded-full bg-white/10" />
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 p-6 text-white shadow-lg">
+            <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-white/10 blur-sm" />
+            <div className="absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/10 blur-sm" />
             <div className="relative flex items-center gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
-                <CheckCircle2 size={28} strokeWidth={2.5} />
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md shadow-inner transition-transform duration-300 hover:scale-105">
+                <CheckCircle2 size={36} strokeWidth={2.5} className="text-white" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold uppercase tracking-widest text-emerald-100">Sale Completed ✓</p>
-                <p className="mt-0.5 font-mono text-lg font-black tabular-nums">{fmt(lastInvoice?.grand_total)}</p>
-                <p className="mt-0.5 text-xs text-emerald-100 truncate">
-                  <span className="font-mono font-semibold">#{lastInvoice?.invoice_number || 'INV'}</span>
+                <p className="text-[11px] font-black uppercase tracking-widest text-emerald-100 flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-emerald-200" />
+                  <span>Sale Completed Successfully</span>
+                </p>
+                <p className="mt-1 font-mono text-2xl sm:text-3xl font-black tracking-tight">{fmt(lastInvoice?.grand_total)}</p>
+                <p className="mt-1 text-xs text-emerald-100/90 truncate">
+                  <span className="font-mono font-bold bg-white/20 px-2 py-0.5 rounded-md">#{lastInvoice?.invoice_number || 'INV'}</span>
                   {lastInvoice?.customer_name && lastInvoice.customer_name !== 'Walk-in Customer'
                     ? ` · ${lastInvoice.customer_name}` : ' · Walk-in Customer'}
                 </p>
@@ -3060,57 +3222,79 @@ export default function NewBill() {
             </div>
           </div>
 
-          {/* Payment summary row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
-            {[
-              { label: 'Method', value: String(lastInvoice?.payment_method || 'Cash').replace(/_/g, ' ') },
-              { label: 'Status', value: lastInvoice?.payment_status || 'Paid', highlight: ['paid','success','completed'].includes(String(lastInvoice?.payment_status||'paid').toLowerCase()) },
-              { label: 'Received', value: fmt(lastPaidAmount(lastInvoice)), mono: true },
-            ].map(({ label, value, highlight, mono }) => (
-              <div key={label} className="rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-2.5 text-center">
-                <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted)]">{label}</p>
-                <p className={`mt-1 text-xs font-bold capitalize truncate ${
-                  highlight === true ? 'text-emerald-600 dark:text-emerald-400'
-                  : highlight === false ? 'text-amber-600 dark:text-amber-400'
-                  : 'text-[var(--ink)]'
-                } ${mono ? 'font-mono' : ''}`}>{value}</p>
-              </div>
-            ))}
+          {/* Payment summary breakdown */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Method</p>
+              <p className="mt-1 text-xs font-bold capitalize truncate text-[var(--ink)]">
+                {String(lastInvoice?.payment_method || 'Cash').replace(/_/g, ' ')}
+              </p>
+            </div>
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Status</p>
+              <p className="mt-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 capitalize truncate">
+                {lastInvoice?.payment_status || 'Paid'}
+              </p>
+            </div>
+            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Received</p>
+              <p className="mt-1 font-mono text-xs font-bold text-[var(--ink)]">
+                {fmt(lastPaidAmount(lastInvoice))}
+              </p>
+            </div>
           </div>
 
-          {/* Cash change row */}
+          {/* Cash change row if applicable */}
           {String(lastInvoice?.payment_method || '').toLowerCase() === 'cash' && Number(lastInvoice?.amount_received || 0) > Number(lastInvoice?.grand_total || 0) && (
-            <div className="mb-4 flex items-center justify-between rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/20 px-4 py-2.5">
-              <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">💵 Change to Return</span>
-              <span className="font-mono text-base font-black tabular-nums text-emerald-700 dark:text-emerald-300">
+            <div className="flex items-center justify-between rounded-xl border border-emerald-300 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/30 px-4 py-3">
+              <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                💵 <span>Change Returned to Customer</span>
+              </span>
+              <span className="font-mono text-lg font-black tabular-nums text-emerald-700 dark:text-emerald-300">
                 {fmt(Math.max(0, Number(lastInvoice?.amount_received || 0) - Number(lastInvoice?.grand_total || 0)))}
               </span>
             </div>
           )}
 
-          {/* Action grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-            <button type="button" onClick={() => printInvoiceDocument(lastInvoice?.id, false)}
-              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-[#1E3A5F] hover:bg-[#162F4D] text-white text-xs font-bold transition shadow-sm">
-              <Printer size={15} /><span>Print A4 Invoice</span>
+          {/* Action buttons grid */}
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => printInvoiceDocument(lastInvoice?.id, false)}
+              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#1E3A5F] hover:bg-[#162F4D] text-white text-xs font-bold transition shadow-sm active:scale-95"
+            >
+              <Printer size={16} /><span>Print A4 Invoice</span>
             </button>
-            <button type="button" onClick={() => printInvoiceDocument(lastInvoice?.id, true)}
-              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-xs font-semibold hover:bg-[var(--surface-hover)] transition">
-              <Receipt size={15} /><span>Thermal Receipt</span>
+            <button
+              type="button"
+              onClick={() => printInvoiceDocument(lastInvoice?.id, true)}
+              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-xs font-bold hover:bg-[var(--surface-hover)] transition shadow-sm active:scale-95"
+            >
+              <Receipt size={16} /><span>Thermal Receipt</span>
             </button>
-            <button type="button" onClick={() => downloadInvoiceDocument(lastInvoice?.id)}
-              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-xs font-semibold hover:bg-[var(--surface-hover)] transition">
-              <Download size={15} /><span>Download PDF</span>
+            <button
+              type="button"
+              onClick={() => downloadInvoiceDocument(lastInvoice?.id)}
+              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-xs font-bold hover:bg-[var(--surface-hover)] transition shadow-sm active:scale-95"
+            >
+              <Download size={16} /><span>Download PDF</span>
             </button>
-            <button type="button" onClick={shareInvoice}
-              className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white text-xs font-bold transition shadow-sm">
-              <Share2 size={15} /><span>Share WhatsApp</span>
+            <button
+              type="button"
+              onClick={shareInvoice}
+              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white text-xs font-bold transition shadow-sm active:scale-95"
+            >
+              <Share2 size={16} /><span>Share WhatsApp</span>
             </button>
           </div>
 
-          <button type="button" onClick={() => { setShowSuccess(false); startNewBill() }}
-            className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-bold transition shadow-sm">
-            <RefreshCw size={16} /><span>Start New Sale</span>
+          {/* Primary New Sale CTA */}
+          <button
+            type="button"
+            onClick={() => { setShowSuccess(false); startNewBill() }}
+            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-bold transition shadow-md"
+          >
+            <RefreshCw size={17} /><span>+ Start New Sale</span>
           </button>
         </div>
       </Modal>

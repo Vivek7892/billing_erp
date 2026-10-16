@@ -230,25 +230,22 @@ function TextAreaInput({ id, value, onChange, placeholder, rows = 3 }) {
   )
 }
 
-function ToggleSwitch({ checked, onChange, label, description, disabled = false }) {
+function CheckboxField({ checked, onChange, label, description, disabled = false }) {
   return (
-    <label className="flex items-start gap-3 cursor-pointer select-none">
-      <div className="relative inline-flex items-center shrink-0 mt-0.5">
-        <input
-          type="checkbox"
-          checked={Boolean(checked)}
-          onChange={e => onChange(e.target.checked)}
-          disabled={disabled}
-          className="sr-only peer"
-        />
-        <div className="w-8 h-4.5 bg-slate-300  peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-indigo-600 " />
-      </div>
+    <label className={`flex items-start gap-2.5 cursor-pointer select-none group ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+      <input
+        type="checkbox"
+        checked={Boolean(checked)}
+        onChange={e => onChange(e.target.checked)}
+        disabled={disabled}
+        className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600 accent-indigo-600 cursor-pointer disabled:cursor-not-allowed"
+      />
       <div className="min-w-0">
-        <span className="text-xs font-semibold text-slate-800  block">
+        <span className="text-xs font-semibold text-slate-800 block leading-snug">
           {label}
         </span>
         {description && (
-          <span className="text-[11px] text-slate-500  block mt-0.5 leading-relaxed">
+          <span className="text-[11px] text-slate-500 block mt-0.5 leading-relaxed">
             {description}
           </span>
         )}
@@ -1014,6 +1011,30 @@ export default function Settings() {
                 />
               </SettingRow>
 
+              {/* CIN Number */}
+              <SettingRow label="CIN Number" description="21-character Company Identification Number (for Pvt Ltd / Ltd companies)." id="cin">
+                <TextInput
+                  id="cin"
+                  value={settings.cin}
+                  onChange={v => setField('cin', v.toUpperCase())}
+                  placeholder="e.g. U74999TN2020PTC123456"
+                  maxLength={21}
+                  mono
+                />
+              </SettingRow>
+
+              {/* FSSAI Licence */}
+              <SettingRow label="FSSAI Licence Number" description="Food Safety licence number for food & grocery businesses." id="fssai_licence">
+                <TextInput
+                  id="fssai_licence"
+                  value={settings.fssai_licence}
+                  onChange={v => setField('fssai_licence', v)}
+                  placeholder="e.g. 12345678901234"
+                  maxLength={14}
+                  mono
+                />
+              </SettingRow>
+
               {/* Store Identity & Header Printing Controls */}
               <div className="pt-4 border-t border-[#DCE3EC]">
                 <div className="mb-3">
@@ -1024,49 +1045,63 @@ export default function Settings() {
                     Configure whether store branding and details appear on printed bills and receipts.
                   </p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 py-3 border-y border-[#DCE3EC]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-3 border-y border-[#DCE3EC]">
                   <div className="col-span-1 sm:col-span-2">
-                    <ToggleSwitch
+                    <CheckboxField
                       checked={isTrue(settings.show_shop_details, true)}
                       onChange={v => setField('show_shop_details', String(v))}
                       label="Print Store Header on Bills"
                       description="Master switch: display business identity header on printed invoices and receipts."
                     />
                   </div>
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.show_business_name, true)}
                     onChange={v => setField('show_business_name', String(v))}
                     disabled={!isTrue(settings.show_shop_details, true)}
                     label="Store Name on Bill"
                     description="Print company/shop trade name in header."
                   />
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.show_business_logo, true)}
                     onChange={v => setField('show_business_logo', String(v))}
                     disabled={!isTrue(settings.show_shop_details, true)}
                     label="Store Logo on Bill"
                     description="Print business graphic logo in header."
                   />
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.show_business_address, true)}
                     onChange={v => setField('show_business_address', String(v))}
                     disabled={!isTrue(settings.show_shop_details, true)}
                     label="Store Address on Bill"
                     description="Print physical shop address on invoices."
                   />
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.show_business_phone, true)}
                     onChange={v => setField('show_business_phone', String(v))}
                     disabled={!isTrue(settings.show_shop_details, true)}
-                    label="Contact Phone & Email"
+                    label="Contact Phone &amp; Email"
                     description="Print contact numbers and support email."
                   />
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.show_business_gstin, true)}
                     onChange={v => setField('show_business_gstin', String(v))}
                     disabled={!isTrue(settings.show_shop_details, true)}
-                    label="Tax Registrations (GSTIN & PAN)"
+                    label="GSTIN &amp; PAN on Bill"
                     description="Print 15-digit GSTIN and PAN numbers."
+                  />
+                  <CheckboxField
+                    checked={isTrue(settings.show_cin_on_invoice, false)}
+                    onChange={v => setField('show_cin_on_invoice', String(v))}
+                    disabled={!isTrue(settings.show_shop_details, true) || !settings.cin}
+                    label="CIN on Bill"
+                    description="Print Company Identification Number on invoices."
+                  />
+                  <CheckboxField
+                    checked={isTrue(settings.show_fssai_on_invoice, false)}
+                    onChange={v => setField('show_fssai_on_invoice', String(v))}
+                    disabled={!isTrue(settings.show_shop_details, true) || !settings.fssai_licence}
+                    label="FSSAI Licence on Bill"
+                    description="Print FSSAI food safety licence number."
                   />
                 </div>
               </div>
@@ -1161,104 +1196,111 @@ export default function Settings() {
                 />
               </SettingRow>
 
-              {/* Column Visibility Toggles */}
+              {/* Column Visibility Checkboxes */}
               <div className="pt-2">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
-                  Printed Invoice Elements & Table Columns
+                  Printed Invoice Elements &amp; Table Columns
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 py-3 border-y border-[#DCE3EC] ">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-3 border-y border-[#DCE3EC]">
                   <div className="col-span-1 sm:col-span-2">
-                    <ToggleSwitch
+                    <CheckboxField
                       checked={isTrue(settings.show_shop_details, true)}
                       onChange={v => setField('show_shop_details', String(v))}
                       label="Store Details Header"
                       description="Master switch: print business identity header on invoices & receipts."
                     />
                   </div>
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.show_business_name, true)}
                     onChange={v => setField('show_business_name', String(v))}
                     disabled={!isTrue(settings.show_shop_details, true)}
                     label="Store Name on Bill"
                     description="Print company / store name in header."
                   />
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.show_business_logo, true)}
                     onChange={v => setField('show_business_logo', String(v))}
                     disabled={!isTrue(settings.show_shop_details, true)}
                     label="Store Logo on Bill"
                     description="Print company logo graphic in header."
                   />
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.show_business_address, true)}
                     onChange={v => setField('show_business_address', String(v))}
                     disabled={!isTrue(settings.show_shop_details, true)}
                     label="Store Address on Bill"
                     description="Print physical store address on invoices."
                   />
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.show_business_phone, true)}
                     onChange={v => setField('show_business_phone', String(v))}
                     disabled={!isTrue(settings.show_shop_details, true)}
-                    label="Store Phone & Email"
+                    label="Store Phone &amp; Email"
                     description="Print primary mobile number and support email."
                   />
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.show_business_gstin, true)}
                     onChange={v => setField('show_business_gstin', String(v))}
                     disabled={!isTrue(settings.show_shop_details, true)}
-                    label="Store GSTIN & PAN"
+                    label="Store GSTIN &amp; PAN"
                     description="Print 15-digit GSTIN and PAN tax registrations."
                   />
-                  <ToggleSwitch
+                  <CheckboxField
+                    checked={isTrue(settings.show_cin_on_invoice, false)}
+                    onChange={v => setField('show_cin_on_invoice', String(v))}
+                    disabled={!isTrue(settings.show_shop_details, true)}
+                    label="CIN on Bill"
+                    description="Print Company Identification Number on invoices."
+                  />
+                  <CheckboxField
                     checked={isTrue(settings.show_hsn_col, true)}
                     onChange={v => setField('show_hsn_col', String(v))}
                     label="HSN / SAC Column"
                     description="Print item tax classification code in product table."
                   />
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.show_sku_col, false)}
                     onChange={v => setField('show_sku_col', String(v))}
                     label="SKU / Item Code"
                     description="Show product SKU code beside item name."
                   />
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.show_unit_col, true)}
                     onChange={v => setField('show_unit_col', String(v))}
                     label="Unit of Measurement"
                     description="Display quantity unit (kg, pcs, L, pack)."
                   />
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.show_discount_col, true)}
                     onChange={v => setField('show_discount_col', String(v))}
                     label="Item Discount Column"
                     description="Show discount percentage given per line item."
                   />
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.show_tax_cols, true)}
                     onChange={v => setField('show_tax_cols', String(v))}
                     label="Tax Split Columns"
                     description="Show SGST / CGST rate and tax amount columns."
                   />
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.show_bank_details, true)}
                     onChange={v => setField('show_bank_details', String(v))}
                     label="Bank Account Details"
-                    description="Print bank account & IFSC code for wire transfer."
+                    description="Print bank account &amp; IFSC code for wire transfer."
                   />
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.show_signature_area, true)}
                     onChange={v => setField('show_signature_area', String(v))}
                     label="Cashier Signature Block"
                     description="Print authorized signatory box at bottom right."
                   />
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.show_amount_in_words, true)}
                     onChange={v => setField('show_amount_in_words', String(v))}
                     label="Amount in Words"
                     description="Print written rupee words (e.g. Rupees One Thousand...)."
                   />
-                  <ToggleSwitch
+                  <CheckboxField
                     checked={isTrue(settings.enable_invoice_qr, true)}
                     onChange={v => setField('enable_invoice_qr', String(v))}
                     label="Digital Bill QR Code"
@@ -1646,14 +1688,14 @@ export default function Settings() {
                 />
               </SettingRow>
 
-              <div className="space-y-3 py-3 border-y border-[#DCE3EC] ">
-                <ToggleSwitch
+              <div className="space-y-3 py-3 border-y border-[#DCE3EC]">
+                <CheckboxField
                   checked={isTrue(settings.hsn_summary_on_invoice, true)}
                   onChange={v => setField('hsn_summary_on_invoice', String(v))}
                   label="Print Statutory HSN Tax Summary Table"
                   description="Prints summary block showing taxable value, CGST, SGST, and IGST by HSN code at bottom of invoice."
                 />
-                <ToggleSwitch
+                <CheckboxField
                   checked={isTrue(settings.reverse_charge, false)}
                   onChange={v => setField('reverse_charge', String(v))}
                   label="Reverse Charge Mechanism (RCM) Flag"
@@ -1842,8 +1884,8 @@ export default function Settings() {
                 />
               </SettingRow>
 
-              <div className="py-3 border-y border-[#DCE3EC] ">
-                <ToggleSwitch
+              <div className="py-3 border-y border-[#DCE3EC]">
+                <CheckboxField
                   checked={isTrue(settings.show_bank_details, true)}
                   onChange={v => setField('show_bank_details', String(v))}
                   label="Display Bank Account on Printed Invoices"

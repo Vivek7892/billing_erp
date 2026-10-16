@@ -384,6 +384,8 @@ export function Tabs({
 
 export function useModalA11y(isOpen, onClose, containerRef) {
   const onCloseRef = useRef(onClose)
+  const triggeringElementRef = useRef(null)
+
   useEffect(() => {
     onCloseRef.current = onClose
   }, [onClose])
@@ -393,8 +395,17 @@ export function useModalA11y(isOpen, onClose, containerRef) {
   useEffect(() => {
     if (!isOpen) {
       hasFocusedRef.current = false
+      if (triggeringElementRef.current && typeof triggeringElementRef.current.focus === 'function') {
+        try {
+          triggeringElementRef.current.focus()
+        } catch {
+          // Ignore focus restoration errors if element unmounted
+        }
+      }
       return undefined
     }
+
+    triggeringElementRef.current = document.activeElement
 
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
@@ -427,15 +438,19 @@ export function useModalA11y(isOpen, onClose, containerRef) {
     }
 
     const previousOverflow = document.body.style.overflow
+    const previousPaddingRight = document.body.style.paddingRight
+    const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth
+    if (scrollBarWidth > 0) {
+      document.body.style.paddingRight = `${scrollBarWidth}px`
+    }
     document.body.style.overflow = 'hidden'
     window.addEventListener('keydown', handleKeyDown)
 
-    // Only set initial focus once upon opening the modal. Never steal focus during typing or state updates!
+    // Set initial focus once upon opening
     if (!hasFocusedRef.current) {
       hasFocusedRef.current = true
       const timer = setTimeout(() => {
         if (containerRef?.current) {
-          // If focus is already inside container, do not touch it
           if (
             containerRef.current.contains(document.activeElement) &&
             document.activeElement !== containerRef.current
@@ -443,7 +458,7 @@ export function useModalA11y(isOpen, onClose, containerRef) {
             return
           }
 
-          // Prioritize first form field (input, select, textarea) instead of the top close button
+          // Prioritize first active form field
           const formField = containerRef.current.querySelector(
             'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled])'
           )
@@ -465,49 +480,60 @@ export function useModalA11y(isOpen, onClose, containerRef) {
         clearTimeout(timer)
         window.removeEventListener('keydown', handleKeyDown)
         document.body.style.overflow = previousOverflow
+        document.body.style.paddingRight = previousPaddingRight
       }
     }
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
       document.body.style.overflow = previousOverflow
+      document.body.style.paddingRight = previousPaddingRight
     }
   }, [isOpen, containerRef])
 }
 
 /* ============================================================
-   MODAL
+   MODAL (Unified Design System)
 ============================================================ */
 
 export function Modal({
   open,
   onClose,
   title,
+  subtitle,
+  description,
   children,
   size = 'md',
   footer,
+  preventBackdropClose = false,
+  className = '',
+  contentClassName = '',
+  headerActions,
 }) {
   const dialogRef = useRef(null)
   const titleId = useId()
+  const descId = useId()
 
   useModalA11y(open, onClose, dialogRef)
 
   if (!open) return null
 
   const sizes = {
-    sm: 'max-w-sm',
-    md: 'max-w-lg',
-    lg: 'max-w-2xl',
-    xl: 'max-w-4xl',
-    full: 'max-w-6xl',
+    sm: 'sm:max-w-[420px]',
+    md: 'sm:max-w-[600px]',
+    lg: 'sm:max-w-[850px]',
+    xl: 'sm:max-w-[1050px]',
+    full: 'sm:max-w-[1240px]',
   }
+
+  const subText = subtitle || description
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 backdrop-blur-xs sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-3 sm:p-4 md:p-6 backdrop-blur-sm transition-opacity duration-200"
       role="presentation"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
+        if (!preventBackdropClose && event.target === event.currentTarget) {
           onClose?.()
         }
       }}
@@ -517,54 +543,55 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-describedby={subText ? descId : undefined}
         tabIndex={-1}
         className={[
-          'flex max-h-[95dvh] w-full flex-col outline-none',
+          'flex flex-col w-[calc(100vw-24px)] max-h-[calc(100dvh-24px)] sm:max-h-[88vh]',
           sizes[size] || sizes.md,
-          'overflow-hidden rounded-t-lg sm:max-h-[90vh] sm:rounded-lg',
-          'border border-[var(--line)]',
-          'bg-[var(--surface)]',
-          'shadow-[var(--shadow-modal)]',
+          'rounded-2xl border border-[var(--line)] bg-[var(--surface)]',
+          'shadow-2xl shadow-black/25',
+          'outline-none overflow-hidden',
+          'transition-all duration-200 ease-out animate-in fade-in zoom-in-[0.98]',
+          className,
         ].join(' ')}
       >
-        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-[var(--line)] bg-[var(--surface-elevated)] px-5 py-4">
-          <div className="min-w-0">
+        {/* Fixed Header */}
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-3.5 sm:px-6 sm:py-4">
+          <div className="min-w-0 flex-1">
             <h2
               id={titleId}
-              className="truncate text-base font-semibold text-[var(--ink)]"
+              className="text-base sm:text-lg font-bold text-[var(--ink)] tracking-tight truncate"
             >
               {title}
             </h2>
+            {subText && (
+              <p id={descId} className="mt-0.5 text-xs text-[var(--muted)] leading-relaxed line-clamp-2">
+                {subText}
+              </p>
+            )}
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close dialog"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--muted)] transition-colors hover:bg-[var(--line)] hover:text-[var(--ink)]"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          <div className="flex items-center gap-1.5 shrink-0">
+            {headerActions}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded-xl text-[var(--muted)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--ink)] active:scale-95 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
             >
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
-          </button>
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+        {/* Scrollable Content Area */}
+        <div className={`min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 ${contentClassName}`}>
           {children}
         </div>
 
+        {/* Fixed Footer */}
         {footer && (
-          <div className="shrink-0 border-t border-[var(--line)] bg-[var(--surface-elevated)] px-5 py-4">
+          <div className="shrink-0 border-t border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-3 sm:px-6 sm:py-4">
             {footer}
           </div>
         )}
@@ -574,7 +601,7 @@ export function Modal({
 }
 
 /* ============================================================
-   CONFIRM DIALOG
+   CONFIRM DIALOG (Unified Standard)
 ============================================================ */
 
 export function ConfirmDialog({
@@ -585,6 +612,7 @@ export function ConfirmDialog({
   message,
   danger = false,
   confirmLabel,
+  cancelLabel = 'Cancel',
   loading = false,
   children,
 }) {
@@ -597,10 +625,10 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm transition-opacity"
       role="presentation"
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose?.()
+        if (!loading && e.target === e.currentTarget) onClose?.()
       }}
     >
       <div
@@ -609,84 +637,91 @@ export function ConfirmDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="w-full max-w-sm rounded-lg border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[var(--shadow-modal)] sm:p-6 outline-none"
+        className="w-[calc(100vw-24px)] sm:w-full sm:max-w-[420px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 sm:p-6 shadow-2xl shadow-black/25 outline-none animate-in fade-in zoom-in-[0.98]"
       >
-        <div
-          className={[
-            'mb-4 flex h-11 w-11 items-center justify-center rounded-lg border',
-            danger
-              ? 'border-red-200 bg-red-50 text-[#B91C1C] dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-400'
-              : 'border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--primary)] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200',
-          ].join(' ')}
-        >
-          {danger ? (
-            <svg
-              width="21"
-              height="21"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-              <path d="M12 9v4" />
-              <path d="M12 17h.01" />
-            </svg>
-          ) : (
-            <svg
-              width="21"
-              height="21"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 8v4" />
-              <path d="M12 16h.01" />
-            </svg>
-          )}
+        <div className="flex items-start gap-3.5">
+          <div
+            className={[
+              'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border',
+              danger
+                ? 'border-red-200 bg-red-50 text-red-600 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-400'
+                : 'border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--primary)] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200',
+            ].join(' ')}
+          >
+            {danger ? (
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                <path d="M12 9v4" />
+                <path d="M12 17h.01" />
+              </svg>
+            ) : (
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v4" />
+                <path d="M12 16h.01" />
+              </svg>
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h3 id={titleId} className="text-base sm:text-lg font-bold text-[var(--ink)] leading-snug">
+              {title}
+            </h3>
+            {message && (
+              <p className="mt-1 text-xs sm:text-sm leading-relaxed text-[var(--muted)]">
+                {message}
+              </p>
+            )}
+          </div>
         </div>
 
-        <h3 id={titleId} className="text-base font-semibold text-[var(--ink)]">
-          {title}
-        </h3>
+        {children && <div className="mt-4">{children}</div>}
 
-        <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
-          {message}
-        </p>
-
-        {children}
-
-        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row">
+        <div className="mt-6 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="btn-secondary flex-1"
+            className="btn-secondary min-h-[44px] flex-1 sm:flex-initial sm:min-w-[100px] justify-center text-xs sm:text-sm font-semibold"
           >
-            Cancel
+            {cancelLabel}
           </button>
 
           <button
             type="button"
-            onClick={() => {
-              onConfirm?.()
-              onClose?.()
-            }}
+            onClick={onConfirm}
             disabled={loading}
             className={[
-              'btn-base flex-1',
+              'btn-base min-h-[44px] flex-1 sm:flex-initial sm:min-w-[110px] justify-center text-xs sm:text-sm font-bold shadow-sm',
               danger ? 'btn-danger' : 'btn-primary',
             ].join(' ')}
           >
-            {loading
-              ? 'Processing…'
-              : confirmLabel || (danger ? 'Delete' : 'Confirm')}
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <InlineSpinner className="w-4 h-4 text-white" />
+                <span>Processing…</span>
+              </span>
+            ) : (
+              confirmLabel || (danger ? 'Delete' : 'Confirm')
+            )}
           </button>
         </div>
       </div>
@@ -695,6 +730,124 @@ export function ConfirmDialog({
 }
 
 export const ConfirmModal = ConfirmDialog
+
+/* ============================================================
+   DRAWER / SLIDE-OVER (Desktop slide-over, Mobile full sheet)
+============================================================ */
+
+export function Drawer({
+  open,
+  isOpen,
+  onClose,
+  title,
+  subtitle,
+  children,
+  footer,
+  size = 'md',
+  width,
+  preventBackdropClose = false,
+}) {
+  const visible = open ?? isOpen
+  const drawerRef = useRef(null)
+  const titleId = useId()
+
+  useModalA11y(visible, onClose, drawerRef)
+
+  if (!visible) return null
+
+  const sizeClasses = {
+    sm: 'sm:max-w-md',
+    md: 'sm:max-w-lg',
+    lg: 'sm:max-w-2xl',
+    xl: 'sm:max-w-4xl',
+  }
+
+  const customWidth = width || sizeClasses[size] || sizeClasses.md
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-slate-950/50 backdrop-blur-xs transition-opacity duration-200"
+      role="presentation"
+      onMouseDown={(e) => {
+        if (!preventBackdropClose && e.target === e.currentTarget) onClose?.()
+      }}
+    >
+      <div
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className={[
+          'fixed inset-y-0 right-0 flex flex-col w-full',
+          customWidth,
+          'bg-[var(--surface)] border-l border-[var(--line)] shadow-2xl shadow-black/30',
+          'outline-none animate-in slide-in-from-right duration-200 ease-out',
+        ].join(' ')}
+      >
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-3.5 sm:px-6 sm:py-4">
+          <div className="min-w-0 flex-1">
+            <h2 id={titleId} className="text-base sm:text-lg font-bold text-[var(--ink)] truncate">
+              {title}
+            </h2>
+            {subtitle && (
+              <p className="mt-0.5 text-xs text-[var(--muted)] truncate">
+                {subtitle}
+              </p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded-xl text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--ink)] transition-colors active:scale-95"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+          {children}
+        </div>
+
+        {footer && (
+          <div className="shrink-0 border-t border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-3 sm:px-6 sm:py-4">
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ============================================================
+   RESPONSIVE TAG CHIP COMPONENT
+============================================================ */
+
+export function TagChip({ label, onRemove, color = 'default', className = '' }) {
+  return (
+    <span
+      className={[
+        'inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs font-semibold',
+        'bg-[var(--surface-elevated)] text-[var(--ink)] shadow-xs transition-colors',
+        className,
+      ].join(' ')}
+    >
+      <span className="truncate max-w-[140px] sm:max-w-[200px]">{label}</span>
+      {onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Remove ${label}`}
+          className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--muted)] hover:bg-[var(--line)] hover:text-red-500 transition-colors"
+        >
+          <X size={12} />
+        </button>
+      )}
+    </span>
+  )
+}
 
 /* ============================================================
    LOADING PLACEHOLDER
@@ -1675,63 +1828,6 @@ export function DataTable({
   )
 }
 
-/* ============================================================
-   DRAWER (Slide-over panel from right)
-============================================================ */
-
-export function Drawer({
-  isOpen,
-  onClose,
-  title,
-  subtitle,
-  children,
-  footer,
-  width = 'max-w-md',
-}) {
-  useEffect(() => {
-    if (!isOpen) return
-    const onKey = e => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [isOpen, onClose])
-
-  if (!isOpen) return null
-
-  return (
-    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/50 backdrop-blur-xs transition-opacity animate-in fade-in">
-      <div className="absolute inset-y-0 right-0 flex max-w-full pl-10">
-        <div className={`w-screen ${width} flex flex-col bg-[var(--surface)] border-l border-[var(--line)] shadow-xl animate-in slide-in-from-right duration-200`}>
-          {/* Drawer Header */}
-          <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-4">
-            <div className="min-w-0">
-              <h3 className="card-title truncate">{title}</h3>
-              {subtitle && <p className="mt-0.5 text-xs text-[var(--muted)] truncate">{subtitle}</p>}
-            </div>
-            <button
-              onClick={onClose}
-              className="rounded-lg p-1.5 text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] transition-colors"
-              aria-label="Close drawer"
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Drawer Body */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-4">
-            {children}
-          </div>
-
-          {/* Drawer Footer */}
-          {footer && (
-            <div className="border-t border-[var(--line)] bg-[var(--surface-elevated)] p-4 flex items-center justify-end gap-2">
-              {footer}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 /* ============================================================
    PAGINATION

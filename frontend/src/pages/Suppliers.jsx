@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react'
 import api from '../api'
 
-import { Badge, Spinner, TableSkeleton, Modal, EmptyState } from '../components/UI'
+import { Badge, Spinner, TableSkeleton, Modal, ConfirmDialog, EmptyState } from '../components/UI'
 
 import {
   Building2,
@@ -2017,7 +2017,28 @@ export default function Suppliers() {
         open={!!payTarget}
         onClose={() => setPayTarget(null)}
         title={`Record Payment — ${payTarget?.name || ''}`}
+        subtitle="Record supplier payment against outstanding dues"
         size="sm"
+        footer={
+          <div className="flex w-full items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setPayTarget(null)}
+              className="min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={recordPayment}
+              disabled={paying}
+              className="min-h-[44px] rounded-xl bg-emerald-600 px-5 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+            >
+              <IndianRupee size={14} />
+              <span>{paying ? 'Recording...' : 'Record Payment'}</span>
+            </button>
+          </div>
+        }
       >
         <div className="space-y-4">
           {/* Outstanding Banner */}
@@ -2041,7 +2062,7 @@ export default function Suppliers() {
               step="0.01"
               min="0.01"
               max={payTarget?.outstanding_amount || undefined}
-              className="input font-mono text-right"
+              className="input font-mono text-right min-h-[44px]"
               value={payAmt}
               onChange={e => setPayAmt(e.target.value)}
               placeholder="0.00"
@@ -2053,7 +2074,7 @@ export default function Suppliers() {
           <div>
             <label className="label">Payment Method</label>
             <select
-              className="input"
+              className="input min-h-[44px]"
               value={payMethod}
               onChange={e => setPayMethod(e.target.value)}
             >
@@ -2063,86 +2084,21 @@ export default function Suppliers() {
               <option value="online">Net Banking / NEFT</option>
             </select>
           </div>
-
-          {/* Footer */}
-          <div className="flex items-center justify-end gap-2 border-t border-[var(--line)] pt-4">
-            <button
-              type="button"
-              onClick={() => setPayTarget(null)}
-              className="btn-secondary h-9 px-4 text-xs"
-            >
-              Cancel
-            </button>
-
-            <button
-              type="button"
-              onClick={recordPayment}
-              disabled={paying}
-              className="btn-primary h-9 px-4 text-xs flex items-center justify-center gap-1.5"
-            >
-              <IndianRupee size={14} />
-              {paying ? 'Recording...' : 'Record Payment'}
-            </button>
-          </div>
         </div>
       </Modal>
 
       {/* ======================================================
           DELETE MODAL
       ====================================================== */}
-      <Modal
+      <ConfirmDialog
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        title="Delete Supplier"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <div className="border border-red-500/20 bg-red-500/10 p-3 rounded-md">
-            <div className="flex items-start gap-2">
-              <Trash2
-                size={16}
-                className="text-red-600 dark:text-red-400 mt-0.5 shrink-0"
-              />
-              <div>
-                <p className="text-sm font-semibold text-red-700 dark:text-red-300">
-                  Delete supplier record?
-                </p>
-                <p className="text-xs text-red-600/80 dark:text-red-400 mt-1">
-                  This action cannot be undone.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <p className="text-sm text-[var(--muted)]">
-            Are you sure you want to delete{' '}
-            <span className="font-bold text-[var(--ink)]">
-              "{deleteTarget?.name}"
-            </span>
-            ?
-          </p>
-
-          <div className="flex items-center justify-end gap-2 border-t border-[var(--line)] pt-4">
-            <button
-              type="button"
-              onClick={() => setDeleteTarget(null)}
-              disabled={deleting}
-              className="btn-secondary h-9 px-4 text-xs"
-            >
-              Cancel
-            </button>
-
-            <button
-              type="button"
-              onClick={confirmDelete}
-              disabled={deleting}
-              className="btn-danger h-9 px-4 text-xs"
-            >
-              {deleting ? 'Deleting...' : 'Delete Supplier'}
-            </button>
-          </div>
-        </div>
-      </Modal>
+        onConfirm={confirmDelete}
+        title="Delete Supplier?"
+        message={`Are you sure you want to delete supplier "${deleteTarget?.name}"? This action cannot be undone.`}
+        confirmText="Delete Supplier"
+        isDestructive={true}
+      />
     </div>
   )
 }

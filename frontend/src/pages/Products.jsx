@@ -7,6 +7,7 @@ import {
   PageHeader,
   Modal,
   ConfirmDialog,
+  TagChip,
   Spinner,
   TableSkeleton,
   EmptyState,
@@ -268,6 +269,12 @@ export default function Products() {
   const [importErrors, setImportErrors] = useState([])
   const [importing, setImporting] = useState(false)
   const fileInputRef = useRef(null)
+
+  // Category Management State
+  const [newCatName, setNewCatName] = useState('')
+  const [newCatDesc, setNewCatDesc] = useState('')
+  const [savingCat, setSavingCat] = useState(false)
+  const [deleteCatTarget, setDeleteCatTarget] = useState(null)
 
   const debounceRef = useRef(null)
 
@@ -545,6 +552,42 @@ export default function Products() {
       toast.error('Failed to delete product')
     }
   }, [deleteId, load, search, catFilter])
+
+  // Category CRUD Handlers
+  const handleAddCategory = async e => {
+    e?.preventDefault?.()
+    if (!newCatName.trim()) {
+      toast.error('Category name is required')
+      return
+    }
+    setSavingCat(true)
+    try {
+      const created = await productService.createCategory({
+        name: newCatName.trim(),
+        description: newCatDesc.trim(),
+      })
+      setCategories(prev => [...prev, created])
+      setNewCatName('')
+      setNewCatDesc('')
+      toast.success(`Category "${created.name}" created`)
+    } catch (err) {
+      toast.error(err?.response?.data?.name?.[0] || 'Failed to create category')
+    } finally {
+      setSavingCat(false)
+    }
+  }
+
+  const handleDeleteCategory = async () => {
+    if (!deleteCatTarget) return
+    try {
+      await productService.deleteCategory(deleteCatTarget.id)
+      setCategories(prev => prev.filter(c => c.id !== deleteCatTarget.id))
+      toast.success(`Category "${deleteCatTarget.name}" deleted`)
+      setDeleteCatTarget(null)
+    } catch {
+      toast.error('Failed to delete category')
+    }
+  }
 
   // Quick Toggle Active/Inactive Status
   const toggleProductStatus = useCallback(async product => {
@@ -1063,6 +1106,16 @@ export default function Products() {
             >
               <Upload size={15} />
               Import
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setModal('categories')}
+              className="btn-secondary btn-base min-h-[42px] flex items-center justify-center gap-2 text-xs font-semibold"
+              title="Manage product categories and tags"
+            >
+              <Tag size={15} />
+              Categories
             </button>
 
             <button
@@ -1837,7 +1890,36 @@ export default function Products() {
         open={modal === 'add' || modal === 'edit'}
         onClose={() => !saving && setModal(null)}
         title={editId ? 'Edit Product Details' : 'Add New Product to Inventory'}
+        subtitle={editId ? 'Modify pricing, stock and tax settings' : 'Create a new catalog item with SKU and barcode'}
         size="xl"
+        footer={
+          <div className="flex w-full items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setModal(null)}
+              disabled={saving}
+              className="min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-5 py-2.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              className="min-h-[44px] rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {saving ? (
+                <>
+                  <RefreshCw size={14} className="animate-spin" /> <span>Saving…</span>
+                </>
+              ) : editId ? (
+                'Update Product'
+              ) : (
+                'Save Product'
+              )}
+            </button>
+          </div>
+        }
       >
         <div className="space-y-5">
           {/* SECTION 1: BASIC INFORMATION */}
@@ -2151,34 +2233,6 @@ export default function Products() {
             </div>
           </div>
 
-          {/* MODAL ACTION BUTTONS */}
-          <div className="flex flex-col-reverse gap-2 border-t border-[var(--line)] pt-4 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={() => setModal(null)}
-              disabled={saving}
-              className="btn-secondary btn-base sm:w-28"
-            >
-              Cancel
-            </button>
-
-            <button
-              type="button"
-              onClick={save}
-              disabled={saving}
-              className="btn-primary btn-base sm:w-36 flex items-center justify-center gap-2"
-            >
-              {saving ? (
-                <>
-                  <RefreshCw size={14} className="animate-spin" /> Saving...
-                </>
-              ) : editId ? (
-                'Update Product'
-              ) : (
-                'Save Product'
-              )}
-            </button>
-          </div>
         </div>
       </Modal>
 
@@ -2597,7 +2651,34 @@ export default function Products() {
             ? `Adjust Stock: ${adjustProduct.name}`
             : 'Adjust Inventory Stock'
         }
+        subtitle="Manually increase, deduct or audit physical product inventory"
         size="md"
+        footer={
+          <div className="flex w-full items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setModal(null)}
+              disabled={adjusting}
+              className="min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-5 py-2.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submitStockAdjustment}
+              disabled={adjusting}
+              className="min-h-[44px] rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {adjusting ? (
+                <>
+                  <RefreshCw size={14} className="animate-spin" /> <span>Updating…</span>
+                </>
+              ) : (
+                'Confirm Adjustment'
+              )}
+            </button>
+          </div>
+        }
       >
         {adjustProduct && (
           <div className="space-y-4">
@@ -2698,31 +2779,6 @@ export default function Products() {
                 placeholder="e.g. Annual stock audit verification or damaged in transit..."
               />
             </FormField>
-
-            <div className="flex flex-col-reverse gap-2 border-t border-[var(--line)] pt-4 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setModal(null)}
-                disabled={adjusting}
-                className="btn-secondary btn-base sm:w-28"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={submitStockAdjustment}
-                disabled={adjusting}
-                className="btn-primary btn-base sm:w-36 flex items-center justify-center gap-2"
-              >
-                {adjusting ? (
-                  <>
-                    <RefreshCw size={14} className="animate-spin" /> Updating...
-                  </>
-                ) : (
-                  'Confirm Adjustment'
-                )}
-              </button>
-            </div>
           </div>
         )}
       </Modal>
@@ -2743,7 +2799,34 @@ export default function Products() {
         open={modal === 'import'}
         onClose={() => !importing && setModal(null)}
         title="Import Products via CSV"
+        subtitle="Bulk import inventory items from standard comma-separated spreadsheet files"
         size="lg"
+        footer={
+          <div className="flex w-full items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setModal(null)}
+              disabled={importing}
+              className="min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-5 py-2.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={runCSVImport}
+              disabled={importing || importPreview.length === 0}
+              className="min-h-[44px] rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {importing ? (
+                <>
+                  <RefreshCw size={14} className="animate-spin" /> <span>Importing…</span>
+                </>
+              ) : (
+                `Import ${importPreview.length} Products`
+              )}
+            </button>
+          </div>
+        }
       >
         <div className="space-y-4">
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-3 text-xs text-[var(--muted)]">
@@ -2841,33 +2924,111 @@ export default function Products() {
               )}
             </div>
           )}
+        </div>
+      </Modal>
 
-          <div className="flex flex-col-reverse gap-2 border-t border-[var(--line)] pt-4 sm:flex-row sm:justify-end">
+      {/* =====================================================
+          CATEGORY & TAG MANAGEMENT MODAL
+      ====================================================== */}
+      <Modal
+        open={modal === 'categories'}
+        onClose={() => setModal(null)}
+        title="Product Categories & Tags"
+        subtitle="Create, classify and organize product catalog tags"
+        size="md"
+        footer={
+          <div className="flex w-full items-center justify-end">
             <button
               type="button"
               onClick={() => setModal(null)}
-              disabled={importing}
-              className="btn-secondary btn-base sm:w-28"
+              className="min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-5 py-2.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
             >
-              Cancel
+              Close
             </button>
-            <button
-              type="button"
-              onClick={runCSVImport}
-              disabled={importing || importPreview.length === 0}
-              className="btn-primary btn-base sm:w-44 flex items-center justify-center gap-2"
-            >
-              {importing ? (
-                <>
-                  <RefreshCw size={14} className="animate-spin" /> Importing...
-                </>
-              ) : (
-                `Import ${importPreview.length} Products`
-              )}
-            </button>
+          </div>
+        }
+      >
+        <div className="space-y-5">
+          {/* Add Category Section */}
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-4 space-y-3">
+            <div className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+              Create New Category
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] font-semibold text-[var(--muted)] mb-1 block">Category Name *</label>
+                <input
+                  className="input min-h-[44px] w-full"
+                  placeholder="e.g. Dairy & Eggs"
+                  value={newCatName}
+                  onChange={e => setNewCatName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-semibold text-[var(--muted)] mb-1 block">Description (Optional)</label>
+                <input
+                  className="input min-h-[44px] w-full"
+                  placeholder="e.g. Fresh daily refrigerated items"
+                  value={newCatDesc}
+                  onChange={e => setNewCatDesc(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={handleAddCategory}
+                disabled={savingCat || !newCatName.trim()}
+                className="btn-primary min-h-[44px] px-5 text-xs font-bold flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <Plus size={15} />
+                <span>{savingCat ? 'Adding…' : 'Add Category'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Existing Categories List */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+                Existing Categories ({categories.length})
+              </span>
+              <span className="text-[11px] text-[var(--muted)]">Click X to delete</span>
+            </div>
+
+            {categories.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-[var(--line)] p-6 text-center text-xs text-[var(--muted)]">
+                No categories registered yet. Add your first category above.
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {categories.map(cat => {
+                  const productCount = products.filter(p => p.category === cat.id || p.category_name === cat.name).length
+                  return (
+                    <TagChip
+                      key={cat.id}
+                      label={cat.name}
+                      count={productCount}
+                      onRemove={() => setDeleteCatTarget(cat)}
+                    />
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
       </Modal>
+
+      {/* Delete Category Confirm Dialog */}
+      <ConfirmDialog
+        open={Boolean(deleteCatTarget)}
+        onClose={() => setDeleteCatTarget(null)}
+        onConfirm={handleDeleteCategory}
+        title="Delete Category?"
+        message={`Are you sure you want to delete category "${deleteCatTarget?.name}"? Products linked to this category will become Uncategorized.`}
+        confirmText="Delete Category"
+        isDestructive={true}
+      />
 
       {/* =====================================================
           DELETE CONFIRMATION DIALOG

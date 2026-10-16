@@ -321,6 +321,8 @@ class SalesReturnItemSerializer(serializers.ModelSerializer):
 class SalesReturnSerializer(serializers.ModelSerializer):
     items = SalesReturnItemSerializer(many=True, read_only=True)
     invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
+    customer_name = serializers.CharField(source='invoice.customer_name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True, default='')
 
     class Meta:
         model = SalesReturn

@@ -36,6 +36,21 @@ export const productService = {
     return listData(response)
   },
 
+  async createCategory(data) {
+    const response = await http.post('/categories/', data)
+    return unwrapResponse(response)
+  },
+
+  async updateCategory(id, data) {
+    const response = await http.patch(`/categories/${id}/`, data)
+    return unwrapResponse(response)
+  },
+
+  async deleteCategory(id) {
+    const response = await http.delete(`/categories/${id}/`)
+    return unwrapResponse(response)
+  },
+
   async getSuppliers(params = {}) {
     const response = await http.get('/suppliers/', { params })
     return listData(response)

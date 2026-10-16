@@ -218,45 +218,43 @@ export function CustomerCollectPaymentModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-xs"
-      role="presentation"
-      onClick={onClose}
-    >
-      <div
-        ref={modalRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="customer-collect-payment-title"
-        className="flex w-full max-w-md flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-2xl outline-none max-h-[95dvh] sm:max-h-[90vh]"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Drag handle (mobile) */}
-        <div className="flex justify-center pt-2.5 pb-0 sm:hidden">
-          <div className="h-1 w-10 rounded-full bg-[var(--line-strong)]" />
-        </div>
-
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3.5 bg-[var(--surface)]">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white">
-              <CircleDollarSign size={18} />
-            </div>
-            <div>
-              <h2 id="customer-collect-payment-title" className="text-sm font-bold text-[var(--ink)]">
-                Collect Payment
-              </h2>
-              <p className="text-[11px] text-[var(--muted)] truncate max-w-[200px]">
-                {customer.name}{customer.mobile ? ` · ${customer.mobile}` : ''}
-              </p>
-            </div>
-          </div>
-          <button onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)] transition"
-            aria-label="Close">
-            <X size={15} />
+    <Modal
+      open={Boolean(customer)}
+      onClose={onClose}
+      title="Collect Customer Payment"
+      subtitle={`${customer.name}${customer.mobile ? ` · ${customer.mobile}` : ''}`}
+      size="md"
+      footer={
+        <div className="flex w-full items-center justify-end gap-2.5">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={submitting}
+            className="min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={submitting || Boolean(error) || !amount}
+            className="min-h-[44px] flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-6 py-2 text-xs font-bold text-white shadow-sm disabled:opacity-50 transition"
+          >
+            {submitting ? (
+              <>
+                <Spinner size={14} />
+                <span>Recording…</span>
+              </>
+            ) : (
+              <>
+                <IndianRupee size={14} />
+                <span>Record {currency(parseFloat(amount) || 0)}</span>
+              </>
+            )}
           </button>
         </div>
+      }
+    >
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-3.5">
@@ -387,19 +385,7 @@ export function CustomerCollectPaymentModal({
           </div>
         </form>
 
-        {/* Footer actions */}
-        <div className="border-t border-[var(--line)] px-4 py-3 flex items-center gap-2.5 bg-[var(--surface)]">
-          <button type="button" onClick={onClose} disabled={submitting}
-            className="flex-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] py-2.5 text-xs font-semibold text-[var(--ink-secondary)] hover:border-[var(--line-strong)] transition">
-            Cancel
-          </button>
-          <button type="button" onClick={handleSubmit} disabled={submitting || Boolean(error) || !amount}
-            className="flex-[2] flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 py-2.5 text-xs font-bold text-white shadow-sm disabled:opacity-50 transition">
-            {submitting ? (<><Spinner size={13} /><span>Recording…</span></>) : (<><IndianRupee size={13} /><span>Record {currency(parseFloat(amount) || 0)}</span></>)}
-          </button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -1377,13 +1363,38 @@ export default function Customers() {
 
       <Modal
         open={modal === 'form'}
-        onClose={() =>
-          !saving && setModal(null)
-        }
-        title={
-          editId ? 'Edit Customer' : 'Add Customer'
-        }
+        onClose={() => !saving && setModal(null)}
+        title={editId ? 'Edit Customer' : 'Add Customer'}
+        subtitle={editId ? 'Update contact, address and credit settings' : 'Register a new customer for billing and credit ledger'}
         size="md"
+        footer={
+          <div className="flex w-full items-center justify-end gap-2.5">
+            <button
+              type="button"
+              onClick={() => setModal(null)}
+              disabled={saving}
+              className="min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-5 py-2.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              className="min-h-[44px] rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 transition flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {saving ? (
+                <>
+                  <RefreshCw size={15} className="animate-spin" /> <span>Saving…</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={15} /> <span>{editId ? 'Update Customer' : 'Save Customer'}</span>
+                </>
+              )}
+            </button>
+          </div>
+        }
       >
 
         <div className="space-y-5">
@@ -1548,46 +1559,7 @@ export default function Customers() {
 
           </div>
 
-          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-1">
-
-            <button
-              onClick={() => setModal(null)}
-              disabled={saving}
-              className="btn-secondary flex-1"
-            >
-              Cancel
-            </button>
-
-            <button
-              onClick={save}
-              disabled={saving}
-              className="btn-primary flex-1 flex items-center justify-center gap-2"
-            >
-
-              {saving ? (
-                <>
-                  <RefreshCw
-                    size={15}
-                    className="animate-spin"
-                  />
-                  Saving…
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 size={15} />
-
-                  {editId
-                    ? 'Update Customer'
-                    : 'Save Customer'}
-                </>
-              )}
-
-            </button>
-
-          </div>
-
         </div>
-
       </Modal>
 
       {/* =====================================================

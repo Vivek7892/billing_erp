@@ -4140,6 +4140,7 @@ class BarcodeLabelView(APIView):
             'size': size,
             'custom_cols': custom_cols,
             'custom_rows': custom_rows,
+            'shop_name': request.query_params.get('shop_name', '').strip(),
             'show_store': parse_bool(request.query_params.get('show_store'), True),
             'show_name': parse_bool(request.query_params.get('show_name'), True),
             'show_barcode': parse_bool(request.query_params.get('show_barcode'), True),
@@ -4158,15 +4159,107 @@ class BarcodeLabelView(APIView):
         return response
 
 
+def _get_registered_label_fonts():
+    """Register and return (regular_font_name, bold_font_name) supporting Unicode currency symbol ₹."""
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    import os
+
+    reg_name = 'LabelSans'
+    bold_name = 'LabelSans-Bold'
+    if reg_name in pdfmetrics.getRegisteredFontNames() and bold_name in pdfmetrics.getRegisteredFontNames():
+        return reg_name, bold_name
+
+    candidates = [
+        ('C:/Windows/Fonts/arial.ttf', 'C:/Windows/Fonts/arialbd.ttf'),
+        ('C:/Windows/Fonts/segoeui.ttf', 'C:/Windows/Fonts/segoeuib.ttf'),
+        ('C:/Windows/Fonts/calibri.ttf', 'C:/Windows/Fonts/calibrib.ttf'),
+        ('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'),
+        ('/usr/share/fonts/TTF/DejaVuSans.ttf', '/usr/share/fonts/TTF/DejaVuSans-Bold.ttf'),
+        ('/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf', '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'),
+        ('/System/Library/Fonts/Supplemental/Arial.ttf', '/System/Library/Fonts/Supplemental/Arial Bold.ttf'),
+        ('/Library/Fonts/Arial.ttf', '/Library/Fonts/Arial Bold.ttf'),
+    ]
+
+    try:
+        import matplotlib
+        mpl_ttf = os.path.join(os.path.dirname(matplotlib.__file__), 'mpl-data', 'fonts', 'ttf')
+        candidates.insert(0, (os.path.join(mpl_ttf, 'DejaVuSans.ttf'), os.path.join(mpl_ttf, 'DejaVuSans-Bold.ttf')))
+    except Exception:
+        pass
+
+    for reg_path, bold_path in candidates:
+        if os.path.exists(reg_path) and os.path.exists(bold_path):
+            try:
+                if reg_name not in pdfmetrics.getRegisteredFontNames():
+                    pdfmetrics.registerFont(TTFont(reg_name, reg_path))
+                if bold_name not in pdfmetrics.getRegisteredFontNames():
+                    pdfmetrics.registerFont(TTFont(bold_name, bold_path))
+                return reg_name, bold_name
+            except Exception:
+                continue
+
+    return 'Helvetica', 'Helvetica-Bold'
+
+
+def _wrap_label_text(text, max_lines, max_width, font_name, font_size):
+    """Splits text across up to max_lines, clipping gracefully with ellipsis if needed."""
+    from reportlab.pdfbase import pdfmetrics
+    words = str(text or '').strip().split()
+    if not words:
+        return []
+    lines = []
+    current = []
+    for i, word in enumerate(words):
+        test_line = ' '.join(current + [word])
+        if pdfmetrics.stringWidth(test_line, font_name, font_size) <= max_width:
+            current.append(word)
+        else:
+            if not current:
+                w = word
+                while w and pdfmetrics.stringWidth(w + '...', font_name, font_size) > max_width:
+                    w = w[:-1]
+                lines.append(w + '...')
+            else:
+                lines.append(' '.join(current))
+                current = [word]
+            if len(lines) >= max_lines - 1:
+                last_text = ' '.join(current + words[i + 1:])
+                while last_text and pdfmetrics.stringWidth(last_text + '...', font_name, font_size) > max_width:
+                    last_text = last_text[:-1]
+                lines.append(last_text.rstrip() + ('...' if len(lines) < max_lines and last_text != ' '.join(words) else ''))
+                return lines[:max_lines]
+    if current and len(lines) < max_lines:
+        lines.append(' '.join(current))
+    return lines[:max_lines]
+
+
+def _format_label_price(val):
+    if val is None or val == '':
+        return '₹0.00'
+    try:
+        f_val = float(val)
+        return f'₹{f_val:,.2f}'
+    except (ValueError, TypeError):
+        return f'₹{val}'
+
+
 def _generate_barcode_label_pdf(product, copies, options=None):
-    """Generates barcode labels supporting A4 3x5, A4 4x8, 58mm Thermal, 80mm Thermal, and Custom with customizable fields."""
-    import barcode as pybarcode
-    from barcode.writer import ImageWriter
+    """Generates clean, print-ready, strictly black-and-white barcode label sheets (A4 3x5, A4 4x8, 58mm, 80mm).
+    Features:
+    - Pure black and white (#000000 on #FFFFFF)
+    - Vector Code 128 machine-readable barcode
+    - Pre-cut sheet whitespace alignment without decorative borders
+    - Proper typography hierarchy: Store Name, Product Name, Unit, Barcode, Barcode No, Selling Price (dominant), MRP, SKU
+    - Strikethrough for MRP when selling price < MRP
+    - Print at 100% / Actual size margin notice
+    """
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.pdfgen import canvas as rl_canvas
     from reportlab.lib import colors as rl_colors
-    import tempfile, os
+    from reportlab.graphics.barcode import createBarcodeDrawing
+    from reportlab.pdfbase import pdfmetrics
 
     options = options or {}
     size_type = options.get('size', 'a4_3x5')
@@ -4182,171 +4275,235 @@ def _generate_barcode_label_pdf(product, copies, options=None):
     show_mrp = options.get('show_mrp', True)
     show_unit = options.get('show_unit', True)
 
+    font_reg, font_bold = _get_registered_label_fonts()
+
+    # Geometry per label format
     if size_type == 'a4_4x8':
         PAGE_W, PAGE_H = A4
         COLS, ROWS = 4, 8
-        MARGIN_X, MARGIN_Y = 5 * mm, 6 * mm
-        GAP_X, GAP_Y = 2 * mm, 2 * mm
+        LABEL_W = 48.0 * mm
+        LABEL_H = 34.0 * mm
+        GAP_X = 2.0 * mm
+        GAP_Y = 2.0 * mm
+        MARGIN_X = (PAGE_W - (COLS * LABEL_W + (COLS - 1) * GAP_X)) / 2.0
+        MARGIN_Y = (PAGE_H - (ROWS * LABEL_H + (ROWS - 1) * GAP_Y)) / 2.0
         is_compact = True
     elif size_type == 'thermal_58':
-        PAGE_W, PAGE_H = 58 * mm, 40 * mm
+        PAGE_W, PAGE_H = 58.0 * mm, 40.0 * mm
         COLS, ROWS = 1, 1
-        MARGIN_X, MARGIN_Y = 2 * mm, 2 * mm
-        GAP_X, GAP_Y = 0, 0
+        LABEL_W = 54.0 * mm
+        LABEL_H = 36.0 * mm
+        MARGIN_X = 2.0 * mm
+        MARGIN_Y = 2.0 * mm
+        GAP_X = 0.0
+        GAP_Y = 0.0
         is_compact = True
     elif size_type == 'thermal_80':
-        PAGE_W, PAGE_H = 80 * mm, 50 * mm
+        PAGE_W, PAGE_H = 80.0 * mm, 50.0 * mm
         COLS, ROWS = 1, 1
-        MARGIN_X, MARGIN_Y = 3 * mm, 3 * mm
-        GAP_X, GAP_Y = 0, 0
+        LABEL_W = 74.0 * mm
+        LABEL_H = 44.0 * mm
+        MARGIN_X = 3.0 * mm
+        MARGIN_Y = 3.0 * mm
+        GAP_X = 0.0
+        GAP_Y = 0.0
         is_compact = False
     elif size_type == 'custom':
         PAGE_W, PAGE_H = A4
         COLS, ROWS = custom_cols, custom_rows
-        MARGIN_X, MARGIN_Y = 5 * mm, 6 * mm
-        GAP_X, GAP_Y = 2 * mm, 2 * mm
+        MARGIN_X, MARGIN_Y = 6.0 * mm, 6.5 * mm
+        GAP_X, GAP_Y = 2.5 * mm, 2.5 * mm
+        LABEL_W = (PAGE_W - (2 * MARGIN_X) - ((COLS - 1) * GAP_X)) / COLS
+        LABEL_H = (PAGE_H - (2 * MARGIN_Y) - ((ROWS - 1) * GAP_Y)) / ROWS
         is_compact = (ROWS > 6 or COLS > 3)
-    else:  # a4_3x5
+    else:  # a4_3x5 (Standard 15-label sheet, approx 64x54mm)
         PAGE_W, PAGE_H = A4
         COLS, ROWS = 3, 5
-        MARGIN_X, MARGIN_Y = 6 * mm, 8 * mm
-        GAP_X, GAP_Y = 2.5 * mm, 2.5 * mm
+        LABEL_W = 64.0 * mm
+        LABEL_H = 54.0 * mm
+        GAP_X = 3.0 * mm
+        GAP_Y = 3.5 * mm
+        MARGIN_X = (PAGE_W - (COLS * LABEL_W + (COLS - 1) * GAP_X)) / 2.0
+        MARGIN_Y = (PAGE_H - (ROWS * LABEL_H + (ROWS - 1) * GAP_Y)) / 2.0
         is_compact = False
-
-    LABEL_W = (PAGE_W - (2 * MARGIN_X) - ((COLS - 1) * GAP_X)) / COLS
-    LABEL_H = (PAGE_H - (2 * MARGIN_Y) - ((ROWS - 1) * GAP_Y)) / ROWS
 
     barcode_value = (product.barcode or product.sku or str(product.id)).strip()
 
-    tmp_dir = tempfile.mkdtemp()
-    tmp_path = os.path.join(tmp_dir, 'bc')
-    bc_img_path = None
-    if show_barcode:
-        try:
-            bc_class = pybarcode.get_barcode_class('code128')
-            bc = bc_class(barcode_value, writer=ImageWriter())
-            saved = bc.save(tmp_path, options={
-                'write_text': False,
-                'quiet_zone': 1.5,
-                'module_height': 9 if is_compact else 18,
-                'dpi': 300,
-            })
-            bc_img_path = saved
-        except Exception:
-            bc_img_path = None
-
-    buffer = BytesIO()
-    c = rl_canvas.Canvas(buffer, pagesize=(PAGE_W, PAGE_H))
-
-    shop_name = ''
-    if show_store:
+    shop_name = options.get('shop_name', '').strip()
+    if show_store and not shop_name:
         try:
             s = Setting.objects.filter(business=product.business, key='shop_name').first()
             if s and s.value:
                 shop_name = s.value.strip()
         except Exception:
             pass
-        if not shop_name:
-            shop_name = 'RETAIL STORE'
+    if show_store and not shop_name and getattr(product, 'business', None):
+        shop_name = getattr(product.business, 'name', '').strip()
+    if show_store and not shop_name:
+        shop_name = 'STORE'
 
-    def format_price(value):
-        try:
-            amount = float(value or 0)
-            formatted = f'{amount:,.0f}' if amount.is_integer() else f'{amount:,.2f}'
-            return f'Rs. {formatted}'
-        except (ValueError, TypeError):
-            return f'Rs. {value}'
+    product_name = (product.name or 'Product').strip()
+    product_unit = (product.unit or '').strip()
 
-    price_text = format_price(product.selling_price)
-    mrp_text = format_price(product.mrp)
-    label_text = (product.name or 'Product').strip()
+    try:
+        selling_float = float(product.selling_price or 0)
+    except (ValueError, TypeError):
+        selling_float = 0.0
 
-    def draw_fitted_center(text, center_x, baseline, max_width, font_name, font_size):
-        from reportlab.pdfbase import pdfmetrics
-        text = str(text or '')
-        if pdfmetrics.stringWidth(text, font_name, font_size) > max_width:
-            while text and pdfmetrics.stringWidth(text + '...', font_name, font_size) > max_width:
-                text = text[:-1]
-            text = text.rstrip() + '...' if text else ''
-        c.setFont(font_name, font_size)
-        c.drawCentredString(center_x, baseline, text)
+    try:
+        mrp_float = float(product.mrp or 0) if product.mrp is not None else 0.0
+    except (ValueError, TypeError):
+        mrp_float = 0.0
+
+    has_mrp = bool(show_mrp and product.mrp is not None and str(product.mrp).strip() != '' and mrp_float > 0)
+    strike_mrp = bool(has_mrp and mrp_float > selling_float)
+    mrp_str = f'MRP {_format_label_price(mrp_float)}' if has_mrp else ''
+
+    has_sku = bool(show_sku and product.sku)
+    sku_str = f'SKU: {product.sku}' if has_sku else ''
+
+    price_str = _format_label_price(selling_float)
+
+    labels_per_page = COLS * ROWS
+    buffer = BytesIO()
+    c = rl_canvas.Canvas(buffer, pagesize=(PAGE_W, PAGE_H))
+
+    def draw_margin_notice():
+        if not size_type.startswith('thermal'):
+            c.setFont(font_reg, 6.5)
+            c.setFillColor(rl_colors.black)
+            c.drawCentredString(PAGE_W / 2.0, 3.2 * mm, 'Print at 100% / Actual Size. Disable "Fit to Page".')
 
     for i in range(copies):
         col = i % COLS
         row = (i // COLS) % ROWS
-        if i > 0 and col == 0 and row == 0:
+        page_index = i % labels_per_page
+
+        # New page trigger
+        if i > 0 and page_index == 0:
+            draw_margin_notice()
             c.showPage()
 
         x = MARGIN_X + col * (LABEL_W + GAP_X)
         y = PAGE_H - MARGIN_Y - (row + 1) * LABEL_H - row * GAP_Y
 
-        # Clean, high-contrast label with a restrained brand accent.
-        c.setFillColor(rl_colors.white)
-        c.setStrokeColor(rl_colors.HexColor('#CBD5E1'))
-        c.setLineWidth(0.45)
-        c.roundRect(x, y, LABEL_W, LABEL_H, radius=1.5 * mm, stroke=1, fill=1)
-        c.setFillColor(rl_colors.HexColor('#1E3A5F'))
-        c.roundRect(x, y + LABEL_H - (1.3 * mm), LABEL_W, 1.3 * mm, radius=0.6 * mm, stroke=0, fill=1)
+        # Strictly pure black and white without any border, box, card outline, or gray shading
+        c.setFillColor(rl_colors.black)
+        c.setStrokeColor(rl_colors.black)
 
-        center_x = x + LABEL_W / 2
-        side_pad = (4 if is_compact else 5) * mm
-        max_text_width = LABEL_W - 2 * side_pad
+        center_x = x + (LABEL_W / 2.0)
+        side_pad = (3.5 if is_compact else 4.5) * mm
+        max_text_w = LABEL_W - (2 * side_pad)
 
-        # Store and product details sit above the dedicated barcode area.
+        # Top section (top down)
+        curr_y = y + LABEL_H - (1.6 if is_compact else 2.2) * mm
+
+        # Store Name
         if show_store and shop_name:
-            c.setFillColor(rl_colors.HexColor('#64748B'))
-            draw_fitted_center(shop_name.upper(), center_x, y + LABEL_H - (4.2 if is_compact else 5.2) * mm,
-                               max_text_width, 'Helvetica-Bold', 5.8 if is_compact else 7)
-        if show_name:
-            c.setFillColor(rl_colors.HexColor('#0F172A'))
-            draw_fitted_center(label_text, center_x, y + LABEL_H - (8.2 if is_compact else 10.2) * mm,
-                               max_text_width, 'Helvetica-Bold', 7.4 if is_compact else 10)
-        if show_unit and product.unit:
-            c.setFillColor(rl_colors.HexColor('#64748B'))
-            draw_fitted_center(product.unit, center_x, y + LABEL_H - (11.1 if is_compact else 13.5) * mm,
-                               max_text_width, 'Helvetica', 5.4 if is_compact else 6.5)
+            store_size = 5.8 if is_compact else 7.5
+            curr_y -= store_size
+            c.setFont(font_bold, store_size)
+            store_txt = shop_name.upper()
+            while store_txt and pdfmetrics.stringWidth(store_txt, font_bold, store_size) > max_text_w:
+                store_txt = store_txt[:-1]
+            c.drawCentredString(center_x, curr_y, store_txt)
+            curr_y -= (1.2 if is_compact else 1.8) * mm
 
-        # Pure white quiet area around the larger, high contrast barcode.
-        barcode_bottom = y + (13.4 if is_compact else 18.5) * mm
-        barcode_height = max(4, min(10.5, LABEL_H - 25.5) if is_compact else min(21, LABEL_H - 34)) * mm
-        barcode_width = LABEL_W - 2 * side_pad
-        if show_barcode and bc_img_path and os.path.exists(bc_img_path):
-            c.setFillColor(rl_colors.white)
-            c.rect(x + side_pad, barcode_bottom, barcode_width, barcode_height, stroke=0, fill=1)
-            c.drawImage(bc_img_path, x + side_pad, barcode_bottom, width=barcode_width,
-                        height=barcode_height, preserveAspectRatio=True, anchor='c', mask='auto')
-        elif show_barcode:
-            c.setFillColor(rl_colors.HexColor('#0F172A'))
-            draw_fitted_center(barcode_value, center_x, barcode_bottom + barcode_height / 2,
-                               barcode_width, 'Courier-Bold', 7 if is_compact else 9)
+        # Product Name
+        if show_name and product_name:
+            name_size = 7.5 if is_compact else 9.5
+            name_lines = _wrap_label_text(product_name, 1 if is_compact else 2, max_text_w, font_bold, name_size)
+            for line in name_lines:
+                curr_y -= name_size
+                c.setFont(font_bold, name_size)
+                c.drawCentredString(center_x, curr_y, line)
+                curr_y -= (1.0 if is_compact else 1.4) * mm
 
-        if show_number:
-            c.setFillColor(rl_colors.HexColor('#111827'))
-            draw_fitted_center(barcode_value, center_x, y + (11.2 if is_compact else 16.1) * mm,
-                               max_text_width, 'Courier', 5.5 if is_compact else 7)
+        # Unit
+        if show_unit and product_unit:
+            unit_size = 5.2 if is_compact else 6.5
+            curr_y -= unit_size
+            c.setFont(font_reg, unit_size)
+            c.drawCentredString(center_x, curr_y, product_unit)
+            curr_y -= (1.0 if is_compact else 1.4) * mm
 
-        # Selling price is dominant; MRP and SKU stay secondary.
+        top_content_bottom = curr_y
+
+        # Bottom section (bottom up)
+        bottom_y = y + (1.6 if is_compact else 2.2) * mm
+
+        # Footer: MRP & SKU
+        footer_size = 5.5 if is_compact else 7.0
+        c.setFont(font_reg, footer_size)
+
+        if has_mrp and has_sku:
+            mrp_w = pdfmetrics.stringWidth(mrp_str, font_reg, footer_size)
+            sku_w = pdfmetrics.stringWidth(sku_str, font_reg, footer_size)
+            gap = 3.0 * mm
+            if (mrp_w + gap + sku_w) <= max_text_w:
+                start_x = center_x - ((mrp_w + gap + sku_w) / 2.0)
+                c.drawString(start_x, bottom_y, mrp_str)
+                if strike_mrp:
+                    sy = bottom_y + (footer_size * 0.35)
+                    c.setLineWidth(0.7)
+                    c.line(start_x, sy, start_x + mrp_w, sy)
+                c.drawString(start_x + mrp_w + gap, bottom_y, sku_str)
+                bottom_y += footer_size + (1.4 if is_compact else 1.8) * mm
+            else:
+                c.drawCentredString(center_x, bottom_y, sku_str)
+                bottom_y += footer_size + (1.0 if is_compact else 1.3) * mm
+                c.drawCentredString(center_x, bottom_y, mrp_str)
+                if strike_mrp:
+                    sy = bottom_y + (footer_size * 0.35)
+                    c.setLineWidth(0.7)
+                    c.line(center_x - (mrp_w / 2.0), sy, center_x + (mrp_w / 2.0), sy)
+                bottom_y += footer_size + (1.4 if is_compact else 1.8) * mm
+        elif has_mrp:
+            mrp_w = pdfmetrics.stringWidth(mrp_str, font_reg, footer_size)
+            c.drawCentredString(center_x, bottom_y, mrp_str)
+            if strike_mrp:
+                sy = bottom_y + (footer_size * 0.35)
+                c.setLineWidth(0.7)
+                c.line(center_x - (mrp_w / 2.0), sy, center_x + (mrp_w / 2.0), sy)
+            bottom_y += footer_size + (1.4 if is_compact else 1.8) * mm
+        elif has_sku:
+            c.drawCentredString(center_x, bottom_y, sku_str)
+            bottom_y += footer_size + (1.4 if is_compact else 1.8) * mm
+
+        # Selling Price (bold, largest text on label)
         if show_price:
-            c.setFillColor(rl_colors.HexColor('#0F172A'))
-            draw_fitted_center(price_text, center_x, y + (7.4 if is_compact else 12.4) * mm,
-                               max_text_width, 'Helvetica-Bold', 9 if is_compact else 14)
-        if show_mrp and product.mrp and float(product.mrp or 0) > 0:
-            c.setFillColor(rl_colors.HexColor('#64748B'))
-            draw_fitted_center(f'MRP {mrp_text}', center_x, y + (5.0 if is_compact else 8.8) * mm,
-                               max_text_width, 'Helvetica', 5.5 if is_compact else 7)
-        if show_sku and product.sku:
-            c.setFillColor(rl_colors.HexColor('#64748B'))
-            draw_fitted_center(f'SKU: {product.sku}', center_x, y + (2.2 if is_compact else 3.4) * mm,
-                               max_text_width, 'Helvetica', 5.2 if is_compact else 6.5)
+            price_size = 9.5 if is_compact else 13.5
+            c.setFont(font_bold, price_size)
+            c.drawCentredString(center_x, bottom_y, price_str)
+            bottom_y += price_size + (1.4 if is_compact else 1.8) * mm
 
+        # Barcode Number
+        if show_number and barcode_value:
+            num_size = 5.5 if is_compact else 7.0
+            c.setFont(font_reg, num_size)
+            c.drawCentredString(center_x, bottom_y, barcode_value)
+            bottom_y += num_size + (1.0 if is_compact else 1.4) * mm
+
+        bottom_content_top = bottom_y
+
+        # Middle section: Machine-readable Code 128 barcode
+        if show_barcode and barcode_value:
+            avail_h = top_content_bottom - bottom_content_top
+            bc_h = max(5 * mm, min(14 * mm, avail_h - (2 * mm))) if not is_compact else max(4 * mm, min(9 * mm, avail_h - (1 * mm)))
+            max_bc_w = LABEL_W - (2 * side_pad)
+            try:
+                ref_bc = createBarcodeDrawing('Code128', value=barcode_value, barWidth=1.0, barHeight=bc_h, humanReadable=False)
+                bw = max(0.4, min(1.15 if not is_compact else 0.85, max_bc_w / max(1.0, ref_bc.width)))
+                bc_d = createBarcodeDrawing('Code128', value=barcode_value, barWidth=bw, barHeight=bc_h, humanReadable=False)
+                bc_x = center_x - (bc_d.width / 2.0)
+                bc_y = bottom_content_top + ((avail_h - bc_h) / 2.0)
+                bc_d.drawOn(c, bc_x, bc_y)
+            except Exception:
+                c.setFont(font_bold, 8)
+                c.drawCentredString(center_x, bottom_content_top + (avail_h / 2.0), barcode_value)
+
+    draw_margin_notice()
     c.save()
-
-    try:
-        import shutil
-        shutil.rmtree(tmp_dir, ignore_errors=True)
-    except Exception:
-        pass
-
     buffer.seek(0)
     return buffer
 

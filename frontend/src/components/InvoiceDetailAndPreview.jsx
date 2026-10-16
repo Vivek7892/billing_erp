@@ -366,16 +366,16 @@ export default function InvoiceDetailAndPreview({
       `}</style>
 
       {/* Top Header & Toolbar Bar: Invoice Selector, Format Switcher & Actions */}
-      <div className="no-print rounded-xl border border-[#DCE3EC] dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 sm:p-4 shadow-xs">
+      <div className="no-print min-w-0 rounded-xl border border-[#DCE3EC] dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:p-4 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
           {/* Left: Invoice Data Picker */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
               <Receipt size={16} className="text-[#1E3A5F] dark:text-sky-400" />
               <span>Preview Bill:</span>
             </div>
 
-            <div className="flex flex-col gap-1.5 min-w-[240px] sm:min-w-[340px]">
+            <div className="flex min-w-0 w-full flex-col gap-1.5 sm:w-auto sm:min-w-[340px]">
               <div className="relative">
                 <Search size={12} className="absolute left-2.5 top-2.5 text-slate-400 pointer-events-none" />
                 <input
@@ -417,7 +417,7 @@ export default function InvoiceDetailAndPreview({
               type="button"
               onClick={loadRecentInvoices}
               disabled={loadingInvoices}
-              className="h-9 w-9 rounded-lg border border-[#DCE3EC] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-colors shadow-2xs"
+              className="h-10 w-10 self-end rounded-lg border border-[#DCE3EC] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-colors shadow-2xs sm:h-9 sm:w-9"
               title="Refresh invoices"
             >
               <RefreshCw size={13} className={loadingInvoices ? 'animate-spin' : ''} />
@@ -425,13 +425,13 @@ export default function InvoiceDetailAndPreview({
           </div>
 
           {/* Right: View Mode Toggle & Print/PDF Actions */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:justify-end">
             {/* View Mode Toggle */}
-            <div className="inline-flex rounded-lg border border-[#DCE3EC] dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 p-0.5">
+            <div className="grid w-full grid-cols-3 rounded-lg border border-[#DCE3EC] dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 p-0.5 sm:inline-flex sm:w-auto">
               <button
                 type="button"
                 onClick={() => setViewMode('dual')}
-                className={`px-2.5 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                className={`min-h-10 px-1.5 py-2 text-[11px] sm:min-h-0 sm:px-2.5 sm:py-1.5 sm:text-xs font-semibold rounded-md transition-all ${
                   viewMode === 'dual'
                     ? 'bg-white dark:bg-slate-900 text-[#1E3A5F] dark:text-sky-400 shadow-2xs'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
@@ -449,7 +449,7 @@ export default function InvoiceDetailAndPreview({
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >
-                Details Only
+                <span className="sm:hidden">Details</span><span className="hidden sm:inline">Details Only</span>
               </button>
               <button
                 type="button"
@@ -460,7 +460,7 @@ export default function InvoiceDetailAndPreview({
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
                 }`}
               >
-                Print Preview
+                <span className="sm:hidden">Preview</span><span className="hidden sm:inline">Print Preview</span>
               </button>
             </div>
 
@@ -469,7 +469,7 @@ export default function InvoiceDetailAndPreview({
                 type="button"
                 onClick={handleSendWhatsApp}
                 disabled={sendingWhatsApp}
-                className="h-9 px-3.5 rounded-lg border border-transparent bg-[#25D366] hover:bg-[#1EBE5D] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs transition-colors disabled:opacity-50"
+                className="min-h-10 justify-center px-3.5 rounded-lg border border-transparent bg-[#25D366] hover:bg-[#1EBE5D] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs transition-colors disabled:opacity-50 sm:min-h-9"
               >
                 <MessageCircle size={14} />
                 <span>{sendingWhatsApp ? 'Sending…' : 'WhatsApp'}</span>
@@ -479,7 +479,7 @@ export default function InvoiceDetailAndPreview({
             <button
               type="button"
               onClick={handlePrint}
-              className="h-9 px-3.5 rounded-lg bg-[#1E3A5F] hover:bg-[#162A45] text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition-colors active:scale-95"
+              className="min-h-10 flex-1 justify-center px-3.5 rounded-lg bg-[#1E3A5F] hover:bg-[#162A45] text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition-colors active:scale-95 sm:min-h-9 sm:flex-none"
               title="Print (Ctrl+P)"
             >
               <Printer size={13} />
@@ -489,7 +489,7 @@ export default function InvoiceDetailAndPreview({
             <button
               type="button"
               onClick={handleDownloadPdf}
-              className="h-9 px-3 rounded-lg border border-[#DCE3EC] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors"
+              className="min-h-10 flex-1 justify-center px-3 rounded-lg border border-[#DCE3EC] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors sm:min-h-9 sm:flex-none"
               title="Download PDF"
             >
               <Download size={13} />
@@ -510,8 +510,8 @@ export default function InvoiceDetailAndPreview({
         </div>
 
         {/* Format Selector Pill Strip */}
-        <div className="mt-3 pt-3 border-t border-[#DCE3EC] dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+        <div className="mt-3 pt-3 border-t border-[#DCE3EC] dark:border-slate-800 flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2.5">
+          <div className="flex max-w-full items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mr-1 uppercase tracking-wider shrink-0">
               Format:
             </span>
@@ -552,7 +552,7 @@ export default function InvoiceDetailAndPreview({
             <button
               type="button"
               onClick={() => onOpenCustomizer(selectedFormat)}
-              className="h-7 px-2.5 rounded-md border border-[#DCE3EC] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-[#1E3A5F] dark:text-sky-400 text-xs font-semibold inline-flex items-center gap-1 transition-colors shadow-2xs"
+              className="min-h-10 justify-center px-2.5 rounded-md border border-[#DCE3EC] dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 text-[#1E3A5F] dark:text-sky-400 text-xs font-semibold inline-flex items-center gap-1 transition-colors shadow-2xs sm:min-h-8 sm:self-end"
             >
               <Sliders size={12} />
               <span>Customize Layout</span>
@@ -562,12 +562,12 @@ export default function InvoiceDetailAndPreview({
       </div>
 
       {/* Main Grid Canvas: Left Invoice Detail View, Right Faithful Print Preview */}
-      <div className={`grid gap-5 ${viewMode === 'dual' ? 'lg:grid-cols-[1fr_560px] xl:grid-cols-[1fr_620px]' : 'grid-cols-1'}`}>
+      <div className={`grid min-w-0 gap-4 sm:gap-5 ${viewMode === 'dual' ? 'lg:grid-cols-[minmax(0,1fr)_560px] xl:grid-cols-[minmax(0,1fr)_620px]' : 'grid-cols-1'}`}>
         {/* ============================================================
             PANEL 1: STRUCTURED INVOICE DETAIL VIEW
         ============================================================ */}
         {(viewMode === 'dual' || viewMode === 'details') && (
-          <div className="no-print space-y-4">
+          <div className="no-print min-w-0 space-y-4">
             {/* Overview & Key Indicators Card */}
             <div className="rounded-xl border border-[#DCE3EC] dark:border-slate-800 bg-white dark:bg-slate-900 p-4 sm:p-5 shadow-xs space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-[#DCE3EC] dark:border-slate-800">
@@ -692,8 +692,8 @@ export default function InvoiceDetailAndPreview({
                 </span>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
+              <div className="hidden overflow-x-auto sm:block">
+                <table className="w-full min-w-[760px] text-left text-xs border-collapse">
                   <thead className="bg-[var(--surface-subtle)] border-b border-[var(--line)] text-[var(--ink)]">
                     <tr>
                       <th className="py-2.5 px-3 text-center w-10 font-bold text-[var(--muted)]">#</th>
@@ -742,6 +742,30 @@ export default function InvoiceDetailAndPreview({
                     ))}
                   </tbody>
                 </table>
+              </div>
+              <div className="divide-y divide-[#DCE3EC] dark:divide-slate-800 sm:hidden">
+                {activeInvoice.items.map((item, idx) => (
+                  <article key={item.id || idx} className="space-y-2.5 p-3.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold leading-5 text-slate-900 dark:text-slate-100 break-words">{idx + 1}. {item.product_name}</div>
+                        {item.sku && <div className="mt-0.5 font-mono text-[10px] text-slate-500">SKU: {item.sku}</div>}
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-[10px] text-slate-500">Total</div>
+                        <div className="font-mono text-sm font-bold text-slate-900 dark:text-slate-100">{fmt(item.total)}</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[11px]">
+                      <div><span className="text-slate-500">Qty </span><span className="font-semibold text-slate-800 dark:text-slate-200">{item.quantity} {item.unit || ''}</span></div>
+                      <div><span className="text-slate-500">Rate </span><span className="font-mono text-slate-800 dark:text-slate-200">{fmt(item.unit_price)}</span></div>
+                      <div><span className="text-slate-500">HSN </span><span className="font-mono text-slate-800 dark:text-slate-200">{item.hsn_code || '—'}</span></div>
+                      <div><span className="text-slate-500">Discount </span><span className="text-slate-800 dark:text-slate-200">{item.discount_percent ? `${item.discount_percent}%` : '—'}</span></div>
+                      <div><span className="text-slate-500">Taxable </span><span className="font-mono text-slate-800 dark:text-slate-200">{fmt(item.taxable_amount || item.quantity * item.unit_price)}</span></div>
+                      <div><span className="text-slate-500">GST </span><span className="text-slate-800 dark:text-slate-200">{item.gst_percent || 0}%</span></div>
+                    </div>
+                  </article>
+                ))}
               </div>
             </div>
 
@@ -906,7 +930,7 @@ export default function InvoiceDetailAndPreview({
         {(viewMode === 'dual' || viewMode === 'preview') && (
           <div className="print-canvas-wrapper flex flex-col items-center">
             {/* Faithful Print Document Card */}
-            <div className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3 sm:p-5 flex flex-col items-center justify-start overflow-x-auto shadow-xs">
+            <div className="w-full min-w-0 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-2 sm:p-5 flex flex-col items-center justify-start overflow-x-auto shadow-xs">
               <div className="no-print mb-3 text-center">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[var(--surface)] text-[var(--ink)] border border-[var(--line)] shadow-2xs">
                   <Eye size={13} className="text-[var(--accent)]" />

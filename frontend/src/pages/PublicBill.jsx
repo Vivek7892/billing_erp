@@ -557,39 +557,42 @@ export default function PublicBill() {
   }, [configuredPrinter, data])
 
   // 4. Copy & Share
-  const copyBillLink = () => {
-    navigator.clipboard.writeText(window.location.href)
-      .then(() => {
-        setCopied(true)
-        toast.success('Bill link copied to clipboard')
-        setTimeout(() => setCopied(false), 2000)
+const copyBillLink = () => {
+  const billUrl = inv.short_url || window.location.href
+
+  navigator.clipboard.writeText(billUrl)
+    .then(() => {
+      setCopied(true)
+      toast.success('Short bill link copied to clipboard')
+      setTimeout(() => setCopied(false), 2000)
+    })
+    .catch(() => toast.error('Could not copy link'))
+}
+
+const shareBill = async () => {
+  const billUrl = inv.short_url || window.location.href
+  const invNumber = data?.invoice?.invoice_number || 'Bill'
+  const shopName = data?.business?.name || data?.settings?.shop_name || 'Store'
+  const totalAmount = currency(data?.invoice?.grand_total || 0)
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: `Invoice #${invNumber} from ${shopName}`,
+        text: `Digital bill for ${totalAmount} from ${shopName}`,
+        url: billUrl,
       })
-      .catch(() => toast.error('Could not copy link'))
-  }
-
-  const shareBill = async () => {
-    const billUrl = window.location.href
-    const invNumber = data?.invoice?.invoice_number || 'Bill'
-    const shopName = data?.business?.name || data?.settings?.shop_name || 'Store'
-    const totalAmount = currency(data?.invoice?.grand_total || 0)
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Invoice #${invNumber} from ${shopName}`,
-          text: `Digital bill for ${totalAmount} from ${shopName}: ${billUrl}`,
-          url: billUrl,
-        })
-        return
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          copyBillLink()
-        }
-        return
+      return
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        copyBillLink()
       }
+      return
     }
-    copyBillLink()
   }
+
+  copyBillLink()
+}
 
   // 5. Fetch PDF & Print exact bill
   const fetchDocument = async (printer, download = false) => {
@@ -731,9 +734,17 @@ export default function PublicBill() {
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
           {/* Brand info */}
           <div className="flex min-w-0 items-center gap-2.5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1E3A5F] text-white shadow-xs">
-              <Receipt size={16} />
-            </div>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xs">
+  {(s.shop_logo || biz.logo) ? (
+    <img
+      src={s.shop_logo || biz.logo}
+      alt={`${biz.name || s.shop_name || 'Business'} logo`}
+      className="h-full w-full object-contain p-1"
+    />
+  ) : (
+    <Receipt size={16} className="text-[#1E3A5F]" />
+  )}
+</div>
             <div className="min-w-0">
               <p className="truncate text-xs font-bold text-slate-900 sm:text-sm">
                 Invoice {inv.invoice_number || '—'}

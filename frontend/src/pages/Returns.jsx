@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api, { API_BASE_URL } from '../api'
 import { getAccessToken } from '../services/tokenStorage'
@@ -89,7 +89,11 @@ function ReturnModal({ open, onClose, invoice, onDone }) {
                 className="w-4 h-4 accent-[#1E3A5F] shrink-0 cursor-pointer" />
               <div className="flex-1 min-w-[calc(100%-2rem)] sm:min-w-0">
                 <div className="text-sm font-medium text-[var(--ink)] truncate">{it.product_name}</div>
-                <div className="text-xs text-[var(--muted-light)]">Billed: {it.quantity} × {fmt(it.unit_price)}</div>
+                <div className="text-xs text-[var(--muted-light)]">
+                  Billed: {it.quantity} × {fmt(it.unit_price)}
+                  {Number(it.discount_percent) > 0 && <span className="ml-1.5 text-green-600 dark:text-green-400">−{it.discount_percent}%</span>}
+                  {Number(it.gst_percent) > 0 && <span className="ml-1.5 text-[var(--muted)]">GST {it.gst_percent}%</span>}
+                </div>
               </div>
               {it.selected && (
                 <div className="flex items-center gap-1.5 shrink-0 ml-6 sm:ml-0">
@@ -142,42 +146,65 @@ function ReturnModal({ open, onClose, invoice, onDone }) {
 function ViewModal({ open, onClose, invoice }) {
   if (!invoice) return null
   return (
-    <Modal open={open} onClose={onClose} title={`Invoice — ${invoice.invoice_number}`} size="md">
-      <div className="space-y-3 text-sm">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-          <div><span className="text-[var(--muted-light)]">Customer:</span> <span className="font-medium">{invoice.customer_name || 'Walk-in'}</span></div>
-          <div><span className="text-[var(--muted-light)]">Date:</span> <span className="font-medium">{new Date(invoice.created_at).toLocaleDateString('en-IN')}</span></div>
-          <div><span className="text-[var(--muted-light)]">Payment:</span> <span className="font-medium capitalize">{invoice.payment_method}</span></div>
-          <div><span className="text-[var(--muted-light)]">Status:</span> <Badge status={invoice.payment_status} /></div>
+    <Modal open={open} onClose={onClose} title={`Invoice — ${invoice.invoice_number}`} size="lg">
+      <div className="space-y-4 text-sm">
+        {/* Meta grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-3 text-xs">
+          <InfoRow label="Customer" value={invoice.customer_name || 'Walk-in'} />
+          <InfoRow label="Phone" value={invoice.customer_phone || '—'} />
+          <InfoRow label="Date" value={new Date(invoice.created_at).toLocaleString('en-IN')} />
+          <InfoRow label="Payment Method" value={invoice.payment_method} valueClass="capitalize" />
+          <InfoRow label="Payment Status" value={<Badge status={invoice.payment_status} />} />
+          <InfoRow label="Invoice Status" value={<Badge status={invoice.status} />} />
+          {invoice.place_of_supply && <InfoRow label="Place of Supply" value={invoice.place_of_supply} />}
+          {invoice.created_by_name && <InfoRow label="Created By" value={invoice.created_by_name} />}
+          {invoice.cancelled_by_name && <InfoRow label="Cancelled By" value={invoice.cancelled_by_name} />}
+          {invoice.cancelled_at && <InfoRow label="Cancelled At" value={new Date(invoice.cancelled_at).toLocaleString('en-IN')} />}
+          {invoice.cancel_reason && <InfoRow label="Cancel Reason" value={invoice.cancel_reason} valueClass="text-rose-600 dark:text-rose-400" />}
+          {invoice.notes && <InfoRow label="Notes" value={invoice.notes} />}
         </div>
-        <div className="hidden sm:block overflow-x-auto">
-          <table className="table w-full text-xs">
-            <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Total</th></tr></thead>
+
+        {/* Items table */}
+        <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
+          <table className="table w-full text-xs min-w-[520px]">
+            <thead>
+              <tr>
+                <th>Item</th><th>SKU</th><th>HSN</th><th className="text-center">Qty</th>
+                <th className="text-right">Rate</th><th className="text-right">Disc%</th>
+                <th className="text-right">GST%</th><th className="text-right">Total</th>
+              </tr>
+            </thead>
             <tbody>
               {(invoice.items || []).map(it => (
                 <tr key={it.id}>
-                  <td>{it.product_name}</td>
+                  <td className="font-medium">{it.product_name}</td>
+                  <td className="text-[var(--muted)] font-mono">{it.sku || '—'}</td>
+                  <td className="text-[var(--muted)] font-mono">{it.hsn_code || '—'}</td>
                   <td className="text-center">{it.quantity}</td>
                   <td className="text-right">{fmt(it.unit_price)}</td>
+                  <td className="text-right">{it.discount_percent > 0 ? `${it.discount_percent}%` : '—'}</td>
+                  <td className="text-right">{it.gst_percent > 0 ? `${it.gst_percent}%` : '—'}</td>
                   <td className="text-right font-semibold">{fmt(it.total)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <div className="sm:hidden space-y-2">
-          {(invoice.items || []).map(it => (
-            <div key={it.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] p-3">
-              <div className="font-medium text-[var(--ink)] text-sm break-words">{it.product_name}</div>
-              <div className="grid grid-cols-3 gap-2 mt-2">
-                <InfoRow label="Qty" value={it.quantity} />
-                <InfoRow label="Rate" value={fmt(it.unit_price)} />
-                <InfoRow label="Total" value={fmt(it.total)} valueClass="font-bold" />
-              </div>
+
+        {/* Totals */}
+        <div className="flex justify-end">
+          <div className="w-full sm:w-64 space-y-1 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-3 text-xs">
+            <InfoRow label="Subtotal" value={fmt(invoice.subtotal)} />
+            {Number(invoice.discount_amount) > 0 && <InfoRow label="Discount" value={`− ${fmt(invoice.discount_amount)}`} valueClass="text-green-600 dark:text-green-400" />}
+            {Number(invoice.tax_amount) > 0 && <InfoRow label="GST" value={`+ ${fmt(invoice.tax_amount)}`} />}
+            {Number(invoice.round_off) !== 0 && <InfoRow label="Round Off" value={fmt(invoice.round_off)} />}
+            <div className="border-t border-[var(--line)] pt-1.5 mt-1">
+              <InfoRow label="Grand Total" value={fmt(invoice.grand_total)} valueClass="text-base font-bold text-[var(--ink)]" />
             </div>
-          ))}
+            {Number(invoice.paid_amount) > 0 && <InfoRow label="Paid" value={fmt(invoice.paid_amount)} valueClass="text-green-600 dark:text-green-400" />}
+            {Number(invoice.balance_due) > 0 && <InfoRow label="Balance Due" value={fmt(invoice.balance_due)} valueClass="text-rose-600 dark:text-rose-400 font-bold" />}
+          </div>
         </div>
-        <div className="text-right font-bold text-base">{fmt(invoice.grand_total)}</div>
       </div>
     </Modal>
   )
@@ -224,7 +251,7 @@ export default function Returns() {
     return returns.filter(r =>
       (r.return_number || '').toLowerCase().includes(q) ||
       (r.invoice_number || '').toLowerCase().includes(q) ||
-      (r.invoice?.customer_name || '').toLowerCase().includes(q) ||
+      (r.customer_name || '').toLowerCase().includes(q) ||
       (r.reason || '').toLowerCase().includes(q)
     )
   }, [returns, returnSearch])
@@ -391,39 +418,58 @@ export default function Returns() {
         {loading ? <Spinner /> : (
           <>
             <div className="hidden md:block overflow-x-auto min-h-[180px] pb-4">
-              <table className="table min-w-[900px] [&_th]:whitespace-nowrap [&_td]:align-middle">
+              <table className="table min-w-[1180px] [&_th]:whitespace-nowrap [&_td]:align-middle">
                 <thead>
-                  <tr><th>Return #</th><th>Invoice</th><th>Customer</th><th>Date</th><th>Refund Method</th><th>Refund Amt</th><th>Reason</th><th></th></tr>
+                  <tr><th>Return #</th><th>Invoice</th><th>Customer</th><th>Returned At</th><th>Items</th><th>Refund Method</th><th>Refund Amount</th><th>Reason</th><th>Processed By</th><th>Details</th></tr>
                 </thead>
                 <tbody>
                   {filteredReturns.length === 0 ? (
-                    <tr><td colSpan={8} className="text-center py-10 text-[var(--muted-light)] text-sm">No sales returns yet</td></tr>
+                    <tr><td colSpan={10} className="text-center py-10 text-[var(--muted-light)] text-sm">No sales returns yet</td></tr>
                   ) : filteredReturns.map(r => (
-                    <>
-                      <tr key={r.id}>
+                    <Fragment key={r.id}>
+                      <tr>
                         <td className="font-mono font-semibold text-[#1E3A5F] dark:text-slate-200 text-sm">{r.return_number}</td>
-                        <td className="font-mono text-sm text-[var(--muted)]">{r.invoice_number}</td>
-                        <td className="text-sm text-[var(--ink-secondary)]">{r.invoice?.customer_name || '—'}</td>
-                        <td className="text-sm text-[var(--muted)]">{new Date(r.created_at).toLocaleDateString('en-IN')}</td>
-                        <td className="text-sm text-[var(--muted)] capitalize">{r.refund_method}</td>
+                        <td className="font-mono text-sm text-[var(--muted)]">{r.invoice_number || `#${r.invoice}`}</td>
+                        <td className="text-sm text-[var(--ink-secondary)]">{r.customer_name || '—'}</td>
+                        <td className="text-sm text-[var(--muted)]">{r.created_at ? new Date(r.created_at).toLocaleString('en-IN') : '—'}</td>
+                        <td className="text-center text-sm text-[var(--muted)]">{(r.items || []).length}</td>
+                        <td className="text-sm text-[var(--muted)] capitalize">{r.refund_method || '—'}</td>
                         <td className="font-bold text-[var(--ink)] text-sm">{fmt(r.refund_amount)}</td>
-                        <td className="text-xs text-[var(--muted-light)] max-w-[120px] truncate">{r.reason || '—'}</td>
+                        <td className="text-xs text-[var(--muted-light)] max-w-[180px] truncate" title={r.reason}>{r.reason || '—'}</td>
+                        <td className="text-sm text-[var(--muted)]">{r.created_by_name || (r.created_by ? `User #${r.created_by}` : '—')}</td>
                         <td>
                           <button onClick={() => toggleExpand(r.id)} className="w-8 h-8 inline-flex items-center justify-center text-[var(--ink-secondary)] bg-[var(--surface)] border border-[var(--line)] rounded-md hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-all active:scale-95" aria-label="Toggle return details">
                             {expandedReturns[r.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                           </button>
                         </td>
                       </tr>
-                      {expandedReturns[r.id] && (r.items || []).map(it => (
-                        <tr key={`${r.id}-${it.id}`} className="bg-[var(--surface-elevated)]">
-                          <td colSpan={2} className="pl-8 text-xs text-[var(--muted)]">↳ {it.product_name}</td>
-                          <td className="text-xs text-[var(--muted)]">Qty: {it.quantity}</td>
-                          <td colSpan={2} className="text-xs text-[var(--muted)]">@ {fmt(it.unit_price)}</td>
-                          <td className="text-xs font-semibold text-[var(--ink-secondary)]">{fmt(it.total)}</td>
-                          <td colSpan={2}></td>
+                      {expandedReturns[r.id] && (
+                        <tr className="bg-[var(--surface-elevated)]">
+                          <td colSpan={10} className="p-0">
+                            <table className="w-full text-xs border-t border-[var(--line)]">
+                              <thead>
+                                <tr className="bg-[var(--surface)]">
+                                  <th className="pl-8 py-1.5 text-left font-semibold text-[var(--muted)] uppercase tracking-wide">Product</th>
+                                  <th className="py-1.5 text-center font-semibold text-[var(--muted)] uppercase tracking-wide">Qty</th>
+                                  <th className="py-1.5 text-right font-semibold text-[var(--muted)] uppercase tracking-wide">Unit Price</th>
+                                  <th className="py-1.5 pr-4 text-right font-semibold text-[var(--muted)] uppercase tracking-wide">Total</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(r.items || []).map(it => (
+                                  <tr key={`${r.id}-${it.id}`}>
+                                    <td className="pl-8 py-1.5 text-[var(--ink-secondary)] font-medium">{it.product_name}</td>
+                                    <td className="py-1.5 text-center text-[var(--muted)]">{it.quantity}</td>
+                                    <td className="py-1.5 text-right text-[var(--muted)]">{fmt(it.unit_price)}</td>
+                                    <td className="py-1.5 pr-4 text-right font-semibold text-[var(--ink-secondary)]">{fmt(it.total)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </td>
                         </tr>
-                      ))}
-                    </>
+                      )}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
@@ -444,9 +490,11 @@ export default function Returns() {
                     </button>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 border-t border-[var(--line-subtle)] pt-2">
-                    <InfoRow label="Customer" value={r.invoice?.customer_name || '—'} />
-                    <InfoRow label="Date" value={new Date(r.created_at).toLocaleDateString('en-IN')} />
-                    <InfoRow label="Method" value={r.refund_method} valueClass="capitalize" />
+                    <InfoRow label="Customer" value={r.customer_name || '—'} />
+                    <InfoRow label="Date" value={r.created_at ? new Date(r.created_at).toLocaleString('en-IN') : '—'} />
+                    <InfoRow label="Items" value={(r.items || []).length} />
+                    <InfoRow label="Method" value={r.refund_method || '—'} valueClass="capitalize" />
+                    <InfoRow label="Processed by" value={r.created_by_name || (r.created_by ? `User #${r.created_by}` : '—')} />
                     <InfoRow label="Refund" value={fmt(r.refund_amount)} valueClass="font-bold" />
                   </div>
                   <div className="mt-2 text-xs text-[var(--muted-light)] break-words"><span className="font-medium text-[var(--muted)]">Reason:</span> {r.reason || '—'}</div>
@@ -496,15 +544,20 @@ export default function Returns() {
         {loading ? <Spinner /> : (
           <>
             <div className="hidden md:block overflow-x-auto min-h-[180px] pb-4">
-              <table className="table min-w-[760px] [&_th]:whitespace-nowrap [&_td]:align-middle">
+              <table className="table min-w-[1000px] [&_th]:whitespace-nowrap [&_td]:align-middle">
                 <thead>
-                  <tr><th>Invoice</th><th>Customer</th><th>Date</th><th>Payment</th><th>Amount</th><th>Status</th><th>Actions</th></tr>
+                  <tr>
+                    <th>Invoice</th><th>Customer</th><th>Date</th><th>Payment</th>
+                    <th className="text-right">Subtotal</th><th className="text-right">Discount</th>
+                    <th className="text-right">GST</th><th className="text-right">Grand Total</th>
+                    <th>Status</th><th>Cancelled By</th><th>Reason</th><th>Actions</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {[...cancelledInvoices, ...refundedInvoices]
                     .filter(b => filter === 'all' || b.status === filter)
                     .length === 0 ? (
-                    <tr><td colSpan={7} className="text-center py-12">
+                    <tr><td colSpan={12} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2 text-[var(--muted-light)]">
                         <RotateCcw size={28} className="opacity-30" />
                         <span className="text-sm">No records found</span>
@@ -518,8 +571,13 @@ export default function Returns() {
                         <td className="text-sm text-[var(--ink-secondary)]">{b.customer_name || 'Walk-in'}</td>
                         <td className="text-sm text-[var(--muted)]">{new Date(b.created_at).toLocaleDateString('en-IN')}</td>
                         <td className="text-sm text-[var(--muted)] capitalize">{b.payment_method}</td>
-                        <td className="font-bold text-[var(--ink)] text-sm">{fmt(b.grand_total)}</td>
+                        <td className="text-right text-sm text-[var(--muted)]">{fmt(b.subtotal)}</td>
+                        <td className="text-right text-sm text-green-600 dark:text-green-400">{Number(b.discount_amount) > 0 ? fmt(b.discount_amount) : '—'}</td>
+                        <td className="text-right text-sm text-[var(--muted)]">{Number(b.tax_amount) > 0 ? fmt(b.tax_amount) : '—'}</td>
+                        <td className="text-right font-bold text-[var(--ink)] text-sm">{fmt(b.grand_total)}</td>
                         <td><Badge status={b.status} /></td>
+                        <td className="text-sm text-[var(--muted)]">{b.cancelled_by_name || '—'}</td>
+                        <td className="text-xs text-[var(--muted-light)] max-w-[160px] truncate" title={b.cancel_reason}>{b.cancel_reason || '—'}</td>
                         <td>
                           <div className="flex items-center gap-1">
                             <button onClick={() => setViewModal(b)} className="w-8 h-8 inline-flex items-center justify-center text-[var(--ink-secondary)] bg-[var(--surface)] border border-[var(--line)] rounded-md hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-all active:scale-95" title="View" aria-label="View invoice">
@@ -561,10 +619,17 @@ export default function Returns() {
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-3 pt-2 border-t border-[var(--line-subtle)]">
                       <InfoRow label="Date" value={new Date(b.created_at).toLocaleDateString('en-IN')} />
                       <InfoRow label="Payment" value={b.payment_method} valueClass="capitalize" />
+                      <InfoRow label="Subtotal" value={fmt(b.subtotal)} />
+                      {Number(b.discount_amount) > 0 && <InfoRow label="Discount" value={fmt(b.discount_amount)} valueClass="text-green-600 dark:text-green-400" />}
+                      {Number(b.tax_amount) > 0 && <InfoRow label="GST" value={fmt(b.tax_amount)} />}
+                      {b.cancelled_by_name && <InfoRow label="Cancelled By" value={b.cancelled_by_name} />}
                     </div>
+                    {b.cancel_reason && (
+                      <div className="mt-2 text-xs text-[var(--muted-light)] break-words"><span className="font-medium text-[var(--muted)]">Reason:</span> {b.cancel_reason}</div>
+                    )}
                     <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-[var(--line-subtle)]">
                       <div>
-                        <div className="text-[11px] uppercase tracking-wide text-[var(--muted-light)]">Amount</div>
+                        <div className="text-[11px] uppercase tracking-wide text-[var(--muted-light)]">Grand Total</div>
                         <div className="text-base font-bold text-[var(--ink)]">{fmt(b.grand_total)}</div>
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -598,19 +663,28 @@ export default function Returns() {
         {loading ? <Spinner /> : (
           <>
             <div className="hidden md:block overflow-x-auto">
-              <table className="table min-w-[700px] [&_th]:whitespace-nowrap [&_td]:align-middle">
+              <table className="table min-w-[860px] [&_th]:whitespace-nowrap [&_td]:align-middle">
                 <thead>
-                  <tr><th>Invoice</th><th>Customer</th><th>Date</th><th>Amount</th><th>Status</th><th>Action</th></tr>
+                  <tr>
+                    <th>Invoice</th><th>Customer</th><th>Date</th><th>Payment</th>
+                    <th className="text-center">Items</th><th className="text-right">Discount</th>
+                    <th className="text-right">GST</th><th className="text-right">Grand Total</th>
+                    <th>Pay Status</th><th>Action</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {completedInvoices.slice(0, 30).length === 0 ? (
-                    <tr><td colSpan={6} className="text-center py-8 text-[var(--muted-light)] text-sm">No completed invoices</td></tr>
+                    <tr><td colSpan={10} className="text-center py-8 text-[var(--muted-light)] text-sm">No completed invoices</td></tr>
                   ) : completedInvoices.slice(0, 30).map(b => (
                     <tr key={b.id}>
                       <td className="font-mono font-semibold text-[#1E3A5F] dark:text-slate-200 text-sm">{b.invoice_number}</td>
                       <td className="text-sm text-[var(--ink-secondary)]">{b.customer_name || 'Walk-in'}</td>
                       <td className="text-sm text-[var(--muted)]">{new Date(b.created_at).toLocaleDateString('en-IN')}</td>
-                      <td className="font-bold text-[var(--ink)] text-sm">{fmt(b.grand_total)}</td>
+                      <td className="text-sm text-[var(--muted)] capitalize">{b.payment_method}</td>
+                      <td className="text-center text-sm text-[var(--muted)]">{(b.items || []).length}</td>
+                      <td className="text-right text-sm text-green-600 dark:text-green-400">{Number(b.discount_amount) > 0 ? fmt(b.discount_amount) : '—'}</td>
+                      <td className="text-right text-sm text-[var(--muted)]">{Number(b.tax_amount) > 0 ? fmt(b.tax_amount) : '—'}</td>
+                      <td className="text-right font-bold text-[var(--ink)] text-sm">{fmt(b.grand_total)}</td>
                       <td><Badge status={b.payment_status} /></td>
                       <td>
                         <button onClick={() => setReturnModal(b)}
@@ -636,11 +710,16 @@ export default function Returns() {
                     </div>
                     <Badge status={b.payment_status} />
                   </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-3 pt-2 border-t border-[var(--line-subtle)]">
+                    <InfoRow label="Date" value={new Date(b.created_at).toLocaleDateString('en-IN')} />
+                    <InfoRow label="Payment" value={b.payment_method} valueClass="capitalize" />
+                    <InfoRow label="Items" value={(b.items || []).length} />
+                    {Number(b.discount_amount) > 0 && <InfoRow label="Discount" value={fmt(b.discount_amount)} valueClass="text-green-600 dark:text-green-400" />}
+                    {Number(b.tax_amount) > 0 && <InfoRow label="GST" value={fmt(b.tax_amount)} />}
+                  </div>
                   <div className="flex items-end justify-between gap-3 mt-3 pt-3 border-t border-[var(--line-subtle)]">
                     <div>
-                      <div className="text-[11px] uppercase tracking-wide text-[var(--muted-light)]">Date</div>
-                      <div className="text-xs text-[var(--muted)]">{new Date(b.created_at).toLocaleDateString('en-IN')}</div>
-                      <div className="text-[11px] uppercase tracking-wide text-[var(--muted-light)] mt-2">Amount</div>
+                      <div className="text-[11px] uppercase tracking-wide text-[var(--muted-light)]">Grand Total</div>
                       <div className="text-base font-bold text-[var(--ink)]">{fmt(b.grand_total)}</div>
                     </div>
                     <button onClick={() => setReturnModal(b)}
