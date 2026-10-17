@@ -1,7 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { PageHeader } from '../components/UI'
 import {
-  HelpCircle,
   Phone,
   Mail,
   MessageCircle,
@@ -11,10 +10,7 @@ import {
   Keyboard,
   CheckCircle2,
   Server,
-  Database,
-  Smartphone,
   X,
-  ExternalLink,
 } from 'lucide-react'
 
 const FAQ_DATA = [
@@ -104,308 +100,295 @@ export default function Support() {
   const [search, setSearch] = useState('')
   const [openItems, setOpenItems] = useState({})
 
-  const toggleItem = (catIdx, itemIdx) => {
-    const key = `${catIdx}-${itemIdx}`
-    setOpenItems(prev => ({ ...prev, [key]: !prev[key] }))
+  const toggleItem = (category, question) => {
+    const key = `${category}-${question}`
+
+    setOpenItems(prev => ({
+      ...prev,
+      [key]: !prev[key],
+    }))
   }
 
   const filteredFaqs = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    return FAQ_DATA.filter(
-      cat => activeCategory === 'All' || cat.category === activeCategory,
-    )
-      .map(cat => ({
-        ...cat,
-        items: cat.items.filter(
-          it =>
-            !q ||
-            it.q.toLowerCase().includes(q) ||
-            it.a.toLowerCase().includes(q) ||
-            cat.category.toLowerCase().includes(q),
+    const query = search.trim().toLowerCase()
+
+    return FAQ_DATA
+      .filter(
+        section =>
+          activeCategory === 'All' ||
+          section.category === activeCategory,
+      )
+      .map(section => ({
+        ...section,
+        items: section.items.filter(
+          item =>
+            !query ||
+            item.q.toLowerCase().includes(query) ||
+            item.a.toLowerCase().includes(query) ||
+            section.category.toLowerCase().includes(query),
         ),
       }))
-      .filter(cat => cat.items.length > 0)
+      .filter(section => section.items.length > 0)
   }, [activeCategory, search])
 
+  const categories = [
+    'All',
+    'Billing & POS',
+    'Inventory & Stock',
+    'Reports & Tax',
+    'Settings & Printing',
+  ]
+
   return (
-    <div className="support-page w-full min-w-0 space-y-6 pb-16 text-[var(--ink)]">
-      {/* =====================================================
-          PAGE HEADER
-      ====================================================== */}
+    <div className="w-full min-w-0 pb-12 text-[var(--ink)]">
       <PageHeader
-        title="Help & Support Desk"
-        subtitle="Need help? Contact our technical team, check system status, or browse guides."
+        title="Help & Support"
+        subtitle="Get assistance, check system status, or find answers to common questions."
       />
 
-      {/* =====================================================
-          1. DIRECT CONTACT CARDS (Simple, Formal, Clean)
-      ====================================================== */}
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {/* Phone Support */}
+      {/* Contact */}
+      <section className="mt-6 grid grid-cols-1 divide-y divide-[var(--line)] rounded-lg border border-[var(--line)] bg-[var(--surface)] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         <a
           href="tel:+917892409872"
-          className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none hover:border-[#1E3A5F] transition-all group block"
+          className="flex items-center gap-3 p-4 transition-colors hover:bg-[var(--surface-elevated)]"
         >
-          <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-[#1E3A5F] border border-[var(--line)] dark:bg-slate-800 dark:text-slate-300">
-              <Phone size={16} />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                Phone Support
-              </span>
-              <p className="mt-0.5 text-sm font-bold text-[var(--ink)] group-hover:text-[#1E3A5F] transition-colors">
-                +91 78924 09872
-              </p>
-              <span className="text-[11px] text-[var(--muted-light)] mt-0.5 block">
-                Mon – Sat • 9:00 AM – 8:00 PM
-              </span>
-            </div>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[var(--surface-elevated)]">
+            <Phone size={16} />
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-[var(--muted)]">
+              Phone Support
+            </p>
+            <p className="mt-0.5 text-sm font-semibold">
+              +91 78924 09872
+            </p>
+            <p className="mt-0.5 text-[11px] text-[var(--muted-light)]">
+              Mon – Sat · 9:00 AM – 8:00 PM
+            </p>
           </div>
         </a>
 
-        {/* WhatsApp Desk */}
         <a
           href="https://wa.me/917892409872"
           target="_blank"
           rel="noreferrer"
-          className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none hover:border-teal-600 transition-all group block"
+          className="flex items-center gap-3 p-4 transition-colors hover:bg-[var(--surface-elevated)]"
         >
-          <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-950/40 dark:text-teal-400 dark:border-teal-800/50">
-              <MessageCircle size={16} />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                WhatsApp Desk
-              </span>
-              <p className="mt-0.5 text-sm font-bold text-[var(--ink)] group-hover:text-teal-700 dark:group-hover:text-teal-400 transition-colors">
-                Instant Chat Assistance
-              </p>
-              <span className="text-[11px] text-[var(--muted-light)] mt-0.5 block">
-                Typical reply in under 15 mins
-              </span>
-            </div>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[var(--surface-elevated)]">
+            <MessageCircle size={16} />
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-[var(--muted)]">
+              WhatsApp
+            </p>
+            <p className="mt-0.5 text-sm font-semibold">
+              Instant Chat Assistance
+            </p>
+            <p className="mt-0.5 text-[11px] text-[var(--muted-light)]">
+              Typical reply in under 15 mins
+            </p>
           </div>
         </a>
 
-        {/* Email Support */}
         <a
           href="mailto:connectwithvvivek@gmail.com"
-          className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none hover:border-[#1E3A5F] transition-all group block"
+          className="flex items-center gap-3 p-4 transition-colors hover:bg-[var(--surface-elevated)]"
         >
-          <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-[#1E3A5F] border border-[var(--line)] dark:bg-slate-800 dark:text-slate-300">
-              <Mail size={16} />
-            </div>
-            <div className="min-w-0">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                Email Support
-              </span>
-              <p className="mt-0.5 text-sm font-bold text-[var(--ink)] group-hover:text-[#1E3A5F] transition-colors truncate">
-               connectwithvvivek@gmail.com
-              </p>
-              <span className="text-[11px] text-[var(--muted-light)] mt-0.5 block">
-                Detailed inquiry &amp; invoice issues
-              </span>
-            </div>
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[var(--surface-elevated)]">
+            <Mail size={16} />
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-[var(--muted)]">
+              Email Support
+            </p>
+            <p className="mt-0.5 truncate text-sm font-semibold">
+              connectwithvvivek@gmail.com
+            </p>
+            <p className="mt-0.5 text-[11px] text-[var(--muted-light)]">
+              Detailed inquiry & invoice issues
+            </p>
           </div>
         </a>
       </section>
 
-      {/* =====================================================
-          2. SYSTEM ENVIRONMENT & DIAGNOSTIC STATUS
-      ====================================================== */}
-      <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] mb-3 flex items-center gap-2">
-          <Server size={14} className="text-[#1E3A5F] dark:text-slate-300" />
-          System &amp; POS Health Status
-        </h3>
+     
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 text-xs">
-          <div className="rounded-md border border-[var(--line-subtle)] bg-[var(--surface-elevated)] p-3">
-            <span className="text-[10px] uppercase font-bold text-[var(--muted-light)]">
-              Backend API
-            </span>
-            <div className="mt-1 flex items-center gap-1.5 font-semibold text-teal-600 dark:text-teal-400">
-              <span className="h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
-              Connected &amp; Online
-            </div>
-          </div>
+      {/* Keyboard shortcuts */}
+      <section className="mt-6 border-b border-[var(--line)] pb-6">
+        <div className="mb-4 flex items-center gap-2">
+          <Keyboard size={15} />
+          <h2 className="text-sm font-semibold">
+            Keyboard Shortcuts
+          </h2>
+        </div>
 
-          <div className="rounded-md border border-[var(--line-subtle)] bg-[var(--surface-elevated)] p-3">
-            <span className="text-[10px] uppercase font-bold text-[var(--muted-light)]">
-              Database Service
-            </span>
-            <div className="mt-1 flex items-center gap-1.5 font-semibold text-teal-600 dark:text-teal-400">
-              <span className="h-2 w-2 rounded-full bg-teal-500" />
-              Operational
-            </div>
-          </div>
+        <div className="overflow-hidden rounded-lg border border-[var(--line)]">
+          <div className="grid grid-cols-1 divide-y divide-[var(--line)] sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+            {SHORTCUTS.map((shortcut, index) => (
+              <div
+                key={shortcut.key}
+                className={`
+                  flex items-center justify-between gap-3 px-3 py-2.5
+                  ${index >= 2 ? 'lg:border-t lg:border-[var(--line)]' : ''}
+                `}
+              >
+                <span className="truncate text-xs text-[var(--muted)]">
+                  {shortcut.label}
+                </span>
 
-          <div className="rounded-md border border-[var(--line-subtle)] bg-[var(--surface-elevated)] p-3">
-            <span className="text-[10px] uppercase font-bold text-[var(--muted-light)]">
-              Local POS Offline Cache
-            </span>
-            <div className="mt-1 flex items-center gap-1.5 font-semibold text-[var(--ink)]">
-              <CheckCircle2 size={13} className="text-teal-600 dark:text-teal-400" />
-              Synchronized
-            </div>
-          </div>
-
-          <div className="rounded-md border border-[var(--line-subtle)] bg-[var(--surface-elevated)] p-3">
-            <span className="text-[10px] uppercase font-bold text-[var(--muted-light)]">
-              Billing ERP Build
-            </span>
-            <p className="mt-1 font-mono font-bold text-[var(--ink)]">
-              v2.4 (Enterprise Edition)
-            </p>
+                <kbd className="shrink-0 rounded border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 font-mono text-[10px] font-semibold">
+                  {shortcut.key}
+                </kbd>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* =====================================================
-          3. POS KEYBOARD SHORTCUTS REFERENCE
-      ====================================================== */}
-      <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5">
-        <div className="flex items-center gap-2 mb-3">
-          <Keyboard size={16} className="text-[#1E3A5F] dark:text-slate-300" />
-          <h3 className="text-sm font-bold text-[var(--ink)]">
-            Billing Workstation Keyboard Shortcuts
-          </h3>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 text-xs">
-          {SHORTCUTS.map(sc => (
-            <div
-              key={sc.key}
-              className="flex items-center justify-between gap-2 rounded-md border border-[var(--line)] bg-[var(--surface)] p-2.5"
-            >
-              <span className="text-[11px] text-[var(--muted)] truncate">
-                {sc.label}
-              </span>
-              <kbd className="font-mono text-[10px] font-bold bg-[var(--surface-elevated)] border border-[var(--line)] rounded px-1.5 py-0.5 text-[var(--ink)] shrink-0">
-                {sc.key}
-              </kbd>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* =====================================================
-          4. FREQUENTLY ASKED QUESTIONS (Simple Accordion)
-      ====================================================== */}
-      <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[var(--line)] pb-3">
+      {/* FAQ */}
+      <section className="mt-6">
+        <div className="flex flex-col gap-4 border-b border-[var(--line)] pb-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h3 className="text-sm font-bold text-[var(--ink)]">
+            <h2 className="text-base font-semibold">
               Frequently Asked Questions
-            </h3>
-            <p className="text-xs text-[var(--muted)] mt-0.5">
-              Instant guidance on billing, inventory, GST calculations, and settings.
+            </h2>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Find quick answers about billing, inventory, GST, reports,
+              and settings.
             </p>
           </div>
 
-          {/* Search box */}
-          <div className="group relative flex items-center min-h-[42px] min-w-0 w-full sm:w-72 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-              <Search size={14} strokeWidth={2.2} />
-            </div>
+          <div className="flex h-9 w-full items-center rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 lg:w-72">
+            <Search
+              size={14}
+              className="shrink-0 text-[var(--muted)]"
+            />
+
             <input
               type="search"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search help articles..."
-              className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
+              placeholder="Search questions..."
+              className="min-w-0 flex-1 bg-transparent px-2 text-xs outline-none placeholder:text-[var(--placeholder)]"
             />
-            {search ? (
+
+            {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
-                title="Clear search"
+                className="text-[var(--muted)] hover:text-[var(--ink)]"
                 aria-label="Clear search"
               >
-                <X size={13} strokeWidth={2.5} />
+                <X size={13} />
               </button>
-            ) : null}
+            )}
           </div>
         </div>
 
-        {/* Category Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto text-xs pb-1">
-          {['All', 'Billing & POS', 'Inventory & Stock', 'Reports & Tax', 'Settings & Printing'].map(
-            cat => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setActiveCategory(cat)}
-                className={`rounded-md px-3 py-1.5 font-semibold whitespace-nowrap transition-colors ${
-                  activeCategory === cat
-                    ? 'bg-[#1E3A5F] text-white'
-                    : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
-                }`}
-              >
-                {cat}
-              </button>
-            ),
-          )}
+        {/* Categories */}
+        <div className="mt-4 flex gap-5 overflow-x-auto border-b border-[var(--line)]">
+          {categories.map(category => (
+            <button
+              key={category}
+              type="button"
+              onClick={() => setActiveCategory(category)}
+              className={`
+                relative shrink-0 pb-2.5 text-xs font-medium transition-colors
+                ${
+                  activeCategory === category
+                    ? 'text-[#1E3A5F]'
+                    : 'text-[var(--muted)] hover:text-[var(--ink)]'
+                }
+              `}
+            >
+              {category}
+
+              {activeCategory === category && (
+                <span className="absolute inset-x-0 bottom-0 h-0.5 bg-[#1E3A5F]" />
+              )}
+            </button>
+          ))}
         </div>
 
-        {/* Accordion Questions List */}
-        <div className="space-y-2.5 pt-1">
+        {/* Questions */}
+        <div className="mt-4">
           {filteredFaqs.length === 0 ? (
-            <div className="text-center py-8 text-xs text-[var(--muted)]">
-              No matching help articles found. Please try a different query or contact support.
+            <div className="py-12 text-center text-xs text-[var(--muted)]">
+              No matching help articles found.
             </div>
           ) : (
-            filteredFaqs.map((section, catIdx) => (
-              <div key={section.category} className="space-y-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-[#1E3A5F] dark:text-slate-300 block pt-1">
+            filteredFaqs.map(section => (
+              <div key={section.category} className="mb-6">
+                <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)]">
                   {section.category}
-                </span>
+                </h3>
 
-                {section.items.map((item, itemIdx) => {
-                  const isOpen = Boolean(openItems[`${catIdx}-${itemIdx}`])
-                  return (
-                    <div
-                      key={itemIdx}
-                      className="rounded-md border border-[var(--line)] bg-[var(--surface)] overflow-hidden transition-all"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => toggleItem(catIdx, itemIdx)}
-                        className="w-full text-left p-3.5 flex items-center justify-between gap-3 hover:bg-[var(--surface-elevated)] transition-colors"
-                      >
-                        <span className="text-xs sm:text-sm font-semibold text-[var(--ink)]">
-                          {item.q}
-                        </span>
-                        {isOpen ? (
-                          <ChevronUp
-                            size={16}
-                            className="text-[#1E3A5F] dark:text-slate-300 shrink-0"
-                          />
-                        ) : (
-                          <ChevronDown
-                            size={16}
-                            className="text-[var(--muted)] shrink-0"
-                          />
+                <div className="divide-y divide-[var(--line)] border-y border-[var(--line)]">
+                  {section.items.map(item => {
+                    const key = `${section.category}-${item.q}`
+                    const isOpen = Boolean(openItems[key])
+
+                    return (
+                      <div key={item.q}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            toggleItem(section.category, item.q)
+                          }
+                          className="flex w-full items-center justify-between gap-4 py-3.5 text-left transition-colors hover:text-[#1E3A5F]"
+                        >
+                          <span className="text-sm font-medium">
+                            {item.q}
+                          </span>
+
+                          {isOpen ? (
+                            <ChevronUp
+                              size={16}
+                              className="shrink-0 text-[var(--muted)]"
+                            />
+                          ) : (
+                            <ChevronDown
+                              size={16}
+                              className="shrink-0 text-[var(--muted)]"
+                            />
+                          )}
+                        </button>
+
+                        {isOpen && (
+                          <div className="pb-4 pr-8 text-xs leading-6 text-[var(--muted)]">
+                            {item.a}
+                          </div>
                         )}
-                      </button>
-
-                      {isOpen && (
-                        <div className="px-3.5 pb-3.5 pt-1 text-xs leading-relaxed text-[var(--muted)] border-t border-[var(--line-subtle)] bg-[var(--surface-elevated)]/40">
-                          {item.a}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             ))
           )}
         </div>
       </section>
+    </div>
+  )
+}
+
+function StatusItem({ label, value, status = false }) {
+  return (
+    <div>
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-light)]">
+        {label}
+      </p>
+
+      <div className="mt-1 flex items-center gap-1.5 text-sm font-medium">
+        {status && (
+          <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
+        )}
+
+        {value}
+      </div>
     </div>
   )
 }

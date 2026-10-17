@@ -409,14 +409,35 @@ export default function Reports() {
       ====================================================== */}
       <PageHeader
         title="Business Reports"
-        subtitle="Comprehensive sales, tax, profitability, customer credit, and operating expense analysis."
+        subtitle="Sales, tax, payments, and operating summaries for your selected period."
         action={
-          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <div className="grid w-full grid-cols-2 gap-1.5 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-2">
+            <button
+              type="button"
+              onClick={() => handleExport('pdf')}
+              disabled={Boolean(exporting) || loading}
+              className="btn-secondary inline-flex h-8 min-w-0 items-center justify-center gap-1 px-2 text-[11px] font-semibold sm:h-9 sm:gap-1.5 sm:px-3 sm:text-xs"
+              title="Download formal black-and-white A4 PDF Report"
+            >
+              <FileText size={14} className="text-slate-700 dark:text-slate-300" />
+              <span className="truncate">{exporting === 'pdf' ? 'Generating PDF…' : 'Export PDF'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleExport('xlsx')}
+              disabled={Boolean(exporting) || loading}
+              className="btn-secondary inline-flex h-8 min-w-0 items-center justify-center gap-1 px-2 text-[11px] font-semibold sm:h-9 sm:gap-1.5 sm:px-3 sm:text-xs"
+              title="Download formatted Excel workbook"
+            >
+              <FileSpreadsheet size={14} className="text-slate-700 dark:text-slate-300" />
+              <span className="truncate">{exporting === 'xlsx' ? 'Generating Excel…' : 'Export Excel'}</span>
+            </button>
             <button
               type="button"
               onClick={() => fetchReport(tab, appliedDates)}
               disabled={loading}
-              className="btn-secondary inline-flex h-9 items-center justify-center gap-1.5 px-3 text-xs font-semibold"
+              className="btn-secondary inline-flex h-8 min-w-0 items-center justify-center gap-1.5 px-2 text-[11px] font-semibold sm:h-9 sm:px-3 sm:text-xs"
               title="Refresh report data"
               aria-label="Refresh report data"
             >
@@ -424,29 +445,7 @@ export default function Reports() {
                 size={13}
                 className={loading ? 'animate-spin text-[#1E3A5F]' : 'text-[var(--muted)]'}
               />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleExport('pdf')}
-              disabled={Boolean(exporting) || loading}
-              className="btn-secondary inline-flex h-9 items-center justify-center gap-1.5 px-3 text-xs font-semibold"
-              title="Download formal black-and-white A4 PDF Report"
-            >
-              <FileText size={14} className="text-slate-700 dark:text-slate-300" />
-              <span>{exporting === 'pdf' ? 'Generating PDF...' : 'Export PDF'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleExport('xlsx')}
-              disabled={Boolean(exporting) || loading}
-              className="btn-secondary inline-flex h-9 items-center justify-center gap-1.5 px-3 text-xs font-semibold"
-              title="Download formatted Excel workbook"
-            >
-              <FileSpreadsheet size={14} className="text-slate-700 dark:text-slate-300" />
-              <span>{exporting === 'xlsx' ? 'Generating Excel...' : 'Export Excel'}</span>
+              <span>Refresh</span>
             </button>
           </div>
         }
@@ -491,14 +490,17 @@ export default function Reports() {
           DATE RANGE & FILTER CONTROLS
       ====================================================== */}
       {tab !== 'customers' ? (
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 shadow-xs space-y-2 sm:space-y-0 sm:space-x-3">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            {/* Quick Presets */}
-            <div className="scrollbar-none flex items-center gap-1.5 overflow-x-auto text-xs">
-             <span className="mr-0.5 flex shrink-0 items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-  <Calendar size={12} />
-  Range
-</span>
+        <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 shadow-xs sm:px-4" aria-label="Report date filters">
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
+              <div className="mb-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] font-semibold text-[var(--ink)]">
+                <Calendar size={14} className="text-[var(--primary)]" />
+                <span>Date range</span>
+                <span className="font-normal text-[var(--muted)]">
+                  {formatDateInput(appliedDates.start)} – {formatDateInput(appliedDates.end)}
+                </span>
+              </div>
+              <div className="scrollbar-none flex items-center gap-1 overflow-x-auto pb-0.5">
               {[
                 ['Today', getToday(), getToday()],
                 ['This Month', getMonthStart(), getToday()],
@@ -512,77 +514,65 @@ export default function Reports() {
                     key={label}
                     type="button"
                     onClick={() => handlePreset(fDate, tDate)}
-                    className={`rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-colors ${
+                    className={`min-h-8 rounded-md border px-2 py-1 text-[10px] font-medium whitespace-nowrap transition-colors ${
                       isSelected
-                        ? 'bg-[#1E3A5F] text-white font-semibold'
-                        : 'border border-[var(--line)] bg-[var(--surface-subtle)] text-[var(--muted)] hover:text-[var(--ink)]'
+                        ? 'border-[var(--primary)] bg-[var(--primary)] text-white font-semibold'
+                        : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-subtle)] hover:text-[var(--ink)]'
                     }`}
                   >
                     {label}
                   </button>
                 )
               })}
+              </div>
             </div>
 
-            {/* Inputs & Apply Action */}
-            <div className="flex flex-wrap items-end gap-2 sm:gap-3 lg:gap-2 xl:gap-3">
+            <div className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-end gap-2 sm:flex sm:w-auto sm:flex-nowrap">
               <ReportDateField
                 id="report-from-date"
-                label="From"
+                label="Start date"
                 value={startDate}
                 max={endDate}
                 onChange={setStartDate}
               />
               <ReportDateField
                 id="report-to-date"
-                label="To"
+                label="End date"
                 value={endDate}
                 min={startDate}
                 onChange={setEndDate}
               />
+              <div className="col-span-2 flex justify-end gap-1.5 sm:col-span-1">
+                <button
+                  type="button"
+                  onClick={handleApplyFilters}
+                  disabled={isDateInvalid || loading}
+                  className="btn-primary h-9 min-w-16 px-3 text-[11px] font-semibold justify-center whitespace-nowrap"
+                >
+                  Apply
+                </button>
 
-              <button
-                type="button"
-                onClick={handleApplyFilters}
-                disabled={isDateInvalid || loading}
-                className="btn-primary h-9 px-3.5 text-xs font-semibold justify-center whitespace-nowrap"
-              >
-                Apply
-              </button>
-
-              <button
-                type="button"
-                onClick={handleResetFilters}
-                disabled={loading}
-                title="Reset date filter to This Month"
-                className="btn-secondary h-9 px-2.5 text-xs font-medium text-[var(--muted)] hover:text-[var(--ink)]"
-              >
-                <RotateCcw size={13} />
-              </button>
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  disabled={loading}
+                  title="Reset date filter to This Month"
+                  aria-label="Reset date range to this month"
+                  className="btn-secondary h-9 w-9 px-0 text-xs font-medium text-[var(--muted)] hover:text-[var(--ink)]"
+                >
+                  <RotateCcw size={13} />
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Validation Feedback & Current Range Display */}
-          <div className="mt-2.5 flex flex-wrap items-center justify-between border-t border-[var(--line-subtle)] pt-2 text-xs">
-            {isDateInvalid ? (
-              <span className="flex items-center gap-1 font-semibold text-rose-600">
-                <AlertCircle size={13} />
-                Start date cannot be after end date.
-              </span>
-            ) : (
-              <span className="text-[11px] text-[var(--muted)]">
-                Active Period:{' '}
-                <strong className="text-[var(--ink)] font-mono">
-                  {formatDateInput(appliedDates.start)}
-                </strong>{' '}
-                to{' '}
-                <strong className="text-[var(--ink)] font-mono">
-                  {formatDateInput(appliedDates.end)}
-                </strong>
-              </span>
-            )}
-          </div>
-        </div>
+          {isDateInvalid && (
+            <p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-rose-600" role="alert">
+              <AlertCircle size={13} />
+              Start date cannot be after end date.
+            </p>
+          )}
+        </section>
         
       ) : (
         <div className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] px-3.5 py-2.5 text-xs text-[var(--muted)]">
@@ -634,6 +624,10 @@ export default function Reports() {
           </div>
         ) : null}
       </div>
+      <footer className="flex flex-col gap-1 border-t border-[var(--line)] pt-3 text-[11px] text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between">
+        <span>{tab === 'customers' ? 'Receivables are current as of today.' : `Reporting period: ${formatDateInput(appliedDates.start)} – ${formatDateInput(appliedDates.end)}`}</span>
+        <span>Amounts are shown in INR</span>
+      </footer>
     </div>
   )
 }

@@ -8,7 +8,7 @@ import { NetworkStatusProvider } from './context/NetworkStatusContext'
 import { ROLES } from './constants'
 
 import Layout from './components/Layout'
-import { InlineSpinner } from './components/UI'
+import { InlineSpinner, Spinner } from './components/UI'
 import NetworkOfflineBanner from './components/NetworkOfflineBanner'
 import SessionExpiredModal from './components/SessionExpiredModal'
 
@@ -53,10 +53,7 @@ const OfflineState = lazy(() => import('./pages/errors/OfflineState'))
 function LoadingScreen() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--surface)]" role="status" aria-live="polite" aria-label="Loading">
-      <div className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm font-medium text-[var(--muted)] shadow-sm">
-        <InlineSpinner className="h-5 w-5 text-[var(--primary)]" />
-        <span>Loading…</span>
-      </div>
+      <InlineSpinner className="h-8 w-8 text-[var(--primary)]" />
     </div>
   )
 }
@@ -69,7 +66,11 @@ function Guard({ children, adminOnly = false, roles }) {
   const { user, loading } = useAuth()
 
   if (loading) {
-    return <LoadingScreen />
+    return user ? (
+      <Layout>
+        <Spinner label="Loading your account" />
+      </Layout>
+    ) : <LoadingScreen />
   }
 
   if (!user) {
@@ -362,6 +363,11 @@ function AppRoutes() {
 
       <Route
         path="/bills"
+        element={<Navigate to="/sales/invoices" replace />}
+      />
+
+      <Route
+        path="/invoices"
         element={<Navigate to="/sales/invoices" replace />}
       />
 

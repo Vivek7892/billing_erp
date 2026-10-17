@@ -508,7 +508,7 @@ function InvoiceActions({
         <button
           type="button"
           onClick={() => onCollect?.(bill)}
-          className="inline-flex items-center gap-0.5 rounded bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-2 py-1 text-[11px] font-bold shadow-2xs transition shrink-0"
+          className="inline-flex min-h-9 items-center gap-1 rounded-md bg-[#1E3A5F] px-2.5 py-1 text-[11px] font-semibold text-white transition hover:bg-[#162F4D] shrink-0"
           title={`Collect payment (${fmt(bill.balance_due)} due)`}
         >
           <IndianRupee size={11} />
@@ -566,7 +566,7 @@ function InvoiceActions({
                   setMenuOpen(false)
                   onCollect?.(bill)
                 }}
-                className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50"
+                className="flex min-h-9 w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-semibold text-[#1E3A5F] hover:bg-[var(--surface-elevated)] dark:text-sky-300"
               >
                 <IndianRupee size={13} />
                 <span>Collect Payment</span>
@@ -710,6 +710,10 @@ function InvoiceModal({
     : sheetMode
   const [modalMode, setModalMode] = useState(defaultMode)
 
+  useEffect(() => {
+    setModalMode(defaultMode)
+  }, [selected?.id, defaultMode])
+
   useModalA11y(Boolean(selected), onClose, modalRef)
 
   if (!selected) return null
@@ -749,7 +753,7 @@ function InvoiceModal({
         aria-modal="true"
         aria-labelledby="invoice-modal-title"
         tabIndex={-1}
-        className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-[var(--surface)] shadow-2xl border border-[var(--line)] outline-none"
+        className="flex max-h-[96vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-[var(--surface)] shadow-2xl border border-[var(--line)] outline-none"
         onClick={e => e.stopPropagation()}
       >
         {/* Modal top action bar */}
@@ -911,16 +915,22 @@ function InvoiceModal({
         </div>
 
         {/* Modal body: settings-driven invoice + communication history */}
-        <div className="overflow-auto bg-[var(--surface-elevated)] p-2 sm:p-6 space-y-5">
-          <div className="flex justify-center overflow-x-auto max-w-full">
-            <InvoiceDocument
-              invoice={selected}
-              settings={settings}
-              mode={modalMode}
-              onModeChange={setModalMode}
-              showModePicker={true}
-            />
-          </div>
+        <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--surface-elevated)] p-2 sm:p-5 space-y-5">
+          <section className="min-w-0 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 sm:p-4">
+            <div className="mb-2 flex items-center justify-between gap-3 px-1">
+              <h3 className="text-xs font-bold text-[var(--ink)]">Invoice document</h3>
+              <span className="text-[10px] text-[var(--muted-light)]">Swipe horizontally to view the full page</span>
+            </div>
+            <div className="flex max-w-full justify-start overflow-x-auto sm:justify-center">
+              <InvoiceDocument
+                invoice={selected}
+                settings={settings}
+                mode={modalMode}
+                onModeChange={setModalMode}
+                showModePicker={true}
+              />
+            </div>
+          </section>
 
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5 shadow-xs">
             <CommunicationHistory
@@ -1053,7 +1063,7 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
           <button
             type="button"
             onClick={() => onCollect?.(bill)}
-            className="flex w-full min-h-[40px] items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-emerald-700 active:scale-[0.98]"
+            className="flex min-h-[42px] w-full items-center justify-center gap-1.5 rounded-lg bg-[#1E3A5F] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#162F4D]"
             title={`Collect payment (${fmt(balance)})`}
           >
             <IndianRupee size={13} />
@@ -1281,27 +1291,27 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
         role="dialog"
         aria-modal="true"
         aria-labelledby="collect-payment-title"
-        className="flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-2xl outline-none"
+        className="flex max-h-[calc(100dvh-24px)] w-full max-w-md flex-col overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-xl outline-none"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-4 bg-[var(--surface)]">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs">
-              <CircleDollarSign size={20} />
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3.5 sm:px-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#1E3A5F] text-white">
+              <CircleDollarSign size={18} />
             </div>
-            <div>
-              <h2 id="collect-payment-title" className="text-base font-bold text-[var(--ink)]">
+            <div className="min-w-0">
+              <h2 id="collect-payment-title" className="text-sm font-semibold text-[var(--ink)] sm:text-base">
                 Collect Payment
               </h2>
-              <p className="text-xs text-[var(--muted)]">
+              <p className="truncate text-xs text-[var(--muted)]">
                 {bill.invoice_number} &bull; {bill.customer_name || 'Walk-in customer'}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--line-strong)] transition"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--line-strong)] transition sm:h-9 sm:w-9"
             aria-label="Close"
           >
             <X size={16} />
@@ -1309,9 +1319,9 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
         </div>
 
         {/* Content */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="max-h-[calc(100dvh-112px)] space-y-4 overflow-y-auto p-4 sm:max-h-[72vh] sm:p-5">
           {/* Summary Strip */}
-          <div className="grid grid-cols-3 gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3 text-center shadow-xs">
+          <div className="grid grid-cols-3 gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-2.5 text-center sm:gap-2 sm:p-3">
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Total Bill
@@ -1348,7 +1358,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                 <button
                   type="button"
                   onClick={() => handleAmountChange(String(balanceDue))}
-                  className="rounded-lg px-2.5 py-1 text-[11px] font-semibold bg-[var(--surface)] text-emerald-700 dark:text-emerald-400 border border-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition"
+              className="min-h-9 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11px] font-semibold text-[#1E3A5F] transition hover:bg-[var(--surface-elevated)] dark:text-sky-300"
                 >
                   Pay Full ({fmt(balanceDue)})
                 </button>
@@ -1402,7 +1412,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                     key={m.id}
                     type="button"
                     onClick={() => setMethod(m.id)}
-                    className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-semibold transition ${
+                    className={`flex min-h-[58px] flex-col items-center justify-center rounded-lg border p-2 text-xs font-semibold transition ${
                       selected
                         ? 'border-[#1E3A5F] bg-[#1E3A5F] text-white shadow-xs'
                         : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:border-[var(--line-strong)]'
@@ -1418,7 +1428,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
 
           {/* Dynamic Content Based on Method */}
           {method === 'upi' ? (
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-4 text-center shadow-xs space-y-3">
+            <div className="space-y-3 rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-3 text-center sm:p-4">
               <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#1E3A5F] dark:text-sky-400">
                 <QrCode size={16} />
                 <span>Scan QR with Any UPI App</span>
@@ -1427,7 +1437,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
               <div className="mx-auto flex w-fit items-center justify-center p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
                 <QRCodeSVG
                   value={upiUri}
-                  size={144}
+                  size={136}
                   level="M"
                   includeMargin={false}
                 />
@@ -1503,19 +1513,19 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[var(--line)]">
+          <div className="flex flex-col-reverse gap-2 border-t border-[var(--line)] pt-3 sm:flex-row sm:justify-end sm:gap-2.5">
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-2.5 text-xs font-semibold text-[var(--ink-secondary)] hover:border-[var(--line-strong)] hover:text-[var(--ink)] transition"
+              className="min-h-11 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-4 py-2.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:border-[var(--line-strong)] hover:text-[var(--ink)] sm:w-auto"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting || Boolean(error) || !amount}
-              className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-xs font-bold text-white shadow-md disabled:opacity-50 transition"
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#1E3A5F] px-5 py-2.5 text-xs font-semibold text-white transition hover:bg-[#162F4D] disabled:opacity-50 sm:w-auto"
             >
               {submitting ? (
                 <>
@@ -1918,11 +1928,11 @@ export default function Bills() {
   ======================================================= */
   return (
     <div className="min-h-full">
-      <div className="mx-auto max-w-[1600px] space-y-4 overflow-x-hidden">
+      <div className="mx-auto max-w-[1600px] space-y-4 overflow-x-hidden pb-4">
         {/* =================================================
             HEADER
         ================================================= */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-b border-[var(--line)] pb-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="mb-1 flex items-center gap-2 text-[var(--muted-light)]">
               <Receipt size={13} />
@@ -1931,7 +1941,7 @@ export default function Bills() {
               <span className="text-[var(--muted)]">Invoices</span>
             </div>
 
-            <h1 className="text-xl font-bold tracking-tight text-[var(--ink)] sm:text-2xl">
+            <h1 className="text-xl font-semibold tracking-tight text-[var(--ink)] sm:text-2xl">
               Billing &amp; Invoices
             </h1>
 
@@ -1946,7 +1956,7 @@ export default function Bills() {
               <button
                 type="button"
                 onClick={() => navigate('/sales/payments')}
-                className="inline-flex min-h-[38px] whitespace-nowrap items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] shadow-none transition hover:bg-[var(--surface-hover)]"
+                className="inline-flex min-h-[42px] whitespace-nowrap items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] shadow-none transition hover:bg-[var(--surface-hover)]"
                 title="Payment Sheet & Collection"
               >
                 <CreditCard size={14} />
@@ -1956,7 +1966,7 @@ export default function Bills() {
               <button
                 type="button"
                 onClick={() => navigate('/billing/drafts')}
-                className="inline-flex min-h-[38px] whitespace-nowrap items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] shadow-none transition hover:bg-[var(--surface-hover)]"
+                className="inline-flex min-h-[42px] whitespace-nowrap items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] shadow-none transition hover:bg-[var(--surface-hover)]"
                 title="Parked Bills"
               >
                 <Clock3 size={14} />
@@ -1972,7 +1982,7 @@ export default function Bills() {
                 type="button"
                 onClick={exportCsv}
                 disabled={loading || visibleBills.length === 0}
-                className="inline-flex min-h-[38px] whitespace-nowrap items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] shadow-none transition hover:bg-[var(--surface-hover)] active:scale-95 disabled:opacity-50"
+                className="inline-flex min-h-[42px] whitespace-nowrap items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] shadow-none transition hover:bg-[var(--surface-hover)] active:scale-95 disabled:opacity-50"
                 title="Export visible invoices to CSV"
               >
                 <Download size={14} />
@@ -1983,7 +1993,7 @@ export default function Bills() {
                 type="button"
                 onClick={() => load(page, search)}
                 disabled={loading}
-                className="inline-flex min-h-[38px] whitespace-nowrap items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] shadow-none transition hover:bg-[var(--surface-hover)] active:scale-95"
+                className="inline-flex min-h-[42px] whitespace-nowrap items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] shadow-none transition hover:bg-[var(--surface-hover)] active:scale-95"
                 title="Refresh invoices table"
               >
                 <RefreshCw size={14} className={loading ? 'animate-spin text-[#1E3A5F]' : ''} />
@@ -1994,7 +2004,7 @@ export default function Bills() {
             <button
               type="button"
               onClick={() => navigate('/billing/new')}
-              className="btn-primary inline-flex min-h-[38px] w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold text-white shadow-none transition active:scale-95 shrink-0"
+              className="btn-primary inline-flex min-h-[42px] w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-none transition active:scale-95 shrink-0"
             >
               <Plus size={15} />
               <span>New Bill</span>
@@ -2005,7 +2015,7 @@ export default function Bills() {
         {/* =================================================
             ERP METRICS SUMMARY (Table-Based)
         ================================================= */}
-        <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)]">
+        <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-xs">
           <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-5 sm:divide-y-0 sm:divide-x">
             <div className="p-3 sm:p-3.5">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
@@ -2058,7 +2068,7 @@ export default function Bills() {
         {/* =================================================
             FILTER & SEARCH TOOLBAR
         ================================================= */}
-        <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-none sm:p-3 space-y-2.5">
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-xs sm:p-3 space-y-2.5">
           {/* Quick Status Filter Pills with live item counts */}
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
@@ -2118,12 +2128,12 @@ export default function Bills() {
 
           {/* Custom Date Range Picker (shown when 'Custom' preset is selected) */}
           {dateFilter === 'custom' && (
-            <div className="flex flex-wrap items-center gap-2 rounded-md border border-blue-200 bg-blue-50/60 dark:border-blue-900/40 dark:bg-blue-950/20 p-2 text-xs">
-              <div className="flex items-center gap-1.5 text-[var(--ink-secondary)] font-medium">
+            <div className="flex flex-col gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-2 text-xs sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+              <div className="flex items-center gap-1.5 font-medium text-[var(--ink-secondary)]">
                 <CalendarDays size={14} className="text-[#1E3A5F] dark:text-sky-400" />
                 <span>Custom Date Range:</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-1.5 sm:flex">
                 <input
                   type="date"
                   value={startDate}
@@ -2131,7 +2141,7 @@ export default function Bills() {
                     setStartDate(e.target.value)
                     setPage(1)
                   }}
-                  className="rounded border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-xs text-[var(--ink)] outline-none focus:border-[#1E3A5F]"
+                  className="min-w-0 w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-2 text-xs text-[var(--ink)] outline-none focus:border-[#1E3A5F] sm:w-auto"
                   title="Start date"
                   aria-label="Start date"
                 />
@@ -2143,7 +2153,7 @@ export default function Bills() {
                     setEndDate(e.target.value)
                     setPage(1)
                   }}
-                  className="rounded border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-xs text-[var(--ink)] outline-none focus:border-[#1E3A5F]"
+                  className="min-w-0 w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-2 text-xs text-[var(--ink)] outline-none focus:border-[#1E3A5F] sm:w-auto"
                   title="End date"
                   aria-label="End date"
                 />
@@ -2334,7 +2344,7 @@ export default function Bills() {
         {/* =================================================
             INVOICE TABLE
         ================================================= */}
-        <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] shadow-none">
+        <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-xs">
           {/* Table header bar */}
           <div className="flex items-center justify-between border-b border-[var(--line-subtle)] px-3.5 py-3 sm:px-5">
             <div>
@@ -2461,7 +2471,7 @@ export default function Bills() {
 
                       {/* 8. Payment Method (Left) */}
                       <th className="px-3 py-3 text-left truncate">
-                        Payment Method
+                        Payment
                       </th>
 
                       {/* 9. Status (Center) */}
@@ -2539,7 +2549,7 @@ export default function Bills() {
                               </div>
                             ) : (
                               <div className="text-[10px] text-[var(--muted-light)] mt-0.5">
-                                Walk-in
+                                Unknown / No phone
                               </div>
                             )}
                           </td>

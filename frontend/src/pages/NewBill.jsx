@@ -3198,23 +3198,20 @@ export default function NewBill() {
 
       {/* ============================ DEDICATED SALE COMPLETED SCREEN ============================ */}
       <Modal open={showSuccess && Boolean(lastInvoice?.id)} onClose={() => setShowSuccess(false)} title="" size="md">
-        <div className="-mt-2 pb-sale-success space-y-4">
+        <div className="-mt-2 pb-sale-success space-y-3.5">
           {/* Hero success banner */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 p-6 text-white shadow-lg">
-            <div className="absolute -right-6 -top-6 h-28 w-28 rounded-full bg-white/10 blur-sm" />
-            <div className="absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/10 blur-sm" />
-            <div className="relative flex items-center gap-4">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-md shadow-inner transition-transform duration-300 hover:scale-105">
-                <CheckCircle2 size={36} strokeWidth={2.5} className="text-white" />
+          <div className="rounded-xl border border-emerald-200 bg-[var(--surface)] p-4 sm:p-5 dark:border-emerald-900">
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                <CheckCircle2 size={25} strokeWidth={2} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-black uppercase tracking-widest text-emerald-100 flex items-center gap-1.5">
-                  <Sparkles size={13} className="text-emerald-200" />
-                  <span>Sale Completed Successfully</span>
+                <p className="text-sm font-semibold text-[var(--ink)]">
+                  Sale completed
                 </p>
-                <p className="mt-1 font-mono text-2xl sm:text-3xl font-black tracking-tight">{fmt(lastInvoice?.grand_total)}</p>
-                <p className="mt-1 text-xs text-emerald-100/90 truncate">
-                  <span className="font-mono font-bold bg-white/20 px-2 py-0.5 rounded-md">#{lastInvoice?.invoice_number || 'INV'}</span>
+                <p className="mt-0.5 font-mono text-2xl font-bold tracking-tight text-[var(--ink)] sm:text-3xl">{fmt(lastInvoice?.grand_total)}</p>
+                <p className="mt-1 flex flex-wrap items-center gap-x-1 text-xs text-[var(--muted)]">
+                  <span className="font-mono font-semibold">#{lastInvoice?.invoice_number || 'INV'}</span>
                   {lastInvoice?.customer_name && lastInvoice.customer_name !== 'Walk-in Customer'
                     ? ` · ${lastInvoice.customer_name}` : ' · Walk-in Customer'}
                 </p>
@@ -3223,20 +3220,20 @@ export default function NewBill() {
           </div>
 
           {/* Payment summary breakdown */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3 text-center">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-3">
               <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Method</p>
               <p className="mt-1 text-xs font-bold capitalize truncate text-[var(--ink)]">
                 {String(lastInvoice?.payment_method || 'Cash').replace(/_/g, ' ')}
               </p>
             </div>
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3 text-center">
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-3">
               <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Status</p>
               <p className="mt-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 capitalize truncate">
                 {lastInvoice?.payment_status || 'Paid'}
               </p>
             </div>
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3 text-center">
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-3">
               <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Received</p>
               <p className="mt-1 font-mono text-xs font-bold text-[var(--ink)]">
                 {fmt(lastPaidAmount(lastInvoice))}
@@ -3257,32 +3254,32 @@ export default function NewBill() {
           )}
 
           {/* Action buttons grid */}
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => printInvoiceDocument(lastInvoice?.id, false)}
-              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#1E3A5F] hover:bg-[#162F4D] text-white text-xs font-bold transition shadow-sm active:scale-95"
+              className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg bg-[#1E3A5F] px-2 text-white text-[11px] font-semibold transition sm:gap-2 sm:text-xs"
             >
               <Printer size={16} /><span>Print A4 Invoice</span>
             </button>
             <button
               type="button"
               onClick={() => printInvoiceDocument(lastInvoice?.id, true)}
-              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-xs font-bold hover:bg-[var(--surface-hover)] transition shadow-sm active:scale-95"
+              className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 text-[var(--ink)] text-[11px] font-semibold hover:bg-[var(--surface-hover)] transition sm:gap-2 sm:text-xs"
             >
               <Receipt size={16} /><span>Thermal Receipt</span>
             </button>
             <button
               type="button"
               onClick={() => downloadInvoiceDocument(lastInvoice?.id)}
-              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] text-xs font-bold hover:bg-[var(--surface-hover)] transition shadow-sm active:scale-95"
+              className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 text-[var(--ink)] text-[11px] font-semibold hover:bg-[var(--surface-hover)] transition sm:gap-2 sm:text-xs"
             >
               <Download size={16} /><span>Download PDF</span>
             </button>
             <button
               type="button"
               onClick={shareInvoice}
-              className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white text-xs font-bold transition shadow-sm active:scale-95"
+              className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg bg-[#1E3A5F] px-2 text-white text-[11px] font-semibold transition sm:gap-2 sm:text-xs"
             >
               <Share2 size={16} /><span>Share WhatsApp</span>
             </button>
@@ -3292,7 +3289,7 @@ export default function NewBill() {
           <button
             type="button"
             onClick={() => { setShowSuccess(false); startNewBill() }}
-            className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-sm font-bold transition shadow-md"
+            className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 text-white text-sm font-semibold transition hover:bg-emerald-800"
           >
             <RefreshCw size={17} /><span>+ Start New Sale</span>
           </button>

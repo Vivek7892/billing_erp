@@ -171,6 +171,7 @@ def _export_report_xlsx(
     sheet.title = (title or 'Report')[:31]
 
     profile = _get_report_business_profile(request_user)
+    logo_bytes = _download_report_logo(profile.get('shop_logo'))
 
     FONT_FAMILY = 'Calibri'
     C_TEXT = '111827'
@@ -205,6 +206,24 @@ def _export_report_xlsx(
     c2 = sheet.cell(row=2, column=1, value=contact_str or shop_name)
     c2.font = Font(name=FONT_FAMILY, size=9, color=C_MUTED)
 
+    if logo_bytes:
+        try:
+            report_logo = XLImage(BytesIO(logo_bytes))
+            report_logo.width = 42
+            report_logo.height = 42
+            report_logo.anchor = 'A1'
+            sheet.add_image(report_logo)
+            c1 = sheet.cell(row=1, column=2, value=shop_name)
+            c1.font = Font(name=FONT_FAMILY, bold=True, size=14, color=C_TEXT)
+            c2 = sheet.cell(row=2, column=2, value=contact_str or shop_name)
+            c2.font = Font(name=FONT_FAMILY, size=9, color=C_MUTED)
+            sheet.cell(row=1, column=1).value = None
+            sheet.cell(row=2, column=1).value = None
+            sheet.row_dimensions[1].height = 25
+            sheet.row_dimensions[2].height = 25
+        except Exception:
+            pass
+
     # 2. Report Title & Metadata
     c3 = sheet.cell(row=4, column=1, value=title.upper())
     c3.font = Font(name=FONT_FAMILY, bold=True, size=12, color=C_TEXT)
@@ -213,6 +232,11 @@ def _export_report_xlsx(
     period_str = f"Period: {period_label} | " if period_label else ""
     c4 = sheet.cell(row=5, column=1, value=f"{period_str}Generated: {gen_time}")
     c4.font = Font(name=FONT_FAMILY, italic=True, size=9, color=C_MUTED)
+
+    sheet.oddHeader.left.text = f'&B{shop_name}'
+    sheet.oddHeader.right.text = title
+    sheet.oddFooter.left.text = f'Confidential | Generated {gen_time}'
+    sheet.oddFooter.right.text = 'Page &[Page] of &[Pages]'
 
     current_row = 7
 
@@ -366,6 +390,10 @@ def _export_report_xlsx(
     sheet.page_setup.fitToWidth = 1
     sheet.page_setup.fitToHeight = 0
     sheet.sheet_properties.pageSetUpPr.fitToPage = True
+    sheet.page_margins.left = 0.3
+    sheet.page_margins.right = 0.3
+    sheet.page_margins.top = 0.5
+    sheet.page_margins.bottom = 0.5
     sheet.print_title_rows = f'{header_row}:{header_row}'
 
     # Auto-size columns
@@ -400,6 +428,7 @@ def _export_report_pdf(
     from .pdf_utils import generate_report_pdf
 
     profile = _get_report_business_profile(request_user)
+    logo_bytes = _download_report_logo(profile.get('shop_logo'))
     buffer = generate_report_pdf(
         title=title,
         headers=headers,
@@ -407,6 +436,7 @@ def _export_report_pdf(
         business_profile=profile,
         summary_rows=summary_rows,
         period_label=period_label,
+        logo_bytes=logo_bytes,
     )
     return _report_response(filename, buffer.getvalue(), 'application/pdf')
 
@@ -4883,18 +4913,45 @@ class NotificationListView(APIView):
         if search:
             qs = qs.filter(Q(title__icontains=search) | Q(message__icontains=search))
 
+        # Role-based notification filtering
+        user_role = getattr(request.user, 'role', 'admin') or 'admin'
+        role_filter = request.query_params.get('role_filter') or request.query_params.get('scope')
+        is_admin_or_owner = user_role in ['admin', 'owner'] or getattr(request.user, 'is_superuser', False)
+
+        is_role_scoped = role_filter == 'my_role' or (role_filter is None and not is_admin_or_owner)
+        if is_role_scoped:
+            if user_role == 'cashier':
+                # Cashiers see counter payments, immediate low stock, and approval requests initiated by themselves
+                cashier_types = ['payment_received', 'low_stock', 'quotation_expiring']
+                qs = qs.filter(
+                    Q(notification_type__in=cashier_types) |
+                    Q(notification_type='approval_required', data__requested_by=request.user.username)
+                )
+            elif user_role == 'accountant':
+                accountant_types = [
+                    'invoice_overdue', 'payment_received', 'gst_submission_failed',
+                    'einvoice_failed', 'eway_bill_expiring', 'approval_required'
+                ]
+                qs = qs.filter(notification_type__in=accountant_types)
+            elif user_role == 'manager':
+                manager_types = [
+                    'low_stock', 'batch_expiring', 'purchase_order_pending',
+                    'quotation_expiring', 'invoice_overdue', 'approval_required'
+                ]
+                qs = qs.filter(notification_type__in=manager_types)
+
         limit = min(int(request.query_params.get('limit', 100)), 200)
 
-        unread_count = Notification.objects.filter(business=biz, is_read=False).count()
-        critical_count = Notification.objects.filter(
-            business=biz, is_read=False, severity__in=['danger', 'warning']
+        unread_count = qs.filter(is_read=False).count()
+        critical_count = qs.filter(
+            is_read=False, severity__in=['danger', 'warning']
         ).count()
-        pending_approval_count = Notification.objects.filter(
-            business=biz, requires_approval=True, status='active'
+        pending_approval_count = qs.filter(
+            requires_approval=True, status='active'
         ).count()
 
         counts_by_type = {}
-        for row in Notification.objects.filter(business=biz, is_read=False).values('notification_type').annotate(cnt=Count('id')):
+        for row in qs.filter(is_read=False).values('notification_type').annotate(cnt=Count('id')):
             counts_by_type[row['notification_type']] = row['cnt']
 
         return Response({
@@ -4903,6 +4960,8 @@ class NotificationListView(APIView):
             'critical_count': critical_count,
             'pending_approval_count': pending_approval_count,
             'counts_by_type': counts_by_type,
+            'user_role': user_role,
+            'is_role_scoped': is_role_scoped,
         })
 
 

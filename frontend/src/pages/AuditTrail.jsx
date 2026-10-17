@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import api from '../api'
-import { PageHeader, Spinner, Modal, Pagination } from '../components/UI'
+import { PageHeader, Spinner, Modal, Pagination, StatCard } from '../components/UI'
 import toast from 'react-hot-toast'
 import {
   ShieldCheck,
@@ -787,111 +787,11 @@ export default function AuditTrail() {
 
       {/* Summary Dashboard Cards (Section D) */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {/* Total Matching Events */}
-        <div className="rounded-lg border border-[var(--line)] border-l-2 border-l-[#1E3A5F] bg-[var(--surface)] p-3.5 shadow-xs">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">Matching Events</p>
-              <p className="mt-1 text-xl font-extrabold tracking-tight font-mono text-[var(--ink)]">
-                {metrics.totalMatching.toLocaleString()}
-              </p>
-              <p className="mt-1 text-[11px] text-[var(--muted)]">
-                of {metrics.totalOverall.toLocaleString()} recorded
-              </p>
-            </div>
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-50 text-[#1E3A5F] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-              <FileText size={16} />
-            </div>
-          </div>
-        </div>
-
-        {/* Successful Events */}
-        <div className="rounded-lg border border-[var(--line)] border-l-2 border-l-[#059669] bg-[var(--surface)] p-3.5 shadow-xs">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">Successful</p>
-              <p className="mt-1 text-xl font-extrabold tracking-tight font-mono text-emerald-700 dark:text-emerald-400">
-                {metrics.successCount.toLocaleString()}
-              </p>
-              <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                {metrics.successRate}% success rate
-              </p>
-            </div>
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/40 dark:bg-emerald-950/40 dark:text-emerald-300">
-              <CheckCircle2 size={16} />
-            </div>
-          </div>
-        </div>
-
-        {/* Failed Operations (Highlighted Rose if > 0) */}
-        <div
-          className={`rounded-lg border border-l-2 p-3.5 shadow-xs transition ${
-            metrics.failCount > 0
-              ? 'border-rose-300 border-l-[#E11D48] bg-rose-50/50 dark:border-rose-800 dark:bg-rose-950/20'
-              : 'border-[var(--line)] border-l-[#059669] bg-[var(--surface)]'
-          }`}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">Failed Events</p>
-              <p
-                className={`mt-1 text-xl font-extrabold tracking-tight font-mono ${
-                  metrics.failCount > 0 ? 'text-rose-700 dark:text-rose-300' : 'text-slate-700 dark:text-slate-300'
-                }`}
-              >
-                {metrics.failCount.toLocaleString()}
-              </p>
-              <p
-                className={`mt-1 text-[11px] font-semibold ${
-                  metrics.failCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
-                }`}
-              >
-                {metrics.failCount > 0 ? 'Requires investigation' : 'Zero security failures'}
-              </p>
-            </div>
-            <div
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md border ${
-                metrics.failCount > 0
-                  ? 'border-rose-200 bg-rose-100 text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                  : 'border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
-              }`}
-            >
-              <XCircle size={16} />
-            </div>
-          </div>
-        </div>
-
-        {/* Unique Operators */}
-        <div className="rounded-lg border border-[var(--line)] border-l-2 border-l-[#0F766E] bg-[var(--surface)] p-3.5 shadow-xs">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">Unique Actors</p>
-              <p className="mt-1 text-xl font-extrabold tracking-tight font-mono text-[var(--ink)]">
-                {metrics.operatorsCount}
-              </p>
-              <p className="mt-1 text-[11px] text-[var(--muted)]">Active operators logged</p>
-            </div>
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-800/40 dark:bg-teal-950/40 dark:text-teal-300">
-              <User size={16} />
-            </div>
-          </div>
-        </div>
-
-        {/* High-Impact Changes */}
-        <div className="col-span-2 sm:col-span-1 rounded-lg border border-[var(--line)] border-l-2 border-l-[#D97706] bg-[var(--surface)] p-3.5 shadow-xs">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">High Impact</p>
-              <p className="mt-1 text-xl font-extrabold tracking-tight font-mono text-amber-700 dark:text-amber-400">
-                {metrics.highImpactCount.toLocaleString()}
-              </p>
-              <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400 font-semibold">Critical operations</p>
-            </div>
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800/40 dark:bg-amber-950/40 dark:text-amber-300">
-              <AlertTriangle size={16} />
-            </div>
-          </div>
-        </div>
+        <StatCard label="Matching Events" value={metrics.totalMatching.toLocaleString()} sub={`of ${metrics.totalOverall.toLocaleString()} recorded`} icon={FileText} color="blue" />
+        <StatCard label="Successful" value={metrics.successCount.toLocaleString()} sub={`${metrics.successRate}% success rate`} icon={CheckCircle2} color="green" />
+        <StatCard label="Failed Events" value={metrics.failCount.toLocaleString()} sub={metrics.failCount > 0 ? 'Requires investigation' : 'Zero security failures'} icon={XCircle} color={metrics.failCount > 0 ? 'red' : 'gray'} />
+        <StatCard label="Unique Actors" value={metrics.operatorsCount} sub="Active operators logged" icon={User} color="teal" />
+        <StatCard label="High Impact" value={metrics.highImpactCount.toLocaleString()} sub="Critical operations" icon={AlertTriangle} color="orange" />
       </div>
 
       {/* Collapsible Activity Distribution Strip */}

@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, isValidElement } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, isValidElement } from 'react'
 import { Search, X } from 'lucide-react'
+import { usePageLoadingRegistration } from './PageLoadingContext'
 
 
 /* ============================================================
@@ -114,6 +115,8 @@ export function StatCard({
   sub,
   trend,
   onClick,
+  active = false,
+  className = '',
 }) {
   const Tag = onClick ? 'button' : 'div'
 
@@ -143,9 +146,11 @@ export function StatCard({
         'p-3.5 sm:p-4',
         'shadow-[var(--shadow-xs)]',
         'transition-all duration-150',
+        active ? 'border-[var(--primary)] ring-2 ring-[var(--primary)]/15' : '',
         onClick
           ? 'cursor-pointer hover:border-[var(--line-strong)]'
           : 'cursor-default',
+        className,
       ].join(' ')}
     >
       <div className="flex items-start justify-between gap-3">
@@ -856,7 +861,20 @@ export function TagChip({ label, onRemove, color = 'default', className = '' }) 
 export function Spinner({
   label = 'Loading data',
 }) {
-  return <TableSkeleton rows={5} columns={4} label={label} />
+  const id = useId()
+  const registerLoading = usePageLoadingRegistration()
+
+  useLayoutEffect(() => {
+    registerLoading(id, true)
+    return () => registerLoading(id, false)
+  }, [id, registerLoading])
+
+  return (
+    <div className="flex min-h-40 w-full flex-col items-center justify-center gap-3 p-6 text-[var(--muted)]" role="status" aria-label={label}>
+      <InlineSpinner className="h-7 w-7 text-[var(--primary)]" />
+      <span className="text-xs font-medium">{label}</span>
+    </div>
+  )
 }
 
 /* ============================================================
@@ -987,46 +1005,8 @@ export function TableSkeleton({
   columns,
   label = 'Loading data',
 }) {
-  const columnCount = columns || cols || 5
-
   return (
-    <div
-      className="w-full divide-y divide-[var(--line)] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-xs"
-      aria-label={label}
-      role="status"
-    >
-      {/* Skeleton header */}
-      <div className="flex items-center gap-4 px-4 py-3 bg-[var(--surface-elevated)] rounded-lg">
-        {Array.from({ length: columnCount }, (_, c) => (
-          <div
-            key={c}
-            className={[
-              'h-4 flex-1 animate-pulse rounded bg-[var(--line)]',
-              c === 0 ? 'max-w-[50px]' : '',
-              c === columnCount - 1 ? 'max-w-[90px]' : '',
-            ].join(' ')}
-          />
-        ))}
-      </div>
-
-      {/* Skeleton rows */}
-      {Array.from({ length: rows }, (_, r) => (
-        <div key={r} className="flex items-center gap-4 px-4 py-3.5">
-          {Array.from({ length: columnCount }, (_, c) => (
-            <div
-              key={c}
-              className={[
-                'h-3.5 flex-1 animate-pulse rounded bg-[var(--line)]',
-                c === 0 ? 'max-w-[40px]' : '',
-                c === columnCount - 1 ? 'max-w-[80px]' : '',
-              ].join(' ')}
-            />
-          ))}
-        </div>
-      ))}
-
-      <span className="sr-only">Loading table data...</span>
-    </div>
+    <Spinner label={label} />
   )
 }
 
@@ -1261,7 +1241,7 @@ export function PageHeader({
   return (
     <div
       className={[
-        'mb-4 flex min-w-0 flex-col gap-3',
+        'mb-4 flex min-w-0 flex-col gap-3 border-b border-[var(--line)] pb-3 sm:pb-4',
         'sm:flex-row sm:items-start sm:justify-between',
         className,
       ].join(' ')}

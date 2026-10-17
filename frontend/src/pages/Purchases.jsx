@@ -1215,7 +1215,11 @@ export default function Purchases() {
   const [supSearch, setSupSearch] = useState('')
   const [poSearch, setPoSearch] = useState(() => {
     const params = new URLSearchParams(window.location.search)
-    return params.has('po') ? `PO-${params.get('po')}` : (params.get('search') || '')
+    const rawPo = params.get('po')
+    if (rawPo) {
+      return rawPo.toUpperCase().startsWith('PO-') ? rawPo : `PO-${rawPo}`
+    }
+    return params.get('search') || ''
   })
   const [expandedPO, setExpandedPO] = useState(null)
   const [sendingPO, setSendingPO] = useState(null)
@@ -1223,8 +1227,13 @@ export default function Purchases() {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
-    const purchaseId = params.get('po')
-    setPoSearch(purchaseId ? `PO-${purchaseId}` : (params.get('search') || ''))
+    const rawPo = params.get('po')
+    const searchParam = params.get('search')
+    if (rawPo || searchParam) {
+      setTab('orders')
+      const targetPo = rawPo ? (rawPo.toUpperCase().startsWith('PO-') ? rawPo : `PO-${rawPo}`) : searchParam
+      setPoSearch(targetPo || '')
+    }
   }, [location.search])
 
   const sendConfirmation = async (p, channel = 'whatsapp') => {
@@ -1406,12 +1415,32 @@ export default function Purchases() {
     },
   ]
 
+  // Auto-expand matched PO if passed via URL parameter
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const rawPo = params.get('po') || params.get('search')
+    if (rawPo && purchases.length > 0) {
+      const q = rawPo.trim().toLowerCase()
+      const numOnly = q.replace(/^po-?/i, '')
+      const matched = purchases.find(p =>
+        (numOnly && String(p.id) === numOnly) ||
+        `po-${p.id}`.toLowerCase() === q ||
+        (p.invoice_number && p.invoice_number.toLowerCase() === q)
+      )
+      if (matched) {
+        setExpandedPO(matched.id)
+      }
+    }
+  }, [location.search, purchases])
+
   const filteredPOs = purchases.filter(p => {
     if (!poSearch.trim()) return true
-    const q = poSearch.toLowerCase()
+    const q = poSearch.trim().toLowerCase()
+    const numOnly = q.replace(/^po-?/i, '')
     return (
       (p.supplier_name || '').toLowerCase().includes(q) ||
       (p.invoice_number || '').toLowerCase().includes(q) ||
+      (numOnly && String(p.id) === numOnly) ||
       `po-${p.id}`.toLowerCase().includes(q)
     )
   })

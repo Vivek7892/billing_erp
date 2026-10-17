@@ -52,10 +52,11 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4, A5, letter, portrait
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
-    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer,
+    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as RLImage,
 )
 
 from .models import Setting
@@ -421,6 +422,8 @@ def any_item_cess(invoice):
 
 INK = colors.black
 BORDER = colors.black
+ACCENT = colors.HexColor("#1E3A5F")
+SECONDARY_ACCENT = colors.HexColor("#64748B")
 
 # Compact A4 geometry: use the page instead of leaving excessive top whitespace.
 PAGE_W, PAGE_H = A4
@@ -586,13 +589,10 @@ def _logo_for_a4(s, max_width_mm=26, max_height_mm=22):
 
 
 def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
-    """Clean, professional A4 header for SRI BALAJI STORE / business profile.
-    Left: Brand name, address, contact (mobile, email), registrations (GSTIN, PAN).
-    Right: TAX INVOICE heading, Invoice No, Date, Payment Mode, Place of Supply.
-    """
+    """Render the configured business identity beside neatly spaced invoice details."""
     show_shop_details = s.flag("show_shop_details", True) and s.flag("show_business_info", True)
     show_name = s.flag("show_business_name", True) and s.flag("show_shop_name", True)
-    brand = _fmt_value(s.shop_name, "")
+    brand = _fmt_value(s.get("store_name_override") or s.shop_name, "")
 
     identity_rows = []
     if show_shop_details:
@@ -637,9 +637,9 @@ def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
 
     if show_shop_details and logo_flowable is not None and s.flag("show_business_logo", True):
         if identity_rows:
-            identity = _tbl([[logo_flowable, details]], [28 * mm, BODY_W * 0.60 - 28 * mm], [
+            identity = _tbl([[logo_flowable, details]], [30 * mm, BODY_W * 0.60 - 30 * mm], [
                 ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 2 * mm),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 3 * mm),
                 ("TOPPADDING", (0, 0), (-1, -1), 0),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
@@ -654,7 +654,7 @@ def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
 
     is_cancelled = getattr(invoice, "status", None) == "cancelled"
     doc_heading = "CANCELLED INVOICE" if is_cancelled else "TAX INVOICE"
-    doc_color = colors.HexColor("#DC2626") if is_cancelled else colors.HexColor("#0F172A")
+    doc_color = colors.HexColor("#DC2626") if is_cancelled else ACCENT
 
     control = [
         [para(doc_heading, size=15.0, bold=True, align=TA_RIGHT, color=doc_color)],
@@ -681,13 +681,19 @@ def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
             control.append([para(f"Cancelled At: {c_at}", size=6.8, align=TA_RIGHT)])
         control.append([para(f"Reason: {c_reason}", size=6.8, align=TA_RIGHT)])
 
-    right = _tbl(control, [None], [
+    control_style = [
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
         ("RIGHTPADDING", (0, 0), (-1, -1), 0),
         ("TOPPADDING", (0, 0), (-1, -1), 0.4),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 0.4),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-    ])
+    ]
+    if str(s.get("invoice_header_layout", "")).lower() == "corporate_bar":
+        control_style.extend([
+            ("LINEABOVE", (0, 0), (-1, 0), 3, ACCENT),
+            ("TOPPADDING", (0, 0), (-1, -1), 2.5),
+        ])
+    right = _tbl(control, [None], control_style)
 
     return [
         _tbl([[identity, right]], [BODY_W * 0.60, BODY_W * 0.40], [
@@ -711,8 +717,9 @@ def build_bill_to_and_details(s, invoice):
 
     left_rows = [
         [para("BILL TO", size=7.2, bold=True, color=colors.HexColor("#475569"))],
-        [para(cust_name, size=9.6, bold=True, color=colors.HexColor("#0F172A"))],
     ]
+    if s.flag("show_customer_name", True):
+        left_rows.append([para(cust_name, size=9.6, bold=True, color=colors.HexColor("#0F172A"))])
     if has_val(cust_addr) and s.flag("show_customer_address", True):
         left_rows.append([para(str(cust_addr).replace("\n", ", "), size=7.2, color=colors.HexColor("#334155"))])
     if has_val(cust_phone) and s.flag("show_customer_phone", True):
@@ -747,7 +754,7 @@ def build_items_table(s, invoice, show_tax, interstate):
     show_mfg = show_expiry and any_item_has(invoice, "mfg_date")
     show_exp = show_expiry and any_item_has(invoice, "exp_date")
     show_cess = show_tax and s.flag("cess_enabled", False) and any_item_cess(invoice)
-    show_gst_cols = show_tax and s.flag("show_tax_cols", True) and any_item_gst(invoice)
+    show_gst_cols = show_tax and s.flag("show_tax_cols", True) and s.flag("show_tax_breakdown", True) and any_item_gst(invoice)
 
     def cell(value, size=7.0, align=TA_RIGHT, bold=False):
         return para(value, size=size, align=align, bold=bold, leading=size + 2.0, color=colors.HexColor("#0F172A"))
@@ -784,7 +791,8 @@ def build_items_table(s, invoice, show_tax, interstate):
     if show_exp:
         columns.append(("exp", "EXP", 9, TA_CENTER, lambda i, idx: cell(short_date(getattr(i, "exp_date", None)), 6.1, TA_CENTER)))
     columns.append(("qty", "Qty", 10, TA_CENTER, lambda i, idx: cell(qty_text(i), 7.0, TA_CENTER)))
-    columns.append(("rate", "Rate", 16, TA_RIGHT, lambda i, idx: cell(currency(i.unit_price), 6.8, TA_RIGHT)))
+    if s.flag("show_rate_col", True):
+        columns.append(("rate", "Rate", 16, TA_RIGHT, lambda i, idx: cell(currency(i.unit_price), 6.8, TA_RIGHT)))
     if show_discount:
         columns.append(("disc", "Disc.", 10, TA_RIGHT, lambda i, idx: cell(f"{dec(getattr(i, 'discount_percent', 0))}%", 6.5, TA_RIGHT)))
     if show_gst_cols:
@@ -800,15 +808,16 @@ def build_items_table(s, invoice, show_tax, interstate):
     ratios = [c[2] for c in columns]
     scale = BODY_W / (sum(ratios) * mm)
     widths = [r * mm * scale for r in ratios]
-    rows = [[para(c[1], size=6.8, bold=True, align=c[3], color=colors.HexColor("#334155")) for c in columns]]
+    rows = [[para(c[1], size=6.8, bold=True, align=c[3], color=ACCENT) for c in columns]]
     for idx, item in enumerate(items, start=1):
         rows.append([c[4](item, idx) for c in columns])
 
-    return _tbl(rows, widths, [
+    table_style = str(s.get("invoice_table_style", "clean")).lower()
+    table_commands = [
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F8FAFC")),
-        ("LINEABOVE", (0, 0), (-1, 0), 0.75, colors.HexColor("#334155")),
-        ("LINEBELOW", (0, 0), (-1, 0), 0.75, colors.HexColor("#334155")),
-        ("LINEBELOW", (0, 1), (-1, -1), 0.25, colors.HexColor("#E2E8F0")),
+        ("LINEABOVE", (0, 0), (-1, 0), 0.75, ACCENT),
+        ("LINEBELOW", (0, 0), (-1, 0), 0.75, ACCENT),
+        ("LINEBELOW", (0, 1), (-1, -1), 0.25, SECONDARY_ACCENT),
         ("TOPPADDING", (0, 0), (-1, 0), 3.5),
         ("BOTTOMPADDING", (0, 0), (-1, 0), 3.5),
         ("TOPPADDING", (0, 1), (-1, -1), 3.0),
@@ -816,7 +825,14 @@ def build_items_table(s, invoice, show_tax, interstate):
         ("LEFTPADDING", (0, 0), (-1, -1), 2.5),
         ("RIGHTPADDING", (0, 0), (-1, -1), 2.5),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-    ], repeat=1)
+    ]
+    if table_style == "bold":
+        table_commands.append(("BACKGROUND", (0, 0), (-1, 0), ACCENT))
+        rows[0] = [para(c[1], size=6.8, bold=True, align=c[3], color=colors.white) for c in columns]
+    elif table_style == "striped":
+        for row_index in range(2, len(rows), 2):
+            table_commands.append(("BACKGROUND", (0, row_index), (-1, row_index), colors.HexColor("#F1F5F9")))
+    return _tbl(rows, widths, table_commands, repeat=1)
 
 
 def build_hsn_summary(invoice, show_tax, interstate):
@@ -881,10 +897,10 @@ def build_totals(s, invoice, show_tax, interstate):
             para(currency(amt), size=size, bold=bold, align=TA_RIGHT, color=colors.HexColor("#0F172A")),
         ]
 
-    rows = [row("Sub Total", subtotal)]
-    if discount != 0:
+    rows = [row("Sub Total", subtotal)] if s.flag("show_subtotal", True) else []
+    if discount != 0 and s.flag("show_discount_total", True):
         rows.append(row("Discount", -discount))
-    if show_tax:
+    if show_tax and s.flag("show_tax_breakdown", True):
         if interstate and igst != 0:
             rows.append(row("IGST", igst))
         else:
@@ -986,14 +1002,14 @@ def build_payment_and_bank(s, invoice):
         [
             para("PAYMENT STATUS", size=6.8, bold=True, color=colors.HexColor("#475569")),
             col_header("AMOUNT PAID"),
-            col_header("BALANCE DUE"),
-            col_header("MODE"),
+            col_header("BALANCE DUE") if s.flag("show_balance_due", True) else para("", size=1),
+            col_header("MODE") if s.flag("show_payment_mode", True) else para("", size=1),
         ],
         [
             para(status, size=8.2, bold=True, color=status_color),
             col_val(currency(paid)),
-            col_val(currency(balance), color=colors.HexColor("#DC2626") if balance > 0 else None),
-            col_val(mode),
+            col_val(currency(balance), color=colors.HexColor("#DC2626") if balance > 0 else None) if s.flag("show_balance_due", True) else para("", size=1),
+            col_val(mode) if s.flag("show_payment_mode", True) else para("", size=1),
         ],
     ]
 
@@ -1058,7 +1074,7 @@ def build_payment_and_bank(s, invoice):
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 0.5),
             ]))
     if s.flag("enable_invoice_qr", True):
-        bill_qr = make_bill_qr(invoice, size_mm=18)
+        bill_qr = make_bill_qr(invoice, size_mm=_qr_size_a4(s))
         if bill_qr:
             qr_blocks.append(_tbl([
                 [para("SCAN TO VIEW BILL", size=6.2, bold=True, align=TA_CENTER,
@@ -1094,7 +1110,7 @@ def build_payment_and_bank(s, invoice):
 
 def build_notes_and_terms(s, invoice):
     notes_text = getattr(invoice, "notes", "") or s.get("invoice_notes")
-    terms_text = s.get("invoice_terms")
+    terms_text = s.get("terms_override") or s.get("invoice_terms")
     show_notes = s.flag("show_notes", True) and has_val(notes_text)
     show_terms = s.flag("show_terms", True) and has_val(terms_text)
     if not show_notes and not show_terms:
@@ -1150,7 +1166,7 @@ def build_footer(s, invoice=None):
         meta.append(f"Time: {time_text}")
     meta.append(f"Bill Ref: {_bill_reference_token(invoice) if invoice is not None else 'BILL-REF'}")
     align = TA_LEFT if str(s.get("invoice_footer_layout", "text_center")).lower() == "text_left" else TA_CENTER
-    footer_text = _clean_footer(s.get("invoice_footer"))
+    footer_text = _clean_footer(s.get("footer_text_override") or s.get("invoice_footer"))
     flowables.extend([
         Spacer(1, 1.2 * mm),
         para(f"<b>{footer_text}</b>", size=7.5, align=align, color=colors.HexColor("#334155")),
@@ -1178,37 +1194,61 @@ def generate_invoice_pdf(invoice, force_a4=False, paper_size=None, template=None
     if template_name == "thermal_80" and not force_a4:
         raise ValueError("invoice_template is 'thermal_80' — use generate_thermal_invoice_pdf() instead.")
 
-    paper_key = str(paper_size or raw_settings.get("invoice_paper_size", "a4")).lower()
+    paper_key = str(paper_size or raw_settings.get("page_size") or raw_settings.get("invoice_paper_size", "a4")).lower()
+    if paper_key in ("80mm", "58mm"):
+        paper_key = "a5" if template_name == "half_a4" else "a4"
     if template_name in ("half_a4", "advanced_gst_a5") and not paper_size:
         paper_key = "a5"
 
     pagesize = _PAPER_SIZES.get(paper_key, A4)
+    if str(raw_settings.get("page_orientation", "portrait")).lower() == "landscape":
+        pagesize = (pagesize[1], pagesize[0])
     page_w, page_h = pagesize
-    margin = 5 * mm if paper_key == "a5" else 8 * mm
+    margin_defaults = {"compact": 5, "minimal": 4, "tight": 4, "wide": 12}
+    default_margin = margin_defaults.get(str(raw_settings.get("margin_size", "normal")).lower(), 8)
+    layout_cfg = raw_settings.get("layout") if isinstance(raw_settings.get("layout"), dict) else {}
+    def _margin(key):
+        try:
+            return max(0, float(layout_cfg.get(key, default_margin))) * mm
+        except (TypeError, ValueError):
+            return default_margin * mm
+    margin_top = _margin("margin_top_mm")
+    margin_bottom = _margin("margin_bottom_mm")
+    margin_left = _margin("margin_left_mm")
+    margin_right = _margin("margin_right_mm")
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer, pagesize=pagesize,
-        topMargin=margin, bottomMargin=margin,
-        leftMargin=margin, rightMargin=margin,
+        topMargin=margin_top, bottomMargin=margin_bottom,
+        leftMargin=margin_left, rightMargin=margin_right,
         title=f"Tax Invoice {invoice.invoice_number}", author="Billing Application",
     )
     # Recalculate body width for the chosen paper size.
     global BODY_W
     _orig_body_w = BODY_W
-    BODY_W = page_w - 2 * margin
+    BODY_W = page_w - margin_left - margin_right
 
     s = Settings(raw_settings)
     document_title, show_tax = resolve_document_mode(s, invoice)
     interstate = resolve_interstate(s, invoice)
     font_r, font_b = _resolve_fonts(raw_settings)
-    global FONT_R, FONT_B
+    global FONT_R, FONT_B, ACCENT, SECONDARY_ACCENT
     _orig_r, _orig_b = FONT_R, FONT_B
+    _orig_accent, _orig_secondary = ACCENT, SECONDARY_ACCENT
     FONT_R, FONT_B = font_r, font_b
+    def _configured_color(key, fallback):
+        value = str(raw_settings.get(key) or fallback)
+        try:
+            return colors.HexColor(value)
+        except Exception:
+            return colors.HexColor(fallback)
+    ACCENT = _configured_color("invoice_theme_color", "#1E3A5F")
+    SECONDARY_ACCENT = _configured_color("invoice_theme_secondary", "#64748B")
 
     story = []
     header_layout = str(s.get("invoice_header_layout", "logo_left")).lower()
-    logo = None if header_layout == "name_only" else _logo_for_a4(s)
+    logo = None if header_layout == "name_only" or not s.flag("show_business_logo", True) else _logo_for_a4(s, max_width_mm=22, max_height_mm=14)
     story.extend(build_header(s, invoice, document_title, logo))
     story.extend(build_bill_to_and_details(s, invoice))
     story.append(build_items_table(s, invoice, show_tax=show_tax, interstate=interstate))
@@ -1242,6 +1282,7 @@ def generate_invoice_pdf(invoice, force_a4=False, paper_size=None, template=None
 
     doc.build(story, onFirstPage=_page_chrome, onLaterPages=_page_chrome)
     FONT_R, FONT_B = _orig_r, _orig_b
+    ACCENT, SECONDARY_ACCENT = _orig_accent, _orig_secondary
     BODY_W = _orig_body_w
     buffer.seek(0)
     return buffer
@@ -1304,7 +1345,7 @@ def generate_thermal_invoice_pdf(invoice, template=None):
     buffer = BytesIO()
     s = load_settings(invoice, template=template)
 
-    shop_name = _fmt_value(s.get("shop_name"), "Business Name Not Configured")
+    shop_name = _fmt_value(s.get("store_name_override") or s.get("shop_name"), "Business Name Not Configured")
     shop_address = s.get("shop_address")
     shop_phone = s.get("shop_phone")
     shop_email = s.get("shop_email")
@@ -1314,9 +1355,11 @@ def generate_thermal_invoice_pdf(invoice, template=None):
     document_title, show_tax = resolve_document_mode(s, invoice)
     interstate = resolve_interstate(s, invoice)
     show_signature = s.flag("show_signature_thermal", False)
-    show_terms = has_val(s.get("invoice_terms"))
+    terms_text = s.get("terms_override") or s.get("invoice_terms")
+    show_terms = has_val(terms_text) and s.flag("show_terms", True)
     show_qr = s.flag("show_upi_qr_on_thermal", True) and has_val(upi_id)
     show_bill_qr = s.flag("enable_invoice_qr", True)
+    show_logo = s.flag("show_business_logo", True) and s.flag("thermal_show_logo", True)
 
     items = list(invoice.items.all())
     inv_date = _date_text(invoice.created_at)
@@ -1349,7 +1392,7 @@ def generate_thermal_invoice_pdf(invoice, template=None):
         + len([l for l in (shop_address or "").split("\n") if l.strip()]) * 3.5
         + (4 if shop_phone or shop_email else 0)
         + (4 if shop_gstin else 0)
-        + (18 if s.flag("show_business_logo", True) and (s.get("shop_logo_path") or s.get("shop_logo")) else 0)
+        + (12 if show_logo and (s.get("shop_logo_path") or s.get("shop_logo")) else 0)
         + len(items) * (14 if is_58mm else 9)
         + (32 if show_qr else 0)
         + (28 if show_bill_qr else 0)
@@ -1376,9 +1419,9 @@ def generate_thermal_invoice_pdf(invoice, template=None):
     show_shop_details = s.flag("show_shop_details", True) and s.flag("show_business_info", True)
     has_identity_rendered = False
     if show_shop_details:
-        if s.flag("show_business_logo", True):
-            max_logo_w = 28 if is_58mm else 40
-            max_logo_h = 13 if is_58mm else 18
+        if show_logo:
+            max_logo_w = 20 if is_58mm else 26
+            max_logo_h = 9 if is_58mm else 12
             logo = _logo_for_a4(s, max_width_mm=max_logo_w, max_height_mm=max_logo_h)
             if logo is not None:
                 logo.hAlign = "CENTER"
@@ -1435,7 +1478,8 @@ def generate_thermal_invoice_pdf(invoice, template=None):
 
     # 3. Customer block
     story.append(_tpara("BILL TO", size=T_META, bold=True))
-    story.append(_tpara(cust_name, size=T_ITEM + 0.5, bold=True))
+    if s.flag("show_customer_name", True):
+        story.append(_tpara(cust_name, size=T_ITEM + 0.5, bold=True))
     if has_val(cust_address) and s.flag("show_customer_address", True):
         story.append(_tpara(str(cust_address).replace("\n", ", "), size=T_META))
     if has_val(cust_phone) and s.flag("show_customer_phone", True):
@@ -1548,10 +1592,11 @@ def generate_thermal_invoice_pdf(invoice, template=None):
     sgst, cgst, igst = invoice_tax_breakup(invoice, interstate) if show_tax else (Decimal("0"), Decimal("0"), Decimal("0"))
     cess_amt = dec(getattr(invoice, "cess_amount", 0)) if show_tax and s.flag("cess_enabled", False) else Decimal("0.00")
 
-    totals_rows = [[_tpara("SUB TOTAL", size=T_META), _tpara(currency(subtotal), size=T_META, align=TA_RIGHT)]]
-    if discount_amt != 0:
+    totals_rows = ([[ _tpara("SUB TOTAL", size=T_META), _tpara(currency(subtotal), size=T_META, align=TA_RIGHT) ]]
+                   if s.flag("show_subtotal", True) else [])
+    if discount_amt != 0 and s.flag("show_discount_total", True):
         totals_rows.append([_tpara("DISCOUNT", size=T_META), _tpara(currency(discount_amt), size=T_META, align=TA_RIGHT)])
-    if show_tax:
+    if show_tax and s.flag("show_tax_breakdown", True):
         if interstate and igst != 0:
             totals_rows.append([_tpara("IGST", size=T_META), _tpara(currency(igst), size=T_META, align=TA_RIGHT)])
         else:
@@ -1636,7 +1681,7 @@ def generate_thermal_invoice_pdf(invoice, template=None):
 
     if has_terms:
         story.append(_tpara("TERMS & CONDITIONS", size=T_META, bold=True))
-        story.append(_tpara(s.get("invoice_terms"), size=5.8, leading=7.4))
+        story.append(_tpara(terms_text, size=5.8, leading=7.4))
         story.append(Spacer(1, 1.0 * mm))
 
     if show_signature:
@@ -1651,7 +1696,7 @@ def generate_thermal_invoice_pdf(invoice, template=None):
 
     if s.flag("show_footer", True) and str(s.get("invoice_footer_layout", "text_center")).lower() != "none":
         align = TA_LEFT if str(s.get("invoice_footer_layout", "text_center")).lower() == "text_left" else TA_CENTER
-        story.append(_tpara(_clean_footer(s.get("invoice_footer")).upper(), size=T_FOOTER, align=align, bold=True))
+        story.append(_tpara(_clean_footer(s.get("footer_text_override") or s.get("invoice_footer")).upper(), size=T_FOOTER, align=align, bold=True))
 
         date_text, time_text = _invoice_datetime(invoice)
         meta = []
@@ -1837,10 +1882,30 @@ def generate_report_pdf(
     if shop_gstin:
         meta_parts.append(f"GSTIN: {shop_gstin}")
 
-    left_flow = [Paragraph(_esc(shop_name), styles['shop_name'])]
+    business_flow = [Paragraph(_esc(shop_name), styles['shop_name'])]
     if meta_parts:
-        left_flow.append(Spacer(1, 1 * mm))
-        left_flow.append(Paragraph(_esc('  |  '.join(meta_parts)), styles['shop_meta']))
+        business_flow.append(Spacer(1, 1 * mm))
+        business_flow.append(Paragraph(_esc('  |  '.join(meta_parts)), styles['shop_meta']))
+
+    left_flow = business_flow
+    if logo_bytes:
+        try:
+            image_stream = BytesIO(logo_bytes)
+            image_width, image_height = ImageReader(image_stream).getSize()
+            image_scale = min((15 * mm) / image_width, (15 * mm) / image_height)
+            image = RLImage(BytesIO(logo_bytes), width=image_width * image_scale, height=image_height * image_scale)
+            identity = Table([[image, business_flow]], colWidths=[18 * mm, printable_w * 0.58 - 18 * mm], hAlign='LEFT')
+            identity.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (0, 0), 3 * mm),
+                ('RIGHTPADDING', (1, 0), (1, 0), 0),
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            ]))
+            left_flow = identity
+        except Exception:
+            left_flow = business_flow
 
     gen_time = timezone.localtime(timezone.now()).strftime('%d/%b/%Y, %I:%M %p')
     period_str = period_label or 'All available records'
@@ -1975,8 +2040,8 @@ def generate_report_pdf(
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('LEFTPADDING', (0, 0), (-1, -1), 4.5),
         ('RIGHTPADDING', (0, 0), (-1, -1), 4.5),
-        ('TOPPADDING', (0, 0), (-1, -1), 3.5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
     ]
     if norm_rows:
         for r_idx in range(1, len(table_data)):
@@ -2002,8 +2067,8 @@ def generate_report_pdf(
 
         canvas.setFillColor(C_MUTED)
         canvas.setFont(font_r, 6.8)
-        left_text = f"{footer_shop}{footer_contact}"
-        canvas.drawString(margin_l, 6 * mm, left_text[:110])
+        left_text = f"{footer_shop}{footer_contact}  |  {_clean_str(title)}"
+        canvas.drawString(margin_l, 6 * mm, left_text[:145])
 
         canvas.setFillColor(C_BLACK)
         canvas.setFont(font_b, 6.8)

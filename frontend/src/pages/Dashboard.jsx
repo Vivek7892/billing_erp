@@ -24,7 +24,7 @@ import {
   YAxis,
 } from 'recharts'
 import api from '../api'
-import { Badge } from '../components/UI'
+import { Badge, Spinner } from '../components/UI'
 import { useShop } from '../components/Layout'
 
 const EMPTY = {
@@ -232,21 +232,7 @@ export default function Dashboard() {
   )
 
   if (loading) {
-    return (
-      <div className="min-w-0 space-y-4 pb-6 animate-pulse">
-        <div className="h-16 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)]" />
-        <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-24 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)]" />
-          ))}
-        </div>
-        <div className="h-48 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)]" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2 h-64 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)]" />
-          <div className="h-64 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)]" />
-        </div>
-      </div>
-    )
+    return <Spinner label="Loading dashboard" />
   }
 
   return (
@@ -300,20 +286,20 @@ export default function Dashboard() {
             </button>
             <button
               type="button"
+              onClick={() => navigate('/reports')}
+              className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold shadow-2xs transition"
+            >
+              <FileText size={14} />
+              <span>Reports</span>
+            </button>
+             <button
+              type="button"
               onClick={loadDashboard}
               disabled={refreshing}
               className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold shadow-2xs transition"
             >
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
               <span>Refresh</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/reports')}
-              className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold shadow-2xs transition"
-            >
-              <FileText size={14} />
-              <span>Reports</span>
             </button>
           </div>
         </div>

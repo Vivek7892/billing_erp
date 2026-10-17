@@ -1,4 +1,3 @@
-import { HeartOff } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 export default function AppFooter({ shopName }) {
@@ -7,91 +6,39 @@ export default function AppFooter({ shopName }) {
 
   const quickLinks = [
     { label: 'Dashboard', path: '/' },
-    { label: 'Billing', path: '/billing' },
+    { label: 'Billing', path: '/billing/new' },
     { label: 'Reports', path: '/reports' },
     { label: 'Settings', path: '/settings' },
-    { label: 'Terms & Conditions', path: '/terms-and-conditions' },
+    { label: 'Terms', path: '/terms-and-conditions' },
   ]
 
   return (
-    <footer
-      className="mt-auto border-t border-[var(--line-subtle)] bg-[var(--surface)] text-[var(--muted-light)]" 
-    >
-      <div
-        className="
-          mx-auto
-          flex
-          min-h-[52px]
-          max-w-[1800px]
-          items-center
-          justify-between
-          gap-4
-          px-4
-          py-2
-          sm:px-6
-          lg:px-8
-        "
-      >
-        {/* Company Branding */}
-        <div className="flex min-w-0 shrink-0 items-center gap-2.5">
-          <div
-            className="
-              flex
-              h-8
-              w-8
-              shrink-0
-              items-center
-              justify-center
-              overflow-hidden
-              rounded-lg
-              border
-              border-[var(--line-subtle)]
-              bg-white
-            "
-          >
-            <img
-              src="/logo.png"
-              alt={`${brandName} logo`}
-              className="h-full w-full object-contain p-1"
-            />
-          </div>
+    <footer className="mt-auto border-t border-[var(--line)] bg-[var(--surface)]">
+      <div className="mx-auto flex max-w-[1800px] flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
 
-          <div className="min-w-0">
-            <p className="truncate text-[11px] font-semibold text-[var(--text)] sm:text-xs">
-              {brandName}
-            </p>
+        {/* Brand */}
+        <div className="flex items-center gap-2">
+          <img
+            src="/logo.png"
+            alt={`${brandName} logo`}
+            className="h-6 w-6 rounded object-contain"
+          />
 
-            <p className="hidden text-[10px] text-[var(--muted-light)] lg:block">
-              Smart billing. Simple business.
-            </p>
-          </div>
+          <span className="text-xs font-semibold text-[var(--text)]">
+            {brandName}
+          </span>
         </div>
 
-        {/* Quick Links */}
+        {/* Links */}
         <nav
-          aria-label="Quick links"
-          className="
-            hidden
-            items-center
-            justify-center
-            gap-4
-            md:flex
-            lg:gap-5
-          "
+          aria-label="Footer navigation"
+          className="flex flex-wrap items-center gap-x-3 gap-y-1"
         >
           {quickLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
-              className="
-                whitespace-nowrap
-                text-[11px]
-                font-medium
-                text-[var(--muted-light)]
-                transition-colors
-                duration-200
-                hover:text-[var(--text)]
-              "
+              className="text-[11px] text-[var(--muted-light)] transition-colors hover:text-[var(--text)]"
             >
               {link.label}
             </Link>
@@ -99,49 +46,26 @@ export default function AppFooter({ shopName }) {
         </nav>
 
         {/* Copyright */}
-        <p className="hidden text-center text-[10px] sm:block sm:text-[11px]">
-          @{currentYear} {brandName}. All rights reserved.
-        </p>
-
-        {/* Powered By */}
-        <p className="hidden text-right text-[10px] lg:block lg:text-[11px]">
-          Powered by{' '}
-          <span className="font-semibold text-[var(--text)]">
-          <a href="https://dreamwithtech.dev" target="_blank" rel="noopener noreferrer">Dreamwithtech</a>
+        <div className="flex items-center gap-3 text-[10px] text-[var(--muted-light)]">
+          <span>
+            © {currentYear} {brandName}
           </span>
-        </p>
-      </div>
 
-      {/* Mobile Quick Links */}
-      <div
-        className="
-          flex
-          items-center
-          justify-center
-          gap-4
-          border-t
-          border-[var(--line-subtle)]
-          px-3
-          py-1.5
-          md:hidden
-        "
-      >
-        {quickLinks.map((link) => (
-          <Link
-            key={link.path}
-            to={link.path}
-            className="
-              text-[10px]
-              font-medium
-              text-[var(--muted-light)]
-              transition-colors
-              duration-200
-              hover:text-[var(--text)]
-            "
-          >
-            {link.label}
-          </Link>
-        ))}
+          <span className="hidden sm:inline">·</span>
+
+          <span className="hidden sm:inline">
+            Powered by{' '}
+            <a
+              href="https://dreamwithtech.dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-[var(--text)] hover:underline"
+            >
+              Dreamwithtech
+            </a>
+          </span>
+        </div>
+
       </div>
     </footer>
   )

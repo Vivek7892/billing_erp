@@ -566,6 +566,47 @@ export function generatePrintStandHtml({
       .print-btn { flex: 1; max-width: 240px; }
     }
 
+    /* Simple, print-friendly stand layout */
+    html, body { background: #ffffff; }
+    .print-wrapper { min-height: 100vh; padding: 20px 12px; }
+    .standee-card {
+      max-width: 320px;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, .08);
+    }
+    .header-banner {
+      background: #ffffff;
+      color: #0f2744;
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      gap: 8px;
+    }
+    .header-logo { width: 44px; height: 44px; border: 1px solid #e2e8f0; box-shadow: none; }
+    .shop-title { color: #0f2744; font-size: 18px; text-transform: none; }
+    .accepted-tag {
+      background: transparent;
+      color: #475569;
+      padding: 0;
+      font-size: 9px;
+      letter-spacing: .06em;
+    }
+    .scan-bar { padding: 10px 14px; }
+    .scan-title { margin-bottom: 6px; }
+    .brand-row { gap: 14px; }
+    .brand-item svg { height: 20px; }
+    .qr-container { padding: 16px 12px; }
+    .qr-frame { padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: none; }
+    .qr-frame svg { width: 210px; height: 210px; max-width: 68vw; max-height: 68vw; }
+    .amount-box { background: #f8fafc; border-color: #e2e8f0; padding: 10px 14px; }
+    .amount-label { color: #475569; }
+    .amount-val { color: #0f2744; font-size: 24px; }
+    .upi-info { padding: 10px 14px 14px; }
+    .upi-vpa { font-size: 12px; background: #ffffff; }
+    .standee-footer { background: #f8fafc; color: #64748b; border-top: 1px solid #e2e8f0; }
+    .print-btn { background: #0f2744; box-shadow: none; }
+    .print-btn:hover { background: #1e3a5f; }
+
     @media print {
       @page {
         size: A4 portrait;
@@ -657,7 +698,7 @@ export function generatePrintStandHtml({
  * - Merchant UPI ID: pure white card with uppercase label and monospace bold UPI ID
  * - Standee base footer: slate-900 (#0F172A) with slate-400 (#94A3B8) text
  */
-export function drawTabletopStandeeCanvas({
+function drawTabletopStandeeCanvasLegacy({
   canvas,
   merchantName = 'Sri Balaji Store',
   upiId = '',
@@ -951,4 +992,97 @@ export function drawTabletopStandeeCanvas({
     ctx.strokeRect(0, 0, width, totalHeight)
   }
   ctx.stroke()
+}
+
+/** Draws a clean, high-resolution merchant QR stand for the PNG download. */
+export function drawTabletopStandeeCanvas({
+  canvas,
+  merchantName = 'Store Counter QR',
+  upiId = '',
+  isFixed = false,
+  numAmt = 0,
+  qrImg,
+  storeLogoImg = null,
+}) {
+  const width = 560
+  const headerHeight = storeLogoImg?.width ? 164 : 112
+  const qrSectionHeight = 390
+  const amountHeight = isFixed ? 82 : 0
+  const infoHeight = 100
+  const footerHeight = 42
+  const height = headerHeight + qrSectionHeight + amountHeight + infoHeight + footerHeight
+  canvas.width = width
+  canvas.height = height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, width, height)
+  ctx.strokeStyle = '#cbd5e1'
+  ctx.lineWidth = 2
+  ctx.strokeRect(1, 1, width - 2, height - 2)
+
+  let y = 28
+  if (storeLogoImg?.width) {
+    const logoSize = 54
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect((width - logoSize) / 2, y, logoSize, logoSize)
+    ctx.drawImage(storeLogoImg, (width - logoSize) / 2 + 3, y + 3, logoSize - 6, logoSize - 6)
+    y += logoSize + 12
+  }
+
+  ctx.fillStyle = '#0f2744'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  let titleSize = 28
+  ctx.font = `600 ${titleSize}px Arial, sans-serif`
+  while (ctx.measureText(merchantName || 'Store Counter QR').width > width - 48 && titleSize > 18) {
+    titleSize -= 1
+    ctx.font = `600 ${titleSize}px Arial, sans-serif`
+  }
+  ctx.fillText(merchantName || 'Store Counter QR', width / 2, y + 12, width - 48)
+  ctx.fillStyle = '#64748b'
+  ctx.font = '500 16px Arial, sans-serif'
+  ctx.fillText('SCAN TO PAY WITH UPI', width / 2, y + 40)
+  y = headerHeight
+  ctx.fillStyle = '#f8fafc'
+  ctx.fillRect(0, y, width, qrSectionHeight)
+  const qrSize = 320
+  const qrX = (width - qrSize) / 2
+  const qrY = y + (qrSectionHeight - qrSize) / 2
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24)
+  ctx.strokeStyle = '#cbd5e1'
+  ctx.lineWidth = 2
+  ctx.strokeRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24)
+  if (qrImg?.width) ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize)
+  y += qrSectionHeight
+
+  if (isFixed) {
+    ctx.fillStyle = '#f1f5f9'
+    ctx.fillRect(0, y, width, amountHeight)
+    ctx.fillStyle = '#64748b'
+    ctx.font = '600 15px Arial, sans-serif'
+    ctx.fillText('AMOUNT PAYABLE', width / 2, y + 24)
+    ctx.fillStyle = '#0f2744'
+    ctx.font = '700 26px Arial, sans-serif'
+    ctx.fillText(`₹${Number(numAmt || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, width / 2, y + 56)
+    y += amountHeight
+  }
+
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, y, width, infoHeight)
+  ctx.fillStyle = '#64748b'
+  ctx.font = '600 14px Arial, sans-serif'
+  ctx.fillText('MERCHANT UPI ID', width / 2, y + 30)
+  ctx.fillStyle = '#0f172a'
+  ctx.font = '600 21px monospace'
+  ctx.fillText(upiId || '', width / 2, y + 66, width - 36)
+  y += infoHeight
+
+  ctx.fillStyle = '#f8fafc'
+  ctx.fillRect(0, y, width, footerHeight)
+  ctx.fillStyle = '#64748b'
+  ctx.font = '500 13px Arial, sans-serif'
+  ctx.fillText('UPI PAYMENTS ACCEPTED', width / 2, y + footerHeight / 2)
 }

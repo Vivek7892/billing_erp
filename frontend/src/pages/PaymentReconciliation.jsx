@@ -659,7 +659,7 @@ export default function PaymentReconciliation() {
   // --------------------------------------------------
 
   return (
-    <div className="reconciliation-page min-h-full w-full min-w-0 bg-[var(--surface)] p-3 sm:p-5 lg:p-6">
+    <div className="reconciliation-page min-h-full w-full min-w-0 text-[var(--ink)]">
       <style>{`
         .reconciliation-page .reconciliation-card {
           border: 1px solid var(--line);
@@ -676,7 +676,7 @@ export default function PaymentReconciliation() {
           }
         }
       `}</style>
-      <div className="mx-auto max-w-[1600px] space-y-6">
+      <div className="mx-auto max-w-[1600px] space-y-4 sm:space-y-5">
 
         {/* HEADER */}
         <div className="flex flex-col justify-between gap-4 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm lg:flex-row lg:items-center">

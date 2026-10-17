@@ -3030,7 +3030,7 @@
   .pb-workspace {
     display: flex;
     flex-direction: column;
-    padding: 6px;
+    padding: 6px 6px calc(92px + env(safe-area-inset-bottom));
     gap: 8px;
     flex: 1;
     height: auto;
@@ -3042,6 +3042,7 @@
     border-radius: var(--pb-r-lg);
     width: 100%;
     min-height: calc(100vh - 165px);
+    min-height: calc(100dvh - 165px);
     height: auto;
     flex-shrink: 0;
   }

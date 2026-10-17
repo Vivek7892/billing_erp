@@ -1,0 +1,29 @@
+import {
+  Bell,
+  Building2,
+  CreditCard,
+  FileText,
+  Gift,
+  HelpCircle,
+  Keyboard,
+  Percent,
+  Printer,
+  ShieldCheck,
+  Tag,
+  UserCheck,
+} from 'lucide-react'
+
+export const SETTINGS_TABS = [
+  { id: 'invoice-settings', label: 'Invoice Settings', icon: FileText, badge: '3 Templates' },
+  { id: 'print-settings', label: 'Print Settings', icon: Printer, badge: 'Thermal & Barcode' },
+  { id: 'manage-business', label: 'Manage Business', icon: Building2 },
+  { id: 'approvals', label: 'Approval Settings', icon: ShieldCheck },
+  { id: 'tax', label: 'Tax & GST', icon: Percent },
+  { id: 'payments', label: 'Payment & Bank', icon: CreditCard },
+  { id: 'reminders', label: 'Reminders', icon: Bell },
+  { id: 'account', label: 'Account', icon: UserCheck },
+  { id: 'pricing', label: 'Pricing', icon: Tag },
+  { id: 'refer', label: 'Refer & Earn', icon: Gift },
+  { id: 'support', label: 'Help & Support', icon: HelpCircle },
+  { id: 'keyboard', label: 'Keyboard Shortcuts', icon: Keyboard },
+]

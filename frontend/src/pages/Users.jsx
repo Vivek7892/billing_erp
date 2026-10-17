@@ -142,23 +142,23 @@ export default function Users() {
   }, [users])
 
   return (
-    <div className="space-y-4">
+    <div className="users-page w-full min-w-0 space-y-4">
       <PageHeader
         title="Users & Roles"
         subtitle="Manage system credentials and access roles (Accountant, Admin, Manager, Cashier, Owner)"
         action={
-          <button onClick={openAdd} className="btn-primary flex items-center gap-2">
+          <button onClick={openAdd} className="btn-primary flex min-h-[42px] w-full items-center justify-center gap-2 sm:w-auto">
             <Plus size={16} /> Add User
           </button>
         }
       />
 
       {/* Role Summary Quick Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] pb-3">
+      <div className="no-scrollbar flex items-center gap-2 overflow-x-auto border-b border-[var(--line)] pb-3">
         <button
           type="button"
           onClick={() => setRoleFilter('all')}
-          className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 border ${
+          className={`min-h-[38px] shrink-0 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 border ${
             roleFilter === 'all'
               ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
               : 'bg-[var(--surface)] text-[var(--ink-secondary)] border-[var(--line)] hover:bg-[var(--surface-hover)]'
@@ -175,7 +175,7 @@ export default function Users() {
             key={opt.value}
             type="button"
             onClick={() => setRoleFilter(opt.value)}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 border ${
+            className={`min-h-[38px] shrink-0 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 border ${
               roleFilter === opt.value
                 ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
                 : 'bg-[var(--surface)] text-[var(--ink-secondary)] border-[var(--line)] hover:bg-[var(--surface-hover)]'

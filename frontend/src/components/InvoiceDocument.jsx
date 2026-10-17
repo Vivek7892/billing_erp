@@ -114,10 +114,10 @@ export default function InvoiceDocument({
   // Determine effective invoice mode
   const effectiveMode = useMemo(() => {
     if (mode === 'thermal' || mode === 'thermal_80' || mode === 'thermal_58') return 'thermal'
-    if (mode === 'half_a4' || mode === 'a5' || mode === 'advanced_gst_a5') return 'half_a4'
-    if (mode === 'a4' || mode === 'gst_a4' || mode === 'luxury' || mode === 'stylish') return 'a4'
+    if (mode === 'half_a4' || mode === 'a5' || mode === 'advanced_gst_a5' || mode === 'compact') return 'half_a4'
+    if (mode === 'a4' || mode === 'gst_a4' || mode === 'classic' || mode === 'luxury' || mode === 'stylish' || mode === 'professional') return 'a4'
     if (s.invoice_template === 'thermal_80' || s.invoice_template === 'thermal_58' || s.invoice_template === 'thermal') return 'thermal'
-    if (s.invoice_template === 'half_a4' || s.invoice_template === 'advanced_gst_a5') return 'half_a4'
+    if (s.invoice_template === 'half_a4' || s.invoice_template === 'advanced_gst_a5' || s.invoice_template === 'compact') return 'half_a4'
     return 'a4'
   }, [mode, s.invoice_template])
 
@@ -147,6 +147,10 @@ export default function InvoiceDocument({
   const tTax = activeTplConfig?.tax || {}
   const tPayment = activeTplConfig?.payment || {}
   const tPage = activeTplConfig?.page || {}
+  const accentColor = s.invoice_theme_color || tLayout.accent_color || '#1E3A5F'
+  const secondaryColor = s.invoice_theme_secondary || tLayout.secondary_color || accentColor
+  const invoiceBorderStyle = s.invoice_border_style || 'solid'
+  const invoiceTableStyle = s.invoice_table_style || 'clean'
 
   // Currency formatter
   const fmt = val => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -183,22 +187,24 @@ export default function InvoiceDocument({
   const cin = s.cin || ''
 
   // Business display flags
-  const showShopDetails = (
-    tBiz.show_shop_details !== undefined
-      ? Boolean(tBiz.show_shop_details)
-      : (tBiz.show_business_info !== undefined
-          ? Boolean(tBiz.show_business_info)
-          : isTrue(s.show_shop_details, isTrue(s.show_business_info, true)))
+  const showShopDetails = isTrue(
+    tBiz.show_shop_details !== undefined ? tBiz.show_shop_details
+      : tBiz.show_business_info !== undefined ? tBiz.show_business_info
+        : s.show_shop_details !== undefined ? s.show_shop_details : s.show_business_info,
+    true,
   )
-  const showShopName = showShopDetails && (
-    tBiz.show_name !== undefined
-      ? Boolean(tBiz.show_name)
-      : (tBiz.show_business_name !== undefined
-          ? Boolean(tBiz.show_business_name)
-          : isTrue(s.show_business_name, isTrue(s.show_shop_name, true)))
-  ) && Boolean(rawShopName || shopName)
-  const showLogo = showShopDetails && (tBiz.show_logo !== undefined ? Boolean(tBiz.show_logo) : isTrue(s.show_business_logo, true)) && Boolean(shopLogo) && (tBiz.header_layout || s.invoice_header_layout) !== 'name_only'
-  const isCorporateA4 = effectiveMode === 'a4' && (tBiz.header_layout || s.invoice_header_layout) === 'corporate_bar'
+  const templateShowName = tBiz.show_name !== undefined ? tBiz.show_name : tBiz.show_business_name
+  const showShopName = showShopDetails
+    && isTrue(s.show_business_name, true)
+    && isTrue(s.show_shop_name, true)
+    && isTrue(templateShowName, true)
+    && Boolean(rawShopName || shopName)
+  const showLogoSetting = isTrue(s.show_business_logo, true)
+    && isTrue(tBiz.show_logo, true)
+    && (effectiveMode !== 'thermal' || isTrue(s.thermal_show_logo, true))
+  const showLogo = showShopDetails && showLogoSetting && Boolean(shopLogo)
+    && (tBiz.header_layout || s.invoice_header_layout) !== 'name_only'
+  const isCorporateA4 = effectiveMode === 'a4' && ((tBiz.header_layout || s.invoice_header_layout) === 'corporate_bar' || mode === 'professional' || mode === 'stylish' || s.invoice_template === 'professional' || s.invoice_template === 'stylish')
   const showAddress = showShopDetails && (tBiz.show_address !== undefined ? Boolean(tBiz.show_address) : isTrue(s.show_business_address, true)) && Boolean(shopAddress)
   const showPhone = showShopDetails && (tBiz.show_phone !== undefined ? Boolean(tBiz.show_phone) : isTrue(s.show_business_phone, true)) && Boolean(shopPhone)
   const showEmail = showShopDetails && (tBiz.show_email !== undefined ? Boolean(tBiz.show_email) : isTrue(s.show_business_email, true)) && Boolean(shopEmail)
@@ -213,7 +219,7 @@ export default function InvoiceDocument({
   const custAddress = inv.customer_address || inv.customer?.address || ''
   const custGstin = inv.customer_gstin || inv.customer?.gstin || ''
 
-  const showCustName = tFields.show_customer_name !== undefined ? tFields.show_customer_name : true
+  const showCustName = isTrue(tFields.show_customer_name, true)
   const showCustPhone = (tFields.show_customer_phone !== undefined ? tFields.show_customer_phone : isTrue(s.show_customer_phone, true)) && Boolean(custPhone)
   const showCustAddress = (tFields.show_customer_address !== undefined ? tFields.show_customer_address : isTrue(s.show_customer_address, true)) && Boolean(custAddress)
   const showCustGstin = (tFields.show_customer_gstin !== undefined ? tFields.show_customer_gstin : isTrue(s.show_customer_gstin, true)) && Boolean(custGstin)
@@ -286,26 +292,26 @@ export default function InvoiceDocument({
   const showCessCol = isTrue(s.cess_enabled, false) && cessAmount > 0
 
   // Tax breakdown flags
-  const showSubtotal = tTax.show_subtotal !== undefined ? tTax.show_subtotal : true
-  const showDiscountTotal = tTax.show_discount_total !== undefined ? tTax.show_discount_total : true
-  const showTaxSummary = tTax.show_tax_summary !== undefined ? tTax.show_tax_summary : true
+  const showSubtotal = isTrue(tTax.show_subtotal, true)
+  const showDiscountTotal = isTrue(tTax.show_discount_total, true)
+  const showTaxSummary = isTrue(tTax.show_tax_summary, true)
   const showRoundOff = tTax.show_round_off !== undefined ? tTax.show_round_off : isTrue(s.round_off, true)
   const showWords = (tTax.show_amount_in_words !== undefined ? tTax.show_amount_in_words : isTrue(s.show_amount_in_words, true))
 
   // Payment, QR & Bank
-  const showPaymentSummary = tPayment.show_payment_summary !== undefined ? tPayment.show_payment_summary : isTrue(s.show_payment_summary, true)
-  const showBalanceDue = tPayment.show_balance_due !== undefined ? tPayment.show_balance_due : isTrue(s.show_balance_due, true)
+  const showPaymentSummary = isTrue(tPayment.show_payment_summary, isTrue(s.show_payment_summary, true))
+  const showBalanceDue = isTrue(tPayment.show_balance_due, isTrue(s.show_balance_due, true))
   const bankDetailsText = s.shop_bank_details || [
     s.shop_bank_name ? `Bank: ${s.shop_bank_name}` : '',
     s.shop_bank_account ? `A/C: ${s.shop_bank_account}` : '',
     s.shop_bank_ifsc ? `IFSC: ${s.shop_bank_ifsc}` : '',
     s.shop_bank_branch ? `Branch: ${s.shop_bank_branch}` : '',
   ].filter(Boolean).join(' | ')
-  const showBankDetails = (tPayment.show_bank_details !== undefined ? tPayment.show_bank_details : isTrue(s.show_bank_details, true)) && Boolean(bankDetailsText)
+  const showBankDetails = isTrue(tPayment.show_bank_details, isTrue(s.show_bank_details, true)) && Boolean(bankDetailsText)
   const upiId = s.shop_upi_id || ''
-  const showUpiA4 = (tPayment.show_upi_qr !== undefined ? tPayment.show_upi_qr : isTrue(s.show_upi_qr_on_invoice, true)) && Boolean(upiId)
-  const showUpiThermal = (tPayment.show_upi_qr !== undefined ? tPayment.show_upi_qr : isTrue(s.show_upi_qr_on_thermal, true)) && Boolean(upiId)
-  const is58mm = mode === 'thermal_58' || tPage.thermal_roll_width === '58mm' || (s.invoice_template === 'thermal_58' && mode !== 'thermal_80' && mode !== 'a4' && mode !== 'half_a4')
+  const showUpiA4 = isTrue(tPayment.show_upi_qr, isTrue(s.show_upi_qr_on_invoice, true)) && Boolean(upiId)
+  const showUpiThermal = isTrue(tPayment.show_upi_qr, isTrue(s.show_upi_qr_on_thermal, true)) && Boolean(upiId)
+  const is58mm = mode === 'thermal_58' || (mode === 'thermal' && (s.thermal_paper_width === '58' || s.thermal_paper_width === '58mm' || s.thermal_paper_width === '2' || s.printer_type === 'thermal_58')) || tPage.thermal_roll_width === '58mm' || (s.invoice_template === 'thermal_58' && mode !== 'thermal_80' && mode !== 'a4' && mode !== 'half_a4')
 
   const qrSizeA4 = ({ small: 64, medium: 78, large: 96 })[s.upi_qr_size_a4] || 78
   const qrSizeThermal = is58mm
@@ -314,7 +320,7 @@ export default function InvoiceDocument({
   const qrValue = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(shopName)}&am=${grandTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(invoiceNo)}`
 
   // Digital Bill QR Code ("Scan to View Bill")
-  const showDigitalBillQr = tPayment.show_digital_bill_qr !== undefined ? tPayment.show_digital_bill_qr : isTrue(s.enable_invoice_qr, true)
+  const showDigitalBillQr = isTrue(tPayment.show_digital_bill_qr, isTrue(s.enable_invoice_qr, true))
   const digitalBillUrl = inv.short_url
     || (inv.public_token ? `${window.location.origin}/bill/${inv.public_token}` : `${window.location.origin}/bill/${inv.id || 'preview'}`)
     || (inv.id ? `http://127.0.0.1:8000/s/${inv.public_token ? inv.public_token.slice(0, 6) : inv.id}/` : '')
@@ -363,13 +369,13 @@ export default function InvoiceDocument({
               <>
                 {/* Store Logo */}
                 {showLogo && shopLogo && (
-                  <div style={{ textAlign: 'center', marginBottom: 4 }}>
+                  <div style={{ textAlign: 'center', marginBottom: 8 }}>
                     <img
                       src={shopLogo}
                       alt="Store Logo"
                       style={{
-                        maxHeight: is58mm ? 28 : 38,
-                        maxWidth: is58mm ? 120 : 160,
+                        maxHeight: is58mm ? 20 : 26,
+                        maxWidth: is58mm ? 76 : 100,
                         objectFit: 'contain',
                         margin: '0 auto',
                         display: 'block',
@@ -409,7 +415,9 @@ export default function InvoiceDocument({
               {docHeading}
             </div>
             <div style={{ textAlign: 'center', fontSize: is58mm ? 9 : 10, fontWeight: '600' }}>{invoiceNo}</div>
-            <div style={{ textAlign: 'center', fontSize: is58mm ? 8.5 : 9.5 }}>Date: {invoiceDate}</div>
+            <div style={{ textAlign: 'center', fontSize: is58mm ? 8.5 : 9.5 }}>
+              Date: {invoiceDate}{(isTrue(s.thermal_show_time, isTrue(s.show_invoice_time, true)) && invoiceTime) ? ` ${invoiceTime}` : ''}
+            </div>
             {showPaymentMode && (
               <div style={{ textAlign: 'center', fontSize: is58mm ? 8.5 : 9.5 }}>Payment: {paymentMode}</div>
             )}
@@ -430,6 +438,9 @@ export default function InvoiceDocument({
             {showCustAddress && <div style={{ fontSize: is58mm ? 8 : 8.5 }}>{custAddress}</div>}
             {showCustPhone && <div style={{ fontSize: is58mm ? 8 : 8.5 }}>Ph: {custPhone}</div>}
             {showCustGstin && <div style={{ fontSize: is58mm ? 8 : 8.5 }}>GSTIN: {custGstin}</div>}
+            {isTrue(s.thermal_show_party_balance, isTrue(s.show_balance_due, true)) && (
+              <div style={{ fontSize: is58mm ? 8 : 8.5 }}>Balance Due: {fmt(balanceDue)}</div>
+            )}
 
             <div style={{ borderTop: '1px dashed #000', margin: '5px 0' }} />
 
@@ -618,20 +629,22 @@ export default function InvoiceDocument({
 
         <div className="overflow-x-auto print:overflow-visible flex justify-center">
           <div
-            className="bg-white text-[#0F172A] border border-slate-300 shadow-sm print:shadow-none print:border-none rounded-sm print:m-0"
+            className="bg-white text-[#0F172A] border shadow-sm print:shadow-none print:border-none rounded-sm print:m-0"
             style={{
               width: 560,
               maxWidth: '100%',
-              minHeight: 420,
+              minHeight: effectiveMode === 'thermal' ? undefined : 792,
               fontFamily,
               fontSize: 10,
               padding: '16px 20px',
               boxSizing: 'border-box',
               lineHeight: 1.35,
+              borderColor: `${accentColor}55`,
+              borderStyle: invoiceBorderStyle === 'double' ? 'double' : invoiceBorderStyle === 'dashed' ? 'dashed' : 'solid',
             }}
           >
             {/* Header: Shop info left, invoice metadata right */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, gap: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, gap: 16 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 {showShopDetails && (
                   <>
@@ -639,11 +652,11 @@ export default function InvoiceDocument({
                       <img
                         src={shopLogo}
                         alt="Store Logo"
-                        style={{ maxHeight: 36, maxWidth: 110, objectFit: 'contain', marginBottom: 4 }}
+                        style={{ maxHeight: 28, maxWidth: 84, objectFit: 'contain', marginBottom: 8 }}
                       />
                     )}
                     {showShopName && shopName && (
-                      <div style={{ fontWeight: '800', fontSize: 14.5, textTransform: 'uppercase', color: '#0F172A', letterSpacing: '0.02em', lineHeight: 1.2 }}>
+                      <div style={{ fontWeight: '800', fontSize: 14.5, textTransform: 'uppercase', color: accentColor, letterSpacing: '0.02em', lineHeight: 1.2 }}>
                         {shopName}
                       </div>
                     )}
@@ -674,7 +687,7 @@ export default function InvoiceDocument({
                   fontWeight: '800',
                   fontSize: 15,
                   letterSpacing: '0.03em',
-                  color: isCancelled ? '#DC2626' : '#0F172A',
+                  color: isCancelled ? '#DC2626' : accentColor,
                 }}>
                   {docHeading}
                 </div>
@@ -708,7 +721,7 @@ export default function InvoiceDocument({
               </div>
             </div>
 
-            <div style={{ borderTop: '1px solid #CBD5E1', marginBottom: 8 }} />
+            <div style={{ borderTop: `1px ${invoiceBorderStyle === 'dashed' ? 'dashed' : 'solid'} ${secondaryColor}66`, marginBottom: 8 }} />
 
             {/* Bill To & UPI QR */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 10 }}>
@@ -743,7 +756,7 @@ export default function InvoiceDocument({
             {/* Items Table */}
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 9.5, marginTop: 2 }}>
               <thead>
-                <tr style={{ background: '#F8FAFC', borderTop: '1px solid #334155', borderBottom: '1px solid #334155' }}>
+                <tr style={{ background: invoiceTableStyle === 'bold' ? `${accentColor}18` : `${secondaryColor}10`, borderTop: `1px ${invoiceBorderStyle === 'dashed' ? 'dashed' : 'solid'} ${accentColor}`, borderBottom: `1px ${invoiceBorderStyle === 'dashed' ? 'dashed' : 'solid'} ${accentColor}` }}>
                   <th style={{ textAlign: 'center', padding: '4px 3px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 26 }}>#</th>
                   <th style={{ textAlign: 'left', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155' }}>Item</th>
                   {showHsnCol && (
@@ -762,7 +775,7 @@ export default function InvoiceDocument({
               </thead>
               <tbody>
                 {items.map((item, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0' }}>
+                  <tr key={idx} style={{ borderBottom: `1px ${invoiceBorderStyle === 'dashed' ? 'dashed' : 'solid'} #E2E8F0`, background: invoiceTableStyle === 'striped' && idx % 2 === 1 ? `${secondaryColor}0A` : '#FFFFFF' }}>
                     <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 8.5, color: '#64748B' }}>{idx + 1}</td>
                     <td style={{ padding: '4px 4px', fontSize: 9.5, color: '#0F172A', fontWeight: '500', wordBreak: 'break-word' }}>
                       <div>{item.name}</div>
@@ -862,11 +875,11 @@ export default function InvoiceDocument({
                   padding: '5px 7px',
                   fontWeight: '800',
                   fontSize: 12,
-                  borderTop: '1px solid #0F172A',
-                  borderBottom: '1px solid #0F172A',
-                  background: '#F1F5F9',
+                  borderTop: `1px solid ${accentColor}`,
+                  borderBottom: `1px solid ${accentColor}`,
+                  background: `${secondaryColor}12`,
                   marginTop: 4,
-                  color: '#0F172A',
+                  color: accentColor,
                 }}>
                   <span>GRAND TOTAL</span>
                   <span>{fmt(grandTotal)}</span>
@@ -948,7 +961,7 @@ export default function InvoiceDocument({
                 marginTop: 8,
                 marginBottom: 2,
               }}>
-                <QRCodeSVG value={digitalBillUrl} size={54} />
+                <QRCodeSVG value={digitalBillUrl} size={qrSizeA4} />
                 <span style={{ fontSize: 8, fontWeight: '700', color: '#475569', marginTop: 2, letterSpacing: '0.02em' }}>
                   Scan to View Bill
                 </span>
@@ -989,7 +1002,7 @@ export default function InvoiceDocument({
           className="bg-white text-[#0F172A] border border-slate-200 shadow-sm print:shadow-none print:border-none mx-auto rounded-sm print:m-0"
           style={{
             width: 794,
-            minHeight: 560,
+            minHeight: 1123,
             fontFamily,
             fontSize: 11,
             padding: '24px 28px',
@@ -1003,6 +1016,7 @@ export default function InvoiceDocument({
               justifyContent: 'space-between',
               alignItems: 'flex-start',
               marginBottom: 12,
+              gap: 18,
               padding: isCorporateA4 ? '12px 14px' : 0,
               border: isCorporateA4 ? '1px solid #CBD5E1' : undefined,
               borderTop: isCorporateA4 ? '4px solid #1E3A5F' : undefined,
@@ -1017,7 +1031,7 @@ export default function InvoiceDocument({
                     <img
                       src={shopLogo}
                       alt="Business Logo"
-                      style={{ maxHeight: 46, maxWidth: 140, objectFit: 'contain', marginBottom: 6 }}
+                      style={{ maxHeight: 32, maxWidth: 100, objectFit: 'contain', marginBottom: 8 }}
                     />
                   )}
                   {showShopName && shopName && (
@@ -1361,7 +1375,7 @@ export default function InvoiceDocument({
               marginTop: 14,
               marginBottom: 4,
             }}>
-              <QRCodeSVG value={digitalBillUrl} size={68} />
+              <QRCodeSVG value={digitalBillUrl} size={qrSizeA4} />
               <span style={{ fontSize: 9, fontWeight: '700', color: '#475569', marginTop: 3, letterSpacing: '0.02em' }}>
                 Scan to View Bill
               </span>

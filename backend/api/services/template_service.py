@@ -277,6 +277,10 @@ def _build_structured_sections(flat_cfg: Dict[str, Any], template_id: str) -> Di
     if 'header_alignment' not in lay: lay['header_alignment'] = flat_cfg.get('header_alignment', 'left')
     if 'compact_mode' not in lay: lay['compact_mode'] = flat_cfg.get('font_size') == 'compact' or template_id in ('half_a4', 'thermal_80', 'thermal_58')
     if 'show_separator_lines' not in lay: lay['show_separator_lines'] = _to_bool(flat_cfg.get('show_separator_lines', True))
+    if 'accent_color' not in lay: lay['accent_color'] = flat_cfg.get('invoice_theme_color', '#1E3A5F')
+    if 'secondary_color' not in lay: lay['secondary_color'] = flat_cfg.get('invoice_theme_secondary', '#64748B')
+    if 'border_style' not in lay: lay['border_style'] = flat_cfg.get('invoice_border_style', 'solid')
+    if 'table_style' not in lay: lay['table_style'] = flat_cfg.get('invoice_table_style', 'clean')
     if 'margin_top_mm' not in lay: lay['margin_top_mm'] = 5 if flat_cfg.get('margin_size') == 'compact' else (4 if flat_cfg.get('margin_size') == 'minimal' else 8)
     if 'margin_bottom_mm' not in lay: lay['margin_bottom_mm'] = 5 if flat_cfg.get('margin_size') == 'compact' else (4 if flat_cfg.get('margin_size') == 'minimal' else 8)
     if 'margin_left_mm' not in lay: lay['margin_left_mm'] = 5 if flat_cfg.get('margin_size') == 'compact' else (4 if flat_cfg.get('margin_size') == 'minimal' else 8)
@@ -409,6 +413,10 @@ def save_template_config(business: Business, template_id: str, new_config: Dict[
     if 'compact_mode' in lay: clean_config['font_size'] = 'compact' if lay['compact_mode'] else 'normal'
     if 'show_separator_lines' in lay: clean_config['show_separator_lines'] = 'true' if lay['show_separator_lines'] else 'false'
     if 'header_alignment' in lay: clean_config['header_alignment'] = str(lay['header_alignment'])
+    if 'accent_color' in lay: clean_config['invoice_theme_color'] = str(lay['accent_color'])
+    if 'secondary_color' in lay: clean_config['invoice_theme_secondary'] = str(lay['secondary_color'])
+    if 'border_style' in lay: clean_config['invoice_border_style'] = str(lay['border_style'])
+    if 'table_style' in lay: clean_config['invoice_table_style'] = str(lay['table_style'])
 
     tx = clean_config.get('tax') or new_config.get('tax') or {}
     if 'show_subtotal' in tx: clean_config['show_subtotal'] = 'true' if tx['show_subtotal'] else 'false'
@@ -611,5 +619,25 @@ def resolve_invoice_template_settings(
     # overlaying template-specific display, layout, typography and column settings.
     merged = deepcopy(base_settings)
     merged.update(tpl_cfg)
+
+    # Business-level visibility switches are master controls across every
+    # template. A saved template may further hide an element, but cannot turn
+    # it back on after it has been disabled globally.
+    global_logo = base_settings.get('show_business_logo')
+    if global_logo is not None:
+        merged['show_business_logo'] = 'true' if (
+            _to_bool(global_logo) and _to_bool(tpl_cfg.get('show_business_logo', True))
+        ) else 'false'
+
+    has_global_name = 'show_business_name' in base_settings or 'show_shop_name' in base_settings
+    if has_global_name:
+        show_name = (
+            _to_bool(base_settings.get('show_business_name', True))
+            and _to_bool(base_settings.get('show_shop_name', True))
+            and _to_bool(tpl_cfg.get('show_business_name', True))
+        )
+        merged['show_business_name'] = 'true' if show_name else 'false'
+        merged['show_shop_name'] = 'true' if show_name and _to_bool(tpl_cfg.get('show_shop_name', True)) else 'false'
+
     merged['invoice_template'] = effective_tpl
     return merged

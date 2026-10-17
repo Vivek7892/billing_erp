@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../api'
-import { PageHeader, Card } from '../components/UI'
+import { PageHeader, Card, Spinner } from '../components/UI'
 import { FileText, Shield, RefreshCw, Package, Truck, ExternalLink } from 'lucide-react'
 
 const POLICY_CONFIG = {
@@ -51,11 +51,7 @@ export function PolicyPage({ type }) {
   const url = settings[config.key]
   const shopName = settings.shop_name || 'ShopEase POS'
 
-  if (loading) return (
-    <div className="flex items-center justify-center py-20">
-      <div className="w-8 h-8 border-4 border-slate-200 border-t-[#1E3A5F] rounded-full animate-spin" />
-    </div>
-  )
+  if (loading) return <Spinner label="Loading policy" />
 
   return (
     <div>
