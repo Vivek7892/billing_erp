@@ -26,6 +26,7 @@ import {
 import api from '../api'
 import { Badge, Spinner } from '../components/UI'
 import { useShop } from '../components/Layout'
+import DashboardBannerCarousel from './DashboardBannerCarousel'
 
 const EMPTY = {
   today_sales: 0,
@@ -304,6 +305,8 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
+
+      <DashboardBannerCarousel />
 
       {/* -------------------------------------------------------------
           ERROR BANNER
