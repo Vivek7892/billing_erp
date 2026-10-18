@@ -5,7 +5,7 @@ import logoImg from '../assets/logo.png'
 import { ROLES } from '../constants'
 import {
   LayoutDashboard, ShoppingCart, FileText, Package, Users, BarChart2,
-  UserCog, Settings, ChevronUp, ChevronRight,
+  UserCog, Settings, ChevronUp, ChevronRight, ChevronDown, Sun, Moon, LogOut,
   Search, Bell, RotateCcw, CreditCard, Boxes, ShoppingBag, Building2,
   IndianRupee, HelpCircle, Layers, Activity, X, Clock, ScanLine, ArrowRight, Check,
   ShieldCheck, Trash2, AlertCircle, AlertTriangle, CheckCircle2, XCircle
@@ -16,6 +16,7 @@ import toast from 'react-hot-toast'
 import AppFooter from './AppFooter'
 import { PageLoadingContext } from './PageLoadingContext'
 import { SETTINGS_TABS } from './SettingsNavigation'
+import { useTheme } from '../ThemeContext'
 
 function MenuIcon({ size = 20 }) {
   return (
@@ -961,6 +962,111 @@ function LiveDateTime() {
   )
 }
 
+function ProfileMenu({ user }) {
+  const { logout } = useAuth()
+  const { theme, toggleTheme } = useTheme()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [open, setOpen] = useState(false)
+  const menuRef = useRef(null)
+  const displayName = user?.first_name || user?.username || user?.email || 'User'
+  const initials = displayName.trim().charAt(0).toUpperCase() || 'U'
+
+  useEffect(() => {
+    if (!open) return
+    const handlePointerDown = event => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) setOpen(false)
+    }
+    const handleKeyDown = event => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
+  useEffect(() => setOpen(false), [location.pathname, location.search])
+
+  const handleSignOut = () => {
+    setOpen(false)
+    logout()
+    navigate('/login', { replace: true })
+  }
+
+  return (
+    <div className="relative shrink-0" ref={menuRef}>
+      <button
+        type="button"
+        onClick={() => setOpen(value => !value)}
+        aria-label="Open profile menu"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="inline-flex h-9 max-w-[180px] items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface)] py-1 pl-1 pr-2.5 text-[var(--ink-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+      >
+        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-xs font-bold text-[var(--primary-contrast)]">
+          {initials}
+        </span>
+        <span className="hidden max-w-28 truncate text-xs font-semibold sm:inline">{displayName}</span>
+        <ChevronDown size={14} className={`hidden text-[var(--muted)] transition-transform sm:block ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          aria-label="Profile menu"
+          className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-lg"
+        >
+          <div className="border-b border-[var(--line)] px-3 py-2">
+            <p className="truncate text-xs font-semibold text-[var(--ink)]">{displayName}</p>
+            {user?.role && <p className="mt-0.5 text-[9px] font-medium uppercase tracking-wide text-[var(--muted)]">{user.role}</p>}
+          </div>
+
+          <div className="border-b border-[var(--line)] p-2">
+            <button
+              type="button"
+              role="menuitem"
+              aria-pressed={theme === 'dark'}
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              onClick={toggleTheme}
+              className="flex h-8 w-full items-center justify-between rounded-md px-2 text-xs font-medium text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)]"
+            >
+              <span className="inline-flex items-center gap-2">
+                {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
+                {theme === 'dark' ? 'Dark mode' : 'Light mode'}
+              </span>
+              <span className={`flex h-4 w-7 items-center rounded-full p-0.5 transition-colors ${theme === 'dark' ? 'bg-[var(--primary)]' : 'bg-[var(--line-strong)]'}`} aria-hidden="true">
+                <span className={`h-3 w-3 rounded-full bg-white shadow-sm transition-transform ${theme === 'dark' ? 'translate-x-3' : 'translate-x-0'}`} />
+              </span>
+            </button>
+          </div>
+
+          <div className="space-y-0.5 p-1.5">
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => { setOpen(false); navigate('/settings') }}
+              className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-xs font-medium text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
+            >
+              <Settings size={15} /> Settings
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleSignOut}
+              className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+            >
+              <LogOut size={15} /> Sign out
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Layout({ children }) {
   const { user } = useAuth()
   const location = useLocation()
@@ -1098,19 +1204,7 @@ export default function Layout({ children }) {
 
               <div className="w-px h-5 bg-[var(--line)]" />
 
-              <NavLink
-                to="/settings?tab=account"
-                title={`${user?.first_name || user?.username || user?.email || 'User'} profile`}
-                aria-label="Open profile"
-                className="inline-flex h-9 max-w-[180px] shrink-0 items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface)] py-1 pl-1 pr-2.5 text-[var(--ink-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
-              >
-                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-xs font-bold text-[var(--primary-contrast)]">
-                  {(user?.first_name || user?.username || user?.email || 'U').charAt(0).toUpperCase()}
-                </span>
-                <span className="hidden max-w-28 truncate text-xs font-semibold sm:inline">
-                  {user?.first_name || user?.username || 'Profile'}
-                </span>
-              </NavLink>
+              <ProfileMenu user={user} />
             </div>
 
             {/* Mobile Search Bar Expansion */}
