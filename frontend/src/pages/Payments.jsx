@@ -905,7 +905,7 @@ export default function Payments() {
             className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--ink-secondary)] shadow-sm transition hover:bg-[var(--surface-elevated)]"
           >
             <ShieldCheck size={14} className="text-blue-600" />
-            <span>Reconciliation</span>
+            <span>Transaction Ledger</span>
           </button>
           <button
             type="button"
@@ -1372,7 +1372,7 @@ export default function Payments() {
                                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40"
                               >
                                 <ShieldCheck size={13} />
-                                <span>Reconciliation</span>
+                                <span>Transaction Ledger</span>
                               </button>
                             )}
                           </div>
@@ -1647,7 +1647,7 @@ export default function Payments() {
                                     className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40"
                                   >
                                     <ShieldCheck size={13} />
-                                    <span>Reconciliation</span>
+                                    <span>Transaction Ledger</span>
                                   </button>
                                 )}
                               </div>
@@ -2185,7 +2185,7 @@ export default function Payments() {
                     }}
                     className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
                   >
-                    <span>Reconciliation</span>
+                    <span>Transaction Ledger</span>
                     <ExternalLink size={12} />
                   </button>
                 </div>

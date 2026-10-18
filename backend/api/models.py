@@ -689,6 +689,7 @@ class RazorpayTransaction(models.Model):
         ('failed', 'Failed'),
         ('expired', 'Expired'),
     ]
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, null=True, blank=True, related_name='razorpay_transactions')
     invoice = models.ForeignKey(Invoice, on_delete=models.SET_NULL, null=True, blank=True, related_name='razorpay_transactions')
     provider = models.CharField(max_length=50, default='razorpay')
     merchant_transaction_id = models.CharField(max_length=100, blank=True)

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
   ArrowUpRight,
   BarChart3,
   CalendarDays,
@@ -33,6 +35,7 @@ const EMPTY = {
   yesterday_sales: 0,
   today_collection: 0,
   today_profit: 0,
+  yesterday_profit: 0,
   today_bills: 0,
   avg_bill_today: 0,
   today_tax: 0,
@@ -155,6 +158,16 @@ export default function Dashboard() {
     () => percentChange(data.today_sales, data.yesterday_sales),
     [data.today_sales, data.yesterday_sales]
   )
+  const salesTrendLabel = Number(data.yesterday_sales)
+    ? `${salesTrend > 0 ? '+' : ''}${salesTrend}% vs yesterday`
+    : 'No prior-day baseline'
+  const profitDifference = Number(data.today_profit || 0) - Number(data.yesterday_profit || 0)
+  const hasProfitBaseline = Number(data.yesterday_profit) !== 0
+  const profitTrendLabel = hasProfitBaseline && Number(data.yesterday_profit) > 0
+    ? `${percentChange(data.today_profit, data.yesterday_profit) > 0 ? '+' : ''}${percentChange(data.today_profit, data.yesterday_profit)}% vs yesterday`
+    : hasProfitBaseline
+      ? `${profitDifference > 0 ? 'Higher' : profitDifference < 0 ? 'Lower' : 'Unchanged'} than yesterday`
+      : 'No prior-day baseline'
 
   const salesChartData = useMemo(() => {
     const list = data.sales_7days || []
@@ -175,6 +188,14 @@ export default function Dashboard() {
 
   const salesData = salesChartData
   const payments = paymentDistributionData
+  const paymentTotal = payments.reduce((sum, payment) => sum + Number(payment.total || 0), 0)
+  const paymentMethodRows = useMemo(() => {
+    const methods = new Map(payments.map(payment => [String(payment.method || '').toLowerCase(), payment]))
+    const preferred = ['upi', 'cash', 'credit', 'razorpay']
+    const rows = preferred.map(method => methods.get(method) || { method, total: 0, count: 0 })
+    const other = payments.filter(payment => !preferred.includes(String(payment.method || '').toLowerCase()))
+    return [...rows, ...other]
+  }, [payments])
   const lowStock = data.low_stock_products || []
   const recentBills = data.recent_bills || []
   const topProducts = data.top_products || []
@@ -190,63 +211,39 @@ export default function Dashboard() {
     [salesData]
   )
 
-  const summaryRows = useMemo(
-    () => [
-      {
-        metric: 'Gross Sales',
-        today: fmtCurrency(data.today_sales),
-        month: fmtCurrency(data.month_sales),
-        prevMonth: fmtCurrency(data.last_month_sales),
-      },
-      {
-        metric: 'Collections / Received',
-        today: fmtCurrency(data.today_collection || data.today_payments_total),
-        month: fmtCurrency(data.month_payments_total),
-        prevMonth: fmtCurrency(data.last_month_payments_total),
-      },
-      {
-        metric: 'Gross Profit',
-        today: fmtCurrency(data.today_profit),
-        month: fmtCurrency(data.month_profit),
-        prevMonth: fmtCurrency(data.last_month_profit),
-      },
-      {
-        metric: 'Purchases (Inward)',
-        today: fmtCurrency(data.today_purchases),
-        month: fmtCurrency(data.month_purchases),
-        prevMonth: fmtCurrency(data.last_month_purchases),
-      },
-      {
-        metric: 'Operating Expenses',
-        today: fmtCurrency(data.today_expenses),
-        month: fmtCurrency(data.month_expenses),
-        prevMonth: fmtCurrency(data.last_month_expenses),
-      },
-      {
-        metric: 'Invoices Generated',
-        today: `${data.today_bills || 0} bills`,
-        month: `${data.month_bills || 0} bills`,
-        prevMonth: '—',
-      },
-    ],
-    [data]
-  )
+  const attentionItems = useMemo(() => {
+    const items = []
+    if (Number(data.pending_credit) > 0 || creditDueCount > 0) {
+      items.push({ key: 'credit', title: 'Outstanding credit', count: creditDueCount, detail: `${fmtCurrency(data.pending_credit)} due`, route: '/parties/customers?credit_due=1', action: 'View customers' })
+    }
+    if (Number(data.out_of_stock) > 0) {
+      items.push({ key: 'out-of-stock', title: 'Out of stock', count: Number(data.out_of_stock), detail: 'Immediate restock needed', route: '/inventory/stock', action: 'Manage stock' })
+    }
+    if (Number(data.low_stock_count) > 0) {
+      items.push({ key: 'low-stock', title: 'Low stock', count: Number(data.low_stock_count), detail: 'Below minimum level', route: '/inventory/stock', action: 'Manage stock' })
+    }
+    actionRequired.filter(item => item.key !== 'credit' && item.key !== 'stock' && Number(item.count) > 0).forEach(item => {
+      items.push({ key: item.key, title: String(item.key || 'Action required').replace(/_/g, ' '), count: item.count, detail: item.label, route: item.route, action: 'Review' })
+    })
+    return items
+  }, [actionRequired, creditDueCount, data])
 
   if (loading) {
     return <Spinner label="Loading dashboard" />
   }
 
   return (
-    <div className="dashboard-page min-w-0 space-y-6 pb-6">
+    <div className="dashboard-page min-w-0 space-y-4 pb-6">
+      
       {/* -------------------------------------------------------------
           TOP BAR: Store Name, Live IST Clock, Action Controls
       -------------------------------------------------------------- */}
-      <header className="dashboard-header rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4 shadow-2xs">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3.5">
+      <header className="dashboard-header rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 sm:px-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div className="min-w-0">
            
 
-            <h1 className="mt-1.5 truncate text-lg sm:text-2xl font-black tracking-tight text-[var(--ink)]">
+            <h1 className="truncate text-lg sm:text-xl font-bold tracking-tight text-[var(--ink)]">
               {shopName || 'Dreamwithtech ERP'}
             </h1>
 
@@ -254,6 +251,7 @@ export default function Dashboard() {
               <span className="inline-flex items-center gap-1 font-medium">
                 <CalendarDays size={13} className="text-[var(--muted)] shrink-0" />
                 {currentTime.toLocaleDateString('en-IN', {
+                  timeZone: 'Asia/Kolkata',
                   weekday: 'short',
                   day: '2-digit',
                   month: 'short',
@@ -264,9 +262,9 @@ export default function Dashboard() {
               <span className="inline-flex items-center gap-1 font-mono font-semibold text-[var(--ink)]">
                 <Clock3 size={13} className="text-[#1E3A5F] dark:text-sky-400 shrink-0" />
                 {currentTime.toLocaleTimeString('en-IN', {
+                  timeZone: 'Asia/Kolkata',
                   hour: '2-digit',
                   minute: '2-digit',
-                  second: '2-digit',
                   hour12: true,
                 })}
               </span>
@@ -276,11 +274,11 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 sm:flex sm:w-auto sm:items-center">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
             <button
               type="button"
               onClick={() => navigate('/billing/new')}
-              className="btn-primary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold text-white shadow-2xs transition"
+              className="btn-primary col-span-2 inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold text-white shadow-2xs transition sm:col-span-1"
             >
               <Plus size={15} strokeWidth={2.5} />
               <span>New Bill</span>
@@ -288,7 +286,7 @@ export default function Dashboard() {
             <button
               type="button"
               onClick={() => navigate('/reports')}
-              className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold shadow-2xs transition"
+              className="btn-secondary inline-flex min-h-[40px] min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold shadow-2xs transition sm:px-3.5"
             >
               <FileText size={14} />
               <span>Reports</span>
@@ -297,7 +295,7 @@ export default function Dashboard() {
               type="button"
               onClick={loadDashboard}
               disabled={refreshing}
-              className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold shadow-2xs transition"
+              className="btn-secondary inline-flex min-h-[40px] min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold shadow-2xs transition sm:px-3.5"
             >
               <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
               <span>Refresh</span>
@@ -323,165 +321,85 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* -------------------------------------------------------------
-          SECTION 1: ERP METRICS SUMMARY (Compact Table-Based KPI Strip)
-      -------------------------------------------------------------- */}
-      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-        {/* Row 1: Today's Metrics */}
-        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
-          <div
-            onClick={() => navigate('/sales/invoices')}
-            className="px-3.5 py-2 sm:px-4 sm:py-2.5 min-w-0 cursor-pointer hover:bg-[var(--surface-hover)] transition"
-          >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
-              Total Sales
-            </span>
-            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
-              {fmtCurrency(data.today_sales)}
-            </p>
-            <p className="text-[11px] text-[var(--muted)] truncate">
-              {data.today_bills || 0} orders {salesTrend !== 0 && `(${salesTrend >= 0 ? '+' : ''}${salesTrend}%)`}
-            </p>
-          </div>
-
-          <div
-            onClick={() => navigate('/sales/payments')}
-            className="px-3.5 py-2 sm:px-4 sm:py-2.5 min-w-0 cursor-pointer hover:bg-[var(--surface-hover)] transition"
-          >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
-              Collected
-            </span>
-            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-teal-600 dark:text-teal-400 tabular-nums truncate">
-              {fmtCurrency(data.today_collection || data.today_payments_total)}
-            </p>
-            <p className="text-[11px] text-[var(--muted)] truncate">
-              Tax: {fmtCurrency(data.today_tax)}
-            </p>
-          </div>
-
-          <div
-            onClick={() => navigate('/reports')}
-            className="px-3.5 py-2 sm:px-4 sm:py-2.5 min-w-0 cursor-pointer hover:bg-[var(--surface-hover)] transition"
-          >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
-              Net Profit
-            </span>
-            <p
-              className={`mt-0.5 font-mono text-base sm:text-lg font-bold tabular-nums truncate ${
-                data.today_profit >= 0
-                  ? 'text-teal-600 dark:text-teal-400'
-                  : 'text-red-500'
-              }`}
-            >
-              {fmtCurrency(data.today_profit)}
-            </p>
-            <p className="text-[11px] text-[var(--muted)] truncate">
-              Margin {Number(data.profit_margin || 0).toFixed(1)}%
-            </p>
-          </div>
-
-          <div
-            onClick={() => navigate('/sales/invoices')}
-            className="px-3.5 py-2 sm:px-4 sm:py-2.5 min-w-0 cursor-pointer hover:bg-[var(--surface-hover)] transition"
-          >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
-              Average Bill
-            </span>
-            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[#1E3A5F] dark:text-slate-200 tabular-nums truncate">
-              {fmtCurrency(data.avg_bill_today)}
-            </p>
-            <p className="text-[11px] text-[var(--muted)] truncate">
-              Average per sale
-            </p>
+      {/* BUSINESS SNAPSHOT */}
+      <section aria-labelledby="business-snapshot-title" className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
+        <h2 id="business-snapshot-title" className="border-b border-[var(--line)] px-4 py-2.5 text-sm font-semibold">Business Insights</h2>
+        <div className="grid grid-cols-2 gap-px bg-[var(--line)] lg:grid-cols-4">
+          <button type="button" onClick={() => navigate('/sales/invoices')} className="min-w-0 bg-[var(--surface)] px-3 py-3 text-left transition hover:bg-[var(--surface-hover)] sm:px-4">
+            <span className="text-xs font-semibold text-[var(--muted)]">Sales</span>
+            <p className="mt-1 truncate font-mono text-xl font-extrabold tabular-nums text-[var(--ink)] sm:text-2xl">{fmtCurrency(data.today_sales)}</p>
+            <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-medium text-[var(--muted)]"><span>{data.today_bills || 0} bills</span><span className="px-0.5">·</span><span className={`inline-flex items-center gap-0.5 ${Number(data.yesterday_sales) ? (salesTrend > 0 ? 'text-emerald-700 dark:text-emerald-400' : salesTrend < 0 ? 'text-red-600 dark:text-red-400' : 'text-[var(--muted)]') : ''}`}>{Number(data.yesterday_sales) && (salesTrend > 0 ? <ArrowUp size={14} aria-label="Up" /> : salesTrend < 0 ? <ArrowDown size={14} aria-label="Down" /> : null)}{salesTrendLabel}</span></p>
+          </button>
+          <button type="button" onClick={() => navigate('/sales/payments')} className="min-w-0 bg-[var(--surface)] px-3 py-3 text-left transition hover:bg-[var(--surface-hover)] sm:px-4">
+            <span className="text-xs font-semibold text-[var(--muted)]">Collections</span>
+            <p className="mt-1 truncate font-mono text-xl font-extrabold tabular-nums text-[var(--ink)] sm:text-2xl">{fmtCurrency(data.today_collection || data.today_payments_total)}</p>
+            <p className="mt-0.5 text-xs text-[var(--muted)]">Today <span className="px-1">·</span> Tax {fmtCurrency(data.today_tax)}</p>
+          </button>
+          <button type="button" onClick={() => navigate('/reports')} className="min-w-0 bg-[var(--surface)] px-3 py-3 text-left transition hover:bg-[var(--surface-hover)] sm:px-4">
+            <span className="text-xs font-semibold text-[var(--muted)]">Profit</span>
+            <p className={`mt-1 truncate font-mono text-xl font-extrabold tabular-nums sm:text-2xl ${Number(data.today_profit) >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{fmtCurrency(data.today_profit)}</p>
+            <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-medium text-[var(--muted)]"><span>Margin {Number(data.profit_margin || 0).toFixed(1)}%</span>{hasProfitBaseline && <span className={`inline-flex items-center gap-0.5 ${profitDifference >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{profitDifference > 0 ? <ArrowUp size={14} /> : profitDifference < 0 ? <ArrowDown size={14} /> : null}{profitTrendLabel}</span>}</p>
+          </button>
+          <div className="min-w-0 bg-[var(--surface)] px-3 py-3 sm:px-4">
+            <span className="text-xs font-semibold text-[var(--muted)]">Receivables & stock</span>
+            <button type="button" onClick={() => navigate('/parties/customers?credit_due=1')} className="mt-1 block max-w-full truncate text-left font-mono text-xl font-extrabold tabular-nums text-amber-700 hover:underline dark:text-amber-400 sm:text-2xl">{fmtCurrency(data.pending_credit)} due</button>
+            <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-[var(--muted)]"><span>{creditDueCount} customers pending</span><button type="button" onClick={() => navigate('/inventory/stock')} className={Number(data.out_of_stock) ? 'text-red-600 dark:text-red-400' : ''}>{data.out_of_stock || 0} out</button><button type="button" onClick={() => navigate('/inventory/stock')} className={Number(data.low_stock_count) ? 'text-amber-700 dark:text-amber-400' : ''}>{data.low_stock_count || 0} low</button></div>
           </div>
         </div>
+      </section>
 
-        {/* Row 2: Monthly Position, Receivables & Supply */}
-        <div className="grid grid-cols-2 divide-y divide-[var(--line)] border-t border-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
-          <div
-            onClick={() => navigate('/sales/invoices')}
-            className="px-3.5 py-2 sm:px-4 sm:py-2.5 min-w-0 cursor-pointer hover:bg-[var(--surface-hover)] transition"
-          >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
-              This Month Sales
-            </span>
-            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
-              {fmtCurrency(data.month_sales)}
-            </p>
-            <p className="text-[11px] text-[var(--muted)] truncate">
-              {data.month_bills || 0} bills this month
-            </p>
-          </div>
-
-          <div
-            onClick={() => navigate('/parties/customers?credit_due=1')}
-            className="px-3.5 py-2 sm:px-4 sm:py-2.5 min-w-0 cursor-pointer hover:bg-[var(--surface-hover)] transition"
-          >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
-              Outstanding Dues
-            </span>
-            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-amber-700 dark:text-amber-400 tabular-nums truncate">
-              {fmtCurrency(data.pending_credit)}
-            </p>
-            <p className="text-[11px] text-[var(--muted)] truncate">
-              {creditDueCount} customer{creditDueCount === 1 ? '' : 's'} pending
-            </p>
-          </div>
-
-          <div
-            onClick={() => navigate('/inventory/stock')}
-            className="px-3.5 py-2 sm:px-4 sm:py-2.5 min-w-0 cursor-pointer hover:bg-[var(--surface-hover)] transition"
-          >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
-              Stock Alerts
-            </span>
-            <p
-              className={`mt-0.5 font-mono text-base sm:text-lg font-bold tabular-nums truncate ${
-                data.out_of_stock > 0
-                  ? 'text-red-500'
-                  : data.low_stock_count > 0
-                  ? 'text-amber-600 dark:text-amber-400'
-                  : 'text-teal-600 dark:text-teal-400'
-              }`}
-            >
-              {data.out_of_stock || 0} Out · {data.low_stock_count || 0} Low
-            </p>
-            <p className="text-[11px] text-[var(--muted)] truncate">
-              {Number(data.total_products || data.product_count || 0)} total products
-            </p>
-          </div>
-
-          <div
-            onClick={() => navigate('/purchases')}
-            className="px-3.5 py-2 sm:px-4 sm:py-2.5 min-w-0 cursor-pointer hover:bg-[var(--surface-hover)] transition"
-          >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
-              Purchases
-            </span>
-            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
-              {fmtCurrency(data.today_purchases)}
-            </p>
-            <p className="text-[11px] text-[var(--muted)] truncate">
-              Month: {fmtCurrency(data.month_purchases)}
-            </p>
-          </div>
+      {/* TODAY AT A GLANCE */}
+      <section aria-label="Today at a glance" className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 sm:px-4">
+        <h2 className="mb-2 text-sm font-semibold text-[var(--ink)]">Today at a glance</h2>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+        <span className="text-[var(--muted)]">Bills <strong className="font-mono tabular-nums text-[var(--ink)]">{data.today_bills || 0}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
+        <span className="text-[var(--muted)]">Avg bill <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.avg_bill_today)}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
+        <span className="text-[var(--muted)]">Purchases <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.today_purchases)}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
+        <span className="text-[var(--muted)]">Expenses <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.today_expenses)}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
+        <span className="text-[var(--muted)]">Month sales <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.month_sales)}</strong> <span className="text-xs">{Number(data.last_month_sales) ? `${data.sales_growth > 0 ? '+' : ''}${Number(data.sales_growth || 0).toFixed(1)}% vs prior month` : ''}</span></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
+        <span className="text-[var(--muted)]">Month profit <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.month_profit)}</strong> <span className="text-xs">{Number(data.last_month_profit) ? `${percentChange(data.month_profit, data.last_month_profit) > 0 ? '+' : ''}${percentChange(data.month_profit, data.last_month_profit)}% vs prior month` : ''}</span></span>
         </div>
+      </section>
+
+      {/* ATTENTION REQUIRED */}
+  
+      <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 sm:px-4">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-base font-semibold text-[var(--ink)]">Attention Required</h2>
+          <span className="shrink-0 rounded-full bg-[var(--surface-elevated)] px-2 py-1 text-xs font-semibold text-[var(--muted)]">{attentionItems.length} items</span>
+        </div>
+        {attentionItems.length ? (
+          <div className="mt-3 grid grid-cols-4 gap-2 border-t border-[var(--line-subtle)] pt-3 sm:grid-cols-2 lg:grid-cols-3">
+            {attentionItems.map(item => (
+              <div key={item.key} className="min-w-0 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-3 py-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate text-sm font-semibold capitalize text-[var(--ink)]">{item.title}</span>
+                  <span className="shrink-0 rounded bg-[var(--surface)] px-1.5 py-0.5 font-mono text-xs font-bold text-[var(--ink)]">{item.count}</span>
+                </div>
+                <div className="mt-1.5 flex items-center justify-between gap-2">
+                  <span className="min-w-0 truncate text-xs text-[var(--muted)]">{item.detail}</span>
+                  <button type="button" onClick={() => navigate(item.route)} className="shrink-0 text-xs font-semibold text-[var(--primary)] hover:underline">{item.action}</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : <p className="mt-2 border-t border-[var(--line-subtle)] pt-3 text-sm text-[var(--muted)]">No operational issues require attention.</p>}
       </section>
 
       {/* -------------------------------------------------------------
           QUICK ACTIONS BAR (Compact & Small Buttons After KPI Cards)
       -------------------------------------------------------------- */}
-      <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 shadow-2xs">
+      <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2">
         <div className="flex items-center gap-1.5 shrink-0 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
           
           <span>Quick Actions</span>
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+        <div className="grid grid-cols-2 gap-1.5 py-0.5 min-[420px]:grid-cols-3 sm:flex sm:flex-wrap sm:justify-end">
           <button
             type="button"
             onClick={() => navigate('/billing/new')}
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#1E3A5F] px-2.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-[#162b47] active:scale-95 dark:bg-sky-600 dark:hover:bg-sky-500"
+            className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg bg-[#1E3A5F] px-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-[#162b47] active:scale-95 dark:bg-sky-600 dark:hover:bg-sky-500 sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
           >
             <Plus size={13} strokeWidth={2.5} />
             <span>New Bill</span>
@@ -490,7 +408,7 @@ export default function Dashboard() {
           <button
             type="button"
             onClick={() => navigate('/billing/drafts')}
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95"
+            className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95 sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
           >
             <Clock3 size={13} className="text-amber-600 dark:text-amber-400" />
             <span>Parked Bills</span>
@@ -499,7 +417,7 @@ export default function Dashboard() {
           <button
             type="button"
             onClick={() => navigate('/sales/payments')}
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95"
+            className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95 sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
           >
             <CreditCard size={13} className="text-emerald-600 dark:text-emerald-400" />
             <span>Payments</span>
@@ -508,7 +426,7 @@ export default function Dashboard() {
           <button
             type="button"
             onClick={() => navigate('/sales/invoices')}
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95"
+            className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95 sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
           >
             <FileText size={13} className="text-slate-600 dark:text-slate-400" />
             <span>All Bills</span>
@@ -517,87 +435,43 @@ export default function Dashboard() {
           <button
             type="button"
             onClick={() => navigate('/inventory/stock')}
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95"
+            className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95 sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
           >
             <Package size={13} className="text-purple-600 dark:text-purple-400" />
-            <span>Stock Control</span>
+            <span>Stock</span>
           </button>
 
           <button
             type="button"
             onClick={() => navigate('/purchases')}
-            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95"
+            className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95 sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
           >
             <BarChart3 size={13} className="text-teal-600 dark:text-teal-400" />
             <span>Purchases</span>
           </button>
-        </div>
-      </section>
-
-      {/* -------------------------------------------------------------
-          SECTION 2: SUMMARY TABLE (Metric | Today | This Month | Previous Month)
-      -------------------------------------------------------------- */}
-      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
-        <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5">
-          <div>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-              Financial & Operational Summary
-            </h2>
-            <p className="text-[11px] text-[var(--muted)]">
-              Multi-period comparison across key ERP performance metrics
-            </p>
-          </div>
           <button
+            type="button"
             onClick={() => navigate('/reports')}
-            className="text-xs font-semibold text-[var(--primary)] hover:underline flex items-center gap-1"
+            className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 text-xs font-medium text-[var(--ink)] transition hover:bg-[var(--surface-hover)] sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
           >
-            <span>Detailed Reports</span>
-            <ArrowUpRight size={13} />
+            <FileText size={13} />
+            <span>Reports</span>
           </button>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="table table-compact">
-            <thead>
-              <tr>
-                <th className="w-1/3">Financial Metric</th>
-                <th className="text-right num-col">Today</th>
-                <th className="text-right num-col">This Month</th>
-                <th className="text-right num-col">Previous Month</th>
-              </tr>
-            </thead>
-            <tbody>
-              {summaryRows.map((row, idx) => (
-                <tr key={idx}>
-                  <td className="font-semibold text-[var(--ink)]">
-                    {row.metric}
-                  </td>
-                  <td className="text-right num-col font-bold font-mono text-[var(--ink)]">
-                    {row.today}
-                  </td>
-                  <td className="text-right num-col font-mono text-[var(--ink-secondary)]">
-                    {row.month}
-                  </td>
-                  <td className="text-right num-col font-mono text-[var(--muted)]">
-                    {row.prevMonth}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </section>
 
       {/* -------------------------------------------------------------
           SECTION 3: CHARTS (Sales Daily Trend & Payment Breakdown)
       -------------------------------------------------------------- */}
+      <section aria-labelledby="sales-performance-title" className="space-y-2">
+        <h2 id="sales-performance-title" className="text-sm font-semibold">Sales performance</h2>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Sales Overview Chart (2 cols) */}
         <section className="lg:col-span-2 overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
-          <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5">
+          <div className="flex flex-col gap-1 border-b border-[var(--line)] bg-[var(--surface-elevated)] px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:px-4">
             <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-                Sales Trend (Last 7 Days)
+            <h2 className="text-sm font-semibold text-[var(--ink)]">
+              Sales — last 7 days
               </h2>
               <p className="text-[11px] text-[var(--muted)]">
                 7-day total:{' '}
@@ -606,12 +480,12 @@ export default function Dashboard() {
                 </span>
               </p>
             </div>
-            <span className="text-[11px] font-semibold text-[var(--muted)]">
-              Daily Distribution
+            <span className="text-[11px] font-semibold text-[var(--muted)] sm:text-right">
+              {salesTrendLabel}
             </span>
           </div>
 
-          <div className="p-4 h-56 sm:h-64">
+          <div className="h-52 p-3 sm:h-56 sm:p-4">
             {salesData.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
@@ -665,48 +539,28 @@ export default function Dashboard() {
         {/* Payment Methods (1 col) */}
         <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] flex flex-col">
           <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-              Payment Methods
+            <h2 className="text-sm font-semibold text-[var(--ink)]">
+              Today’s collection
             </h2>
             <p className="text-[11px] text-[var(--muted)]">
-              Today's collection breakdown
+              Payment method breakdown
             </p>
           </div>
 
-          <div className="p-4 flex-1 flex flex-col justify-center">
-            {payments.length ? (
-              <div className="space-y-3.5">
-                {payments.map((p, i) => {
-                  const share = p.share || 0
-                  return (
-                    <div key={`${p.method}-${i}`}>
-                      <div className="mb-1 flex items-center justify-between text-xs">
-                        <span className="font-semibold capitalize text-[var(--ink-secondary)]">
-                          {p.method}
-                        </span>
-                        <span className="font-mono font-bold text-[var(--ink)]">
-                          {fmtCurrency(p.total)} ({share}%)
-                        </span>
-                      </div>
-                      <div className="h-1.5 overflow-hidden rounded-full bg-[var(--surface-elevated)] border border-[var(--line)]">
-                        <div
-                          className="h-full rounded-full bg-[var(--primary)]"
-                          style={{ width: `${share}%` }}
-                        />
-                      </div>
-                    </div>
-                  )
-                })}
+          <div className="flex-1 p-3 sm:p-4">
+            {paymentTotal > 0 || Number(data.today_collection) > 0 ? <>
+              <div className="divide-y divide-[var(--line-subtle)]">
+                {paymentMethodRows.map((payment, index) => <div key={`${payment.method}-${index}`} className="flex items-center justify-between gap-3 py-2 text-sm first:pt-0">
+                  <span className="font-medium text-[var(--ink-secondary)]">{String(payment.method || 'other').replace(/_/g, ' ').toUpperCase()}</span>
+                  <span className="font-mono font-semibold tabular-nums text-[var(--ink)]">{fmtCurrency(payment.total)}</span>
+                </div>)}
               </div>
-            ) : (
-              <EmptyState
-                icon={CreditCard}
-                text="No payments recorded today."
-              />
-            )}
+              <div className="mt-2 flex items-center justify-between border-t border-[var(--line)] pt-2 text-sm font-semibold"><span>Total collected</span><span className="font-mono tabular-nums">{fmtCurrency(data.today_collection || paymentTotal)}</span></div>
+            </> : <p className="py-5 text-center text-xs text-[var(--muted)]">No payments recorded today.</p>}
           </div>
         </section>
       </div>
+      </section>
 
       {/* -------------------------------------------------------------
           SECTION 4: RECENT TRANSACTIONS TABLE
@@ -714,8 +568,8 @@ export default function Dashboard() {
       <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
         <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5">
           <div>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-              Recent Invoices
+            <h2 className="text-sm font-semibold text-[var(--ink)]">
+              Recent Transactions
             </h2>
             <p className="text-[11px] text-[var(--muted)]">
               Latest transactions with payment status
@@ -733,7 +587,7 @@ export default function Dashboard() {
         {recentBills.length ? (
           <>
             {/* Mobile Card List */}
-            <div className="divide-y divide-[var(--line-subtle)] sm:hidden">
+            <div className="divide-y divide-[var(--line-subtle)] lg:hidden">
               {recentBills.slice(0, 8).map(bill => (
                 <div
                   key={bill.id}
@@ -776,7 +630,7 @@ export default function Dashboard() {
             </div>
 
             {/* Desktop Table */}
-            <div className="hidden sm:block overflow-x-auto">
+            <div className="hidden overflow-x-auto lg:block">
               <table className="table">
                 <thead>
                   <tr>
@@ -848,7 +702,7 @@ export default function Dashboard() {
         <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
           <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5">
             <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+              <h2 className="text-sm font-semibold text-[var(--ink)]">
                 Top Selling Products
               </h2>
               <p className="text-[11px] text-[var(--muted)]">
@@ -865,7 +719,8 @@ export default function Dashboard() {
           </div>
 
           {topProducts.length ? (
-            <div className="overflow-x-auto">
+            <>
+            <div className="hidden overflow-x-auto lg:block">
               <table className="table table-compact">
                 <thead>
                   <tr>
@@ -897,6 +752,19 @@ export default function Dashboard() {
                 </tbody>
               </table>
             </div>
+            <div className="divide-y divide-[var(--line-subtle)] lg:hidden">
+              {topProducts.slice(0, 6).map((prod, idx) => (
+                <div key={idx} className="flex items-center gap-3 px-3 py-2.5">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--surface-elevated)] font-mono text-xs font-bold text-[var(--muted)]">{idx + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-[var(--ink)]">{prod.product_name}</p>
+                    <p className="mt-0.5 text-xs text-[var(--muted)]">{prod.total_qty} units sold</p>
+                  </div>
+                  <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">{fmtCurrency(prod.total_revenue)}</span>
+                </div>
+              ))}
+            </div>
+            </>
           ) : (
             <EmptyState
               icon={Package}
@@ -909,8 +777,8 @@ export default function Dashboard() {
         <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
           <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5">
             <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-                Low-Stock Inventory Alerts
+              <h2 className="text-sm font-semibold text-[var(--ink)]">
+                Inventory alerts
               </h2>
               <p className="text-[11px] text-[var(--muted)]">
                 {data.out_of_stock || 0} out of stock · {data.low_stock_count || 0} below threshold
@@ -926,7 +794,8 @@ export default function Dashboard() {
           </div>
 
           {lowStock.length ? (
-            <div className="overflow-x-auto">
+            <>
+            <div className="hidden overflow-x-auto lg:block">
               <table className="table table-compact">
                 <thead>
                   <tr>
@@ -979,6 +848,22 @@ export default function Dashboard() {
                 </tbody>
               </table>
             </div>
+            <div className="divide-y divide-[var(--line-subtle)] lg:hidden">
+              {lowStock.slice(0, 6).map(prod => (
+                <div key={prod.id} className="flex items-center gap-3 px-3 py-2.5">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-[var(--ink)]">{prod.name}</p>
+                    <p className="mt-0.5 text-xs text-[var(--muted)]">Minimum {prod.minimum_stock}</p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <Badge status={Number(prod.current_stock) <= 0 ? 'out_of_stock' : 'low_stock'} />
+                    <span className={`font-mono text-xs font-bold tabular-nums ${Number(prod.current_stock) <= 0 ? 'text-red-600' : 'text-amber-600'}`}>{prod.current_stock} in stock</span>
+                  </div>
+                  <button type="button" onClick={() => navigate('/inventory/products')} className="min-h-9 shrink-0 rounded-md border border-[var(--line)] px-2 text-xs font-medium">Adjust</button>
+                </div>
+              ))}
+            </div>
+            </>
           ) : (
             <EmptyState
               icon={CheckCircle2}
@@ -988,76 +873,6 @@ export default function Dashboard() {
         </section>
       </div>
 
-      {/* -------------------------------------------------------------
-          SECTION 6: OUTSTANDING PAYMENTS / ACTION REQUIRED TABLE
-      -------------------------------------------------------------- */}
-      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
-        <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5">
-          <div>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-              Operational Action Items
-            </h2>
-            <p className="text-[11px] text-[var(--muted)]">
-              Items requiring immediate staff review or reconciliation
-            </p>
-          </div>
-        </div>
-
-        {actionRequired.length ? (
-          <div className="overflow-x-auto">
-            <table className="table table-compact">
-              <thead>
-                <tr>
-                  <th>Category</th>
-                  <th>Status Detail</th>
-                  <th className="text-right num-col">Pending Count</th>
-                  <th className="text-right">Quick Navigation</th>
-                </tr>
-              </thead>
-              <tbody>
-                {actionRequired.map((item, idx) => (
-                  <tr
-                    key={idx}
-                    className={item.count > 0 ? 'row-pending' : ''}
-                  >
-                    <td className="font-semibold capitalize text-[var(--ink)]">
-                      {item.key}
-                    </td>
-                    <td className="text-[var(--ink-secondary)]">
-                      {item.label}
-                    </td>
-                    <td className="text-right num-col font-mono font-bold">
-                      <span
-                        className={
-                          item.count > 0
-                            ? 'text-amber-600 font-bold'
-                            : 'text-[var(--muted)]'
-                        }
-                      >
-                        {item.count}
-                      </span>
-                    </td>
-                    <td className="text-right">
-                      <button
-                        onClick={() => navigate(item.route)}
-                        className="btn-secondary btn-sm text-xs inline-flex items-center gap-1"
-                      >
-                        <span>Resolve</span>
-                        <ArrowUpRight size={12} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <EmptyState
-            icon={CheckCircle2}
-            text="No immediate pending operational tasks."
-          />
-        )}
-      </section>
     </div>
   )
 }

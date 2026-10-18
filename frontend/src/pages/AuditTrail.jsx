@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import api from '../api'
-import { PageHeader, Spinner, Modal, Pagination, StatCard } from '../components/UI'
+import { PageHeader, Spinner, Modal, Pagination } from '../components/UI'
 import toast from 'react-hot-toast'
 import {
   ShieldCheck,
@@ -27,8 +27,6 @@ import {
   CreditCard,
   Settings,
   Activity,
-  Hash,
-  Clock,
   Sparkles,
 } from 'lucide-react'
 
@@ -199,6 +197,7 @@ export default function AuditTrail() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [highImpactOnly, setHighImpactOnly] = useState(false)
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -665,8 +664,8 @@ export default function AuditTrail() {
     <div className="audit-trail-page w-full min-w-0 space-y-4 pb-16 text-[var(--ink)]">
       {/* Page Header */}
       <PageHeader
-        title="Statutory Audit Trail"
-        subtitle="Immutable ledger of business actions, security events, operator attributions, and data state modifications across all ERP modules."
+        title="Audit Trail"
+        subtitle="Business activity, security events, and recorded changes across your ERP."
         action={
           <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
             <button
@@ -694,12 +693,36 @@ export default function AuditTrail() {
         }
       />
 
-      {/* Quick Filter Presets Strip */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-xs text-xs">
+      {/* Audit health summary */}
+      <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-3 shadow-xs" aria-label="Audit health">
+        <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-[var(--muted)]">
+          <ShieldCheck size={14} className="text-[var(--ink-secondary)]" /> Audit health
+          {metrics.failCount === 0 && <span className="normal-case tracking-normal font-medium text-emerald-700 dark:text-emerald-400">· No failures detected</span>}
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          {[
+            { label: 'Failed events', value: metrics.failCount, icon: XCircle, tone: metrics.failCount ? 'text-rose-700 dark:text-rose-300' : 'text-[var(--ink)]', hint: metrics.failCount ? 'Review required' : 'No failures' },
+            { label: 'High-impact', value: metrics.highImpactCount, icon: AlertTriangle, tone: 'text-amber-700 dark:text-amber-300', hint: 'Recorded changes' },
+            { label: 'Matching events', value: metrics.totalMatching, icon: FileText, tone: 'text-[var(--ink)]', hint: `of ${metrics.totalOverall.toLocaleString()} total` },
+            { label: 'Success rate', value: `${metrics.successRate}%`, icon: CheckCircle2, tone: 'text-emerald-700 dark:text-emerald-300', hint: `${metrics.successCount.toLocaleString()} successful` },
+            { label: 'Unique actors', value: metrics.operatorsCount, icon: User, tone: 'text-[var(--ink)]', hint: 'Operators recorded' },
+          ].map(item => {
+            const Icon = item.icon
+            const Tag = item.label === 'High-impact' || item.label === 'Failed events' ? 'button' : 'div'
+            return <Tag key={item.label} type={Tag === 'button' ? 'button' : undefined} onClick={item.label === 'High-impact' ? () => setHighImpactOnly(true) : item.label === 'Failed events' ? () => setResultFilter('failure') : undefined} className={`min-w-0 rounded-md border px-3 py-2 text-left ${item.label === 'Failed events' && metrics.failCount ? 'border-rose-300 bg-rose-50/70 dark:border-rose-900 dark:bg-rose-950/20' : 'border-[var(--line-subtle)] bg-[var(--surface)]'} ${Tag === 'button' ? 'cursor-pointer hover:bg-[var(--surface-elevated)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]' : ''}`}>
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[var(--muted)]"><Icon size={12} className={item.tone} />{item.label}</div>
+              <div className={`mt-0.5 text-xl font-bold tabular-nums ${item.tone}`}>{Number(item.value) ? Number(item.value).toLocaleString() : item.value}</div>
+              <div className="truncate text-[10px] text-[var(--muted)]">{item.hint}</div>
+            </Tag>
+          })}
+        </div>
+      </section>
+
+      {/* Investigation shortcuts */}
+      <div className="flex flex-col gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-xs text-xs">
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] mr-1 shrink-0">
-            Quick Reports:
-          </span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] mr-1 shrink-0">Investigate:</span>
+          <button type="button" onClick={() => { setResultFilter('ALL'); setHighImpactOnly(false); setActionFilter('ALL'); setModuleFilter('ALL') }} className="rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-semibold text-[var(--ink-secondary)] hover:bg-[var(--surface-elevated)]">All Events</button>
 
           <button
             type="button"
@@ -717,7 +740,7 @@ export default function AuditTrail() {
             }`}
           >
             <XCircle size={12} className={resultFilter === 'failure' ? 'text-rose-600' : 'text-slate-400'} />
-            <span>Failed Operations</span>
+            <span>Failed</span>
             {metrics.failCount > 0 && (
               <span className="ml-1 rounded-full bg-rose-600 text-white text-[10px] px-1.5 py-0.2">
                 {metrics.failCount}
@@ -735,7 +758,7 @@ export default function AuditTrail() {
             }`}
           >
             <AlertTriangle size={12} className={highImpactOnly ? 'text-amber-600' : 'text-slate-400'} />
-            <span>High-Impact Changes</span>
+            <span>High Impact</span>
             {metrics.highImpactCount > 0 && (
               <span className="ml-1 rounded-full bg-amber-600 text-white text-[10px] px-1.5 py-0.2">
                 {metrics.highImpactCount}
@@ -755,7 +778,7 @@ export default function AuditTrail() {
             }`}
           >
             <Tag size={12} className={actionFilter === 'PRICE_CHANGED' ? 'text-teal-600' : 'text-slate-400'} />
-            <span>Price Adjustments</span>
+            <span>Price Changes</span>
           </button>
 
           <button
@@ -770,7 +793,7 @@ export default function AuditTrail() {
             }`}
           >
             <User size={12} className={moduleFilter === 'user' ? 'text-indigo-600' : 'text-slate-400'} />
-            <span>User & Auth Events</span>
+            <span>Security & Users</span>
           </button>
         </div>
 
@@ -780,18 +803,9 @@ export default function AuditTrail() {
           className="inline-flex items-center gap-1 text-xs font-semibold text-[#1E3A5F] hover:text-[#162F4D] dark:text-sky-300"
         >
           <Activity size={13} />
-          <span>{showDistribution ? 'Hide Activity Distribution' : 'View Activity Distribution'}</span>
+          <span>{showDistribution ? 'Hide Activity Distribution' : 'Activity Distribution'}</span>
           {showDistribution ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
         </button>
-      </div>
-
-      {/* Summary Dashboard Cards (Section D) */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Matching Events" value={metrics.totalMatching.toLocaleString()} sub={`of ${metrics.totalOverall.toLocaleString()} recorded`} icon={FileText} color="blue" />
-        <StatCard label="Successful" value={metrics.successCount.toLocaleString()} sub={`${metrics.successRate}% success rate`} icon={CheckCircle2} color="green" />
-        <StatCard label="Failed Events" value={metrics.failCount.toLocaleString()} sub={metrics.failCount > 0 ? 'Requires investigation' : 'Zero security failures'} icon={XCircle} color={metrics.failCount > 0 ? 'red' : 'gray'} />
-        <StatCard label="Unique Actors" value={metrics.operatorsCount} sub="Active operators logged" icon={User} color="teal" />
-        <StatCard label="High Impact" value={metrics.highImpactCount.toLocaleString()} sub="Critical operations" icon={AlertTriangle} color="orange" />
       </div>
 
       {/* Collapsible Activity Distribution Strip */}
@@ -999,8 +1013,13 @@ export default function AuditTrail() {
           </div>
         </div>
 
+        <details open={showAdvancedFilters} onToggle={e => setShowAdvancedFilters(e.currentTarget.open)} className="rounded-md border border-[var(--line-subtle)] px-3">
+        <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-2 text-xs font-semibold text-[var(--ink-secondary)]">
+          <span className="inline-flex items-center gap-2"><Filter size={13} /> More filters</span>
+          <span className="text-[10px] text-[var(--muted)]">Operator, entity and date range</span>
+        </summary>
         {/* Row 2: Operator, Target Entity, Date From, Date To */}
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2.5 pb-3 sm:grid-cols-2 lg:grid-cols-4">
           {/* Operator Filter */}
           <div className="flex items-center gap-1.5">
             <User size={14} className="text-[var(--muted)] shrink-0" />
@@ -1077,6 +1096,7 @@ export default function AuditTrail() {
             </div>
           </div>
         </div>
+        </details>
 
         {/* Row 3: Date Presets & Filter Counters Bar */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--line-subtle)] pt-3 text-xs">
@@ -1153,8 +1173,8 @@ export default function AuditTrail() {
           </div>
         ) : (
           <>
-            {/* Mobile Responsive Card View (sm:hidden) */}
-            <div className="divide-y divide-[var(--line-subtle)] sm:hidden">
+            {/* Responsive investigation cards */}
+            <div className="divide-y divide-[var(--line-subtle)] lg:hidden">
               {pagedLogs.map(log => (
                 <div
                   key={log.id}
@@ -1230,31 +1250,29 @@ export default function AuditTrail() {
               ))}
             </div>
 
-            {/* Desktop Semantic HTML Table (Strict 9 Columns with <colgroup>) */}
-            <div className="hidden sm:block overflow-x-auto min-h-[220px] pb-4">
-              <table className="erp-table w-full text-xs text-left" style={{ tableLayout: 'fixed', minWidth: '1140px' }}>
+            {/* Dense ERP table for wide screens */}
+            <div className="hidden lg:block overflow-x-auto min-h-[220px] pb-2">
+              <table className="erp-table w-full text-xs text-left" style={{ tableLayout: 'fixed', minWidth: '1040px' }}>
                 <colgroup>
                   <col style={{ width: '140px' }} /> {/* 1. Timestamp */}
                   <col style={{ width: '140px' }} /> {/* 2. Operator */}
                   <col style={{ width: '175px' }} /> {/* 3. Action */}
                   <col style={{ width: '160px' }} /> {/* 4. Target Entity */}
                   <col style={{ width: '100px' }} /> {/* 5. Outcome */}
-                  <col style={{ width: '180px' }} /> {/* 6. Reason */}
-                  <col style={{ width: '145px' }} /> {/* 7. Changes */}
-                  <col style={{ width: '125px' }} /> {/* 8. IP / Device */}
-                  <col style={{ width: '75px' }} />  {/* 9. Details */}
+                  <col style={{ width: '190px' }} /> {/* 6. Changes */}
+                  <col style={{ width: '125px' }} /> {/* 7. Source */}
+                  <col style={{ width: '75px' }} />  {/* 8. Details */}
                 </colgroup>
                 <thead>
                   <tr className="border-b border-[var(--line)] bg-[var(--surface-elevated)] font-bold text-[var(--ink-secondary)] select-none">
-                    <th className="py-3 px-3 text-left">Timestamp</th>
+                    <th className="py-3 px-3 text-left">Time</th>
                     <th className="py-3 px-3 text-left">Operator</th>
                     <th className="py-3 px-3 text-left">Action</th>
                     <th className="py-3 px-3 text-left">Target Entity</th>
-                    <th className="py-3 px-3 text-center">Outcome</th>
-                    <th className="py-3 px-3 text-left">Reason / Justification</th>
-                    <th className="py-3 px-3 text-center">Changes (Diff)</th>
-                    <th className="py-3 px-3 text-center">IP / Device</th>
-                    <th className="py-3 px-3 text-center">Details</th>
+                    <th className="py-3 px-3 text-center">Result</th>
+                    <th className="py-3 px-3 text-left">Change</th>
+                    <th className="py-3 px-3 text-center">Source</th>
+                    <th className="py-3 px-3 text-center">View</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--line-subtle)]">
@@ -1262,7 +1280,7 @@ export default function AuditTrail() {
                     <tr
                       key={log.id}
                       onClick={() => setSelectedLog(log)}
-                      className="hover:bg-[var(--surface-elevated)]/75 transition-colors cursor-pointer group"
+                      className={`hover:bg-[var(--surface-elevated)]/75 transition-colors cursor-pointer group ${log.result === 'failure' ? 'border-l-2 border-l-rose-500' : HIGH_IMPACT_ACTIONS.has(log.action) ? 'border-l-2 border-l-amber-500' : ''}`}
                     >
                       {/* 1. Timestamp (Left-aligned, tabular nums) */}
                       <td className="py-3 px-3 whitespace-nowrap font-mono text-[11px] text-[var(--ink-secondary)]">
@@ -1303,6 +1321,7 @@ export default function AuditTrail() {
                       {/* 3. Action (Left-aligned, high-contrast badge) */}
                       <td className="py-3 px-3 whitespace-nowrap text-left">
                         {getActionBadge(log.action, log.result)}
+                        {(log.failure_reason || log.reason) && <div className={`mt-1 max-w-[165px] truncate text-[10px] ${log.result === 'failure' ? 'font-semibold text-rose-700 dark:text-rose-300' : 'text-[var(--muted)]'}`} title={log.failure_reason || log.reason}>{log.failure_reason || log.reason}</div>}
                       </td>
 
                       {/* 4. Target Entity (Left-aligned, entity name primary, entity type secondary) */}
@@ -1330,28 +1349,8 @@ export default function AuditTrail() {
                         )}
                       </td>
 
-                      {/* 6. Reason (Left-aligned, text with ellipsis, tooltip) */}
-                      <td className="py-3 px-3 text-left">
-                        <div
-                          className="truncate max-w-[170px]"
-                          title={log.result === 'failure' ? log.failure_reason : (log.reason || 'Standard operation')}
-                        >
-                          {log.result === 'failure' ? (
-                            <span className="text-rose-700 dark:text-rose-300 font-semibold text-[11px]">
-                              {log.failure_reason || 'Operation failed'}
-                            </span>
-                          ) : log.reason ? (
-                            <span className="italic text-[11px] text-amber-800 dark:text-amber-300 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-                              "{log.reason}"
-                            </span>
-                          ) : (
-                            <span className="text-[var(--muted)] text-[11px]">Standard operation</span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* 7. Changes (Center-aligned, readable diff preview) */}
-                      <td className="py-3 px-3 text-center whitespace-nowrap">
+                      {/* 6. Changes (readable diff preview) */}
+                      <td className="py-3 px-3 text-left whitespace-nowrap">
                         {renderDiffPreview(log)}
                       </td>
 

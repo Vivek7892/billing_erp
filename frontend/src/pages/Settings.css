@@ -150,13 +150,16 @@
   }
 
   body.settings-invoice-print .settings-print-invoice-target {
-    position: fixed !important;
-    inset: 0 auto auto 0 !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
     z-index: 99999 !important;
     width: max-content !important;
     max-width: none !important;
     overflow: visible !important;
     box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
   }
 
   body.settings-invoice-print .settings-print-invoice-target .overflow-x-auto {

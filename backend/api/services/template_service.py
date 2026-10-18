@@ -594,7 +594,7 @@ def resolve_invoice_template_settings(
     3. Template-specific settings overrides
     """
     business = getattr(invoice, 'business', None)
-    base_settings = {s.key: s.value for s in Setting.objects.filter(business=business)} if business else {}
+    base_settings = {s.key: s.value for s in Setting.objects.filter(business=business)}
     active_map = get_active_templates(business)
 
     # 1. Determine effective template_id

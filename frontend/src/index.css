@@ -2588,3 +2588,28 @@ header {
     min-width: 0;
   }
 }
+
+/* ============================================================
+   CONTINUOUS THERMAL RECEIPT PRINT STYLES (58mm & 80mm)
+============================================================ */
+@media print {
+  .thermal-receipt {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 auto !important;
+    box-shadow: none !important;
+    border: none !important;
+    overflow: visible !important;
+  }
+
+  .thermal-receipt * {
+    color: #000000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .thermal-no-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}

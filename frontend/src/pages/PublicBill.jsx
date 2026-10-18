@@ -6,17 +6,16 @@ import { QRCodeSVG } from 'qrcode.react'
 import {
   AlertCircle,
   CheckCircle2,
-  Copy,
   Download,
-  FileText,
   Mail,
   MapPin,
   Phone,
   Printer,
-  Receipt,
+  RefreshCw,
   Share2,
   Check,
-  Smartphone,
+  CircleAlert,
+  XCircle,
   ExternalLink,
 } from 'lucide-react'
 
@@ -60,16 +59,31 @@ const formatTime = (value) => {
 function StatusBadge({ cancelled, paid }) {
   const label = cancelled ? 'Cancelled' : paid ? 'Paid' : 'Payment pending'
   const styles = cancelled
-    ? 'border-rose-300 bg-rose-50 text-rose-700'
+    ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300'
     : paid
-      ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-      : 'border-amber-300 bg-amber-50 text-amber-800'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300'
+      : 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300'
+  const Icon = cancelled ? XCircle : paid ? CheckCircle2 : CircleAlert
 
   return (
-    <span className={`inline-flex items-center gap-1.5 border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md ${styles}`}>
-      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold tracking-wide ${styles}`}>
+      <Icon size={14} aria-hidden="true" />
       {label}
     </span>
+  )
+}
+
+function InvoiceLoadingState() {
+  return (
+    <main className="mx-auto min-h-screen w-full max-w-3xl space-y-4 px-4 py-8 sm:px-6" aria-label="Loading digital invoice" aria-busy="true">
+      <div className="animate-pulse rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 sm:p-7">
+        <div className="flex items-center gap-3"><div className="h-12 w-12 rounded-xl bg-[var(--surface-elevated)]" /><div className="flex-1 space-y-2"><div className="h-4 w-40 rounded bg-[var(--surface-elevated)]" /><div className="h-3 w-28 rounded bg-[var(--surface-elevated)]" /></div><div className="h-7 w-24 rounded-full bg-[var(--surface-elevated)]" /></div>
+        <div className="mt-8 h-3 w-28 rounded bg-[var(--surface-elevated)]" /><div className="mt-3 h-8 w-48 max-w-full rounded bg-[var(--surface-elevated)]" /><div className="mt-3 h-12 w-56 max-w-full rounded bg-[var(--surface-elevated)]" />
+        <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-4">{[0, 1, 2, 3].map(key => <div key={key} className="h-16 rounded-xl bg-[var(--surface-elevated)]" />)}</div>
+      </div>
+      <div className="animate-pulse rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5"><div className="h-4 w-24 rounded bg-[var(--surface-elevated)]" /><div className="mt-5 space-y-3">{[0, 1, 2].map(key => <div key={key} className="h-12 rounded-lg bg-[var(--surface-elevated)]" />)}</div></div>
+      <p className="text-center text-sm text-[var(--muted)]">Loading your digital bill…</p>
+    </main>
   )
 }
 
@@ -492,6 +506,7 @@ export default function PublicBill() {
   const [copied, setCopied] = useState(false)
   const [selectedPrinter, setSelectedPrinter] = useState('a4')
   const [downloading, setDownloading] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
 
   // 1. Resolve token if accessed via invoice ID
   useEffect(() => {
@@ -519,7 +534,7 @@ export default function PublicBill() {
         setLoading(false)
       })
     return () => { active = false }
-  }, [id, token])
+  }, [id, token, retryCount])
 
   // 2. Fetch public invoice data
   useEffect(() => {
@@ -540,7 +555,7 @@ export default function PublicBill() {
         setLoading(false)
       })
     return () => { active = false }
-  }, [resolvedToken])
+  }, [resolvedToken, retryCount])
 
   // 3. Printer format preference
   const configuredPrinter = useMemo(() => {
@@ -557,16 +572,29 @@ export default function PublicBill() {
   }, [configuredPrinter, data])
 
   // 4. Copy & Share
-const copyBillLink = () => {
+const copyBillLink = async () => {
   const billUrl = inv.short_url || window.location.href
-
-  navigator.clipboard.writeText(billUrl)
-    .then(() => {
-      setCopied(true)
-      toast.success('Short bill link copied to clipboard')
-      setTimeout(() => setCopied(false), 2000)
-    })
-    .catch(() => toast.error('Could not copy link'))
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(billUrl)
+    } else {
+      const input = document.createElement('textarea')
+      input.value = billUrl
+      input.setAttribute('readonly', '')
+      input.style.position = 'fixed'
+      input.style.opacity = '0'
+      document.body.appendChild(input)
+      input.select()
+      const copied = document.execCommand('copy')
+      input.remove()
+      if (!copied) throw new Error('Copy unavailable')
+    }
+    setCopied(true)
+    toast.success('Bill link copied')
+    setTimeout(() => setCopied(false), 2200)
+  } catch {
+    toast.error('Could not copy bill link')
+  }
 }
 
 const shareBill = async () => {
@@ -655,262 +683,139 @@ const shareBill = async () => {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100 p-6 text-center">
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
-          <div className="mx-auto mb-4 h-9 w-9 animate-spin rounded-full border-2 border-slate-200 border-t-[#1E3A5F]" />
-          <h2 className="text-base font-bold text-slate-900">Loading invoice...</h2>
-          <p className="mt-1 text-xs text-slate-500">Retrieving exact bill preview</p>
-        </div>
-      </div>
-    )
+  if (loading) return <InvoiceLoadingState />
+
+  const retryLoad = () => {
+    setLoading(true)
+    setError('')
+    setRetryCount(count => count + 1)
   }
 
   if (error || !data) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100 p-6">
-        <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 text-rose-600">
-            <AlertCircle size={24} />
-          </div>
-          <h2 className="text-base font-bold text-slate-900">Invoice Unavailable</h2>
-          <p className="mt-2 text-xs leading-relaxed text-slate-500">{error || 'Could not locate this digital bill.'}</p>
-          <p className="mt-4 text-[11px] text-slate-400">Please contact the store if you need another copy of your invoice.</p>
-        </div>
-      </div>
+      <main className="flex min-h-screen items-center justify-center bg-[var(--app-bg)] px-4 py-10 text-[var(--ink)]">
+        <section role="alert" className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 text-center shadow-sm sm:p-8">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"><AlertCircle size={26} aria-hidden="true" /></div>
+          <p className="mt-5 text-xs font-bold uppercase tracking-[0.16em] text-[var(--muted)]">Digital invoice</p>
+          <h1 className="mt-2 text-xl font-bold">Invoice unavailable</h1>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">This digital bill could not be found or the link may have expired.</p>
+          <p className="mt-3 text-sm text-[var(--ink-secondary)]">Please contact the store if you need another copy.</p>
+          <button type="button" onClick={retryLoad} className="mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1E3A5F] px-5 text-sm font-semibold text-white hover:bg-[#162F4D] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F] dark:bg-sky-700 dark:hover:bg-sky-600"><RefreshCw size={16} aria-hidden="true" />Try again</button>
+        </section>
+      </main>
     )
   }
 
-  const { invoice: inv, business: biz, settings: s } = data
-  const settingEnabled = (key) => String(s?.[key] ?? 'true').toLowerCase() !== 'false'
-  const items = Array.isArray(inv.items) ? inv.items : []
-
-  const bankDetails =
-    s?.shop_bank_details ||
-    [
-      s?.shop_bank_name && `Bank: ${s.shop_bank_name}`,
-      s?.shop_bank_branch && `Branch: ${s.shop_bank_branch}`,
-      s?.shop_bank_account && `A/C: ${s.shop_bank_account}`,
-      s?.shop_bank_ifsc && `IFSC: ${s.shop_bank_ifsc}`,
-    ].filter(Boolean).join(' | ')
-
-  const isPaid = String(inv.payment_status || '').toLowerCase() === 'paid'
-  const isCancelled = String(inv.status || '').toLowerCase() === 'cancelled'
+  const { invoice: inv, business: businessData, settings: settingsData } = data
+  const biz = businessData || {}
+  const s = settingsData || {}
+  const settingEnabled = key => String(s?.[key] ?? 'true').toLowerCase() !== 'false'
+  const items = Array.isArray(inv?.items) ? inv.items : []
+  const shopName = biz.name || s.shop_name || 'Store'
+  const companyLogo = settingEnabled('show_business_logo') ? (s.shop_logo || biz.logo) : ''
+  const companyWebsite = String(s.shop_website || biz.website || '').trim()
+  const websiteHref = companyWebsite
+    ? (/^https?:\/\//i.test(companyWebsite) ? companyWebsite : `https://${companyWebsite}`)
+    : ''
+  const contactHref = settingEnabled('show_business_phone') && biz.mobile
+    ? `tel:${String(biz.mobile).replace(/[^+\d]/g, '')}`
+    : settingEnabled('show_business_email') && biz.email
+      ? `mailto:${biz.email}`
+      : ''
+  const customerName = inv.customer_name || 'Walk-in Customer'
   const total = Number(inv.grand_total || 0)
   const paid = Number(inv.paid_amount || 0)
-  const due = Number(inv.balance_due || Math.max(0, total - paid))
-
-  const showPaymentQr = settingEnabled('show_upi_qr_on_invoice') && Boolean(s?.shop_upi_id)
+  const due = Math.max(0, Number(inv.balance_due ?? Math.max(0, total - paid)))
+  const isCancelled = String(inv.status || '').toLowerCase() === 'cancelled'
+  const isPaid = String(inv.payment_status || '').toLowerCase() === 'paid' || (total > 0 && due <= 0.005)
+  const showPaymentQr = !isCancelled && due > 0 && settingEnabled('show_upi_qr_on_invoice') && Boolean(s.shop_upi_id)
   const showBillQr = settingEnabled('enable_invoice_qr') && Boolean(inv.short_url)
-
-  const upiPayUrl = s?.shop_upi_id
-    ? `upi://pay?pa=${encodeURIComponent(s.shop_upi_id)}&pn=${encodeURIComponent(biz?.name || s?.shop_name || '')}&am=${total.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Invoice ${inv?.invoice_number || ''}`)}`
+  const bankDetails = s.shop_bank_details || [
+    s.shop_bank_name && `Bank: ${s.shop_bank_name}`,
+    s.shop_bank_branch && `Branch: ${s.shop_bank_branch}`,
+    s.shop_bank_account && `A/C: ${s.shop_bank_account}`,
+    s.shop_bank_ifsc && `IFSC: ${s.shop_bank_ifsc}`,
+  ].filter(Boolean).join(' · ')
+  const upiPayUrl = s.shop_upi_id
+    ? `upi://pay?pa=${encodeURIComponent(s.shop_upi_id)}&pn=${encodeURIComponent(shopName)}&am=${due.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`Invoice ${inv.invoice_number || ''}`)}`
     : ''
+  const printProps = { invoice: inv, business: biz, settings: s, settingEnabled, showPaymentQr, showBillQr, bankDetails, upiPayUrl }
+  const primaryButton = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#1E3A5F] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#162F4D] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F] active:scale-[.98] disabled:cursor-wait disabled:opacity-60 dark:bg-sky-700 dark:hover:bg-sky-600'
+  const secondaryButton = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F] active:scale-[.98]'
+  const desktopPrimaryButton = 'inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg bg-[#1E3A5F] px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-[#162F4D] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F] disabled:cursor-wait disabled:opacity-60 dark:bg-sky-700 dark:hover:bg-sky-600'
+  const desktopSecondaryButton = 'inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink)] transition hover:bg-[var(--surface-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F]'
 
   return (
-    <div className="min-h-screen bg-slate-100 font-sans text-slate-900 antialiased print:min-h-0 print:bg-white print:p-0">
-      {/* Dynamic print stylesheet for exact printing */}
-      <style>{`
-        @media print {
-          @page {
-            size: ${selectedPrinter === 'thermal' ? '80mm auto' : (selectedPrinter === 'half_a4' ? '148mm 210mm' : 'A4 portrait')};
-            margin: ${selectedPrinter === 'thermal' ? '0mm' : (selectedPrinter === 'half_a4' ? '5mm' : '8mm')};
-          }
-          body {
-            background: white !important;
-            color: black !important;
-          }
-          .print-hidden, header, aside {
-            display: none !important;
-          }
-        }
-      `}</style>
+    <div className="relative isolate min-h-screen bg-[var(--app-bg)] pb-24 font-sans text-[var(--ink)] antialiased sm:pb-10 print:bg-white print:p-0">
+      <style>{`@media print { @page { size: ${selectedPrinter === 'thermal' ? '80mm auto' : selectedPrinter === 'half_a4' ? '148mm 210mm' : 'A4 portrait'}; margin: ${selectedPrinter === 'thermal' ? '0mm' : selectedPrinter === 'half_a4' ? '5mm' : '8mm'}; } body { background: white !important; color: black !important; } .public-screen { display: none !important; } .print-invoice { display: block !important; } }`}</style>
 
-      {/* ============================================================
-          STICKY TOP ACTION BAR (Clean, simple, mobile-friendly)
-      ============================================================ */}
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-3 py-2.5 backdrop-blur-md print:hidden">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
-          {/* Brand info */}
-          <div className="flex min-w-0 items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xs">
-  {(s.shop_logo || biz.logo) ? (
-    <img
-      src={s.shop_logo || biz.logo}
-      alt={`${biz.name || s.shop_name || 'Business'} logo`}
-      className="h-full w-full object-contain p-1"
-    />
-  ) : (
-    <Receipt size={16} className="text-[#1E3A5F]" />
-  )}
-</div>
-            <div className="min-w-0">
-              <p className="truncate text-xs font-bold text-slate-900 sm:text-sm">
-                Invoice {inv.invoice_number || '—'}
-              </p>
-              <p className="text-[10px] text-slate-500">
-                {biz.name || s.shop_name || 'Store Invoice'} • {selectedPrinter === 'thermal' ? '80mm Thermal' : (selectedPrinter === 'half_a4' ? 'Half-A4 (A5)' : 'A4 Document')}
-              </p>
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 flex items-center justify-center overflow-hidden print:hidden">
+        {companyLogo
+          ? <img src={companyLogo} alt="" className="max-h-[52vh] max-w-[72vw] object-contain opacity-[0.04] grayscale" />
+          : <span className="max-w-[90vw] rotate-[-22deg] break-words text-center text-[clamp(3rem,10vw,8rem)] font-black leading-none text-[var(--muted)] opacity-[0.04]">{shopName}</span>}
+      </div>
+
+      <div className="public-screen relative z-10">
+        <header className="border-b border-[var(--line)] bg-[var(--surface)]">
+          <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-4 sm:px-6">
+            {companyLogo && <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)]"><img src={companyLogo} alt={`${shopName} logo`} className="h-full w-full object-contain p-1.5" /></div>}
+            <div className="min-w-0 flex-1"><p className="truncate text-base font-bold sm:text-lg">{shopName}</p><p className="text-xs text-[var(--muted)]">Digital invoice · Issued by {shopName}</p></div>
+            <div className="hidden sm:block"><StatusBadge cancelled={isCancelled} paid={isPaid} /></div>
+          </div>
+        </header>
+
+        <main className="mx-auto w-full max-w-3xl space-y-4 px-3 py-4 sm:space-y-5 sm:px-6 sm:py-7">
+          <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]/90 shadow-sm" aria-labelledby="invoice-summary-title">
+            <div className="border-b border-[var(--line-subtle)] px-4 py-5 sm:px-7 sm:py-6">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0"><p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--muted)]">Invoice <span className="font-mono tracking-normal">#{inv.invoice_number || '—'}</span></p><h1 id="invoice-summary-title" className="mt-2 break-words text-xl font-bold tracking-tight sm:text-2xl">Digital bill from {shopName}</h1><p className="mt-1.5 text-sm text-[var(--muted)]">{formatDate(inv.created_at)}{formatTime(inv.created_at) ? ` · ${formatTime(inv.created_at)}` : ''}</p></div>
+                <div className="sm:hidden"><StatusBadge cancelled={isCancelled} paid={isPaid} /></div>
+              </div>
+              <p className="mt-6 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">Grand total</p>
+              <p className="mt-1 break-all font-mono text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">{currency(total)}</p>
+              {isCancelled ? <p className="mt-3 text-sm font-semibold text-rose-700 dark:text-rose-300">This invoice has been cancelled.</p> : due > 0 ? <div className="mt-4 inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm dark:border-amber-900 dark:bg-amber-950/40"><span className="font-semibold text-amber-900 dark:text-amber-200">Balance due</span><span className="font-mono text-lg font-bold text-amber-950 dark:text-amber-100">{currency(due)}</span></div> : <p className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 dark:text-emerald-300"><CheckCircle2 size={16} aria-hidden="true" />Paid in full</p>}
+              <div className="mt-5 hidden flex-wrap justify-end gap-2 border-t border-[var(--line-subtle)] pt-4 sm:flex">
+                <button type="button" onClick={shareBill} className={desktopSecondaryButton}>{copied ? <Check size={14} /> : <Share2 size={14} />}{copied ? 'Link copied' : 'Share bill'}</button>
+                <button type="button" onClick={() => printBill(selectedPrinter)} className={desktopSecondaryButton}><Printer size={14} />Print</button>
+                <button type="button" onClick={() => downloadPdf(selectedPrinter)} disabled={downloading} className={desktopPrimaryButton}><Download size={14} />{downloading ? 'Preparing PDF…' : 'Download PDF'}</button>
+              </div>
             </div>
-          </div>
+            <dl className="grid grid-cols-2 gap-px bg-[var(--line-subtle)] sm:grid-cols-4">
+              <div className="min-w-0 bg-[var(--surface)] px-4 py-3.5"><dt className="text-xs text-[var(--muted)]">Billed to</dt><dd className="mt-1 truncate text-sm font-semibold" title={customerName}>{customerName}</dd></div>
+              <div className="min-w-0 bg-[var(--surface)] px-4 py-3.5"><dt className="text-xs text-[var(--muted)]">Payment</dt><dd className="mt-1 truncate text-sm font-semibold capitalize">{inv.payment_method || 'Not specified'}</dd></div>
+              <div className="min-w-0 bg-[var(--surface)] px-4 py-3.5"><dt className="text-xs text-[var(--muted)]">Items</dt><dd className="mt-1 text-sm font-semibold">{items.length} {items.length === 1 ? 'item' : 'items'}</dd></div>
+              {Number(inv.tax_amount) > 0 && <div className="min-w-0 bg-[var(--surface)] px-4 py-3.5"><dt className="text-xs text-[var(--muted)]">GST / tax</dt><dd className="mt-1 truncate font-mono text-sm font-semibold">{currency(inv.tax_amount)}</dd></div>}
+            </dl>
+          </section>
 
-          {/* Action Tools */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Format Toggle Pill — Strictly two types: Sheet Bill vs Thermal Receipt */}
-            <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-xs font-semibold text-slate-600" role="group" aria-label="Bill format">
-              <button
-                type="button"
-                onClick={() => setSelectedPrinter(s?.invoice_template === 'half_a4' || s?.printer_type === 'half_a4' ? 'half_a4' : 'a4')}
-                className={`rounded-md px-3 py-1 text-xs transition ${
-                  selectedPrinter !== 'thermal'
-                    ? 'bg-[#1E3A5F] text-white shadow-xs font-bold'
-                    : 'hover:text-slate-900'
-                }`}
-              >
-                {s?.invoice_template === 'half_a4' || s?.printer_type === 'half_a4' ? 'Tax Invoice (Half-A4)' : 'Tax Invoice (A4)'}
-              </button>
+          <section className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)]/90 p-4 sm:p-5"><h2 className="text-sm font-bold">Bill to</h2><p className="mt-2 text-sm font-semibold">{customerName}</p>{settingEnabled('show_customer_phone') && inv.customer_phone && <a className="mt-1.5 inline-flex min-h-8 items-center gap-2 text-sm text-[var(--primary)] hover:underline" href={`tel:${String(inv.customer_phone).replace(/[^+\d]/g, '')}`}><Phone size={14} aria-hidden="true" />{inv.customer_phone}</a>}{settingEnabled('show_customer_address') && inv.customer_address && <p className="mt-1.5 flex gap-2 whitespace-pre-line text-sm leading-relaxed text-[var(--ink-secondary)]"><MapPin size={14} className="mt-0.5 shrink-0" aria-hidden="true" />{inv.customer_address}</p>}</div>
+            <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)]/90 p-4 sm:p-5"><h2 className="text-sm font-bold">Payment summary</h2><dl className="mt-3 space-y-2.5 text-sm"><div className="flex items-start justify-between gap-3"><dt className="text-[var(--muted)]">Method</dt><dd className="text-right font-semibold capitalize">{inv.payment_method || 'Not specified'}</dd></div><div className="flex items-start justify-between gap-3"><dt className="text-[var(--muted)]">Status</dt><dd className="text-right font-semibold">{isCancelled ? 'Cancelled' : isPaid ? 'Paid' : due < total ? 'Partially paid' : 'Payment pending'}</dd></div><div className="flex items-start justify-between gap-3"><dt className="text-[var(--muted)]">Amount paid</dt><dd className="font-mono font-semibold">{currency(paid)}</dd></div><div className="flex items-start justify-between gap-3 border-t border-[var(--line-subtle)] pt-2.5"><dt className="font-semibold">{due > 0 ? 'Balance due' : 'Remaining balance'}</dt><dd className={`font-mono font-bold ${due > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'}`}>{currency(due)}</dd></div></dl></div>
+          </section>
 
-              <button
-                type="button"
-                onClick={() => setSelectedPrinter('thermal')}
-                className={`rounded-md px-3 py-1 text-xs transition ${
-                  selectedPrinter === 'thermal'
-                    ? 'bg-[#1E3A5F] text-white shadow-xs font-bold'
-                    : 'hover:text-slate-900'
-                }`}
-              >
-                {s?.printer_type === 'thermal_58' || s?.invoice_template === 'thermal_58' ? 'Thermal Receipt (58mm)' : 'Thermal Receipt (80mm)'}
-              </button>
-            </div>
+          <section className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]" aria-labelledby="purchased-items-title">
+            <div className="border-b border-[var(--line-subtle)] px-4 py-4 sm:px-5"><h2 id="purchased-items-title" className="text-sm font-bold">Purchased items</h2><p className="mt-0.5 text-xs text-[var(--muted)]">{items.length} {items.length === 1 ? 'item' : 'items'} on this invoice</p></div>
+            {items.length ? <div className="divide-y divide-[var(--line-subtle)]">{items.map((item, index) => <article key={item.id || index} className="flex min-w-0 items-start justify-between gap-3 px-4 py-3.5 sm:px-5"><div className="min-w-0 flex-1"><h3 className="break-words text-sm font-semibold">{item.product_name || item.name || 'Item'}</h3><p className="mt-1 text-xs text-[var(--muted)]"><span className="font-mono">{item.quantity ?? 0} × {currency(item.unit_price)}</span>{item.hsn_code && <span className="ml-2">HSN {item.hsn_code}</span>}</p>{Number(item.discount_amount) > 0 && <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">Item discount −{currency(item.discount_amount)}</p>}</div><p className="shrink-0 pt-0.5 text-right font-mono text-sm font-bold tabular-nums">{currency(item.total)}</p></article>)}</div> : <p className="px-4 py-8 text-center text-sm text-[var(--muted)]">No line items were recorded for this bill.</p>}
+          </section>
 
-            <button
-              type="button"
-              onClick={() => printBill(selectedPrinter)}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 active:scale-95"
-            >
-              <Printer size={13} />
-              <span>Print {selectedPrinter === 'thermal' ? 'Thermal' : (selectedPrinter === 'A4')}</span>
-            </button>
+          <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5" aria-label="Invoice totals"><div className="ml-auto w-full max-w-sm space-y-2.5 text-sm"><div className="flex justify-between gap-4 text-[var(--ink-secondary)]"><span>Subtotal</span><span className="font-mono tabular-nums">{currency(inv.subtotal)}</span></div>{Number(inv.discount_amount) > 0 && <div className="flex justify-between gap-4 text-emerald-700 dark:text-emerald-300"><span>Discount</span><span className="font-mono tabular-nums">−{currency(inv.discount_amount)}</span></div>}{Number(inv.tax_amount) > 0 && <div className="flex justify-between gap-4 text-[var(--ink-secondary)]"><span>GST / tax</span><span className="font-mono tabular-nums">{currency(inv.tax_amount)}</span></div>}{Number(inv.round_off) !== 0 && <div className="flex justify-between gap-4 text-[var(--muted)]"><span>Round off</span><span className="font-mono tabular-nums">{currency(inv.round_off)}</span></div>}<div className="flex items-center justify-between gap-4 border-t-2 border-[var(--line)] pt-3 text-base font-bold"><span>Total</span><span className="font-mono text-xl tabular-nums">{currency(total)}</span></div><div className="flex justify-between gap-4 text-[var(--ink-secondary)]"><span>Paid</span><span className="font-mono tabular-nums">{currency(paid)}</span></div><div className={`flex justify-between gap-4 font-bold ${due > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300'}`}><span>{due > 0 ? 'Balance due' : 'Paid in full'}</span><span className="font-mono tabular-nums">{currency(due)}</span></div></div></section>
 
-            <button
-              type="button"
-              onClick={() => downloadPdf(selectedPrinter)}
-              disabled={downloading}
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#1E3A5F] px-3 text-xs font-bold text-white shadow-xs transition hover:bg-[#162F4D] active:scale-95 disabled:opacity-60"
-            >
-              <Download size={13} />
-              <span>{downloading ? 'Downloading…' : 'PDF'}</span>
-            </button>
+          {(showPaymentQr || showBillQr || (settingEnabled('show_bank_details') && bankDetails)) && <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5" aria-label="Payment and invoice options"><h2 className="text-sm font-bold">Payment and bill details</h2><div className="mt-4 grid gap-5 sm:grid-cols-[auto_auto_1fr] sm:items-center">{showPaymentQr && <div className="flex items-center gap-3 sm:flex-col sm:items-center sm:text-center"><div className="rounded-xl border border-[var(--line)] bg-white p-2"><QRCodeSVG value={upiPayUrl} size={88} level="M" /></div><div><p className="text-sm font-bold">Scan to pay</p><p className="mt-0.5 break-all text-xs text-[var(--muted)]">{s.shop_upi_id}</p></div></div>}{showBillQr && <div className="flex items-center gap-3 sm:flex-col sm:items-center sm:text-center"><div className="rounded-xl border border-[var(--line)] bg-white p-2"><QRCodeSVG value={inv.short_url} size={88} level="M" /></div><div><p className="text-sm font-bold">Scan to view</p><p className="mt-0.5 text-xs text-[var(--muted)]">Digital bill link</p></div></div>}{settingEnabled('show_bank_details') && bankDetails && <div className="min-w-0 border-t border-[var(--line-subtle)] pt-4 text-sm sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0"><p className="font-semibold">Bank details</p><p className="mt-1 whitespace-pre-line break-words font-mono text-xs leading-relaxed text-[var(--ink-secondary)]">{bankDetails}</p></div>}</div></section>}
 
-            <button
-              type="button"
-              onClick={shareBill}
-              className="hidden sm:inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-bold text-slate-700 shadow-xs transition hover:bg-slate-50 active:scale-95"
-            >
-              {copied ? <Check size={13} className="text-teal-600" /> : <Share2 size={13} />}
-              <span>{copied ? 'Copied' : 'Share'}</span>
-            </button>
-          </div>
-        </div>
-      </header>
+          {settingEnabled('show_notes') && inv.notes && <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5"><h2 className="text-sm font-bold">Note from {shopName}</h2><p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-[var(--ink-secondary)]">{inv.notes}</p></section>}
 
-      {/* ============================================================
-          MAIN BILL DISPLAY AREA (Exact A4, Exact Half-A4, or Exact Thermal)
-      ============================================================ */}
-      <main className="mx-auto max-w-5xl px-2 py-4 sm:px-6 sm:py-6 pb-20 sm:pb-8">
-        {/* Format hint for mobile users */}
-        {selectedPrinter === 'a4' && (
-          <div className="mb-3 block sm:hidden rounded-lg bg-blue-50/80 border border-blue-200/80 p-2 text-center text-[11px] text-blue-900 print:hidden">
-            Showing exact <strong>A4 Tax Invoice</strong>. Swipe horizontally to view full table, or tap <strong>Half-A4</strong> or <strong>Thermal</strong> above for a compact receipt.
-          </div>
-        )}
+          <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5" aria-label="Business contact information"><h2 className="text-sm font-bold">Questions about this bill?</h2><p className="mt-1 text-sm text-[var(--muted)]">Contact {shopName} if you need help.</p><div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm">{settingEnabled('show_business_phone') && biz.mobile && <a href={`tel:${String(biz.mobile).replace(/[^+\d]/g, '')}`} className="inline-flex min-h-8 items-center gap-2 font-medium text-[var(--primary)] hover:underline"><Phone size={15} aria-hidden="true" />{biz.mobile}</a>}{settingEnabled('show_business_email') && biz.email && <a href={`mailto:${biz.email}`} className="inline-flex min-h-8 min-w-0 items-center gap-2 break-all font-medium text-[var(--primary)] hover:underline"><Mail size={15} className="shrink-0" aria-hidden="true" />{biz.email}</a>}{settingEnabled('show_business_address') && biz.address && <p className="flex w-full gap-2 whitespace-pre-line text-[var(--ink-secondary)]"><MapPin size={15} className="mt-0.5 shrink-0" aria-hidden="true" />{biz.address}</p>}</div>{settingEnabled('show_business_gstin') && biz.gstin && <p className="mt-3 text-xs text-[var(--muted)]">GSTIN <span className="font-mono font-medium text-[var(--ink-secondary)]">{biz.gstin}</span></p>}</section>
 
-        {/* Outer scroll wrapper for mobile screens to preserve exact dimensions */}
-        <div className="w-full overflow-x-auto overscroll-x-contain py-1">
-          {selectedPrinter === 'thermal' ? (
-            <ThermalBill
-              invoice={inv}
-              business={biz}
-              settings={s}
-              settingEnabled={settingEnabled}
-              showPaymentQr={showPaymentQr}
-              showBillQr={showBillQr}
-              bankDetails={bankDetails}
-              upiPayUrl={upiPayUrl}
-            />
-          ) : (
-            <A4Bill
-              invoice={inv}
-              business={biz}
-              settings={s}
-              settingEnabled={settingEnabled}
-              showPaymentQr={showPaymentQr}
-              showBillQr={showBillQr}
-              bankDetails={bankDetails}
-              isPaid={isPaid}
-              isCancelled={isCancelled}
-              items={items}
-              total={total}
-              paid={paid}
-              due={due}
-              upiPayUrl={upiPayUrl}
-              isHalf={selectedPrinter === 'half_a4'}
-            />
-          )}
-        </div>
-      </main>
+          {settingEnabled('show_terms') && s.invoice_terms && <details className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm"><summary className="cursor-pointer font-semibold">Terms and conditions</summary><p className="mt-3 whitespace-pre-line text-xs leading-relaxed text-[var(--ink-secondary)]">{s.invoice_terms}</p></details>}
+        
+          <footer className="px-2 pb-2 pt-1 text-center">{s.invoice_footer && <p className="text-sm font-semibold text-[var(--ink-secondary)]">{s.invoice_footer}</p>}<p className="mt-2 text-xs text-[var(--muted)]">This is a digital copy of your invoice.</p></footer>
+          <details className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3 text-sm print:hidden"><summary className="cursor-pointer font-semibold text-[var(--ink-secondary)]">More options · Receipt format</summary><label className="mt-3 flex flex-col gap-1.5 text-xs font-medium text-[var(--muted)]">Choose a PDF or print format<select value={selectedPrinter} onChange={event => setSelectedPrinter(event.target.value)} className="min-h-11 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-sm text-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1E3A5F]"><option value="a4">Full page invoice (A4)</option><option value="half_a4">Compact invoice (A5)</option><option value="thermal">Receipt</option></select></label></details>
+        </main>
 
-      {/* ============================================================
-          FIXED MOBILE BOTTOM ACTION BAR
-      ============================================================ */}
-      <aside className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-2 border-t border-slate-200 bg-white/95 px-3 py-2 shadow-lg backdrop-blur-md sm:hidden print:hidden">
-        {/* Mobile Format Switcher — Two Types: Sheet vs Thermal */}
-        <div className="flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-[11px] font-bold">
-          <button
-            type="button"
-            onClick={() => setSelectedPrinter(s?.invoice_template === 'half_a4' || s?.printer_type === 'half_a4' ? 'half_a4' : 'a4')}
-            className={`rounded px-2.5 py-1 ${selectedPrinter !== 'thermal' ? 'bg-[#1E3A5F] text-white shadow-xs' : 'text-slate-600'}`}
-          >
-            {s?.invoice_template === 'half_a4' || s?.printer_type === 'half_a4' ? 'Half-A4' : 'A4 Bill'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedPrinter('thermal')}
-            className={`rounded px-2.5 py-1 ${selectedPrinter === 'thermal' ? 'bg-[#1E3A5F] text-white shadow-xs' : 'text-slate-600'}`}
-          >
-            {s?.printer_type === 'thermal_58' || s?.invoice_template === 'thermal_58' ? '58mm Roll' : 'Thermal'}
-          </button>
-        </div>
+        <aside className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--line)] bg-[var(--surface)]/95 p-2 pb-[max(.5rem,env(safe-area-inset-bottom))] shadow-lg backdrop-blur sm:hidden print:hidden" aria-label="Invoice actions"><div className="mx-auto grid max-w-3xl grid-cols-3 gap-2"><button type="button" onClick={shareBill} className={`${secondaryButton} min-w-0 px-1.5 text-xs`} aria-label={copied ? 'Bill link copied' : 'Share invoice'}>{copied ? <Check size={16} /> : <Share2 size={16} />}<span>{copied ? 'Copied' : 'Share'}</span></button><button type="button" onClick={() => printBill(selectedPrinter)} className={`${secondaryButton} min-w-0 px-1.5 text-xs`}><Printer size={16} aria-hidden="true" />Print</button><button type="button" onClick={() => downloadPdf(selectedPrinter)} disabled={downloading} className={`${primaryButton} min-w-0 px-1.5 text-xs`}><Download size={16} aria-hidden="true" />{downloading ? 'Preparing…' : 'Download'}</button></div></aside>
+      </div>
 
-        <button
-          type="button"
-          onClick={() => printBill(selectedPrinter)}
-          className="flex h-9 items-center justify-center gap-1 rounded-xl border border-slate-300 bg-white px-3 text-xs font-bold text-slate-800 active:scale-95"
-        >
-          <Printer size={13} />
-          <span>Print</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => downloadPdf(selectedPrinter)}
-          disabled={downloading}
-          className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#1E3A5F] px-3 text-xs font-bold text-white shadow-xs transition hover:bg-[#162F4D] active:scale-95 disabled:opacity-60"
-        >
-          <Download size={13} />
-          <span>{downloading ? 'Downloading…' : `PDF (${selectedPrinter === 'thermal' ? 'Thermal' : selectedPrinter === 'half_a4' ? 'Half-A4' : 'A4'})`}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={shareBill}
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-700 active:scale-95"
-          title="Share"
-        >
-          <Share2 size={13} />
-        </button>
-      </aside>
+      <div className="print-invoice hidden">{selectedPrinter === 'thermal' ? <ThermalBill {...printProps} /> : <A4Bill {...printProps} isPaid={isPaid} isCancelled={isCancelled} items={items} total={total} paid={paid} due={due} isHalf={selectedPrinter === 'half_a4'} />}</div>
     </div>
   )
 }

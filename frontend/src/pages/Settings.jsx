@@ -45,6 +45,8 @@ import api from '../api'
 import toast from 'react-hot-toast'
 import { useAuth } from '../AuthContext'
 import InvoiceDocument, { isTrue } from '../components/InvoiceDocument'
+import ThermalReceipt from '../components/ThermalReceipt'
+import { isValidUpiId } from '../utils/thermalSettings'
 import { drawTabletopStandeeCanvas, generatePrintStandHtml, loadUpiBrandLogos, UpiLogo } from '../components/UpiLogos'
 import merchantStandIllustration from '../assets/merchant-qr-stand.svg'
 import googlePayLogo from '../assets/google-pay.svg'
@@ -627,7 +629,7 @@ export default function Settings() {
 
   const printThermalDirect = () => {
     const is58 = settings.thermal_paper_width === '58' || settings.thermal_paper_width === '2'
-    const pageSize = `${is58 ? '58mm' : '80mm'} 200mm`
+    const pageSize = `${is58 ? '58mm' : '80mm'} auto`
     document.getElementById('settings-invoice-print-page')?.remove()
     const pageStyle = document.createElement('style')
     pageStyle.id = 'settings-invoice-print-page'
@@ -1463,12 +1465,12 @@ export default function Settings() {
                 <div className="p-6 bg-slate-100/90 overflow-x-auto flex justify-center items-start min-h-[520px]">
                   {printSubTab === 'thermal' ? (
                     /* Thermal Continuous Receipt Simulator */
-                    <div className="settings-print-invoice-target bg-white text-black shadow-lg rounded-xs overflow-visible border border-slate-300">
-                      <InvoiceDocument
+                    <div className="settings-print-invoice-target bg-white text-black shadow-md rounded-xs overflow-visible border border-slate-300 print:border-none print:shadow-none print:m-0">
+                      <ThermalReceipt
                         invoice={sampleInvoice}
                         settings={settings}
                         mode={settings.thermal_paper_width === '58' || settings.thermal_paper_width === '2' ? 'thermal_58' : 'thermal_80'}
-                        showModePicker={false}
+                        isPreview={true}
                       />
                     </div>
                   ) : (
@@ -1843,6 +1845,23 @@ export default function Settings() {
                           label="Print UPI QR Code for Payment"
                           description="Customers can scan and pay bill directly at POS."
                         />
+                        {isTrue(settings.thermal_show_upi_qr, true) && (
+                          <div className="ml-7 text-[11px]">
+                            {!settings.shop_upi_id?.trim() ? (
+                              <p className="text-amber-750 bg-amber-50 border border-amber-200 rounded px-2.5 py-1 text-amber-800">
+                                ⚠️ Merchant UPI ID is empty. Add a valid UPI ID (e.g. store@upi) in Payments &amp; UPI settings to print QR.
+                              </p>
+                            ) : !isValidUpiId(settings.shop_upi_id) ? (
+                              <p className="text-amber-800 bg-amber-50 border border-amber-200 rounded px-2.5 py-1">
+                                ⚠️ UPI ID format appears invalid: &quot;{settings.shop_upi_id}&quot; (expected format: username@bank).
+                              </p>
+                            ) : (
+                              <p className="text-emerald-700 font-medium">
+                                ✓ Verified UPI ID: {settings.shop_upi_id}
+                              </p>
+                            )}
+                          </div>
+                        )}
                         <CheckboxField
                           checked={isTrue(settings.thermal_show_bill_qr, true)}
                           onChange={v => setField('thermal_show_bill_qr', String(v))}

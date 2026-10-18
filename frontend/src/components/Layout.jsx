@@ -74,7 +74,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/users', icon: UserCog, label: 'Users', adminOnly: true },
       { to: '/recycle-bin', icon: Trash2, label: 'Recycle Bin', adminOnly: true },
-      { to: '/payments/reconciliation', icon: ScanLine, label: 'Reconciliation', adminOnly: true },
+      { to: '/payments/reconciliation', icon: ScanLine, label: 'Transaction Ledger', adminOnly: true },
       { to: '/support', icon: HelpCircle, label: 'Support' }
     ]
   }
@@ -92,7 +92,7 @@ const PAGE_META = NAV_GROUPS.reduce((acc, group) => {
   return acc
 }, {})
 
-function NavGroup({ group, collapsed, user, onNav }) {
+function NavGroup({ group, collapsed, mobile, user, onNav }) {
   const location = useLocation()
   const [open, setOpen] = useState(true)
 
@@ -112,6 +112,7 @@ function NavGroup({ group, collapsed, user, onNav }) {
       <NavGroupItems
         items={supportOnly}
         collapsed={collapsed}
+        mobile={mobile}
         groupLabel={group.label}
         open={open}
         setOpen={setOpen}
@@ -124,6 +125,7 @@ function NavGroup({ group, collapsed, user, onNav }) {
     <NavGroupItems
       items={visibleItems}
       collapsed={collapsed}
+      mobile={mobile}
       groupLabel={group.label}
       open={open}
       setOpen={setOpen}
@@ -132,10 +134,10 @@ function NavGroup({ group, collapsed, user, onNav }) {
   )
 }
 
-function NavGroupItems({ items, collapsed, groupLabel, open, setOpen, onNav }) {
+function NavGroupItems({ items, collapsed, mobile, groupLabel, open, setOpen, onNav }) {
   if (collapsed) {
     return (
-      <div className="px-2 mb-2.5">
+      <div className="px-2 mb-1.5">
         {items.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
@@ -144,7 +146,7 @@ function NavGroupItems({ items, collapsed, groupLabel, open, setOpen, onNav }) {
             onClick={onNav}
             title={label}
             className={({ isActive }) =>
-              `relative flex items-center justify-center w-10 h-10 rounded-lg mb-1 transition-all duration-150 group ${
+              `relative flex items-center justify-center w-9 h-9 rounded-lg mb-0.5 transition-all duration-150 group ${
                 isActive
                   ? 'bg-[var(--sidebar-active)] text-[var(--sidebar-active-text)] shadow-xs font-semibold'
                   : 'text-slate-400 hover:bg-[var(--sidebar-hover)] hover:text-white'
@@ -166,12 +168,12 @@ function NavGroupItems({ items, collapsed, groupLabel, open, setOpen, onNav }) {
   }
 
   return (
-    <div className={`mb-2.5 ${groupLabel === 'Dashboard' ? '' : 'border-t border-white/[0.06] pt-1.5'}`}>
+    <div className={`mb-1.5 ${groupLabel === 'Dashboard' ? '' : 'border-t border-white/[0.06] pt-1'}`}>
       {/* Group header: strictly neutral, never highlighted when active */}
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between px-3 py-1.5 mb-1 rounded-md text-slate-400 hover:text-slate-200 transition-colors"
+        className="w-full flex items-center justify-between px-2.5 py-1 mb-0.5 rounded-md text-slate-400 hover:text-slate-200 transition-colors"
       >
         <span className="text-[10px] font-bold uppercase tracking-[0.14em]">
           {groupLabel}
@@ -180,7 +182,7 @@ function NavGroupItems({ items, collapsed, groupLabel, open, setOpen, onNav }) {
       </button>
 
       {open && (
-        <div className="space-y-1 px-2">
+        <div className="space-y-0.5 px-2">
           {items.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
@@ -188,7 +190,7 @@ function NavGroupItems({ items, collapsed, groupLabel, open, setOpen, onNav }) {
               end={to === '/'}
               onClick={onNav}
               className={({ isActive }) =>
-                `relative flex min-h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-medium transition-colors duration-150 ${
+                `relative flex ${mobile ? 'min-h-10' : 'min-h-9'} items-center gap-2.5 rounded-lg px-2.5 text-[11px] font-medium transition-colors duration-150 ${
                   isActive
                     ? 'bg-[var(--sidebar-active)] text-[var(--sidebar-active-text)] shadow-xs font-semibold'
                     : 'text-slate-300 hover:bg-[var(--sidebar-hover)] hover:text-white'
@@ -298,11 +300,11 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
 
       {/* Scrollable navigation */}
   
-      <nav className="sidebar-menu-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain py-3.5 space-y-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      <nav className="sidebar-menu-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain py-2 space-y-0.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {settingsMode ? (
           <div className="px-2">
             {(!collapsed || mobile) && <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">Settings</p>}
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {SETTINGS_TABS.map(({ id, label, icon: Icon, badge }) => {
                 const isActive = currentSettingsTab === id
                 return (
@@ -312,7 +314,7 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
                     onClick={onNav}
                     title={collapsed && !mobile ? label : undefined}
                     aria-current={isActive ? 'page' : undefined}
-                    className={`flex min-h-10 items-center rounded-xl text-[12px] font-medium transition-colors duration-150 ${
+                    className={`flex ${mobile ? 'min-h-10' : 'min-h-9'} items-center rounded-lg text-[11px] font-medium transition-colors duration-150 ${
                       collapsed && !mobile ? 'justify-center px-2' : 'gap-3 px-3'
                     } ${isActive
                       ? 'bg-indigo-50 text-indigo-800 font-semibold shadow-xs'
@@ -332,18 +334,18 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
             </div>
           </div>
         ) : NAV_GROUPS.map(group => (
-          <NavGroup key={group.label} group={group} collapsed={collapsed && !mobile} user={user} onNav={onNav} />
+          <NavGroup key={group.label} group={group} collapsed={collapsed && !mobile} mobile={mobile} user={user} onNav={onNav} />
         )).concat(!settingsMode && canAccessUtility ? [
-          <div key="settings-security" className={`mt-2.5 border-t border-white/10 pt-2.5 ${collapsed && !mobile ? 'px-2' : 'px-2.5'}`}>
+          <div key="settings-security" className={`mt-1.5 border-t border-white/10 pt-1.5 ${collapsed && !mobile ? 'px-2' : 'px-2.5'}`}>
             {(!collapsed || mobile) && <p className="mb-1 px-2 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">Settings &amp; Security</p>}
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {SIDEBAR_UTILITY_ITEMS.map(({ to, icon: Icon, label }) => (
                 <NavLink
                   key={to}
                   to={to}
                   onClick={onNav}
                   title={collapsed && !mobile ? label : undefined}
-                  className={({ isActive }) => `flex min-h-9 items-center rounded-xl text-[12px] font-medium transition-colors ${
+                  className={({ isActive }) => `flex ${mobile ? 'min-h-10' : 'min-h-9'} items-center rounded-lg text-[11px] font-medium transition-colors ${
                     collapsed && !mobile ? 'justify-center' : 'gap-2.5 px-2.5'
                   } ${isActive
                     ? 'bg-[var(--sidebar-active)] text-[var(--sidebar-active-text)] font-semibold'
@@ -919,10 +921,10 @@ function PageHeading({ shopName, pathname }) {
         <Icon size={16} strokeWidth={2.2} />
       </div>
       <div className="min-w-0 flex flex-col justify-center leading-tight">
-        <h1 className="font-bold text-[var(--ink)] text-[13px] sm:text-[15px] tracking-tight whitespace-normal break-words">
+        <h1 className="max-w-[125px] truncate font-bold text-[var(--ink)] text-[13px] sm:max-w-none sm:text-[15px] tracking-tight sm:whitespace-normal sm:break-words">
           {title}
         </h1>
-        <div className="text-[9px] text-[var(--muted)] font-medium whitespace-nowrap leading-snug">
+        <div className="max-w-[125px] truncate text-[9px] text-[var(--muted)] font-medium leading-snug sm:max-w-none sm:whitespace-nowrap">
           {meta?.group ? `${shopName} · ${meta.group}` : shopName}
         </div>
       </div>
@@ -1004,11 +1006,12 @@ function ProfileMenu({ user }) {
         aria-label="Open profile menu"
         aria-haspopup="menu"
         aria-expanded={open}
-        className="inline-flex h-9 max-w-[180px] items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface)] py-1 pl-1 pr-2.5 text-[var(--ink-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+        className="inline-flex h-10 max-w-[110px] items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] py-1 pl-1 pr-2 text-[var(--ink-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] sm:max-w-[180px] sm:gap-2 sm:pr-2.5"
       >
         <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-xs font-bold text-[var(--primary-contrast)]">
           {initials}
         </span>
+        <span className="text-[11px] font-semibold sm:hidden">Profile</span>
         <span className="hidden max-w-28 truncate text-xs font-semibold sm:inline">{displayName}</span>
         <ChevronDown size={14} className={`hidden text-[var(--muted)] transition-transform sm:block ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -1017,11 +1020,14 @@ function ProfileMenu({ user }) {
         <div
           role="menu"
           aria-label="Profile menu"
-          className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-lg"
+          className="absolute right-0 top-full z-50 mt-2 w-[min(18rem,calc(100vw-1rem))] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-lg"
         >
-          <div className="border-b border-[var(--line)] px-3 py-2">
-            <p className="truncate text-xs font-semibold text-[var(--ink)]">{displayName}</p>
-            {user?.role && <p className="mt-0.5 text-[9px] font-medium uppercase tracking-wide text-[var(--muted)]">{user.role}</p>}
+          <div className="flex items-center gap-3 border-b border-[var(--line)] px-3 py-3">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-sm font-bold text-[var(--primary-contrast)]">{initials}</span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-[var(--ink)]">{displayName}</p>
+              <p className="truncate text-[11px] text-[var(--muted)]">{user?.email || user?.role || 'Signed in'}</p>
+            </div>
           </div>
 
           <div className="border-b border-[var(--line)] p-2">
@@ -1031,7 +1037,7 @@ function ProfileMenu({ user }) {
               aria-pressed={theme === 'dark'}
               aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
               onClick={toggleTheme}
-              className="flex h-8 w-full items-center justify-between rounded-md px-2 text-xs font-medium text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)]"
+              className="flex min-h-10 w-full items-center justify-between rounded-md px-2.5 text-xs font-medium text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)]"
             >
               <span className="inline-flex items-center gap-2">
                 {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
@@ -1048,7 +1054,7 @@ function ProfileMenu({ user }) {
               type="button"
               role="menuitem"
               onClick={() => { setOpen(false); navigate('/settings') }}
-              className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-xs font-medium text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
+              className="flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-xs font-medium text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
             >
               <Settings size={15} /> Settings
             </button>
@@ -1056,7 +1062,7 @@ function ProfileMenu({ user }) {
               type="button"
               role="menuitem"
               onClick={handleSignOut}
-              className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+              className="flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
             >
               <LogOut size={15} /> Sign out
             </button>
@@ -1158,12 +1164,12 @@ export default function Layout({ children }) {
 
           {/* Top Menu Bar / Header */}
           <header className="flex-shrink-0 z-10 bg-[var(--surface)] border-b border-[var(--line)] shadow-xs">
-            <div className="flex min-h-14 min-w-0 items-center gap-1.5 px-2.5 py-1.5 sm:gap-3 sm:px-5">
+            <div className="flex min-h-12 min-w-0 items-center gap-1.5 px-2 py-1 sm:min-h-14 sm:gap-3 sm:px-5 sm:py-1.5">
               <button
                 onClick={() => setMobileOpen(true)}
                 title="Open menu"
                 aria-label="Open menu"
-                className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-all duration-150"
+                className="md:hidden flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
               >
                 <MenuIcon size={20} />
               </button>
@@ -1183,7 +1189,7 @@ export default function Layout({ children }) {
                 onClick={() => setMobileSearchOpen(v => !v)}
                 title="Search"
                 aria-label="Search"
-                className={`lg:hidden w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-150 ${
+                className={`lg:hidden flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors ${
                   mobileSearchOpen
                     ? 'bg-slate-100 text-[#1E3A5F] dark:bg-slate-800 dark:text-slate-200'
                     : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
@@ -1202,7 +1208,7 @@ export default function Layout({ children }) {
               {/* Live Clock */}
               <LiveDateTime />
 
-              <div className="w-px h-5 bg-[var(--line)]" />
+              <div className="hidden sm:block w-px h-5 bg-[var(--line)]" />
 
               <ProfileMenu user={user} />
             </div>

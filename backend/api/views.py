@@ -2243,7 +2243,17 @@ class SettingViewSet(viewsets.ModelViewSet):
         if unknown_keys:
             return Response({'detail': 'Unknown setting keys.', 'keys': sorted(unknown_keys)}, status=400)
 
-        bool_keys = {key for key in incoming_keys if key.startswith(('show_', 'enable_', 'allow_', 'thermal_', 'upi_qr_', 'approval_')) and key.endswith(('_enabled', '_area', '_col', '_cols', '_qr', '_details', '_logo', '_address', '_phone', '_email', '_gstin', '_pan', '_summary', '_words', '_status', '_mode', '_due', '_terms', '_footer', '_business_name', '_customer_address', '_place_of_supply', '_stock', '_expiry', '_charge'))}
+        bool_keys = {
+            key for key in incoming_keys
+            if (key.startswith(('show_', 'enable_', 'allow_', 'approval_')) or key.startswith('thermal_show_'))
+            and key.endswith((
+                '_enabled', '_area', '_col', '_cols', '_qr', '_details', '_logo',
+                '_address', '_phone', '_email', '_gstin', '_pan', '_summary',
+                '_words', '_status', '_mode', '_due', '_terms', '_footer',
+                '_business_name', '_customer_address', '_place_of_supply',
+                '_stock', '_expiry', '_charge'
+            ))
+        }
         bool_keys.update({
             'prevent_expired_batch_sale', 'barcode_bold', 'round_off', 'reverse_charge',
             'hsn_summary_on_invoice', 'cess_enabled', 'upi_qr_enabled', 'advance_payment_enabled',
@@ -2251,6 +2261,12 @@ class SettingViewSet(viewsets.ModelViewSet):
             'approval_refund_enabled', 'approval_stock_adjustment_enabled', 'approval_price_change_enabled',
         } & incoming_keys)
         bool_keys.update(key for key in incoming_keys if key.startswith(('thermal_show_', 'barcode_show_', 'enable_')))
+        non_bool_keys = {
+            'thermal_terms', 'thermal_footer', 'thermal_title', 'thermal_paper_width',
+            'printer_paper_width', 'upi_qr_size_a4', 'upi_qr_size_thermal', 'invoice_terms',
+            'invoice_footer', 'receipt_footer', 'footer_text_override', 'terms_override',
+        }
+        bool_keys.difference_update(non_bool_keys)
         for key in bool_keys:
             if key in request.data and str(request.data[key]).lower() not in ('true', 'false', '1', '0', 'yes', 'no'):
                 return Response({'detail': f'{key} must be a boolean.'}, status=400)
@@ -2349,10 +2365,17 @@ class SettingViewSet(viewsets.ModelViewSet):
         for key, value in request.data.items():
             if key in ('reason', '_reason'):
                 continue
+            clean_value = str(value)
+            if key in bool_keys:
+                clean_value = 'true' if str(value).lower() in ('true', '1', 'yes') else 'false'
+            elif key == 'thermal_paper_width':
+                val_str = str(value).lower().strip()
+                clean_value = '58' if val_str in ('58', '2', '58mm') else '80'
+
             Setting.objects.update_or_create(
                 business=request.user.business,
                 key=key,
-                defaults={'value': str(value)},
+                defaults={'value': clean_value},
             )
 
         # Synchronize place_of_supply and shop_state if either is updated
@@ -2496,20 +2519,21 @@ class SettingViewSet(viewsets.ModelViewSet):
             'invoice_border_style': 'solid', 'invoice_layout': 'standard',
             'invoice_table_style': 'clean', 'invoice_theme_color': '#1e3a5f',
             'show_rate_col': 'true', 'show_total_col': 'true',
-            'thermal_paper_width': '80', 'thermal_title': 'RECEIPT', 'thermal_terms': '',
+            'thermal_paper_width': '80', 'thermal_title': 'TAX INVOICE',
+            'thermal_terms': 'Goods once sold can be exchanged within 7 days with bill.',
             'thermal_show_logo': 'true', 'thermal_show_invoice_no': 'true', 'thermal_show_date': 'true',
-            'thermal_show_time': 'true', 'thermal_show_cashier': 'true', 'thermal_show_payment_mode': 'true',
-            'thermal_show_place_of_supply': 'true', 'thermal_show_customer_name': 'true',
-            'thermal_show_customer_phone': 'true', 'thermal_show_customer_gstin': 'true',
-            'thermal_show_sku': 'true', 'thermal_show_qty': 'true', 'thermal_show_rate': 'true',
+            'thermal_show_time': 'true', 'thermal_show_cashier': 'false', 'thermal_show_payment_mode': 'true',
+            'thermal_show_place_of_supply': 'false', 'thermal_show_customer_name': 'true',
+            'thermal_show_customer_phone': 'false', 'thermal_show_customer_gstin': 'false',
+            'thermal_show_sku': 'false', 'thermal_show_qty': 'true', 'thermal_show_rate': 'true',
             'thermal_show_total': 'true',
-            'thermal_show_discount': 'true', 'thermal_show_tax': 'true', 'thermal_show_party_balance': 'true',
+            'thermal_show_discount': 'false', 'thermal_show_tax': 'false', 'thermal_show_party_balance': 'false',
             'thermal_show_upi_qr': 'true',
-            'thermal_show_bill_qr': 'true', 'thermal_show_party_balance': 'true',
-            'thermal_show_item_desc': 'true', 'thermal_show_batch': 'false',
+            'thermal_show_bill_qr': 'false',
+            'thermal_show_item_desc': 'false', 'thermal_show_batch': 'false',
             'thermal_show_expiry': 'false', 'thermal_show_mrp': 'false',
-            'thermal_show_barcode': 'false', 'thermal_show_terms': 'true',
-            'thermal_show_customer_address': 'true',
+            'thermal_show_barcode': 'false', 'thermal_show_terms': 'false',
+            'thermal_show_customer_address': 'false',
             'barcode_align': 'center', 'barcode_bold': 'true', 'barcode_font_size': 'medium',
             'barcode_height': '36', 'barcode_width': '2', 'barcode_label_size': '50x25',
             'barcode_printer_type': 'thermal', 'barcode_show_business_name': 'true',
@@ -3545,6 +3569,7 @@ class PublicBillDetailView(APIView):
             'shop_address': business_data['address'],
             'shop_phone': business_data['mobile'],
             'shop_email': business_data['email'],
+            'shop_website': business_settings.get('shop_website', ''),
             'shop_gstin': business_data['gstin'],
             'shop_pan': business_data['pan'],
             'shop_upi_id': business_settings.get('shop_upi_id', ''),
@@ -4853,6 +4878,7 @@ class RazorpayCreateOrderView(APIView):
         )
 
         RazorpayTransaction.objects.create(
+            business=request.user.business,
             invoice=invoice,
             razorpay_order_id=result['order_id'] if result['success'] else f'FAILED-{receipt}',
             merchant_transaction_id=receipt,
@@ -5025,9 +5051,13 @@ class PaymentReconciliationView(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request):
+        business = request.user.business
+        if not business:
+            return Response([])
+
         qs = RazorpayTransaction.objects.select_related('invoice').filter(
-            invoice__business=request.user.business
-        ).order_by('-created_at')
+            Q(business=business) | Q(invoice__business=business)
+        ).distinct().order_by('-created_at')
 
         status_filter = request.query_params.get('status')
         if status_filter:
@@ -5041,7 +5071,17 @@ class PaymentReconciliationView(APIView):
                 Q(invoice__invoice_number__icontains=search)
             )
 
-        page_size = min(int(request.query_params.get('page_size', 50)), 200)
+        transaction_date = request.query_params.get('date')
+        if transaction_date:
+            from django.utils.dateparse import parse_date
+            parsed_date = parse_date(transaction_date)
+            if parsed_date:
+                qs = qs.filter(created_at__date=parsed_date)
+
+        try:
+            page_size = min(max(int(request.query_params.get('page_size', 50)), 1), 200)
+        except (TypeError, ValueError):
+            page_size = 50
         return Response(RazorpayTransactionSerializer(qs[:page_size], many=True).data)
 
 

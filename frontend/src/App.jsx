@@ -30,7 +30,7 @@ const Reports = lazy(() => import('./pages/Reports'))
 const Users = lazy(() => import('./pages/Users'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Support = lazy(() => import('./pages/Support'))
-const PaymentReconciliation = lazy(() => import('./pages/PaymentReconciliation'))
+const TransactionLedger = lazy(() => import('./pages/TransactionLedger'))
 const Notifications = lazy(() => import('./pages/Notifications'))
 const PublicBill = lazy(() => import('./pages/PublicBill'))
 const AuditTrail = lazy(() => import('./pages/AuditTrail'))
@@ -283,7 +283,7 @@ function AppRoutes() {
         path="/payments/reconciliation"
         element={
           <Guard adminOnly>
-            <PaymentReconciliation />
+            <TransactionLedger />
           </Guard>
         }
       />
