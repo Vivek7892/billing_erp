@@ -1214,6 +1214,16 @@ export default function Suppliers() {
   const [payMethod, setPayMethod] = useState('cash')
   const [paying, setPaying] = useState(false)
 
+  /* Purchase return */
+  const [returnTarget, setReturnTarget] = useState(null)
+  const [returnOrders, setReturnOrders] = useState([])
+  const [purchaseReturns, setPurchaseReturns] = useState([])
+  const [returnPurchaseId, setReturnPurchaseId] = useState('')
+  const [returnQuantities, setReturnQuantities] = useState({})
+  const [returnReason, setReturnReason] = useState('')
+  const [loadingReturns, setLoadingReturns] = useState(false)
+  const [savingReturn, setSavingReturn] = useState(false)
+
   /* ==========================================================
      LOAD DATA
   ========================================================== */
@@ -1277,6 +1287,85 @@ export default function Suppliers() {
 
   const closeAllExpanded = () => {
     setExpandedIds(new Set())
+  }
+
+  const openSupplierReturn = async supplier => {
+    setReturnTarget(supplier)
+    setReturnOrders([])
+    setPurchaseReturns([])
+    setReturnPurchaseId('')
+    setReturnQuantities({})
+    setReturnReason('')
+    setLoadingReturns(true)
+    try {
+      const [purchaseResponse, returnResponse] = await Promise.all([
+        api.get(`/purchases/?supplier=${supplier.id}&page_size=1000`),
+        api.get('/purchase-returns/?page_size=1000'),
+      ])
+      const purchases = purchaseResponse.data?.results || purchaseResponse.data || []
+      const returns = returnResponse.data?.results || returnResponse.data || []
+      const supplierPurchases = (Array.isArray(purchases) ? purchases : [])
+        .filter(purchase => String(purchase.supplier) === String(supplier.id))
+        .sort((a, b) => new Date(b.purchase_date || b.created_at) - new Date(a.purchase_date || a.created_at))
+      setReturnOrders(supplierPurchases)
+      setPurchaseReturns(Array.isArray(returns) ? returns : [])
+      const returnedItems = (Array.isArray(returns) ? returns : []).flatMap(item => item.items || [])
+      const firstEligiblePurchase = supplierPurchases.find(purchase =>
+        (purchase.items || []).some(item => {
+          const alreadyReturned = returnedItems
+            .filter(returnItem => String(returnItem.purchase_item) === String(item.id))
+            .reduce((total, returnItem) => total + Number(returnItem.quantity || 0), 0)
+          return Number(item.quantity || 0) - alreadyReturned > 0
+        })
+      )
+      if (firstEligiblePurchase) setReturnPurchaseId(String(firstEligiblePurchase.id))
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Unable to load supplier purchases for return')
+    } finally {
+      setLoadingReturns(false)
+    }
+  }
+
+  const returnedQuantityFor = purchaseItemId => purchaseReturns
+    .flatMap(purchaseReturn => purchaseReturn.items || [])
+    .filter(item => String(item.purchase_item) === String(purchaseItemId))
+    .reduce((total, item) => total + Number(item.quantity || 0), 0)
+
+  const returnOrder = returnOrders.find(purchase => String(purchase.id) === String(returnPurchaseId))
+  const returnableItems = (returnOrder?.items || []).map(item => ({
+    ...item,
+    remaining: Math.max(0, Number(item.quantity || 0) - returnedQuantityFor(item.id)),
+  })).filter(item => item.remaining > 0)
+
+  const submitSupplierReturn = async () => {
+    if (!returnOrder) return
+    const items = returnableItems
+      .map(item => ({ purchase_item_id: item.id, quantity: Number(returnQuantities[item.id] || 0) }))
+      .filter(item => item.quantity > 0)
+    if (!items.length) {
+      toast.error('Enter a return quantity for at least one item')
+      return
+    }
+    if (items.some(item => item.quantity > (returnableItems.find(row => row.id === item.purchase_item_id)?.remaining || 0))) {
+      toast.error('A return quantity exceeds the remaining purchased quantity')
+      return
+    }
+
+    setSavingReturn(true)
+    try {
+      const response = await api.post('/purchase-returns/', {
+        purchase: returnOrder.id,
+        reason: returnReason.trim(),
+        items,
+      })
+      toast.success(`Return ${response.data?.return_number || ''} recorded`)
+      setReturnTarget(null)
+      await load()
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Unable to record supplier return')
+    } finally {
+      setSavingReturn(false)
+    }
   }
 
   /* ==========================================================
@@ -1709,12 +1798,21 @@ export default function Suppliers() {
                           <button
                             type="button"
                             onClick={() => openPayment(supplier)}
-                            className="h-7 px-2.5 bg-[#1E3A5F] text-white hover:bg-[#162F4D] text-[11px] font-semibold flex items-center gap-1 rounded"
+                            className="btn-success btn-sm inline-flex items-center gap-1"
                           >
                             <CreditCard size={12} />
                             Pay
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => openSupplierReturn(supplier)}
+                          className="btn-secondary btn-sm inline-flex items-center gap-1"
+                          title="Return items from a supplier purchase"
+                        >
+                          <RotateCcw size={12} />
+                          <span>Return</span>
+                        </button>
                         <button
                           type="button"
                           onClick={() => openEdit(supplier)}
@@ -1937,13 +2035,23 @@ export default function Suppliers() {
                                 <button
                                   type="button"
                                   onClick={() => openPayment(supplier)}
-                                  className="h-7 px-2.5 bg-[#1E3A5F] text-white hover:bg-[#162F4D] text-[11px] font-semibold flex items-center gap-1 rounded transition-colors"
+                                  className="btn-success btn-sm inline-flex items-center gap-1"
                                   title="Record payment"
                                 >
                                   <CreditCard size={12} />
                                   Pay
                                 </button>
                               )}
+
+                              <button
+                                type="button"
+                                onClick={() => openSupplierReturn(supplier)}
+                                className="btn-secondary btn-sm inline-flex items-center gap-1"
+                                title="Return items from a supplier purchase"
+                              >
+                                <RotateCcw size={12} />
+                                <span className="hidden xl:inline">Return</span>
+                              </button>
 
                               <button
                                 type="button"
@@ -2009,6 +2117,123 @@ export default function Suppliers() {
         onClose={() => setImportModal(false)}
         onSuccess={load}
       />
+
+      {/* ======================================================
+          SUPPLIER PURCHASE RETURN
+      ====================================================== */}
+      <Modal
+        open={!!returnTarget}
+        onClose={() => !savingReturn && setReturnTarget(null)}
+        title={`Return to Supplier${returnTarget?.name ? ` — ${returnTarget.name}` : ''}`}
+        subtitle="Choose a purchase and enter the quantities being returned. Stock and supplier balances update when recorded."
+        size="lg"
+        footer={
+          <div className="flex w-full items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setReturnTarget(null)}
+              disabled={savingReturn}
+              className="btn-secondary btn-base"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submitSupplierReturn}
+              disabled={savingReturn || loadingReturns || !returnOrder}
+              className="btn-primary btn-base inline-flex items-center gap-2"
+            >
+              <RotateCcw size={14} />
+              {savingReturn ? 'Recording…' : 'Record Return'}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {loadingReturns ? (
+            <div className="py-10 text-center text-sm text-[var(--muted)]">Loading supplier purchases…</div>
+          ) : returnOrders.length === 0 ? (
+            <EmptyState
+              icon={Package}
+              title="No supplier purchases found"
+              description="Create a purchase for this supplier before recording a return."
+            />
+          ) : (
+            <>
+              <div>
+                <label className="label" htmlFor="supplier-return-purchase">Purchase</label>
+                <select
+                  id="supplier-return-purchase"
+                  className="input"
+                  value={returnPurchaseId}
+                  onChange={event => {
+                    setReturnPurchaseId(event.target.value)
+                    setReturnQuantities({})
+                  }}
+                >
+                  {returnOrders.map(purchase => (
+                    <option key={purchase.id} value={purchase.id}>
+                      {purchase.invoice_number || `Purchase #${purchase.id}`} · {purchase.purchase_date || 'Undated'} · {fmt(purchase.total_amount)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {returnOrder && (
+                <div className="overflow-x-auto rounded-md border border-[var(--line)]">
+                  {returnableItems.length > 0 ? (
+                    <table className="erp-table w-full min-w-[540px] text-xs">
+                      <thead>
+                        <tr>
+                          <th>Product</th>
+                          <th className="text-right">Purchased</th>
+                          <th className="text-right">Returnable</th>
+                          <th className="text-right">Return Qty</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {returnableItems.map(item => (
+                          <tr key={item.id}>
+                            <td className="font-semibold">{item.product_name || item.product_detail?.name || `Product #${item.product}`}</td>
+                            <td className="text-right font-mono">{item.quantity}</td>
+                            <td className="text-right font-mono">{item.remaining}</td>
+                            <td className="text-right">
+                              <input
+                                type="number"
+                                min="0"
+                                max={item.remaining}
+                                step="0.01"
+                                value={returnQuantities[item.id] ?? ''}
+                                onChange={event => setReturnQuantities(current => ({ ...current, [item.id]: event.target.value }))}
+                                className="input ml-auto w-28 text-right font-mono"
+                                aria-label={`Return quantity for ${item.product_name || 'product'}`}
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p className="p-5 text-center text-sm text-[var(--muted)]">All items on this purchase have already been returned.</p>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <label className="label" htmlFor="supplier-return-reason">Reason (optional)</label>
+                <textarea
+                  id="supplier-return-reason"
+                  className="input resize-y"
+                  rows={2}
+                  value={returnReason}
+                  onChange={event => setReturnReason(event.target.value)}
+                  placeholder="Damaged goods, incorrect items, or other reason"
+                />
+              </div>
+            </>
+          )}
+        </div>
+      </Modal>
 
       {/* ======================================================
           PAYMENT MODAL

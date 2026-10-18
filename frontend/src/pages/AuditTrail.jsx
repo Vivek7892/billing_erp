@@ -1232,7 +1232,7 @@ export default function AuditTrail() {
 
             {/* Desktop Semantic HTML Table (Strict 9 Columns with <colgroup>) */}
             <div className="hidden sm:block overflow-x-auto min-h-[220px] pb-4">
-              <table className="w-full text-xs text-left" style={{ tableLayout: 'fixed', minWidth: '1140px' }}>
+              <table className="erp-table w-full text-xs text-left" style={{ tableLayout: 'fixed', minWidth: '1140px' }}>
                 <colgroup>
                   <col style={{ width: '140px' }} /> {/* 1. Timestamp */}
                   <col style={{ width: '140px' }} /> {/* 2. Operator */}
@@ -1523,7 +1523,7 @@ export default function AuditTrail() {
 
               {getStructuredChanges(selectedLog).length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left">
+                  <table className="erp-table w-full text-xs text-left">
                     <thead className="bg-[var(--surface)] text-[10px] font-bold uppercase text-[var(--muted)] border-b border-[var(--line-subtle)]">
                       <tr>
                         <th className="py-2 px-3 w-1/3">Business Attribute</th>

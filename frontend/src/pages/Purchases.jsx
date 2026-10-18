@@ -906,7 +906,7 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
                                   <div className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-wider mb-2">
                                     Line items for {ord.invoice_number} ({ord.items.length})
                                   </div>
-                                  <table className="w-full text-xs border border-[var(--line)] bg-[var(--surface)] rounded overflow-hidden">
+                                  <table className="erp-table w-full text-xs border border-[var(--line)] bg-[var(--surface)] rounded overflow-hidden">
                                     <thead className="bg-[var(--surface-subtle)] border-b border-[var(--line)] text-[var(--muted)]">
                                       <tr>
                                         <th className="p-2 text-center text-[10px] font-bold uppercase">Row</th>

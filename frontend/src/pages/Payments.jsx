@@ -843,21 +843,28 @@ export default function Payments() {
 
         .payments-page .payment-table th {
           padding: 10px 14px;
+          border-right: 1px solid var(--line-subtle);
           text-align: left;
-          font-size: 0.75rem;
-          font-weight: 700;
-          letter-spacing: .04em;
-          text-transform: uppercase;
-          color: var(--muted);
-          background: var(--surface-subtle);
+          font-size: 14px;
+          font-weight: 600;
+          letter-spacing: 0;
+          color: var(--ink-secondary);
+          background: var(--table-header-bg);
           border-bottom: 1px solid var(--line);
           white-space: nowrap;
         }
 
         .payments-page .payment-table td {
-          padding: 15px 18px;
+          padding: 10px 14px;
+          border-right: 1px solid var(--line-subtle);
           border-bottom: 1px solid var(--line-subtle);
+          font-size: 14px;
           vertical-align: middle;
+        }
+
+        .payments-page .payment-table th:last-child,
+        .payments-page .payment-table td:last-child {
+          border-right: 0;
         }
 
         .payments-page .payment-table tbody tr:last-child td {
@@ -1044,7 +1051,7 @@ export default function Payments() {
           </section>
 
           {/* STATUS METRICS + METHOD BREAKDOWN */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-2">
             {/* Status pills */}
             <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 space-y-2">
               <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Payment Status Breakdown</p>
@@ -1228,7 +1235,7 @@ export default function Payments() {
         ) : (
           <>
             {/* MOBILE CARDS VIEW (sm:hidden) */}
-            <div className="divide-y divide-[var(--line-subtle)] sm:hidden">
+            <div className="hidden">
               {pagedBills.map((bill, idx) => {
                 const paymentRef = getPaymentRef(bill)
                 const isMenuOpen = openActionMenuId === `mobile-${bill.id}`
@@ -1386,7 +1393,7 @@ export default function Payments() {
             </div>
 
             {/* DESKTOP TABLE VIEW (hidden sm:block) */}
-            <div className="hidden overflow-x-auto sm:block min-h-[280px]">
+            <div className="overflow-x-auto min-h-[280px]">
               <table className="payment-table table-fixed w-full min-w-[840px]">
                 <colgroup>
                   <col style={{ width: '15%' }} />
@@ -1829,7 +1836,7 @@ export default function Payments() {
           ) : (
             <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] shadow-xs">
               {/* Desktop Table View */}
-              <div className="hidden sm:block overflow-x-auto min-h-[220px] pb-4">
+              <div className="overflow-x-auto min-h-[220px] pb-4">
                 <table className="erp-table w-full text-left text-xs min-w-[760px]">
                   <colgroup>
                     <col style={{ width: '28%' }} />
@@ -1916,7 +1923,7 @@ export default function Payments() {
               </div>
 
               {/* Mobile Cards View */}
-              <div className="sm:hidden divide-y divide-[var(--line)]">
+              <div className="hidden">
                 {filteredCustomers.map(customer => {
                   const due = Number(customer.outstanding_amount || 0)
                   return (

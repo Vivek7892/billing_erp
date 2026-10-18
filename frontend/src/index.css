@@ -83,6 +83,8 @@
   --line: #D7DEE7;
   --line-subtle: #E8EDF3;
   --line-strong: #CBD5E1;
+  --table-header-bg: #F3F4F6;
+  --table-selected-bg: #EEF2FF;
 
   --background: #FFFFFF;
   --bg-subtle: #FFFFFF;
@@ -254,6 +256,8 @@
   --line: #334155;
   --line-subtle: #263449;
   --line-strong: #475569;
+  --table-header-bg: #172033;
+  --table-selected-bg: rgba(143, 183, 232, 0.14);
 
   --background: #0B1220;
   --bg-subtle: #111827;
@@ -1045,8 +1049,11 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 
 .table {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: auto;
+  font-size: 14px;
+  font-family: "Inter", Arial, sans-serif;
   color: var(--ink);
   background: var(--surface);
 }
@@ -1054,29 +1061,30 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 .table thead tr,
 .table thead {
   border-bottom: 1px solid var(--line);
-  background: var(--surface-subtle);
+  background: var(--table-header-bg);
 }
 
 .dark .table thead tr,
 .dark .table thead {
   border-bottom: 1px solid var(--line);
-  background: var(--surface-subtle);
+  background: var(--table-header-bg);
 }
 
 .table th {
   padding: 10px 12px;
+  border-right: 1px solid var(--line-subtle);
   border-bottom: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  color: var(--ink-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
   text-align: left;
-  text-transform: uppercase;
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .dark .table th {
-  color: var(--muted);
+  color: var(--ink-secondary);
 }
 
 .table th.num-col,
@@ -1087,11 +1095,17 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 
 .table td {
   padding: 10px 12px;
+  border-right: 1px solid var(--line-subtle);
   border-bottom: 1px solid var(--line-subtle);
   color: var(--ink);
-  font-size: 13px;
+  font-size: 14px;
   vertical-align: middle;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
+
+.table th:last-child,
+.table td:last-child { border-right: 0; }
 
 .dark .table td {
   border-bottom: 1px solid var(--line-subtle);
@@ -1102,7 +1116,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 .table td.numeric {
   color: var(--ink);
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
+  font-feature-settings: "tnum" 1;
   font-weight: 600;
   text-align: right;
 }
@@ -1116,7 +1130,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   color: var(--ink);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
+  font-feature-settings: "tnum" 1;
   font-weight: 700;
   text-align: right;
 }
@@ -1143,11 +1157,11 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
 }
 
 .table tbody tr.selected {
-  background: var(--surface-hover) !important;
+  background: var(--table-selected-bg) !important;
 }
 
 .dark .table tbody tr.selected {
-  background: var(--surface-hover) !important;
+  background: var(--table-selected-bg) !important;
 }
 
 /* Status-based Table Row Highlighting (Subtle Indication) */
@@ -1224,12 +1238,12 @@ tr.row-info {
 /* Compact ERP Table variant */
 .table-compact th {
   padding: 0.5rem 0.75rem;
-  font-size: 0.6875rem;
+  font-size: 14px;
 }
 
 .table-compact td {
   padding: 0.45rem 0.75rem;
-  font-size: 0.8125rem;
+  font-size: 14px;
 }
 
 /* ERP Table container with clean borders and subtle rounded corners */
@@ -1247,41 +1261,66 @@ tr.row-info {
   min-width: 640px;
   border-collapse: separate;
   border-spacing: 0;
+  table-layout: auto;
   color: var(--ink);
   background: var(--surface);
-  font-size: 0.875rem;
+  font-size: 14px;
+  font-family: "Inter", Arial, sans-serif;
+}
+
+.erp-table.table-fixed,
+.table.table-fixed {
+  table-layout: fixed;
+}
+
+.table .font-mono,
+.erp-table .font-mono,
+.erp-summary-table .font-mono,
+.erp-report-table .font-mono,
+.summary-strip-table .font-mono,
+.payment-table .font-mono,
+.pb-prod-table .font-mono,
+.pb-bill-table .font-mono {
+  font-family: "Inter", Arial, sans-serif !important;
 }
 
 .erp-table thead {
-  background: var(--surface-subtle);
+  background: var(--table-header-bg);
 }
 
 .erp-table th {
   padding: 10px 12px;
-  background: var(--surface-subtle) !important;
+  background: var(--table-header-bg) !important;
+  border-right: 1px solid var(--line-subtle) !important;
   border-bottom: 1px solid var(--line) !important;
-  color: var(--muted) !important;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  color: var(--ink-secondary) !important;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
   text-align: left;
-  text-transform: uppercase;
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .dark .erp-table th {
-  background: var(--surface-subtle) !important;
-  color: var(--muted) !important;
+  background: var(--table-header-bg) !important;
+  color: var(--ink-secondary) !important;
   border-bottom-color: var(--line) !important;
 }
 
 .erp-table td {
   padding: 10px 12px;
+  border-right: 1px solid var(--line-subtle);
   border-bottom: 1px solid var(--line-subtle);
-  font-size: 0.8125rem;
+  font-size: 14px;
   color: var(--ink);
   vertical-align: middle;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
+
+.erp-table th:last-child,
+.erp-table td:last-child { border-right: 0; }
 
 .erp-table tbody tr {
   background: var(--surface);
@@ -1290,6 +1329,25 @@ tr.row-info {
 
 .erp-table tbody tr:hover {
   background: var(--surface-hover);
+}
+
+.erp-table tbody tr.selected,
+.erp-table tbody tr[aria-selected="true"] {
+  background: var(--table-selected-bg) !important;
+}
+
+.erp-table tbody tr:focus-within,
+.table tbody tr:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.table input[type="checkbox"],
+.erp-table input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  accent-color: var(--primary);
 }
 
 .dark .erp-table tbody tr {
@@ -1315,7 +1373,7 @@ table td.text-right,
 .erp-summary-table td.text-right {
   text-align: right !important;
   font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
+  font-feature-settings: "tnum" 1;
 }
 
 .erp-table th.text-center,
@@ -1378,30 +1436,35 @@ table td,
 .erp-summary-table {
   width: 100%;
   border-collapse: collapse;
+  font-family: "Inter", Arial, sans-serif;
+  background: var(--surface);
 }
 
 .erp-summary-table th {
-  padding: 0.625rem 1rem;
-  background: var(--surface-elevated);
+  padding: 10px 12px;
+  background: var(--table-header-bg);
+  border-right: 1px solid var(--line-subtle);
   border-bottom: 1px solid var(--line);
-  font-size: 0.6875rem;
+  font-size: 14px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #475467;
+  color: var(--ink-secondary);
 }
 
 .dark .erp-summary-table th {
-  color: #98A2B3;
+  color: var(--ink-secondary);
 }
 
 .erp-summary-table td {
-  padding: 0.625rem 1rem;
+  padding: 10px 12px;
+  border-right: 1px solid var(--line-subtle);
   border-bottom: 1px solid var(--line-subtle);
-  font-size: 0.8125rem;
+  font-size: 14px;
   color: var(--ink);
   vertical-align: middle;
 }
+
+.erp-summary-table th:last-child,
+.erp-summary-table td:last-child { border-right: 0; }
 
 .erp-summary-table tr:hover td {
   background: var(--surface-hover);

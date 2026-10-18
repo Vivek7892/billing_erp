@@ -457,9 +457,11 @@ export default function Stock() {
             </p>
           </div>
 
-          <div
+          <button
+            type="button"
             onClick={() => setFilter('in_stock')}
-            className={`p-3 cursor-pointer transition-colors ${
+            aria-pressed={filter === 'in_stock'}
+            className={`w-full p-3 text-left cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus)] ${
               filter === 'in_stock'
                 ? 'bg-[var(--surface-elevated)] font-semibold'
                 : 'hover:bg-[var(--surface-hover)]'
@@ -477,7 +479,7 @@ export default function Stock() {
             <p className="text-[10px] text-[var(--muted)]">
               Above reorder level
             </p>
-          </div>
+          </button>
 
           <div
             onClick={() => setFilter('low_stock')}

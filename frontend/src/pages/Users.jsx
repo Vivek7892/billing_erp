@@ -41,6 +41,7 @@ export default function Users() {
   const [deleteId, setDeleteId] = useState(null)
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
 
   const load = useCallback(() => {
     setLoading(true)
@@ -127,9 +128,34 @@ export default function Users() {
         roleFilter === 'all' ||
         String(u.role || '').toLowerCase() === roleFilter.toLowerCase()
 
-      return matchesSearch && matchesRole
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'active' ? Boolean(u.is_active) : !u.is_active)
+
+      return matchesSearch && matchesRole && matchesStatus
     })
-  }, [users, search, roleFilter])
+  }, [users, search, roleFilter, statusFilter])
+
+  const exportUsers = () => {
+    const columns = ['Name', 'Username', 'Email', 'Phone', 'Role', 'Status']
+    const rows = filteredUsers.map(u => [
+      `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+      u.username,
+      u.email,
+      u.phone,
+      u.role,
+      u.is_active ? 'Active' : 'Inactive',
+    ])
+    const csv = [columns, ...rows]
+      .map(row => row.map(value => `"${String(value || '').replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'users.csv'
+    link.click()
+    URL.revokeObjectURL(url)
+  }
 
   // Count by role
   const roleCounts = useMemo(() => {
@@ -218,8 +244,19 @@ export default function Users() {
             </kbd>
           )}
         </div>
-        <div className="text-xs text-[var(--muted)] self-end sm:self-center">
-          Showing {filteredUsers.length} of {users.length} users
+        <div className="flex w-full items-center justify-between gap-2 text-xs text-[var(--muted)] sm:w-auto">
+          <label className="flex items-center gap-2">
+            <span>Status</span>
+            <select className="input h-9 min-h-9 w-auto py-1 text-xs" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </label>
+          <span>Showing {filteredUsers.length} of {users.length}</span>
+          <button type="button" onClick={exportUsers} disabled={!filteredUsers.length} className="btn-secondary h-9 px-3 text-xs disabled:opacity-50">
+            Export CSV
+          </button>
         </div>
       </div>
 
@@ -238,24 +275,26 @@ export default function Users() {
             icon={Search}
             title="No matching users"
             description="No users matched your search and role filters."
-            action={{ label: 'Clear Filters', onClick: () => { setSearch(''); setRoleFilter('all') } }}
+            action={{ label: 'Clear Filters', onClick: () => { setSearch(''); setRoleFilter('all'); setStatusFilter('all') } }}
           />
         ) : (
           <div className="overflow-x-auto min-h-[180px] pb-4">
-            <table className="table w-full min-w-[700px]">
+            <table className="table w-full min-w-[820px]">
               <colgroup>
-                <col style={{ width: '25%' }} />
                 <col style={{ width: '20%' }} />
-                <col style={{ width: '23%' }} />
-                <col style={{ width: '12%' }} />
+                <col style={{ width: '16%' }} />
+                <col style={{ width: '22%' }} />
+                <col style={{ width: '14%' }} />
                 <col style={{ width: '10%' }} />
-                <col style={{ width: '10%' }} />
+                <col style={{ width: '9%' }} />
+                <col style={{ width: '9%' }} />
               </colgroup>
               <thead>
                 <tr>
                   <th>Name</th>
                   <th>Username</th>
                   <th>Email</th>
+                  <th>Phone</th>
                   <th>Role</th>
                   <th className="text-center">Status</th>
                   <th className="text-right">Actions</th>
@@ -272,6 +311,7 @@ export default function Users() {
                       </td>
                       <td className="font-mono text-xs">{u.username}</td>
                       <td className="text-xs text-[var(--ink-secondary)]">{u.email || '—'}</td>
+                      <td className="font-mono text-xs text-[var(--ink-secondary)]">{u.phone || '—'}</td>
                       <td>
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${badgeClass}`}>
                           {u.role || 'Staff'}

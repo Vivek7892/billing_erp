@@ -296,11 +296,7 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
       )}
 
       {/* Scrollable navigation */}
-      {(!collapsed || mobile) && !settingsMode && (
-        <div className="shrink-0 px-4 pt-3 pb-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Workspace menu</p>
-        </div>
-      )}
+  
       <nav className="sidebar-menu-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain py-3.5 space-y-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {settingsMode ? (
           <div className="px-2">
@@ -1103,12 +1099,17 @@ export default function Layout({ children }) {
               <div className="w-px h-5 bg-[var(--line)]" />
 
               <NavLink
-                to="/settings"
-                title="Settings"
-                aria-label="Open settings"
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+                to="/settings?tab=account"
+                title={`${user?.first_name || user?.username || user?.email || 'User'} profile`}
+                aria-label="Open profile"
+                className="inline-flex h-9 max-w-[180px] shrink-0 items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface)] py-1 pl-1 pr-2.5 text-[var(--ink-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
               >
-                <Settings size={17} />
+                <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-xs font-bold text-[var(--primary-contrast)]">
+                  {(user?.first_name || user?.username || user?.email || 'U').charAt(0).toUpperCase()}
+                </span>
+                <span className="hidden max-w-28 truncate text-xs font-semibold sm:inline">
+                  {user?.first_name || user?.username || 'Profile'}
+                </span>
               </NavLink>
             </div>
 

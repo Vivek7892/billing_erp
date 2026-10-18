@@ -461,7 +461,7 @@ export default function Returns() {
                       {expandedReturns[r.id] && (
                         <tr className="bg-[var(--surface-elevated)]">
                           <td colSpan={10} className="p-0">
-                            <table className="w-full text-xs border-t border-[var(--line)]">
+                            <table className="erp-table w-full text-xs border-t border-[var(--line)]">
                               <thead>
                                 <tr className="bg-[var(--surface)]">
                                   <th className="pl-8 py-1.5 text-left font-semibold text-[var(--muted)] uppercase tracking-wide">Product</th>

@@ -693,7 +693,7 @@ export default function InvoiceDetailAndPreview({
               </div>
 
               <div className="hidden overflow-x-auto sm:block">
-                <table className="w-full min-w-[760px] text-left text-xs border-collapse">
+                <table className="erp-table w-full min-w-[760px] text-left text-xs">
                   <thead className="bg-[var(--surface-subtle)] border-b border-[var(--line)] text-[var(--ink)]">
                     <tr>
                       <th className="py-2.5 px-3 text-center w-10 font-bold text-[var(--muted)]">#</th>

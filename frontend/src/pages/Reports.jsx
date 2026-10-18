@@ -340,27 +340,30 @@ export default function Reports() {
           width: 100%;
           min-width: 640px;
           border-collapse: collapse;
+          font-family: "Inter", Arial, sans-serif;
           font-variant-numeric: tabular-nums;
+          background: var(--surface);
         }
 
         .reports-page .erp-report-table th {
           padding: 9px 12px;
           text-align: left;
           white-space: nowrap;
-          background: var(--surface-subtle);
+          background: var(--table-header-bg);
           border-bottom: 1px solid var(--line);
-          color: var(--muted);
-          font-size: 0.72rem;
-          font-weight: 700;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
+          font-size: 14px;
+          font-weight: 600;
+          letter-spacing: 0;
+          color: var(--ink-secondary);
+          border-right: 1px solid var(--line-subtle);
         }
 
         .reports-page .erp-report-table td {
           padding: 10px 12px;
           border-bottom: 1px solid var(--line-subtle);
           vertical-align: middle;
-          font-size: 13px;
+          font-size: 14px;
+          border-right: 1px solid var(--line-subtle);
         }
 
         .reports-page .erp-report-table tbody tr:hover {
@@ -374,7 +377,7 @@ export default function Reports() {
         .reports-page .erp-report-table tfoot td {
           padding: 11px 12px;
           border-top: 2px solid var(--line);
-          background: var(--surface-subtle);
+          background: var(--table-header-bg);
           font-weight: 700;
           font-size: 13px;
         }
@@ -383,23 +386,26 @@ export default function Reports() {
           width: 100%;
           min-width: 640px;
           border-collapse: collapse;
+          font-family: "Inter", Arial, sans-serif;
+          background: var(--surface);
         }
 
         .reports-page .summary-strip-table th {
           padding: 8px 12px;
-          background: var(--surface-subtle);
+          background: var(--table-header-bg);
           border-bottom: 1px solid var(--line);
-          color: var(--muted);
-          font-size: 0.7rem;
-          font-weight: 700;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
+          font-size: 14px;
+          font-weight: 600;
+          letter-spacing: 0;
+          color: var(--ink-secondary);
+          border-right: 1px solid var(--line-subtle);
           text-align: left;
         }
 
         .reports-page .summary-strip-table td {
           padding: 9px 12px;
-          font-size: 13px;
+          font-size: 14px;
+          border-right: 1px solid var(--line-subtle);
           border-bottom: 1px solid var(--line-subtle);
         }
       `}</style>

@@ -2991,7 +2991,7 @@ export default function Settings() {
             />
 
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+              <table className="erp-table w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-500 font-bold">
                     <th className="py-2.5 px-3">Shortcut Key</th>

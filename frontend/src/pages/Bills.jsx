@@ -508,7 +508,7 @@ function InvoiceActions({
         <button
           type="button"
           onClick={() => onCollect?.(bill)}
-          className="inline-flex min-h-9 items-center gap-1 rounded-md bg-[#1E3A5F] px-2.5 py-1 text-[11px] font-semibold text-white transition hover:bg-[#162F4D] shrink-0"
+          className="btn-success btn-sm inline-flex shrink-0 items-center gap-1"
           title={`Collect payment (${fmt(bill.balance_due)} due)`}
         >
           <IndianRupee size={11} />
@@ -806,7 +806,7 @@ function InvoiceModal({
                 <button
                   type="button"
                   onClick={() => onCollect?.(selected)}
-                  className="inline-flex min-h-9 flex-1 sm:flex-initial items-center justify-center gap-1.5 rounded-xl border border-emerald-500/50 bg-emerald-600 px-3.5 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 active:scale-95 shadow-xs"
+                  className="btn-success inline-flex min-h-9 flex-1 sm:flex-initial items-center justify-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition active:scale-95 shadow-xs"
                   title={`Collect outstanding balance (${fmt(selected.balance_due)})`}
                 >
                   <IndianRupee size={14} />
@@ -1063,7 +1063,7 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
           <button
             type="button"
             onClick={() => onCollect?.(bill)}
-            className="flex min-h-[42px] w-full items-center justify-center gap-1.5 rounded-lg bg-[#1E3A5F] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#162F4D]"
+            className="btn-success flex min-h-[42px] w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold"
             title={`Collect payment (${fmt(balance)})`}
           >
             <IndianRupee size={13} />
@@ -2383,7 +2383,7 @@ export default function Bills() {
           ) : (
             <>
               {/* Mobile cards view (sm:hidden) */}
-              <div className="space-y-2.5 p-2.5 sm:hidden">
+              <div className="hidden">
                 {visibleBills.map(bill => (
                   <MobileInvoiceCard
                     key={bill.id}
@@ -2404,7 +2404,7 @@ export default function Bills() {
               </div>
 
               {/* Desktop / Tablet Semantic Table */}
-              <div className="hidden overflow-x-auto sm:block min-h-[220px] pb-4">
+              <div className="overflow-x-auto min-h-[220px] pb-4">
                 <table className="erp-table w-full text-xs min-w-[1175px]" style={{ tableLayout: 'fixed' }}>
                   <colgroup>
                     <col style={{ width: '40px' }} />  {/* Selection Checkbox */}
