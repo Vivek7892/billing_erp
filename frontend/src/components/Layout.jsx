@@ -1,14 +1,13 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
-import { useTheme } from '../ThemeContext'
 import api from '../api'
 import logoImg from '../assets/logo.png'
 import { ROLES } from '../constants'
 import {
   LayoutDashboard, ShoppingCart, FileText, Package, Users, BarChart2,
-  UserCog, Settings, LogOut, ChevronDown, ChevronUp, ChevronRight,
+  UserCog, Settings, ChevronUp, ChevronRight,
   Search, Bell, RotateCcw, CreditCard, Boxes, ShoppingBag, Building2,
-  IndianRupee, HelpCircle, Layers, Activity, X, Sun, Moon, Clock, ScanLine, ArrowRight, Check,
+  IndianRupee, HelpCircle, Layers, Activity, X, Clock, ScanLine, ArrowRight, Check,
   ShieldCheck, Trash2, AlertCircle, AlertTriangle, CheckCircle2, XCircle
 } from 'lucide-react'
 import { useEffect, useState, createContext, useContext, useRef, useCallback, useMemo } from 'react'
@@ -17,7 +16,6 @@ import toast from 'react-hot-toast'
 import AppFooter from './AppFooter'
 import { PageLoadingContext } from './PageLoadingContext'
 import { SETTINGS_TABS } from './SettingsNavigation'
-import appPackage from '../../package.json'
 
 function MenuIcon({ size = 20 }) {
   return (
@@ -199,7 +197,7 @@ function NavGroupItems({ items, collapsed, groupLabel, open, setOpen, onNav }) {
               {({ isActive }) => (
                 <>
                   <Icon size={16} className={`flex-shrink-0 ${isActive ? 'text-teal-400' : 'text-slate-400'}`} />
-                  <span className="truncate">{label}</span>
+                  <span className="min-w-0 whitespace-normal break-words leading-snug">{label}</span>
                 </>
               )}
             </NavLink>
@@ -210,7 +208,7 @@ function NavGroupItems({ items, collapsed, groupLabel, open, setOpen, onNav }) {
   )
 }
 
-function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, logoSrc, onLogout, onNav, onToggle, onClose }) {
+function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, logoSrc, onNav, onToggle, onClose }) {
   const [headerHovered, setHeaderHovered] = useState(false)
   const location = useLocation()
   const canAccessUtility = [ROLES.ADMIN, ROLES.OWNER].includes(String(user?.role || '').toLowerCase())
@@ -257,8 +255,8 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
               <img src={logoSrc} alt={shopName} className="w-full h-full object-contain rounded" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className={`font-bold text-[13.5px] truncate leading-tight tracking-tight ${settingsMode ? 'text-slate-900' : 'text-white'}`}>{shopName}</div>
-              {settingsMode && shopPhone && <div className="mt-1 truncate text-[10px] font-medium text-slate-500">{shopPhone}</div>}
+              <div className={`text-[11px] font-bold whitespace-nowrap leading-tight tracking-tight ${settingsMode ? 'text-slate-900' : 'text-white'}`}>{shopName}</div>
+              {shopPhone && <div className={`mt-1 whitespace-normal break-words text-[10px] font-medium ${settingsMode ? 'text-slate-500' : 'text-slate-400'}`}>{shopPhone}</div>}
             </div>
             {!mobile && (
               <button
@@ -297,8 +295,13 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
         </div>
       )}
 
-      {/* Nav List */}
-      <nav className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain py-3.5 space-y-1" style={{ scrollbarWidth: 'thin', scrollbarColor: settingsMode ? '#CBD5E1 transparent' : 'rgba(148,163,184,.35) transparent' }}>
+      {/* Scrollable navigation */}
+      {(!collapsed || mobile) && !settingsMode && (
+        <div className="shrink-0 px-4 pt-3 pb-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Workspace menu</p>
+        </div>
+      )}
+      <nav className="sidebar-menu-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain py-3.5 space-y-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {settingsMode ? (
           <div className="px-2">
             {(!collapsed || mobile) && <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">Settings</p>}
@@ -322,7 +325,7 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
                     <Icon size={16} strokeWidth={1.8} className={`shrink-0 ${isActive ? 'text-indigo-700' : 'text-slate-400'}`} />
                     {(!collapsed || mobile) && (
                       <>
-                        <span className="min-w-0 flex-1 truncate">{label}</span>
+                        <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">{label}</span>
                         {badge && <span className={`max-w-24 truncate rounded px-1.5 py-0.5 text-[9px] ${isActive ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>{badge}</span>}
                       </>
                     )}
@@ -351,7 +354,7 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
                   }`}
                 >
                   <Icon size={15} className="shrink-0 text-slate-400" />
-                  {(!collapsed || mobile) && <span className="truncate">{label}</span>}
+                  {(!collapsed || mobile) && <span className="min-w-0 whitespace-normal break-words leading-snug">{label}</span>}
                 </NavLink>
               ))}
             </div>
@@ -359,70 +362,6 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
         ] : [])}
       </nav>
 
-      {/* User / Sign Out Footer */}
-      <div className={`flex-shrink-0 ${settingsMode ? 'border-t border-slate-200 bg-slate-50/80 px-3 py-3' : ''} ${collapsed && !mobile ? 'px-2 py-3' : 'px-3 py-3.5'}`}>
-        {settingsMode ? (
-          <>
-            <div className="flex items-center gap-2.5 px-1">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-indigo-100 bg-indigo-50 text-xs font-bold text-indigo-700">
-                {((user?.first_name?.[0] || '') + (user?.last_name?.[0] || '')) || user?.username?.[0]?.toUpperCase() || 'U'}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[12px] font-semibold leading-tight text-slate-800">
-                  {[user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username}
-                </div>
-                <div className="mt-0.5 text-[10px] font-medium capitalize text-slate-500">{user?.role || 'Staff'}</div>
-              </div>
-            </div>
-            <div className="mt-2.5 flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2">
-              <ShieldCheck size={14} className="shrink-0 text-emerald-600" />
-              <span className="text-[10px] font-medium text-slate-600">Secure settings access</span>
-            </div>
-            <div className="mt-2 px-1 text-[10px] text-slate-400">App version {appPackage.version}</div>
-
-            <div className="mt-3 border-t border-slate-200 pt-2.5">
-              <button
-                type="button"
-                onClick={onLogout}
-                className="flex h-9 w-full items-center gap-2 rounded-lg px-2.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-rose-50 hover:text-rose-700"
-              >
-                <LogOut size={15} />
-                <span>Logout</span>
-              </button>
-            </div>
-          </>
-        ) : collapsed && !mobile ? (
-          <button
-            onClick={onLogout}
-            title="Sign Out"
-            className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-[#1E293B] transition-all mx-auto"
-          >
-            <LogOut size={16} />
-          </button>
-        ) : (
-          <div className="flex items-center gap-2.5 px-1">
-            <div className="w-8 h-8 rounded-full bg-[#1E3A5F] border border-slate-700 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 shadow-xs">
-              {((user?.first_name?.[0] || '') + (user?.last_name?.[0] || '')) || user?.username?.[0]?.toUpperCase() || 'U'}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-[12px] font-semibold text-slate-200 truncate leading-tight">
-                {[user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username}
-              </div>
-              <div className="text-[10px] text-slate-300 capitalize font-medium flex items-center gap-1 mt-0.5">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-teal-400"></span>
-                <span>{user?.role || 'Staff'}</span>
-              </div>
-            </div>
-            <button
-              onClick={onLogout}
-              title="Sign Out"
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-[#1F2937] transition-all flex-shrink-0"
-            >
-              <LogOut size={15} />
-            </button>
-          </div>
-        )}
-      </div>
     </div>
   )
 }
@@ -955,87 +894,6 @@ function NotificationBell() {
   )
 }
 
-function ProfileMenu({ user, onLogout }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef()
-  const { theme, toggleTheme } = useTheme()
-
-  useEffect(() => {
-    const handleClickOutside = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const initials = ((user?.first_name?.[0] || '') + (user?.last_name?.[0] || '')) || user?.username?.[0]?.toUpperCase() || 'U'
-  const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-2 hover:bg-[var(--surface-hover)] rounded-lg px-2 py-1.5 transition-all border border-transparent hover:border-[var(--line)]"
-      >
-        <div className="w-8 h-8 rounded-full bg-[#1E3A5F] border border-[#D7DEE7] text-white text-xs font-bold flex items-center justify-center flex-shrink-0 shadow-xs">
-          {initials}
-        </div>
-        <div className="text-left hidden md:block">
-          <div className="text-xs font-semibold text-[var(--ink)] leading-tight">{fullName}</div>
-          <div className="text-[10px] text-[var(--muted)] capitalize font-medium flex items-center gap-1">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-teal-500"></span>
-            <span>{user?.role || 'Staff'}</span>
-          </div>
-        </div>
-        <ChevronDown size={13} className={`text-[var(--muted)] hidden md:block transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-full mt-2 w-56 bg-[var(--surface)] rounded-[12px] shadow-[var(--shadow-lg)] border border-[var(--line)] z-50 overflow-hidden">
-          <div className="px-4 py-3 bg-[var(--surface-elevated)] border-b border-[var(--line)]">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-[#1E3A5F] border border-[#D7DEE7] text-white text-sm font-bold flex items-center justify-center">
-                {initials}
-              </div>
-              <div className="min-w-0">
-                <div className="font-semibold text-[var(--ink)] text-sm truncate">{fullName}</div>
-                <div className="mt-0.5">
-                  <span className=" text-[10px] text-[var(--muted)] capitalize font-medium flex items-center gap-1">
-                    {user?.role || 'Staff'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="py-1.5">
-            <NavLink
-              to="/settings"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-colors"
-            >
-              <Settings size={14} className="text-[var(--muted)]" />
-              Settings
-            </NavLink>
-            <button
-              onClick={() => { toggleTheme(); setOpen(false) }}
-              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] transition-colors"
-            >
-              {theme === 'dark' ? <Sun size={14} className="text-[var(--muted)]" /> : <Moon size={14} className="text-[var(--muted)]" />}
-              {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-            </button>
-            <div className="h-px bg-[var(--line)] my-1 mx-3" />
-            <button
-              onClick={() => { setOpen(false); onLogout() }}
-              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
-            >
-              <LogOut size={14} />
-              Sign Out
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
 function getPageMeta(pathname) {
   if (PAGE_META[pathname]) return PAGE_META[pathname]
   if (pathname.startsWith('/invoice/')) return { icon: FileText, group: 'Billing', label: 'Invoice Details' }
@@ -1064,10 +922,10 @@ function PageHeading({ shopName, pathname }) {
         <Icon size={16} strokeWidth={2.2} />
       </div>
       <div className="min-w-0 flex flex-col justify-center leading-tight">
-        <h1 className="font-bold text-[var(--ink)] text-[13px] sm:text-[15px] tracking-tight truncate">
+        <h1 className="font-bold text-[var(--ink)] text-[13px] sm:text-[15px] tracking-tight whitespace-normal break-words">
           {title}
         </h1>
-        <div className="text-[10px] text-[var(--muted)] font-medium truncate">
+        <div className="text-[9px] text-[var(--muted)] font-medium whitespace-nowrap leading-snug">
           {meta?.group ? `${shopName} · ${meta.group}` : shopName}
         </div>
       </div>
@@ -1108,8 +966,7 @@ function LiveDateTime() {
 }
 
 export default function Layout({ children }) {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
+  const { user } = useAuth()
   const location = useLocation()
   const mainRef = useRef()
 
@@ -1152,7 +1009,6 @@ export default function Layout({ children }) {
     setMobileSearchOpen(false)
   }, [location.pathname])
 
-  const handleLogout = () => { logout(); navigate('/login') }
   const logoSrc = shopLogo || logoImg
   const settingsMode = location.pathname === '/settings' || location.pathname.startsWith('/settings/')
 
@@ -1170,7 +1026,6 @@ export default function Layout({ children }) {
             shopName={shopName}
             shopPhone={shopPhone}
             logoSrc={logoSrc}
-            onLogout={handleLogout}
             onNav={() => {}}
             onToggle={() => setCollapsed(v => !v)}
             onClose={() => {}}
@@ -1188,7 +1043,6 @@ export default function Layout({ children }) {
               shopName={shopName}
               shopPhone={shopPhone}
               logoSrc={logoSrc}
-              onLogout={handleLogout}
               onNav={() => setMobileOpen(false)}
               onToggle={() => {}}
               onClose={() => setMobileOpen(false)}
@@ -1202,7 +1056,7 @@ export default function Layout({ children }) {
 
           {/* Top Menu Bar / Header */}
           <header className="flex-shrink-0 z-10 bg-[var(--surface)] border-b border-[var(--line)] shadow-xs">
-            <div className="flex min-w-0 items-center gap-1.5 px-2.5 sm:gap-3 sm:px-5 h-14">
+            <div className="flex min-h-14 min-w-0 items-center gap-1.5 px-2.5 py-1.5 sm:gap-3 sm:px-5">
               <button
                 onClick={() => setMobileOpen(true)}
                 title="Open menu"
@@ -1248,8 +1102,14 @@ export default function Layout({ children }) {
 
               <div className="w-px h-5 bg-[var(--line)]" />
 
-              {/* Profile Menu */}
-              <ProfileMenu user={user} onLogout={handleLogout} />
+              <NavLink
+                to="/settings"
+                title="Settings"
+                aria-label="Open settings"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
+              >
+                <Settings size={17} />
+              </NavLink>
             </div>
 
             {/* Mobile Search Bar Expansion */}

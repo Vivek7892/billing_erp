@@ -32,7 +32,7 @@ import {
   XCircle,
 } from 'lucide-react'
 import api from '../api'
-import { StatCard } from '../components/UI'
+import './Notifications.css'
 
 // ─── Notification Types Configuration ──────────────────────────────────────
 
@@ -54,8 +54,6 @@ const TYPE_CONFIG = {
 const SEVERITY_STYLE = {
   danger: {
     dot: '#EF4444',
-    rail: 'border-l-red-500',
-    railBg: 'bg-red-500',
     bg: '#FEF2F2',
     border: '#FECACA',
     color: '#B91C1C',
@@ -64,8 +62,6 @@ const SEVERITY_STYLE = {
   },
   warning: {
     dot: '#F59E0B',
-    rail: 'border-l-amber-500',
-    railBg: 'bg-amber-500',
     bg: '#FFFBEB',
     border: '#FDE68A',
     color: '#B45309',
@@ -74,8 +70,6 @@ const SEVERITY_STYLE = {
   },
   success: {
     dot: '#10B981',
-    rail: 'border-l-emerald-500',
-    railBg: 'bg-emerald-500',
     bg: '#F0FDF4',
     border: '#BBF7D0',
     color: '#15803D',
@@ -84,8 +78,6 @@ const SEVERITY_STYLE = {
   },
   info: {
     dot: '#3B82F6',
-    rail: 'border-l-blue-500',
-    railBg: 'bg-blue-500',
     bg: '#EFF6FF',
     border: '#BFDBFE',
     color: '#1D4ED8',
@@ -466,8 +458,19 @@ function NotificationContextStrip({ item }) {
 
 // ─── Clickable Summary Metric Card ─────────────────────────────────────────
 
-function ActionMetricCard({ label, count, sub, icon, color, active, onClick }) {
-  return <StatCard label={label} value={count} sub={sub} icon={icon} color={color} active={active} onClick={onClick} />
+function ActionMetricCard({ label, count, sub, active, onClick }) {
+  return (
+    <button
+      type="button"
+      className={`notification-kpi${active ? ' is-active' : ''}`}
+      onClick={onClick}
+      aria-pressed={active}
+    >
+      <span className="notification-kpi-label">{label}</span>
+      <strong>{count}</strong>
+      <span className="notification-kpi-sub">{sub}</span>
+    </button>
+  )
 }
 
 // ─── Main Notifications Component ──────────────────────────────────────────
@@ -489,6 +492,7 @@ export default function Notifications() {
   const [activeTab, setActiveTab] = useState('needs_attention')
   const [scopeFilter, setScopeFilter] = useState('role') // 'role' | 'all'
   const [search, setSearch] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
   const [typeFilter, setTypeFilter] = useState('')
   const [severityFilter, setSeverityFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -1108,40 +1112,32 @@ export default function Notifications() {
       </div>
 
       {/* ── 2. Clickable Summary Cards ── */}
-      <section className="grid grid-cols-2 gap-2 sm:gap-2.5 sm:grid-cols-4">
+      <section className="notification-kpi-grid grid grid-cols-2 gap-2 sm:gap-2.5 sm:grid-cols-4" aria-label="Notification summary">
         <ActionMetricCard
           label="Critical"
           count={criticalCount}
           sub="Immediate attention"
-          icon={AlertCircle}
-          color="red"
           active={activeTab === 'critical'}
           onClick={() => setActiveTab('critical')}
         />
         <ActionMetricCard
           label="Needs Action"
           count={needsActionCount}
-          sub="Require attention"
-          icon={Bell}
-          color="orange"
+          sub="Open items"
           active={activeTab === 'needs_attention'}
           onClick={() => setActiveTab('needs_attention')}
         />
         <ActionMetricCard
           label="Pending Approvals"
           count={pendingApprovalCount}
-          sub="Require sign-off"
-          icon={UserCheck}
-          color="indigo"
+          sub="Awaiting sign-off"
           active={activeTab === 'approvals'}
           onClick={() => setActiveTab('approvals')}
         />
         <ActionMetricCard
           label="Unread"
           count={counts.unread}
-          sub="Awaiting review"
-          icon={Eye}
-          color="blue"
+          sub="Not reviewed"
           active={activeTab === 'unread'}
           onClick={() => setActiveTab('unread')}
         />
@@ -1186,7 +1182,7 @@ export default function Notifications() {
       )}
 
       {/* ── 4. Tabs & Filter Toolbar ── */}
-      <section className="space-y-2 sm:space-y-2.5">
+      <section className="notifications-filter-panel space-y-2 sm:space-y-2.5">
         {/* Primary Tabs */}
         <div className="flex items-center gap-1 overflow-x-auto border-b border-[var(--line)] pb-1.5 scrollbar-none">
           {tabList.map(tab => {
@@ -1218,9 +1214,9 @@ export default function Notifications() {
         </div>
 
         {/* Toolbar: Search & Select Dropdowns */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <div className="notifications-filter-bar flex flex-wrap items-center gap-1.5 sm:gap-2">
           {/* Search Box with Ctrl+K */}
-          <div className="group relative flex items-center h-8 sm:h-9 flex-1 min-w-[180px] max-w-sm rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/15 shadow-2xs">
+          <div className="notifications-search group relative flex items-center h-8 sm:h-9 flex-1 min-w-[180px] max-w-sm rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/15 shadow-2xs">
             <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[var(--muted)] group-focus-within:text-[var(--primary)]">
               <Search size={13} strokeWidth={2.2} />
             </div>
@@ -1249,7 +1245,20 @@ export default function Notifications() {
             )}
           </div>
 
+          <button
+            type="button"
+            className="notifications-filter-toggle md:hidden"
+            onClick={() => setShowFilters(open => !open)}
+            aria-expanded={showFilters}
+            aria-controls="notifications-advanced-filters"
+          >
+            <Filter size={13} />
+            <span>{showFilters ? 'Hide filters' : 'Filters'}</span>
+            {activeChips.length > 0 && <span className="notification-filter-count">{activeChips.length}</span>}
+          </button>
+
           {/* Type Filter */}
+          <div id="notifications-advanced-filters" className={`notifications-advanced-filters${showFilters ? ' is-open' : ''}`}>
           <select
             value={typeFilter}
             onChange={e => setTypeFilter(e.target.value)}
@@ -1303,6 +1312,7 @@ export default function Notifications() {
             <option value="30days">Last 30 days</option>
             <option value="older">Older</option>
           </select>
+          </div>
 
           <span className="text-[10px] sm:text-[11px] text-[var(--muted)] ml-auto font-mono">
             {filteredNotifications.length} shown
@@ -1402,9 +1412,6 @@ export default function Notifications() {
                                   : 'bg-[var(--surface)] hover:bg-[var(--surface-hover)]'
                               }`}
                             >
-                              {/* Left Severity Indicator Rail */}
-                              <td className={`p-0 w-1 ${sev.railBg}`} />
-
                               {/* Unread Status Dot */}
                               <td className="text-center py-2.5">
                                 <span
@@ -1620,7 +1627,7 @@ export default function Notifications() {
                       return (
                         <article
                           key={item.id}
-                          className={`p-2.5 sm:p-3 space-y-2 relative border-l-3 sm:border-l-4 ${sev.rail} transition ${
+                          className={`p-2.5 sm:p-3 space-y-2 relative transition ${
                             !item.is_read
                               ? 'bg-blue-50/20 dark:bg-blue-950/20'
                               : 'bg-[var(--surface)]'

@@ -8,13 +8,10 @@
   border: 1px solid #D7DEE7;
   border-radius: 6px;
   background-color: #EAF2FA;
-
-  /* Changed */
-  background-position: right center;
+  background-position: center;
   background-repeat: no-repeat;
-  background-size: contain;
+  background-size: cover;
 }
-
 
 .dashboard-welcome-copy {
   position: relative;

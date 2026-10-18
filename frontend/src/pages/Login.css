@@ -69,18 +69,18 @@
   width: 100%;
   max-width: 410px;
   align-self: center;
-  margin: 48px auto;
+  margin: 34px auto;
 }
 
 .login-heading {
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 
 .login-heading-icon {
   display: grid;
   width: 42px;
   height: 42px;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
   place-items: center;
   border: 1px solid #D9E7F4;
   border-radius: 12px;
@@ -98,7 +98,7 @@
 }
 
 .login-heading p {
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   color: #64748B;
   font-size: 14px;
   line-height: 1.6;
@@ -106,7 +106,7 @@
 
 .login-form {
   display: grid;
-  gap: 20px;
+  gap: 16px;
 }
 
 .login-field label {
@@ -308,6 +308,10 @@
   color: #0F766E;
 }
 
+.login-about-mobile {
+  display: none;
+}
+
 .login-about {
   width: 100%;
   max-width: 410px;
@@ -438,10 +442,15 @@
 .login-visual-caption {
   position: absolute;
   z-index: 1;
-  right: clamp(28px, 4vw, 64px);
-  bottom: 30px;
-  left: clamp(28px, 4vw, 64px);
-  text-align: center;
+  right: clamp(24px, 3vw, 42px);
+  bottom: 28px;
+  width: min(330px, 46%);
+  border: 1px solid rgba(215, 222, 231, 0.9);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  padding: 15px 17px;
+  text-align: left;
+  box-shadow: 0 10px 30px rgba(27, 64, 102, 0.12);
 }
 
 .login-visual-caption span {
@@ -451,11 +460,44 @@
   letter-spacing: 0.15em;
 }
 
+.login-visual-caption h2 {
+  margin: 6px 0 0;
+  color: #123866;
+  font-size: 17px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
 .login-visual-caption p {
-  margin: 7px 0 0;
+  margin: 6px 0 0;
   color: #475569;
-  font-size: 14px;
-  font-weight: 550;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.login-visual-caption small {
+  display: block;
+  margin-top: 7px;
+  color: #718096;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.login-visual-caption a,
+.login-about-mobile a {
+  display: inline-block;
+  margin-top: 8px;
+  color: #126DB5;
+  font-size: 11px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.login-visual-caption a:hover,
+.login-about-mobile a:hover {
+  color: #0D4F8B;
+  text-decoration: underline;
 }
 
 @media (max-width: 900px) {
@@ -475,11 +517,36 @@
   }
 
   .login-content {
-    margin: 40px auto;
+    margin: 34px auto;
   }
 
   .login-visual {
     display: none;
+  }
+
+  .login-about-mobile {
+    display: block;
+    margin-top: 20px;
+    border-top: 1px solid #E8EDF3;
+    padding-top: 14px;
+  }
+
+  .login-about-mobile h2 {
+    margin: 0;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .login-about-mobile p {
+    margin: 5px 0 0;
+    color: #64748B;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .login-about-mobile a {
+    margin-top: 5px;
   }
 }
 

@@ -162,6 +162,12 @@ export default function Login() {
               <ShieldCheck size={15} aria-hidden="true" />
               <span>Secure access to your business workspace</span>
             </div>
+
+            <section className="login-about-mobile" aria-labelledby="login-about-mobile-title">
+              <h2 id="login-about-mobile-title">About Dreamwithtech</h2>
+              <p>POS and retail ERP tools for billing, inventory, customers, payments and reports.</p>
+              <a href="mailto:connectwithvvivek@gmail.com">Contact support</a>
+            </section>
           </div>
 
           
@@ -181,8 +187,14 @@ export default function Login() {
           />
         </div>
         <div className="login-visual-caption">
-          <span>BUILT FOR EVERYDAY RETAIL</span>
-          <p>Billing, inventory and business insights in one place.</p>
+          <span>ABOUT DREAMWITHTECH</span>
+          <h2>Retail operations, connected.</h2>
+          <p>
+            Dreamwithtech POS &amp; Billing ERP brings billing, inventory,
+            customers, payments and reports into one workspace.
+          </p>
+          <small>Operated by ShopEase Retail Technologies with Sri Balaji Store.</small>
+          <a href="mailto:connectwithvvivek@gmail.com">Contact support</a>
         </div>
       </aside>
     </main>
