@@ -13,6 +13,7 @@ from ..models import (
     Product,
     SalesReturnItem,
     Setting,
+    ProductBatch,
 )
 from ..utils import audit_event, get_next_invoice_number
 from .inventory_service import InventoryService
@@ -80,9 +81,28 @@ class InvoiceService:
             for item_data, line in zip(items_data, calculation.lines):
                 product_key = str(item_data.get('product_id') or item_data.get('product'))
                 product = locked_products[product_key]
+                if product.batches.filter(active=True).exists() and not item_data.get('batch_id'):
+                    raise ValueError(f'Select a batch for {product.name}.')
                 if not allow_negative and projected_stock[product_key] < line.quantity:
                     raise ValueError(f'Insufficient stock for {product.name}')
                 projected_stock[product_key] -= line.quantity
+                batch_id = item_data.get('batch_id')
+                if batch_id:
+                    try:
+                        batch = ProductBatch.objects.select_for_update().get(
+                            pk=batch_id, product=product, business=business, active=True,
+                        )
+                    except ProductBatch.DoesNotExist as exc:
+                        raise ValueError(f'Batch is unavailable for {product.name}.') from exc
+                    if Decimal(str(item_data.get('unit_price', batch.selling_rate))) != batch.selling_rate:
+                        raise ValueError(f'Rate for batch {batch.batch_number} does not match its selling rate.')
+                    expiry_setting = Setting.objects.filter(business=business, key='prevent_expired_batch_sale').first()
+                    tracking = Setting.objects.filter(business=business, key='expiry_tracking_enabled').first()
+                    tracking_enabled = not tracking or tracking.value.lower() in ('true', '1', 'yes')
+                    if tracking_enabled and expiry_setting and expiry_setting.value.lower() in ('true', '1', 'yes') and batch.expiry_date and batch.expiry_date < timezone.localdate():
+                        raise ValueError(f'Batch {batch.batch_number} is expired.')
+                    if batch.quantity < line.quantity:
+                        raise ValueError(f'Insufficient stock in batch {batch.batch_number}.')
 
             customer = None
             if attributes.get('customer') and balance_due > 0:
@@ -115,13 +135,22 @@ class InvoiceService:
             for item_data, line in zip(items_data, calculation.lines):
                 product = locked_products[str(item_data.get('product_id') or item_data.get('product'))]
                 gst_percent = Decimal(str(item_data.get('gst_percent', product.gst_percent)))
+                batch = None
+                if item_data.get('batch_id'):
+                    batch = ProductBatch.objects.get(pk=item_data['batch_id'], product=product, business=business)
                 invoice_item = InvoiceItem.objects.create(
                     invoice=invoice,
                     product=product,
+                    batch=batch,
                     product_name=product.name,
                     sku=product.sku,
+                    barcode=product.barcode,
+                    unit=product.unit,
                     hsn_code=item_data.get('hsn_code', product.hsn_code),
-                    mrp=Decimal(str(item_data.get('mrp', product.mrp or product.selling_price))),
+                    batch_number=batch.batch_number if batch else '',
+                    manufacturing_date=batch.manufacturing_date if batch else None,
+                    expiry_date=batch.expiry_date if batch else None,
+                    mrp=batch.mrp if batch else product.mrp,
                     quantity=line.quantity,
                     unit_price=line.unit_price,
                     cost_price=product.purchase_price,
@@ -143,6 +172,7 @@ class InvoiceService:
                     movement_key=f'invoice:{invoice.pk}:item:{invoice_item.pk}',
                     reference_type='invoice',
                     reference_id=invoice.pk,
+                    batch_id=batch.pk if batch else None,
                     allow_negative=allow_negative,
                 )
 
@@ -261,6 +291,7 @@ class InvoiceService:
                     movement_key=f'invoice:{invoice.pk}:{status}:item:{item.pk}',
                     reference_type='invoice_reversal',
                     reference_id=invoice.pk,
+                    batch_id=item.batch_id,
                 )
 
             now = timezone.now()

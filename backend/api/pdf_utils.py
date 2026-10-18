@@ -747,12 +747,14 @@ def build_items_table(s, invoice, show_tax, interstate):
     items = list(invoice.items.all())
     show_discount = s.flag("show_discount_col", True) and any(dec(getattr(i, "discount_percent", 0)) != 0 for i in items)
     show_sku = s.flag("show_sku_col", False) and any_item_has(invoice, "sku")
+    show_barcode = s.flag("show_barcode_col", False) and any_item_has(invoice, "barcode")
     show_hsn = s.flag("show_hsn_col", True) and any_item_has(invoice, "hsn_code")
     show_unit = s.flag("show_unit_col", False) and any_item_has(invoice, "unit")
-    show_batch = s.flag("show_batch_col", False) and any_item_has(invoice, "batch_no")
+    show_batch = s.flag("show_batch_col", False) and any_item_has(invoice, "batch_number")
     show_expiry = s.flag("show_expiry_col", False)
-    show_mfg = show_expiry and any_item_has(invoice, "mfg_date")
-    show_exp = show_expiry and any_item_has(invoice, "exp_date")
+    show_mfg = s.flag("show_mfg_date", False) and any_item_has(invoice, "manufacturing_date")
+    show_exp = show_expiry and any_item_has(invoice, "expiry_date")
+    show_mrp = s.flag("show_mrp_col", False) and any_item_has(invoice, "mrp")
     show_cess = show_tax and s.flag("cess_enabled", False) and any_item_cess(invoice)
     show_gst_cols = show_tax and s.flag("show_tax_cols", True) and s.flag("show_tax_breakdown", True) and any_item_gst(invoice)
 
@@ -779,17 +781,21 @@ def build_items_table(s, invoice, show_tax, interstate):
     columns = [("sl", "S.No", 8, TA_CENTER, lambda i, idx: cell(str(idx), 6.8, TA_CENTER))]
     if show_sku:
         columns.append(("sku", "Item Code", 13, TA_CENTER, lambda i, idx: cell(_fmt_value(getattr(i, "sku", "")), 6.5, TA_CENTER)))
+    if show_barcode:
+        columns.append(("barcode", "Barcode", 18, TA_CENTER, lambda i, idx: cell(_fmt_value(getattr(i, "barcode", "")), 6.0, TA_CENTER)))
     columns.append(("item", "Item Description", 50, TA_LEFT, lambda i, idx: cell(_fmt_value(i.product_name), 7.2, TA_LEFT)))
     if show_hsn:
         columns.append(("hsn", "HSN/SAC", 12, TA_CENTER, lambda i, idx: cell(_fmt_value(i.hsn_code), 6.5, TA_CENTER)))
     if show_unit:
         columns.append(("unit", "Unit", 9, TA_CENTER, lambda i, idx: cell(_fmt_value(getattr(i, "unit", "")), 6.5, TA_CENTER)))
     if show_batch:
-        columns.append(("batch", "Batch", 10, TA_CENTER, lambda i, idx: cell(_fmt_value(getattr(i, "batch_no", "")), 6.2, TA_CENTER)))
+        columns.append(("batch", "Batch", 10, TA_CENTER, lambda i, idx: cell(_fmt_value(getattr(i, "batch_number", "")), 6.2, TA_CENTER)))
     if show_mfg:
-        columns.append(("mfg", "MFG", 9, TA_CENTER, lambda i, idx: cell(short_date(getattr(i, "mfg_date", None)), 6.1, TA_CENTER)))
+        columns.append(("mfg", "MFG", 9, TA_CENTER, lambda i, idx: cell(short_date(getattr(i, "manufacturing_date", None)), 6.1, TA_CENTER)))
     if show_exp:
-        columns.append(("exp", "EXP", 9, TA_CENTER, lambda i, idx: cell(short_date(getattr(i, "exp_date", None)), 6.1, TA_CENTER)))
+        columns.append(("exp", "EXP", 9, TA_CENTER, lambda i, idx: cell(short_date(getattr(i, "expiry_date", None)), 6.1, TA_CENTER)))
+    if show_mrp:
+        columns.append(("mrp", "MRP", 12, TA_RIGHT, lambda i, idx: cell(currency(getattr(i, "mrp", 0)), 6.5, TA_RIGHT)))
     columns.append(("qty", "Qty", 10, TA_CENTER, lambda i, idx: cell(qty_text(i), 7.0, TA_CENTER)))
     if s.flag("show_rate_col", True):
         columns.append(("rate", "Rate", 16, TA_RIGHT, lambda i, idx: cell(currency(i.unit_price), 6.8, TA_RIGHT)))
@@ -1355,10 +1361,10 @@ def generate_thermal_invoice_pdf(invoice, template=None):
     document_title, show_tax = resolve_document_mode(s, invoice)
     interstate = resolve_interstate(s, invoice)
     show_signature = s.flag("show_signature_thermal", False)
-    terms_text = s.get("terms_override") or s.get("invoice_terms")
-    show_terms = has_val(terms_text) and s.flag("show_terms", True)
-    show_qr = s.flag("show_upi_qr_on_thermal", True) and has_val(upi_id)
-    show_bill_qr = s.flag("enable_invoice_qr", True)
+    terms_text = s.get("thermal_terms") or s.get("terms_override") or s.get("invoice_terms")
+    show_terms = has_val(terms_text) and s.flag("thermal_show_terms", s.flag("show_terms", True))
+    show_qr = s.flag("thermal_show_upi_qr", s.flag("show_upi_qr_on_thermal", True)) and has_val(upi_id)
+    show_bill_qr = s.flag("thermal_show_bill_qr", s.flag("enable_invoice_qr", True))
     show_logo = s.flag("show_business_logo", True) and s.flag("thermal_show_logo", True)
 
     items = list(invoice.items.all())
@@ -1455,14 +1461,24 @@ def generate_thermal_invoice_pdf(invoice, template=None):
     # 2. Invoice control
     is_cancelled = getattr(invoice, "status", None) == "cancelled"
     doc_title = "CANCELLED INVOICE" if is_cancelled else document_title
+    if not is_cancelled:
+        doc_title = s.get("thermal_title") or doc_title
     story.append(_tpara(doc_title, size=T_TITLE + 1, align=TA_CENTER, bold=True))
-    story.append(_tpara(f"Invoice No: {_fmt_value(invoice.invoice_number)}", size=T_META + 0.5, align=TA_CENTER, bold=True))
-    if inv_date:
+    if s.flag("thermal_show_invoice_no", True):
+        story.append(_tpara(f"Invoice No: {_fmt_value(invoice.invoice_number)}", size=T_META + 0.5, align=TA_CENTER, bold=True))
+    if inv_date and s.flag("thermal_show_date", True):
         story.append(_tpara(f"Invoice Date: {inv_date}", size=T_META, align=TA_CENTER))
-    if has_val(payment_mode) and s.flag("show_payment_mode", True):
+    if s.flag("thermal_show_time", True):
+        _, time_text = _invoice_datetime(invoice)
+        if time_text:
+            story.append(_tpara(f"Time: {time_text}", size=T_META, align=TA_CENTER))
+    if s.flag("thermal_show_cashier", True) and getattr(invoice, "created_by", None):
+        cashier = invoice.created_by.get_full_name() or invoice.created_by.username
+        story.append(_tpara(f"Cashier: {cashier}", size=T_META, align=TA_CENTER))
+    if has_val(payment_mode) and s.flag("thermal_show_payment_mode", s.flag("show_payment_mode", True)):
         story.append(_tpara(f"Payment Mode: {payment_mode}", size=T_META, align=TA_CENTER))
     place_header = place
-    if has_val(place_header) and s.flag("show_place_of_supply", True):
+    if has_val(place_header) and s.flag("thermal_show_place_of_supply", s.flag("show_place_of_supply", True)):
         story.append(_tpara(f"Place of Supply: {place_header}", size=T_META, align=TA_CENTER))
     if is_cancelled:
         c_by = invoice.cancelled_by.get_full_name() or invoice.cancelled_by.username if getattr(invoice, "cancelled_by", None) else "User"
@@ -1478,20 +1494,30 @@ def generate_thermal_invoice_pdf(invoice, template=None):
 
     # 3. Customer block
     story.append(_tpara("BILL TO", size=T_META, bold=True))
-    if s.flag("show_customer_name", True):
+    if s.flag("thermal_show_customer_name", s.flag("show_customer_name", True)):
         story.append(_tpara(cust_name, size=T_ITEM + 0.5, bold=True))
-    if has_val(cust_address) and s.flag("show_customer_address", True):
+    if has_val(cust_address) and s.flag("thermal_show_customer_address", s.flag("show_customer_address", True)):
         story.append(_tpara(str(cust_address).replace("\n", ", "), size=T_META))
-    if has_val(cust_phone) and s.flag("show_customer_phone", True):
+    if has_val(cust_phone) and s.flag("thermal_show_customer_phone", s.flag("show_customer_phone", True)):
         story.append(_tpara(f"Mobile: {cust_phone}", size=T_META))
-    if has_val(cust_gstin) and s.flag("show_customer_gstin", True):
+    if has_val(cust_gstin) and s.flag("thermal_show_customer_gstin", s.flag("show_customer_gstin", True)):
         story.append(_tpara(f"GSTIN: {cust_gstin}", size=T_META))
 
     _tdashed(story, content_w)
 
     # 4. Items — Space-efficient stacked layout for 58mm, 4-column layout for 80mm
-    show_hsn = s.flag("show_hsn_col", True) and any_item_has(invoice, "hsn_code")
-    show_discount = s.flag("show_discount_col", True) and discount_amt != 0
+    thermal_show_qty = s.flag("thermal_show_qty", True)
+    thermal_show_rate = s.flag("thermal_show_rate", True)
+    thermal_show_total = s.flag("thermal_show_total", True)
+    thermal_show_discount = s.flag("thermal_show_discount", s.flag("show_discount_col", True))
+    thermal_show_tax = s.flag("thermal_show_tax", show_tax)
+    show_hsn = thermal_show_tax and s.flag("show_hsn_col", True) and any_item_has(invoice, "hsn_code")
+    show_discount = thermal_show_discount and discount_amt != 0
+    show_sku = s.flag("thermal_show_sku", s.flag("show_sku_col", False))
+    show_barcode = s.flag("thermal_show_barcode", False)
+    show_batch = s.flag("thermal_show_batch", s.flag("show_batch_col", False))
+    show_expiry = s.flag("thermal_show_expiry", s.flag("show_expiry_col", False))
+    show_mrp = s.flag("thermal_show_mrp", s.flag("show_mrp_col", False))
 
     if is_58mm:
         item_rows = [[
@@ -1507,17 +1533,34 @@ def generate_thermal_invoice_pdf(invoice, template=None):
         ]
         r_idx = 1
         for item in items:
-            product = _fmt_value(item.product_name)
+            product = _fmt_value(item.product_name) if s.flag("thermal_show_item_desc", True) else ""
             details = []
+            if show_sku and has_val(getattr(item, "sku", None)):
+                details.append(f"SKU:{item.sku}")
+            if show_barcode and has_val(getattr(item, "barcode", None)):
+                details.append(f"Barcode:{item.barcode}")
             if show_hsn and has_val(getattr(item, "hsn_code", None)):
                 details.append(f"HSN:{item.hsn_code}")
+            if show_batch and has_val(getattr(item, "batch_number", None)):
+                details.append(f"Batch:{item.batch_number}")
+            if s.flag("show_mfg_date", False) and getattr(item, "manufacturing_date", None):
+                details.append(f"MFG:{item.manufacturing_date.strftime('%d-%m-%y')}")
+            if show_expiry and getattr(item, "expiry_date", None):
+                details.append(f"EXP:{item.expiry_date.strftime('%d-%m-%y')}")
+            if show_mrp and dec(getattr(item, "mrp", 0)):
+                details.append(f"MRP:{currency(item.mrp)}")
             if show_discount and dec(getattr(item, "discount_percent", 0)) != 0:
                 details.append(f"Disc:{dec(getattr(item, 'discount_percent', 0))}%")
-            if show_tax and dec(getattr(item, "gst_amount", 0)) != 0 and has_val(getattr(item, "gst_percent", None)):
+            if thermal_show_tax and show_tax and dec(getattr(item, "gst_amount", 0)) != 0 and has_val(getattr(item, "gst_percent", None)):
                 details.append(f"GST:{dec(getattr(item, 'gst_percent', 0))}%")
 
             item_text = product + (" <font size='5.2'>(" + " ".join(details) + ")</font>" if details else "")
-            qty_rate = f"{_fmt_value(item.quantity)} x {currency(item.unit_price)}"
+            qty_rate_parts = []
+            if thermal_show_qty:
+                qty_rate_parts.append(_fmt_value(item.quantity))
+            if thermal_show_rate:
+                qty_rate_parts.append(currency(item.unit_price))
+            qty_rate = " x ".join(qty_rate_parts)
 
             item_rows.append([
                 _tpara(item_text, size=T_ITEM, bold=True),
@@ -1529,7 +1572,7 @@ def generate_thermal_invoice_pdf(invoice, template=None):
 
             item_rows.append([
                 _tpara(qty_rate, size=T_META),
-                _tpara(currency(item.total), size=T_ITEM, align=TA_RIGHT, bold=True),
+                _tpara(currency(item.total) if thermal_show_total else "", size=T_ITEM, align=TA_RIGHT, bold=True),
             ])
             tbl_styles.append(("TOPPADDING", (0, r_idx + 1), (-1, r_idx + 1), 0.5))
             tbl_styles.append(("BOTTOMPADDING", (0, r_idx + 1), (-1, r_idx + 1), 1.5))
@@ -1542,27 +1585,39 @@ def generate_thermal_invoice_pdf(invoice, template=None):
     else:
         item_rows = [[
             _tpara("ITEM", size=T_META, bold=True),
-            _tpara("QTY", size=T_META, align=TA_RIGHT, bold=True),
-            _tpara("RATE", size=T_META, align=TA_RIGHT, bold=True),
-            _tpara("AMOUNT", size=T_META, align=TA_RIGHT, bold=True),
+            _tpara("QTY" if thermal_show_qty else "", size=T_META, align=TA_RIGHT, bold=True),
+            _tpara("RATE" if thermal_show_rate else "", size=T_META, align=TA_RIGHT, bold=True),
+            _tpara("AMOUNT" if thermal_show_total else "", size=T_META, align=TA_RIGHT, bold=True),
         ]]
 
         for item in items:
-            product = _fmt_value(item.product_name)
+            product = _fmt_value(item.product_name) if s.flag("thermal_show_item_desc", True) else ""
             details = []
+            if show_sku and has_val(getattr(item, "sku", None)):
+                details.append(f"SKU: {item.sku}")
+            if show_barcode and has_val(getattr(item, "barcode", None)):
+                details.append(f"Barcode: {item.barcode}")
             if show_hsn and has_val(getattr(item, "hsn_code", None)):
                 details.append(f"HSN: {item.hsn_code}")
+            if show_batch and has_val(getattr(item, "batch_number", None)):
+                details.append(f"Batch: {item.batch_number}")
+            if s.flag("show_mfg_date", False) and getattr(item, "manufacturing_date", None):
+                details.append(f"MFG: {item.manufacturing_date.strftime('%d-%m-%y')}")
+            if show_expiry and getattr(item, "expiry_date", None):
+                details.append(f"EXP: {item.expiry_date.strftime('%d-%m-%y')}")
+            if show_mrp and dec(getattr(item, "mrp", 0)):
+                details.append(f"MRP: {currency(item.mrp)}")
             if show_discount and dec(getattr(item, "discount_percent", 0)) != 0:
                 details.append(f"Disc: {dec(getattr(item, 'discount_percent', 0))}%")
-            if show_tax and dec(getattr(item, "gst_amount", 0)) != 0 and has_val(getattr(item, "gst_percent", None)):
+            if thermal_show_tax and show_tax and dec(getattr(item, "gst_amount", 0)) != 0 and has_val(getattr(item, "gst_percent", None)):
                 details.append(f"GST: {dec(getattr(item, 'gst_percent', 0))}%")
             item_text = product + ("<br/><font size='5.2'>" + " | ".join(details) + "</font>" if details else "")
 
             item_rows.append([
                 _tpara(item_text, size=T_ITEM),
-                _tpara(_fmt_value(item.quantity), size=T_ITEM, align=TA_RIGHT),
-                _tpara(currency(item.unit_price), size=T_ITEM, align=TA_RIGHT),
-                _tpara(currency(item.total), size=T_ITEM, align=TA_RIGHT, bold=True),
+                _tpara(_fmt_value(item.quantity) if thermal_show_qty else "", size=T_ITEM, align=TA_RIGHT),
+                _tpara(currency(item.unit_price) if thermal_show_rate else "", size=T_ITEM, align=TA_RIGHT),
+                _tpara(currency(item.total) if thermal_show_total else "", size=T_ITEM, align=TA_RIGHT, bold=True),
             ])
 
         item_col_widths = [31 * mm, 9 * mm, 15 * mm, 17 * mm]
@@ -1594,9 +1649,9 @@ def generate_thermal_invoice_pdf(invoice, template=None):
 
     totals_rows = ([[ _tpara("SUB TOTAL", size=T_META), _tpara(currency(subtotal), size=T_META, align=TA_RIGHT) ]]
                    if s.flag("show_subtotal", True) else [])
-    if discount_amt != 0 and s.flag("show_discount_total", True):
+    if thermal_show_discount and discount_amt != 0 and s.flag("show_discount_total", True):
         totals_rows.append([_tpara("DISCOUNT", size=T_META), _tpara(currency(discount_amt), size=T_META, align=TA_RIGHT)])
-    if show_tax and s.flag("show_tax_breakdown", True):
+    if thermal_show_tax and show_tax and s.flag("show_tax_breakdown", True):
         if interstate and igst != 0:
             totals_rows.append([_tpara("IGST", size=T_META), _tpara(currency(igst), size=T_META, align=TA_RIGHT)])
         else:
@@ -1636,7 +1691,7 @@ def generate_thermal_invoice_pdf(invoice, template=None):
     if s.flag("show_payment_summary", True):
         _tdashed(story, content_w)
         payment_line = f"{status}  |  PAID: {currency(paid_amount)}"
-        if balance_due != 0 and s.flag("show_balance_due", True):
+        if balance_due != 0 and s.flag("thermal_show_party_balance", s.flag("show_balance_due", True)):
             payment_line += f"  |  BAL: {currency(balance_due)}"
         if change_returned != 0:
             payment_line += f"  |  CHANGE: {currency(change_returned)}"
@@ -1694,7 +1749,9 @@ def generate_thermal_invoice_pdf(invoice, template=None):
         story.append(sig_tbl)
         story.append(Spacer(1, 1.0 * mm))
 
-    if s.flag("show_footer", True) and str(s.get("invoice_footer_layout", "text_center")).lower() != "none":
+    if has_val(s.get("receipt_footer")):
+        story.append(_tpara(_clean_footer(s.get("receipt_footer")), size=T_FOOTER, align=TA_CENTER, bold=True))
+    elif s.flag("show_footer", True) and str(s.get("invoice_footer_layout", "text_center")).lower() != "none":
         align = TA_LEFT if str(s.get("invoice_footer_layout", "text_center")).lower() == "text_left" else TA_CENTER
         story.append(_tpara(_clean_footer(s.get("footer_text_override") or s.get("invoice_footer")).upper(), size=T_FOOTER, align=align, bold=True))
 

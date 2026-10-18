@@ -27,7 +27,7 @@ function InfoRow({ label, value, valueClass = '' }) {
   )
 }
 
-const REFUND_METHODS = ['cash', 'upi', 'card', 'online']
+const REFUND_METHODS = ['cash', 'UPI', 'card', 'online']
 
 function ReturnModal({ open, onClose, invoice, onDone }) {
   const [items, setItems] = useState([])
@@ -313,49 +313,43 @@ export default function Returns() {
       </div>
 
       {/* Return & Refund Summary (Responsive KPI Grid) */}
-      <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)]">
-        <div className="border-b border-[var(--line)] px-4 py-2 bg-[var(--surface-elevated)] flex items-center justify-between">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-            Returns &amp; Refund Valuation Summary
-          </span>
-          <span className="text-[10px] text-[var(--muted)]">Audit overview</span>
-        </div>
-        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
-          <div className="p-3 sm:p-3.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
+        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x divide-[var(--line)]">
+          <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
               Total Returns
             </span>
-            <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
               {returns.length + refundedInvoices.length}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">Recorded returns</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">Recorded returns</p>
           </div>
-          <div className="p-3 sm:p-3.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
               Refunded Invoices
             </span>
-            <p className="mt-1 font-mono text-lg font-bold text-amber-600 dark:text-amber-400">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400 tabular-nums truncate">
               {refundedInvoices.length}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">Complete refunds</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">Complete refunds</p>
           </div>
-          <div className="p-3 sm:p-3.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
               Cancelled Invoices
             </span>
-            <p className="mt-1 font-mono text-lg font-bold text-[var(--muted)]">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--muted)] tabular-nums truncate">
               {cancelledInvoices.length}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">Voided sales</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">Voided sales</p>
           </div>
-          <div className="p-3 sm:p-3.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
               Value Refunded
             </span>
-            <p className="mt-1 font-mono text-lg font-bold text-rose-600 dark:text-rose-400">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-rose-600 dark:text-rose-400 tabular-nums truncate">
               {fmt(totalRefunded)}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">Total refund amount</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">Total refund amount</p>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import api from '../api'
 import productService from '../features/inventory/api/productService'
+import ProductBatchManager from '../features/inventory/ProductBatchManager'
 import { STOCK_STATUS } from '../constants'
 import {
   Badge,
@@ -1094,7 +1095,7 @@ export default function Products() {
             <button
               type="button"
               onClick={exportToCSV}
-              className="btn-secondary btn-base min-h-[42px] flex items-center justify-center gap-2 text-xs font-semibold"
+              className="btn-secondary btn-base flex w-full items-center justify-center gap-1.5 text-xs sm:w-auto"
               title="Export products to CSV"
             >
               <Download size={15} />
@@ -1141,102 +1142,99 @@ export default function Products() {
       {/* =====================================================
           PRODUCT METRICS & STOCK ALERTS SUMMARY TABLE
       ====================================================== */}
-      <section className="erp-table-container">
-        <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-          Product Catalog & Stock Valuation
-        </div>
-        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-5 sm:divide-y-0 sm:divide-x">
+      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
+        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-5 sm:divide-y-0 sm:divide-x divide-[var(--line)]">
           <div
             onClick={() => setStockFilter('all')}
-            className={`p-3 cursor-pointer transition-colors ${
+            className={`px-3.5 py-2 sm:px-4 sm:py-2.5 cursor-pointer transition-colors ${
               stockFilter === 'all'
                 ? 'bg-[var(--surface-elevated)] font-semibold'
                 : 'hover:bg-[var(--surface-hover)]'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate">
                 Total Products
               </span>
-              <Boxes size={13} className="text-[#1E3A5F] dark:text-slate-300" />
+              <Boxes size={13} className="text-[#1E3A5F] dark:text-slate-300 shrink-0" />
             </div>
-            <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
               {stats.total}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">All catalog items</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">All catalog items</p>
           </div>
 
           <div
             onClick={() => setStatusFilter(statusFilter === 'active' ? 'all' : 'active')}
-            className={`p-3 cursor-pointer transition-colors ${
+            className={`px-3.5 py-2 sm:px-4 sm:py-2.5 cursor-pointer transition-colors ${
               statusFilter === 'active'
                 ? 'bg-[var(--surface-elevated)] font-semibold'
                 : 'hover:bg-[var(--surface-hover)]'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate">
                 Active Items
               </span>
-              <CheckCircle2 size={13} className="text-teal-600 dark:text-teal-400" />
+              <CheckCircle2 size={13} className="text-teal-600 dark:text-teal-400 shrink-0" />
             </div>
-            <p className="mt-1 font-mono text-lg font-bold text-teal-600 dark:text-teal-400">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-teal-600 dark:text-teal-400 tabular-nums truncate">
               {stats.active}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">Available for sale</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">Available for sale</p>
           </div>
 
           <div
             onClick={() => setStockFilter(stockFilter === 'low_stock' ? 'all' : 'low_stock')}
-            className={`p-3 cursor-pointer transition-colors ${
+            className={`px-3.5 py-2 sm:px-4 sm:py-2.5 cursor-pointer transition-colors ${
               stockFilter === 'low_stock'
                 ? 'bg-[var(--surface-elevated)] font-semibold'
                 : 'hover:bg-[var(--surface-hover)]'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate">
                 Low Stock Alert
               </span>
-              <AlertTriangle size={13} className="text-amber-600 dark:text-amber-400" />
+              <AlertTriangle size={13} className="text-amber-600 dark:text-amber-400 shrink-0" />
             </div>
-            <p className="mt-1 font-mono text-lg font-bold text-amber-600 dark:text-amber-400">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400 tabular-nums truncate">
               {stats.low}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">Threshold reached</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">Threshold reached</p>
           </div>
 
           <div
             onClick={() => setStockFilter(stockFilter === 'out_of_stock' ? 'all' : 'out_of_stock')}
-            className={`p-3 cursor-pointer transition-colors ${
+            className={`px-3.5 py-2 sm:px-4 sm:py-2.5 cursor-pointer transition-colors ${
               stockFilter === 'out_of_stock'
                 ? 'bg-[var(--surface-elevated)] font-semibold'
                 : 'hover:bg-[var(--surface-hover)]'
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate">
                 Out of Stock
               </span>
-              <XCircle size={13} className="text-rose-600 dark:text-rose-400" />
+              <XCircle size={13} className="text-rose-600 dark:text-rose-400 shrink-0" />
             </div>
-            <p className="mt-1 font-mono text-lg font-bold text-rose-600 dark:text-rose-400">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-rose-600 dark:text-rose-400 tabular-nums truncate">
               {stats.out}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">Zero balance</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">Zero balance</p>
           </div>
 
-          <div className="p-3 col-span-2 sm:col-span-1 border-t sm:border-t-0 border-[var(--line)]">
+          <div className="px-3.5 py-2 sm:px-4 sm:py-2.5 col-span-2 sm:col-span-1 border-t sm:border-t-0 border-[var(--line)]">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate">
                 Stock Valuation
               </span>
-              <Tag size={13} className="text-[#1E3A5F] dark:text-slate-300" />
+              <Tag size={13} className="text-[#1E3A5F] dark:text-slate-300 shrink-0" />
             </div>
-            <p className="mt-1 font-mono text-lg font-bold text-[#1E3A5F] dark:text-slate-200">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[#1E3A5F] dark:text-slate-200 tabular-nums truncate">
               {formatCurrency(stats.stockValue)}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">
+            <p className="text-[10px] text-[var(--muted)] truncate">
               Retail: {formatCurrency(stats.retailValue)}
             </p>
           </div>
@@ -1737,8 +1735,8 @@ export default function Products() {
                         </td>
 
                         {/* 7. GST */}
-                        <td className="text-center">
-                          <span className="inline-flex rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 font-mono text-[11px] font-semibold text-[var(--muted)]">
+                        <td className="text-center whitespace-nowrap">
+                          <span className="text-xs font-medium text-[var(--ink)] whitespace-nowrap">
                             {product.gst_percent ?? 0}%
                           </span>
                         </td>
@@ -2255,6 +2253,7 @@ export default function Products() {
       >
         {detailProduct && (
           <div className="space-y-5">
+            <ProductBatchManager product={detailProduct} />
             {/* Top Summary Header */}
             <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from django.db import transaction
 
-from ..models import InventoryTransaction, Product
+from ..models import InventoryTransaction, Product, ProductBatch
 
 
 class DuplicateStockMovement(ValueError):
@@ -15,7 +15,7 @@ class InventoryService:
     def move_stock(*, product_id, quantity, transaction_type, business, user,
                    reference='', notes='', unit_cost=None, movement_key=None,
                    allow_negative=False, expected_before=None,
-                   reference_type='', reference_id=''):
+                   reference_type='', reference_id='', batch_id=None):
         quantity = Decimal(str(quantity))
         if quantity == 0:
             raise ValueError('Quantity cannot be zero.')
@@ -39,11 +39,25 @@ class InventoryService:
             after_stock = before_stock + quantity
             if not allow_negative and after_stock < 0:
                 raise ValueError(f'Insufficient stock for {product.name}.')
+            batch = None
+            if batch_id is not None:
+                try:
+                    batch = ProductBatch.objects.select_for_update().get(
+                        pk=batch_id, product=product, business=business,
+                    )
+                except ProductBatch.DoesNotExist as exc:
+                    raise ValueError('Selected batch does not belong to this product.') from exc
+                batch_after = batch.quantity + quantity
+                if batch_after < 0:
+                    raise ValueError(f'Insufficient stock in batch {batch.batch_number}.')
+                batch.quantity = batch_after
+                batch.save(update_fields=['quantity', 'updated_at'])
             product.current_stock = after_stock
             product.save(update_fields=['current_stock', 'updated_at'])
             return InventoryTransaction.objects.create(
                 business=business,
                 product=product,
+                batch=batch,
                 transaction_type=transaction_type,
                 quantity=quantity,
                 before_stock=before_stock,

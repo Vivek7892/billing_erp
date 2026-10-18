@@ -26,7 +26,6 @@ import {
 import api from '../api'
 import { Badge, Spinner } from '../components/UI'
 import { useShop } from '../components/Layout'
-import DashboardBannerCarousel from './DashboardBannerCarousel'
 
 const EMPTY = {
   today_sales: 0,
@@ -306,8 +305,6 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <DashboardBannerCarousel />
-
       {/* -------------------------------------------------------------
           ERROR BANNER
       -------------------------------------------------------------- */}
@@ -324,50 +321,50 @@ export default function Dashboard() {
       )}
 
       {/* -------------------------------------------------------------
-          SECTION 1: ERP METRICS SUMMARY (Table-Based KPI Strip)
+          SECTION 1: ERP METRICS SUMMARY (Compact Table-Based KPI Strip)
       -------------------------------------------------------------- */}
-      <section className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] shadow-none">
+      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
         {/* Row 1: Today's Metrics */}
         <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
           <div
             onClick={() => navigate('/sales/invoices')}
-            className="p-3 sm:p-3.5 cursor-pointer hover:bg-[var(--surface-elevated)] transition"
+            className="px-3.5 py-2 sm:px-4 sm:py-2.5 min-w-0 cursor-pointer hover:bg-[var(--surface-hover)] transition"
           >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
               Total Sales
             </span>
-            <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
               {fmtCurrency(data.today_sales)}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">
-              {data.today_bills || 0} orders today {salesTrend !== 0 && `(${salesTrend >= 0 ? '+' : ''}${salesTrend}%)`}
+            <p className="text-[11px] text-[var(--muted)] truncate">
+              {data.today_bills || 0} orders {salesTrend !== 0 && `(${salesTrend >= 0 ? '+' : ''}${salesTrend}%)`}
             </p>
           </div>
 
           <div
             onClick={() => navigate('/sales/payments')}
-            className="p-3 sm:p-3.5 cursor-pointer hover:bg-[var(--surface-elevated)] transition"
+            className="px-3.5 py-2 sm:px-4 sm:py-2.5 min-w-0 cursor-pointer hover:bg-[var(--surface-hover)] transition"
           >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
               Collected
             </span>
-            <p className="mt-1 font-mono text-lg font-bold text-teal-600 dark:text-teal-400">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-teal-600 dark:text-teal-400 tabular-nums truncate">
               {fmtCurrency(data.today_collection || data.today_payments_total)}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">
+            <p className="text-[11px] text-[var(--muted)] truncate">
               Tax: {fmtCurrency(data.today_tax)}
             </p>
           </div>
 
           <div
             onClick={() => navigate('/reports')}
-            className="p-3 sm:p-3.5 cursor-pointer hover:bg-[var(--surface-elevated)] transition"
+            className="px-3.5 py-2 sm:px-4 sm:py-2.5 min-w-0 cursor-pointer hover:bg-[var(--surface-hover)] transition"
           >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
               Net Profit
             </span>
             <p
-              className={`mt-1 font-mono text-lg font-bold ${
+              className={`mt-0.5 font-mono text-base sm:text-lg font-bold tabular-nums truncate ${
                 data.today_profit >= 0
                   ? 'text-teal-600 dark:text-teal-400'
                   : 'text-red-500'
@@ -375,22 +372,22 @@ export default function Dashboard() {
             >
               {fmtCurrency(data.today_profit)}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">
+            <p className="text-[11px] text-[var(--muted)] truncate">
               Margin {Number(data.profit_margin || 0).toFixed(1)}%
             </p>
           </div>
 
           <div
             onClick={() => navigate('/sales/invoices')}
-            className="p-3 sm:p-3.5 cursor-pointer hover:bg-[var(--surface-elevated)] transition"
+            className="px-3.5 py-2 sm:px-4 sm:py-2.5 min-w-0 cursor-pointer hover:bg-[var(--surface-hover)] transition"
           >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
               Average Bill
             </span>
-            <p className="mt-1 font-mono text-lg font-bold text-[#1E3A5F] dark:text-slate-200">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[#1E3A5F] dark:text-slate-200 tabular-nums truncate">
               {fmtCurrency(data.avg_bill_today)}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">
+            <p className="text-[11px] text-[var(--muted)] truncate">
               Average per sale
             </p>
           </div>
@@ -400,43 +397,43 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 divide-y divide-[var(--line)] border-t border-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
           <div
             onClick={() => navigate('/sales/invoices')}
-            className="p-3 sm:p-3.5 cursor-pointer hover:bg-[var(--surface-elevated)] transition"
+            className="px-3.5 py-2 sm:px-4 sm:py-2.5 min-w-0 cursor-pointer hover:bg-[var(--surface-hover)] transition"
           >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
               This Month Sales
             </span>
-            <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
               {fmtCurrency(data.month_sales)}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">
+            <p className="text-[11px] text-[var(--muted)] truncate">
               {data.month_bills || 0} bills this month
             </p>
           </div>
 
           <div
             onClick={() => navigate('/parties/customers?credit_due=1')}
-            className="p-3 sm:p-3.5 cursor-pointer hover:bg-[var(--surface-elevated)] transition"
+            className="px-3.5 py-2 sm:px-4 sm:py-2.5 min-w-0 cursor-pointer hover:bg-[var(--surface-hover)] transition"
           >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
               Outstanding Dues
             </span>
-            <p className="mt-1 font-mono text-lg font-bold text-amber-700 dark:text-amber-400">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-amber-700 dark:text-amber-400 tabular-nums truncate">
               {fmtCurrency(data.pending_credit)}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">
+            <p className="text-[11px] text-[var(--muted)] truncate">
               {creditDueCount} customer{creditDueCount === 1 ? '' : 's'} pending
             </p>
           </div>
 
           <div
             onClick={() => navigate('/inventory/stock')}
-            className="p-3 sm:p-3.5 cursor-pointer hover:bg-[var(--surface-elevated)] transition"
+            className="px-3.5 py-2 sm:px-4 sm:py-2.5 min-w-0 cursor-pointer hover:bg-[var(--surface-hover)] transition"
           >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
               Stock Alerts
             </span>
             <p
-              className={`mt-1 font-mono text-lg font-bold ${
+              className={`mt-0.5 font-mono text-base sm:text-lg font-bold tabular-nums truncate ${
                 data.out_of_stock > 0
                   ? 'text-red-500'
                   : data.low_stock_count > 0
@@ -446,22 +443,22 @@ export default function Dashboard() {
             >
               {data.out_of_stock || 0} Out · {data.low_stock_count || 0} Low
             </p>
-            <p className="text-[10px] text-[var(--muted)]">
+            <p className="text-[11px] text-[var(--muted)] truncate">
               {Number(data.total_products || data.product_count || 0)} total products
             </p>
           </div>
 
           <div
             onClick={() => navigate('/purchases')}
-            className="p-3 sm:p-3.5 cursor-pointer hover:bg-[var(--surface-elevated)] transition"
+            className="px-3.5 py-2 sm:px-4 sm:py-2.5 min-w-0 cursor-pointer hover:bg-[var(--surface-hover)] transition"
           >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
               Purchases
             </span>
-            <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
               {fmtCurrency(data.today_purchases)}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">
+            <p className="text-[11px] text-[var(--muted)] truncate">
               Month: {fmtCurrency(data.month_purchases)}
             </p>
           </div>

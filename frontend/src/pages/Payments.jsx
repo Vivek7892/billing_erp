@@ -1007,45 +1007,37 @@ export default function Payments() {
             </div>
           </section>
           {/* SUMMARY STRIP */}
-          <section className="erp-table-container">
-            <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] flex items-center justify-between">
-              <span>Payment &amp; Collection Summary</span>
-              {datePreset !== 'all' && (
-                <span className="text-[10px] font-mono text-[var(--muted)]">
-                  {dateStart} → {dateEnd}
-                </span>
-              )}
-            </div>
-            <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-3 lg:grid-cols-6 sm:divide-y-0 sm:divide-x">
-              <div className="p-3 sm:p-3.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Collected</span>
-                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-teal-600 dark:text-teal-400">{formatCurrency(totalCollected)}</p>
-                <p className="text-[10px] text-[var(--muted)]">Non-credit receipts</p>
+          <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
+            <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-3 lg:grid-cols-6 sm:divide-y-0 sm:divide-x divide-[var(--line)]">
+              <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">Collected</span>
+                <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-teal-600 dark:text-teal-400 tabular-nums truncate">{formatCurrency(totalCollected)}</p>
+                <p className="text-[10px] text-[var(--muted)] truncate">Non-credit receipts</p>
               </div>
-              <div className="p-3 sm:p-3.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Credit Due</span>
-                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-rose-600 dark:text-rose-400">{formatCurrency(totalCredit)}</p>
-                <p className="text-[10px] text-[var(--muted)]">Receivable balances</p>
+              <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">Credit Due</span>
+                <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-rose-600 dark:text-rose-400 tabular-nums truncate">{formatCurrency(totalCredit)}</p>
+                <p className="text-[10px] text-[var(--muted)] truncate">Receivable balances</p>
               </div>
-              <div className="p-3 sm:p-3.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Transactions</span>
-                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[var(--ink)]">{totalTransactions.toLocaleString('en-IN')}</p>
-                <p className="text-[10px] text-[var(--muted)]">Total recorded bills</p>
+              <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">Transactions</span>
+                <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">{totalTransactions.toLocaleString('en-IN')}</p>
+                <p className="text-[10px] text-[var(--muted)] truncate">Total recorded bills</p>
               </div>
-              <div className="p-3 sm:p-3.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Avg Bill</span>
-                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[var(--ink)]">{formatCurrency(paymentMetrics.avgBill)}</p>
-                <p className="text-[10px] text-[var(--muted)]">Per transaction</p>
+              <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">Avg Bill</span>
+                <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">{formatCurrency(paymentMetrics.avgBill)}</p>
+                <p className="text-[10px] text-[var(--muted)] truncate">Per transaction</p>
               </div>
-              <div className="p-3 sm:p-3.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Tax Collected</span>
-                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-400">{formatCurrency(paymentMetrics.tax)}</p>
-                <p className="text-[10px] text-[var(--muted)]">Output GST</p>
+              <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">Tax Collected</span>
+                <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400 tabular-nums truncate">{formatCurrency(paymentMetrics.tax)}</p>
+                <p className="text-[10px] text-[var(--muted)] truncate">Output GST</p>
               </div>
-              <div className="p-3 sm:p-3.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Discounts</span>
-                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-slate-600 dark:text-slate-300">{formatCurrency(paymentMetrics.discounts)}</p>
-                <p className="text-[10px] text-[var(--muted)]">Total given</p>
+              <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">Discounts</span>
+                <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-slate-600 dark:text-slate-300 tabular-nums truncate">{formatCurrency(paymentMetrics.discounts)}</p>
+                <p className="text-[10px] text-[var(--muted)] truncate">Total given</p>
               </div>
             </div>
           </section>
@@ -1725,46 +1717,46 @@ export default function Payments() {
       {activeTab === 'collection' && (
         <div className="space-y-4">
           {/* Outstanding Receivables Metrics Strip */}
-          <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)]">
-            <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
-              <div className="p-3 sm:p-3.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
+            <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x divide-[var(--line)]">
+              <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
                   Total Receivables Due
                 </span>
-                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-rose-600 dark:text-rose-400">
+                <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-rose-600 dark:text-rose-400 tabular-nums truncate">
                   {formatCurrency(totalOutstandingReceivables)}
                 </p>
-                <p className="text-[10px] text-[var(--muted)]">{dueCustomers.length} customers with balance</p>
+                <p className="text-[10px] text-[var(--muted)] truncate">{dueCustomers.length} customers with balance</p>
               </div>
 
-              <div className="p-3 sm:p-3.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
                   Customers with Dues
                 </span>
-                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-400">
+                <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400 tabular-nums truncate">
                   {dueCustomers.length}
                 </p>
-                <p className="text-[10px] text-[var(--muted)]">Pending recovery</p>
+                <p className="text-[10px] text-[var(--muted)] truncate">Pending recovery</p>
               </div>
 
-              <div className="p-3 sm:p-3.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
                   Credit Limit Extended
                 </span>
-                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[var(--ink)]">
+                <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
                   {formatCurrency(totalCreditLimitGiven)}
                 </p>
-                <p className="text-[10px] text-[var(--muted)]">Total allowed credit</p>
+                <p className="text-[10px] text-[var(--muted)] truncate">Total allowed credit</p>
               </div>
 
-              <div className="p-3 sm:p-3.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+              <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
                   Total Customers
                 </span>
-                <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[var(--primary)]">
+                <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--primary)] tabular-nums truncate">
                   {customers.length}
                 </p>
-                <p className="text-[10px] text-[var(--muted)]">In store registry</p>
+                <p className="text-[10px] text-[var(--muted)] truncate">In store registry</p>
               </div>
             </div>
           </div>

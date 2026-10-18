@@ -2,6 +2,7 @@ from decimal import Decimal
 from django.db.models import Sum
 from rest_framework import serializers
 from .models import *
+from datetime import date
 
 
 class BusinessSerializer(serializers.ModelSerializer):
@@ -62,11 +63,55 @@ class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     supplier_name = serializers.CharField(source='supplier.name', read_only=True)
     stock_status = serializers.ReadOnlyField()
+    batches = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = '__all__'
         read_only_fields = ['business']
+
+    def validate(self, attrs):
+        mrp = attrs.get('mrp', getattr(self.instance, 'mrp', None))
+        selling = attrs.get('selling_price', getattr(self.instance, 'selling_price', None))
+        if mrp is not None and selling is not None and mrp > 0 and mrp < selling:
+            raise serializers.ValidationError({'mrp': 'MRP cannot be lower than the selling price.'})
+        for field in ('category', 'supplier'):
+            related = attrs.get(field, getattr(self.instance, f'{field}_id', None))
+            if related and hasattr(related, 'business_id'):
+                request = self.context.get('request')
+                if request and related.business_id != request.user.business_id:
+                    raise serializers.ValidationError({field: f'{field.title()} does not belong to this business.'})
+        return attrs
+
+    def get_batches(self, obj):
+        return ProductBatchSerializer(obj.batches.filter(active=True), many=True).data
+
+
+class ProductBatchSerializer(serializers.ModelSerializer):
+    inventory_status = serializers.ReadOnlyField()
+
+    class Meta:
+        model = ProductBatch
+        fields = '__all__'
+        read_only_fields = ['business', 'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        manufacturing = attrs.get('manufacturing_date', getattr(self.instance, 'manufacturing_date', None))
+        expiry = attrs.get('expiry_date', getattr(self.instance, 'expiry_date', None))
+        if manufacturing and expiry and expiry < manufacturing:
+            raise serializers.ValidationError({'expiry_date': 'Expiry date cannot be before manufacturing date.'})
+        mrp = attrs.get('mrp', getattr(self.instance, 'mrp', None))
+        selling = attrs.get('selling_rate', getattr(self.instance, 'selling_rate', None))
+        if mrp is not None and selling is not None and mrp > 0 and mrp < selling:
+            raise serializers.ValidationError({'mrp': 'Batch MRP cannot be lower than its selling rate.'})
+        quantity = attrs.get('quantity', getattr(self.instance, 'quantity', 0))
+        if quantity < 0:
+            raise serializers.ValidationError({'quantity': 'Quantity cannot be negative.'})
+        product = attrs.get('product', getattr(self.instance, 'product', None))
+        request = self.context.get('request')
+        if product and request and product.business_id != request.user.business_id:
+            raise serializers.ValidationError({'product': 'Product does not belong to this business.'})
+        return attrs
 
 
 class CustomerSerializer(serializers.ModelSerializer):

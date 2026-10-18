@@ -45,11 +45,12 @@ import api from '../api'
 import toast from 'react-hot-toast'
 import { useAuth } from '../AuthContext'
 import InvoiceDocument, { isTrue } from '../components/InvoiceDocument'
-import { drawTabletopStandeeCanvas, generatePrintStandHtml, loadUpiBrandLogos } from '../components/UpiLogos'
+import { drawTabletopStandeeCanvas, generatePrintStandHtml, loadUpiBrandLogos, UpiLogo } from '../components/UpiLogos'
 import merchantStandIllustration from '../assets/merchant-qr-stand.svg'
 import googlePayLogo from '../assets/google-pay.svg'
 import phonePeLogo from '../assets/phonepe.svg'
 import paytmLogo from '../assets/paytm.svg'
+import upiLogo from '../assets/upi.svg'
 import { Spinner } from '../components/UI'
 import { SETTINGS_TABS } from '../components/SettingsNavigation'
 import './Settings.css'
@@ -1299,10 +1300,16 @@ export default function Settings() {
                       onChange={v => setField('show_sku_col', String(v))}
                       label="Item Code / SKU"
                     />
+                    <CheckboxField checked={isTrue(settings.show_barcode_col, false)} onChange={v => setField('show_barcode_col', String(v))} label="Barcode" />
                     <CheckboxField
                       checked={isTrue(settings.show_batch_col, false)}
                       onChange={v => setField('show_batch_col', String(v))}
                       label="Batch Number"
+                    />
+                    <CheckboxField
+                      checked={isTrue(settings.show_mrp_col, false)}
+                      onChange={v => setField('show_mrp_col', String(v))}
+                      label="MRP"
                     />
                     <CheckboxField
                       checked={isTrue(settings.show_mfg_date, false)}
@@ -1771,6 +1778,7 @@ export default function Settings() {
                           onChange={v => setField('thermal_show_customer_gstin', String(v))}
                           label="Print Customer GSTIN"
                         />
+                        <CheckboxField checked={isTrue(settings.thermal_show_customer_address, true)} onChange={v => setField('thermal_show_customer_address', String(v))} label="Print Customer Address" />
                       </div>
                     </AccordionSection>
 
@@ -1788,6 +1796,7 @@ export default function Settings() {
                           onChange={v => setField('thermal_show_sku', String(v))}
                           label="Print SKU / Barcode Number"
                         />
+                        <CheckboxField checked={isTrue(settings.thermal_show_barcode, false)} onChange={v => setField('thermal_show_barcode', String(v))} label="Print product barcode" />
                         <CheckboxField
                           checked={isTrue(settings.thermal_show_qty, true)}
                           onChange={v => setField('thermal_show_qty', String(v))}
@@ -1799,6 +1808,11 @@ export default function Settings() {
                           label="Print Unit Rate / Price"
                         />
                         <CheckboxField
+                          checked={isTrue(settings.thermal_show_total, true)}
+                          onChange={v => setField('thermal_show_total', String(v))}
+                          label="Print item line total"
+                        />
+                        <CheckboxField
                           checked={isTrue(settings.thermal_show_discount, true)}
                           onChange={v => setField('thermal_show_discount', String(v))}
                           label="Print Discount Given"
@@ -1808,6 +1822,9 @@ export default function Settings() {
                           onChange={v => setField('thermal_show_tax', String(v))}
                           label="Print Tax Rate % (HSN/GST)"
                         />
+                        <CheckboxField checked={isTrue(settings.thermal_show_batch, false)} onChange={v => setField('thermal_show_batch', String(v))} label="Print batch number" />
+                        <CheckboxField checked={isTrue(settings.thermal_show_expiry, false)} onChange={v => setField('thermal_show_expiry', String(v))} label="Print expiry date" />
+                        <CheckboxField checked={isTrue(settings.thermal_show_mrp, false)} onChange={v => setField('thermal_show_mrp', String(v))} label="Print MRP" />
                       </div>
                     </AccordionSection>
 
@@ -1832,6 +1849,8 @@ export default function Settings() {
                           label="Digital Bill QR Code (Scan to View Bill)"
                           description="Paperless customer receipt access via QR."
                         />
+                        <CheckboxField checked={isTrue(settings.thermal_show_terms, true)} onChange={v => setField('thermal_show_terms', String(v))} label="Print thermal return terms" />
+                        <CheckboxField checked={isTrue(settings.thermal_show_party_balance, true)} onChange={v => setField('thermal_show_party_balance', String(v))} label="Print customer balance due" />
                         <div>
                           <label className="text-xs font-semibold text-slate-800 block mb-1">
                             Receipt Footer Greeting
@@ -2378,6 +2397,19 @@ export default function Settings() {
         )}
 
         {/* ============================================================
+            TAB: INVENTORY AND BATCH SETTINGS
+        ============================================================ */}
+        {activeTab === 'inventory' && (
+          <div className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 max-w-4xl w-full mx-auto">
+            <PageHeader title="Inventory, Batch & Expiry" description="Control batch-level stock tracking and expired stock sales." isDirty={isDirty} saving={saving} onSave={() => saveCurrentSettings('Updated inventory and batch settings')} saveLabel="Save Inventory Settings" />
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs space-y-4">
+              <CheckboxField checked={isTrue(settings.expiry_tracking_enabled, true)} onChange={v => setField('expiry_tracking_enabled', String(v))} label="Enable expiry tracking" description="Store manufacturing and expiry dates on batches and show their expiry status." />
+              <CheckboxField checked={isTrue(settings.prevent_expired_batch_sale, false)} onChange={v => setField('prevent_expired_batch_sale', String(v))} label="Prevent sale of expired batches" description="Reject invoice creation when the selected batch has expired." />
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================
             TAB: APPROVAL SETTINGS (MAKER-CHECKER WORKFLOW)
         ============================================================ */}
         {activeTab === 'approvals' && (
@@ -2461,20 +2493,23 @@ export default function Settings() {
                 </SettingRow>
 
                 <div className="pt-2 border-t border-slate-200 space-y-3">
+                  <CheckboxField checked={isTrue(settings.approval_price_change_enabled, true)} onChange={v => setField('approval_price_change_enabled', String(v))} label="Require approval for large price changes" />
+                  <CheckboxField checked={isTrue(settings.approval_refund_enabled, true)} onChange={v => setField('approval_refund_enabled', String(v))} label="Require approval for refunds above threshold" />
+                  <CheckboxField checked={isTrue(settings.approval_stock_adjustment_enabled, true)} onChange={v => setField('approval_stock_adjustment_enabled', String(v))} label="Require approval for large stock adjustments" />
                   <CheckboxField
-                    checked={isTrue(settings.approval_invoice_cancellation, true)}
-                    onChange={v => setField('approval_invoice_cancellation', String(v))}
+                    checked={isTrue(settings.approval_invoice_cancellation_enabled, true)}
+                    onChange={v => setField('approval_invoice_cancellation_enabled', String(v))}
                     label="Invoice Cancellation requires Admin Approval"
                     description="Cashiers cannot void saved tax invoices without manager dual-control."
                   />
                   <CheckboxField
-                    checked={isTrue(settings.approval_user_role_change, true)}
-                    onChange={v => setField('approval_user_role_change', String(v))}
+                    checked={isTrue(settings.approval_user_role_change_enabled, true)}
+                    onChange={v => setField('approval_user_role_change_enabled', String(v))}
                     label="User Role Promotion / Privilege Change requires Admin Approval"
                   />
                   <CheckboxField
-                    checked={isTrue(settings.approval_credit_limit_increase, true)}
-                    onChange={v => setField('approval_credit_limit_increase', String(v))}
+                    checked={isTrue(settings.approval_credit_limit_increase_enabled, true)}
+                    onChange={v => setField('approval_credit_limit_increase_enabled', String(v))}
                     label="Customer Credit Limit Increase requires Admin Approval"
                   />
                 </div>
@@ -2683,10 +2718,11 @@ export default function Settings() {
                           <p className="mt-0.5 font-mono text-slate-600 break-all text-[11px]">{settings.shop_upi_id}</p>
                           <div className="mt-2">
                             <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-wider text-slate-500">Accepted payment apps</p>
-                            <div className="flex items-center gap-2.5" aria-label="Accepted payment apps">
-                              <img src={googlePayLogo} alt="Google Pay" title="Google Pay" className="h-5 w-auto max-w-[48px] object-contain" />
-                              <img src={phonePeLogo} alt="PhonePe" title="PhonePe" className="h-5 w-auto max-w-[72px] object-contain" />
+                            <div className="flex items-center gap-0.5" aria-label="Accepted payment apps">
+                              <img src={googlePayLogo} alt="Google Pay" title="Google Pay" className="h-10 w-auto max-w-[48px] object-contain" />
+                              <img src={phonePeLogo} alt="PhonePe" title="PhonePe" className="h-10 w-auto max-w-[180px] object-contain" />
                               <img src={paytmLogo} alt="Paytm" title="Paytm" className="h-5 w-auto max-w-[54px] object-contain" />
+                              <img src={upiLogo} alt="Paytm" title="UPI" className="h-8 w-auto max-w-[54px] object-contain" />
                             </div>
                           </div>
                         </div>

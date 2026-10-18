@@ -1,14 +1,14 @@
 .notification-kpi {
   display: flex;
   min-width: 0;
-  min-height: 104px;
+  min-height: 72px;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
-  padding: 12px 14px;
+  padding: 8px 12px;
   color: var(--ink);
   text-align: left;
   transition: border-color 150ms ease, background-color 150ms ease;
@@ -34,23 +34,23 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  line-height: 1.3;
+  line-height: 1.2;
   text-transform: uppercase;
 }
 
 .notification-kpi strong {
-  margin-top: 5px;
-  font-size: 23px;
+  margin-top: 2px;
+  font-size: 18px;
   font-variant-numeric: tabular-nums;
   font-weight: 750;
-  line-height: 1;
+  line-height: 1.1;
 }
 
 .notification-kpi-sub {
-  margin-top: 5px;
+  margin-top: 2px;
   color: var(--muted);
-  font-size: 11px;
-  line-height: 1.3;
+  font-size: 10px;
+  line-height: 1.2;
 }
 
 .notifications-advanced-filters {
@@ -66,16 +66,16 @@
 
 @media (max-width: 640px) {
   .notification-kpi {
-    min-height: 90px;
-    padding: 10px 11px;
+    min-height: 68px;
+    padding: 7px 10px;
   }
 
   .notification-kpi strong {
-    font-size: 21px;
+    font-size: 17px;
   }
 
   .notification-kpi-sub {
-    font-size: 10px;
+    font-size: 9.5px;
   }
 
   .notifications-filter-bar {

@@ -1489,37 +1489,24 @@ export default function Purchases() {
         }
       />
 
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#1E3A5F] dark:text-slate-300">
-            Procurement workspace
-          </p>
-          <p className="mt-1 text-sm text-slate-700 dark:text-slate-300 font-medium">
-            Track supplier spending, purchase orders and outstanding payments.
-          </p>
-        </div>
-      </div>
-
+      
       {/* Table-First Procurement Summary */}
-      <section className="erp-table-container">
-        <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-          Procurement & Supplier Payable Summary
-        </div>
-        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
+      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
+        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x divide-[var(--line)]">
           {summaryCards.map(({ label, value, hint, icon: Icon, iconClass }) => (
-            <div key={label} className="p-3 sm:p-3.5">
+            <div key={label} className="px-3.5 py-2 sm:px-4 sm:py-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 truncate">
                   {label}
                 </span>
-                <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${iconClass}`}>
-                  <Icon size={13} />
+                <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md ${iconClass}`}>
+                  <Icon size={12} />
                 </div>
               </div>
-              <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 tabular-nums">
+              <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 tabular-nums truncate">
                 {value}
               </p>
-              <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">{hint}</p>
+              <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium truncate">{hint}</p>
             </div>
           ))}
         </div>

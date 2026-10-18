@@ -148,40 +148,37 @@ export default function Expenses() {
       {/* =====================================================
           ERP SUMMARY (Table-Based)
       ====================================================== */}
-      <section className="erp-table-container">
-        <div className="border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-          Expense Tracking Summary
-        </div>
-        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
-          <div className="p-3 sm:p-3.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
+        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x divide-[var(--line)]">
+          <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
               Total Expenses
             </span>
-            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-rose-600 dark:text-rose-400">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-rose-600 dark:text-rose-400 tabular-nums truncate">
               {fmt(totalAll)}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">{expenses.length} recorded entries</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">{expenses.length} recorded entries</p>
           </div>
 
-          <div className="p-3 sm:p-3.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
               This Month
             </span>
-            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-400">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400 tabular-nums truncate">
               {fmt(thisMonth)}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">Current monthly outflow</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">Current monthly outflow</p>
           </div>
 
           {catTotals.slice(0, 2).map(({ cat, total }) => (
-            <div key={cat} className="p-3 sm:p-3.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            <div key={cat} className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
                 {cat} (Top Spend)
               </span>
-              <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[var(--ink)]">
+              <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
                 {fmt(total)}
               </p>
-              <p className="text-[10px] text-[var(--muted)]">Category expenditure</p>
+              <p className="text-[10px] text-[var(--muted)] truncate">Category expenditure</p>
             </div>
           ))}
         </div>

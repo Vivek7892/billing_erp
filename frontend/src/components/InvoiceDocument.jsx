@@ -254,9 +254,12 @@ export default function InvoiceDocument({
           ...i,
           name: i.product_name || i.name || 'Item',
           sku: i.sku || '',
+          barcode: i.barcode || '',
           hsn: i.hsn_code || i.hsn || '',
           unit: i.unit || '',
-          batch: i.batch_no || i.batch || '',
+          batch: i.batch_number || i.batch_no || i.batch || '',
+          manufacturing: i.manufacturing_date || i.mfg_date || '',
+          expiry: i.expiry_date || i.exp_date || '',
           qty,
           rate,
           disc,
@@ -284,11 +287,24 @@ export default function InvoiceDocument({
 
   // Column toggles
   const showSkuCol = (tFields.show_sku !== undefined ? tFields.show_sku : isTrue(s.show_sku_col, false)) && items.some(i => Boolean(i.sku))
+  const showBarcodeCol = isTrue(s.show_barcode_col, false) && items.some(i => Boolean(i.barcode))
   const showHsnCol = (tFields.show_hsn !== undefined ? tFields.show_hsn : isTrue(s.show_hsn_col, true)) && items.some(i => Boolean(i.hsn))
   const showUnitCol = (tFields.show_unit !== undefined ? tFields.show_unit : isTrue(s.show_unit_col, false)) && items.some(i => Boolean(i.unit))
   const showBatchCol = (tFields.show_batch !== undefined ? tFields.show_batch : isTrue(s.show_batch_col, false)) && items.some(i => Boolean(i.batch))
+  const showExpiryCol = isTrue(s.show_expiry_col, false) && items.some(i => Boolean(i.expiry))
+  const showMfgCol = isTrue(s.show_mfg_date, false) && items.some(i => Boolean(i.manufacturing))
+  const showMrpCol = isTrue(s.show_mrp_col, false) && items.some(i => Number(i.mrp) > 0)
   const showDiscCol = (tFields.show_discount !== undefined ? tFields.show_discount : isTrue(s.show_discount_col, true)) && items.some(i => Number(i.disc) > 0)
   const showTaxCols = (tFields.show_tax_breakup !== undefined ? tFields.show_tax_breakup : isTrue(s.show_tax_cols, true)) && s.gst_reg_type !== 'unregistered'
+  const thermal = effectiveMode === 'thermal'
+  const showQtyCol = thermal ? isTrue(s.thermal_show_qty, true) : isTrue(s.show_qty_col, true)
+  const showRateCol = thermal ? isTrue(s.thermal_show_rate, true) : isTrue(s.show_rate_col, true)
+  const showTotalCol = thermal ? isTrue(s.thermal_show_total, true) : isTrue(s.show_total_col, true)
+  const showSerialCol = isTrue(s.show_sr_no, true)
+  const showItemName = isTrue(s.show_item_name, true)
+  const showThermalBatch = isTrue(s.thermal_show_batch, showBatchCol)
+  const showThermalExpiry = isTrue(s.thermal_show_expiry, showExpiryCol)
+  const showThermalMrp = isTrue(s.thermal_show_mrp, showMrpCol)
   const showCessCol = isTrue(s.cess_enabled, false) && cessAmount > 0
 
   // Tax breakdown flags
@@ -310,7 +326,7 @@ export default function InvoiceDocument({
   const showBankDetails = isTrue(tPayment.show_bank_details, isTrue(s.show_bank_details, true)) && Boolean(bankDetailsText)
   const upiId = s.shop_upi_id || ''
   const showUpiA4 = isTrue(tPayment.show_upi_qr, isTrue(s.show_upi_qr_on_invoice, true)) && Boolean(upiId)
-  const showUpiThermal = isTrue(tPayment.show_upi_qr, isTrue(s.show_upi_qr_on_thermal, true)) && Boolean(upiId)
+  const showUpiThermal = isTrue(s.thermal_show_upi_qr, isTrue(tPayment.show_upi_qr, isTrue(s.show_upi_qr_on_thermal, true))) && Boolean(upiId)
   const is58mm = mode === 'thermal_58' || (mode === 'thermal' && (s.thermal_paper_width === '58' || s.thermal_paper_width === '58mm' || s.thermal_paper_width === '2' || s.printer_type === 'thermal_58')) || tPage.thermal_roll_width === '58mm' || (s.invoice_template === 'thermal_58' && mode !== 'thermal_80' && mode !== 'a4' && mode !== 'half_a4')
 
   const qrSizeA4 = ({ small: 64, medium: 78, large: 96 })[s.upi_qr_size_a4] || 78
@@ -320,7 +336,9 @@ export default function InvoiceDocument({
   const qrValue = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(shopName)}&am=${grandTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(invoiceNo)}`
 
   // Digital Bill QR Code ("Scan to View Bill")
-  const showDigitalBillQr = isTrue(tPayment.show_digital_bill_qr, isTrue(s.enable_invoice_qr, true))
+  const showDigitalBillQr = effectiveMode === 'thermal'
+    ? isTrue(s.thermal_show_bill_qr, isTrue(s.enable_invoice_qr, true))
+    : isTrue(tPayment.show_digital_bill_qr, isTrue(s.enable_invoice_qr, true))
   const digitalBillUrl = inv.short_url
     || (inv.public_token ? `${window.location.origin}/bill/${inv.public_token}` : `${window.location.origin}/bill/${inv.id || 'preview'}`)
     || (inv.id ? `http://127.0.0.1:8000/s/${inv.public_token ? inv.public_token.slice(0, 6) : inv.id}/` : '')
@@ -333,6 +351,8 @@ export default function InvoiceDocument({
   const showSignature = tPayment.show_signature !== undefined ? tPayment.show_signature : isTrue(s.show_signature_area, false)
   const showFooter = (tPayment.show_footer !== undefined ? tPayment.show_footer : isTrue(s.show_footer, true)) && (tPayment.footer_layout || s.invoice_footer_layout) !== 'none'
   const footerText = tPayment.footer_text_override || s.invoice_footer || 'THANK YOU FOR SHOPPING WITH US!'
+  const thermalTermsText = s.thermal_terms || termsText
+  const thermalFooterText = s.receipt_footer || footerText
   const footerAlign = (tPayment.footer_layout || s.invoice_footer_layout) === 'text_left' ? 'left' : 'center'
 
   // Font and typography
@@ -412,16 +432,17 @@ export default function InvoiceDocument({
 
             {/* Document Title & Number */}
             <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: is58mm ? 10.5 : 12 }}>
-              {docHeading}
+              {isCancelled ? 'CANCELLED INVOICE' : s.thermal_title || docHeading}
             </div>
-            <div style={{ textAlign: 'center', fontSize: is58mm ? 9 : 10, fontWeight: '600' }}>{invoiceNo}</div>
-            <div style={{ textAlign: 'center', fontSize: is58mm ? 8.5 : 9.5 }}>
+            {isTrue(s.thermal_show_invoice_no, true) && <div style={{ textAlign: 'center', fontSize: is58mm ? 9 : 10, fontWeight: '600' }}>{invoiceNo}</div>}
+            {isTrue(s.thermal_show_date, true) && <div style={{ textAlign: 'center', fontSize: is58mm ? 8.5 : 9.5 }}>
               Date: {invoiceDate}{(isTrue(s.thermal_show_time, isTrue(s.show_invoice_time, true)) && invoiceTime) ? ` ${invoiceTime}` : ''}
-            </div>
-            {showPaymentMode && (
+            </div>}
+            {isTrue(s.thermal_show_cashier, true) && inv.created_by_name && <div style={{ textAlign: 'center', fontSize: 8.5 }}>Cashier: {inv.created_by_name}</div>}
+            {isTrue(s.thermal_show_payment_mode, showPaymentMode) && showPaymentMode && (
               <div style={{ textAlign: 'center', fontSize: is58mm ? 8.5 : 9.5 }}>Payment: {paymentMode}</div>
             )}
-            {showPlaceOfSupply && (
+            {isTrue(s.thermal_show_place_of_supply, showPlaceOfSupply) && showPlaceOfSupply && (
               <div style={{ textAlign: 'center', fontSize: is58mm ? 8 : 9 }}>Place of Supply: {placeOfSupply}</div>
             )}
 
@@ -434,10 +455,10 @@ export default function InvoiceDocument({
             <div style={{ borderTop: '1px dashed #000', margin: '5px 0' }} />
 
             {/* Customer */}
-            <div style={{ fontSize: is58mm ? 9 : 10, fontWeight: 'bold' }}>CUSTOMER: {custName}</div>
-            {showCustAddress && <div style={{ fontSize: is58mm ? 8 : 8.5 }}>{custAddress}</div>}
-            {showCustPhone && <div style={{ fontSize: is58mm ? 8 : 8.5 }}>Ph: {custPhone}</div>}
-            {showCustGstin && <div style={{ fontSize: is58mm ? 8 : 8.5 }}>GSTIN: {custGstin}</div>}
+            {isTrue(s.thermal_show_customer_name, true) && <div style={{ fontSize: is58mm ? 9 : 10, fontWeight: 'bold' }}>CUSTOMER: {custName}</div>}
+            {showCustAddress && isTrue(s.thermal_show_customer_address, true) && <div style={{ fontSize: is58mm ? 8 : 8.5 }}>{custAddress}</div>}
+            {showCustPhone && isTrue(s.thermal_show_customer_phone, true) && <div style={{ fontSize: is58mm ? 8 : 8.5 }}>Ph: {custPhone}</div>}
+            {showCustGstin && isTrue(s.thermal_show_customer_gstin, true) && <div style={{ fontSize: is58mm ? 8 : 8.5 }}>GSTIN: {custGstin}</div>}
             {isTrue(s.thermal_show_party_balance, isTrue(s.show_balance_due, true)) && (
               <div style={{ fontSize: is58mm ? 8 : 8.5 }}>Balance Due: {fmt(balanceDue)}</div>
             )}
@@ -457,13 +478,11 @@ export default function InvoiceDocument({
                   textTransform: 'uppercase',
                 }}>
                   <span>ITEM / DETAILS</span>
-                  <span>AMOUNT</span>
+                  {showTotalCol && <span>AMOUNT</span>}
                 </div>
                 {items.map((item, idx) => (
                   <div key={idx} style={{ padding: '3px 0', borderBottom: '1px dotted #ccc' }}>
-                    <div style={{ fontWeight: 'bold', fontSize: 9, lineHeight: 1.25 }}>
-                      {item.name}
-                    </div>
+                    {showItemName && <div style={{ fontWeight: 'bold', fontSize: 9, lineHeight: 1.25 }}>{item.name}</div>}
                     <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
@@ -473,13 +492,19 @@ export default function InvoiceDocument({
                       marginTop: 1,
                     }}>
                       <span>
-                        {item.qty} {showUnitCol && item.unit ? item.unit : ''} × {item.rate.toFixed(2)}
-                        {showDiscCol && item.disc > 0 && ` (-${item.disc}%)`}
-                        {showHsnCol && item.hsn && ` [HSN:${item.hsn}]`}
+                        {showQtyCol ? `${item.qty} ${showUnitCol && item.unit ? item.unit : ''}` : ''}{showQtyCol && showRateCol ? ' × ' : ''}{showRateCol ? item.rate.toFixed(2) : ''}
+                        {isTrue(s.thermal_show_discount, showDiscCol) && showDiscCol && item.disc > 0 && ` (-${item.disc}%)`}
+                        {isTrue(s.thermal_show_sku, true) && item.sku && ` SKU:${item.sku}`}
+                        {isTrue(s.thermal_show_tax, showTaxCols) && showHsnCol && item.hsn && ` [HSN:${item.hsn}]`}
+                        {showThermalBatch && item.batch && ` Batch:${item.batch}`}
+                        {isTrue(s.thermal_show_barcode, false) && item.barcode && ` Barcode:${item.barcode}`}
+                        {showThermalExpiry && item.expiry && ` EXP:${item.expiry}`}
+                        {showMfgCol && item.manufacturing && ` MFG:${item.manufacturing}`}
+                        {showThermalMrp && Number(item.mrp) > 0 && ` MRP:${fmt(item.mrp)}`}
                       </span>
-                      <span style={{ fontWeight: 'bold', fontSize: 9, color: '#000' }}>
+                      {showTotalCol && <span style={{ fontWeight: 'bold', fontSize: 9, color: '#000' }}>
                         {item.total.toFixed(2)}
-                      </span>
+                      </span>}
                     </div>
                   </div>
                 ))}
@@ -489,27 +514,33 @@ export default function InvoiceDocument({
                 <thead>
                   <tr style={{ borderBottom: '1px solid #000' }}>
                     <th style={{ textAlign: 'left', paddingBottom: 3 }}>ITEM</th>
-                    <th style={{ textAlign: 'center', width: 32 }}>QTY</th>
-                    <th style={{ textAlign: 'right', width: 50 }}>RATE</th>
-                    <th style={{ textAlign: 'right', width: 58 }}>AMT</th>
+                    {showQtyCol && <th style={{ textAlign: 'center', width: 32 }}>QTY</th>}
+                    {showRateCol && <th style={{ textAlign: 'right', width: 50 }}>RATE</th>}
+                    {showTotalCol && <th style={{ textAlign: 'right', width: 58 }}>AMT</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {items.map((item, idx) => (
                     <tr key={idx} style={{ borderBottom: '1px dotted #ccc' }}>
                       <td style={{ paddingTop: 2, paddingBottom: 2 }}>
-                        <div style={{ fontWeight: '600' }}>{item.name}</div>
+                        {showItemName && <div style={{ fontWeight: '600' }}>{item.name}</div>}
                         <div style={{ fontSize: 8, color: '#444' }}>
-                          {showHsnCol && item.hsn && <span>HSN: {item.hsn} </span>}
-                          {showDiscCol && item.disc > 0 && <span>Disc: {item.disc}% </span>}
+                          {isTrue(s.thermal_show_sku, true) && item.sku && <span>SKU: {item.sku} </span>}
+                          {isTrue(s.thermal_show_tax, showTaxCols) && showHsnCol && item.hsn && <span>HSN: {item.hsn} </span>}
+                          {isTrue(s.thermal_show_barcode, false) && item.barcode && <span>Barcode: {item.barcode} </span>}
+                          {showThermalBatch && item.batch && <span>Batch: {item.batch} </span>}
+                          {showThermalExpiry && item.expiry && <span>EXP: {item.expiry} </span>}
+                          {showMfgCol && item.manufacturing && <span>MFG: {item.manufacturing} </span>}
+                          {showThermalMrp && Number(item.mrp) > 0 && <span>MRP: {fmt(item.mrp)} </span>}
+                          {isTrue(s.thermal_show_discount, showDiscCol) && showDiscCol && item.disc > 0 && <span>Disc: {item.disc}% </span>}
                           {showUnitCol && item.unit && <span>({item.unit})</span>}
                         </div>
                       </td>
-                      <td style={{ textAlign: 'center', verticalAlign: 'top', paddingTop: 2 }}>{item.qty}</td>
-                      <td style={{ textAlign: 'right', verticalAlign: 'top', paddingTop: 2 }}>{item.rate.toFixed(2)}</td>
-                      <td style={{ textAlign: 'right', verticalAlign: 'top', paddingTop: 2, fontWeight: 'bold' }}>
+                      {showQtyCol && <td style={{ textAlign: 'center', verticalAlign: 'top', paddingTop: 2 }}>{item.qty}</td>}
+                      {showRateCol && <td style={{ textAlign: 'right', verticalAlign: 'top', paddingTop: 2 }}>{item.rate.toFixed(2)}</td>}
+                      {showTotalCol && <td style={{ textAlign: 'right', verticalAlign: 'top', paddingTop: 2, fontWeight: 'bold' }}>
                         {item.total.toFixed(2)}
-                      </td>
+                      </td>}
                     </tr>
                   ))}
                 </tbody>
@@ -587,16 +618,16 @@ export default function InvoiceDocument({
             )}
 
             {/* Terms */}
-            {showTerms && (
+            {isTrue(s.thermal_show_terms, showTerms) && Boolean(thermalTermsText) && (
               <div style={{ fontSize: 7.5, marginTop: 5, color: '#333', lineHeight: 1.25 }}>
-                {termsText}
+                {thermalTermsText}
               </div>
             )}
 
             {/* Footer */}
-            {showFooter && (
+            {(Boolean(s.receipt_footer) || showFooter) && (
               <div style={{ textAlign: 'center', fontSize: is58mm ? 8 : 9, marginTop: 5 }}>
-                <b>{footerText}</b>
+                <b>{thermalFooterText}</b>
                 <div style={{ fontSize: is58mm ? 7.5 : 8, marginTop: 1 }}>Date: {invoiceDate} | Ref: {invoiceNo}</div>
               </div>
             )}
@@ -757,36 +788,41 @@ export default function InvoiceDocument({
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 9.5, marginTop: 2 }}>
               <thead>
                 <tr style={{ background: invoiceTableStyle === 'bold' ? `${accentColor}18` : `${secondaryColor}10`, borderTop: `1px ${invoiceBorderStyle === 'dashed' ? 'dashed' : 'solid'} ${accentColor}`, borderBottom: `1px ${invoiceBorderStyle === 'dashed' ? 'dashed' : 'solid'} ${accentColor}` }}>
-                  <th style={{ textAlign: 'center', padding: '4px 3px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 26 }}>#</th>
-                  <th style={{ textAlign: 'left', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155' }}>Item</th>
+                  {showSerialCol && <th style={{ textAlign: 'center', padding: '4px 3px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 26 }}>#</th>}
+                  {showItemName && <th style={{ textAlign: 'left', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155' }}>Item</th>}
                   {showHsnCol && (
                     <th style={{ textAlign: 'center', padding: '4px 3px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 50 }}>HSN</th>
                   )}
-                  <th style={{ textAlign: 'center', padding: '4px 3px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 34 }}>Qty</th>
-                  <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 56 }}>Rate</th>
+                  {showQtyCol && <th style={{ textAlign: 'center', padding: '4px 3px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 34 }}>Qty</th>}
+                  {showRateCol && <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 56 }}>Rate</th>}
                   {showDiscCol && (
                     <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 42 }}>Disc</th>
                   )}
                   {showTaxCols && (
                     <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 44 }}>GST</th>
                   )}
-                  <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 64 }}>Amount</th>
+                  {showTotalCol && <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 64 }}>Amount</th>}
                 </tr>
               </thead>
               <tbody>
                 {items.map((item, idx) => (
                   <tr key={idx} style={{ borderBottom: `1px ${invoiceBorderStyle === 'dashed' ? 'dashed' : 'solid'} #E2E8F0`, background: invoiceTableStyle === 'striped' && idx % 2 === 1 ? `${secondaryColor}0A` : '#FFFFFF' }}>
-                    <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 8.5, color: '#64748B' }}>{idx + 1}</td>
-                    <td style={{ padding: '4px 4px', fontSize: 9.5, color: '#0F172A', fontWeight: '500', wordBreak: 'break-word' }}>
+                    {showSerialCol && <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 8.5, color: '#64748B' }}>{idx + 1}</td>}
+                    {showItemName && <td style={{ padding: '4px 4px', fontSize: 9.5, color: '#0F172A', fontWeight: '500', wordBreak: 'break-word' }}>
                       <div>{item.name}</div>
                       {item.sku && showSkuCol && <span style={{ fontSize: 7.5, color: '#64748B' }}>SKU: {item.sku} </span>}
+                      {item.barcode && showBarcodeCol && <span style={{ fontSize: 7.5, color: '#64748B' }}>Barcode: {item.barcode} </span>}
                       {item.unit && showUnitCol && <span style={{ fontSize: 7.5, color: '#64748B' }}>({item.unit})</span>}
-                    </td>
+                      {showBatchCol && item.batch && <span style={{ fontSize: 7.5, color: '#64748B' }}> Batch: {item.batch}</span>}
+                      {showExpiryCol && item.expiry && <span style={{ fontSize: 7.5, color: '#64748B' }}> Expiry: {item.expiry}</span>}
+                      {showMfgCol && item.manufacturing && <span style={{ fontSize: 7.5, color: '#64748B' }}> Mfg: {item.manufacturing}</span>}
+                      {showMrpCol && Number(item.mrp) > 0 && <span style={{ fontSize: 7.5, color: '#64748B' }}> MRP: {fmt(item.mrp)}</span>}
+                    </td>}
                     {showHsnCol && (
                       <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 8.5, color: '#64748B' }}>{item.hsn || '—'}</td>
                     )}
-                    <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 9.5, color: '#0F172A' }}>{item.qty}</td>
-                    <td style={{ padding: '4px 4px', textAlign: 'right', fontSize: 9.5, color: '#0F172A' }}>{fmt(item.rate)}</td>
+                    {showQtyCol && <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 9.5, color: '#0F172A' }}>{item.qty}</td>}
+                    {showRateCol && <td style={{ padding: '4px 4px', textAlign: 'right', fontSize: 9.5, color: '#0F172A' }}>{fmt(item.rate)}</td>}
                     {showDiscCol && (
                       <td style={{ padding: '4px 4px', textAlign: 'right', fontSize: 8.5, color: '#64748B' }}>
                         {item.disc ? `${item.disc}%` : '—'}
@@ -797,9 +833,9 @@ export default function InvoiceDocument({
                         {item.gst ? `${item.gst}%` : '—'}
                       </td>
                     )}
-                    <td style={{ padding: '4px 4px', textAlign: 'right', fontWeight: '700', fontSize: 9.5, color: '#0F172A' }}>
+                    {showTotalCol && <td style={{ padding: '4px 4px', textAlign: 'right', fontWeight: '700', fontSize: 9.5, color: '#0F172A' }}>
                       {fmt(item.total)}
-                    </td>
+                    </td>}
                   </tr>
                 ))}
               </tbody>
@@ -1135,11 +1171,12 @@ export default function InvoiceDocument({
           <table className={isCorporateA4 ? 'settings-corporate-table' : undefined} style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10.5, marginTop: 4 }}>
             <thead>
               <tr style={{ background: '#F8FAFC', borderTop: '1px solid #334155', borderBottom: '1px solid #334155' }}>
-                <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 34 }}>S.No</th>
+                {showSerialCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 34 }}>S.No</th>}
                 {showSkuCol && (
                   <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 70 }}>Item Code</th>
                 )}
-                <th style={{ textAlign: 'left', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: '#334155' }}>Item Description</th>
+                {showBarcodeCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 75 }}>Barcode</th>}
+                {showItemName && <th style={{ textAlign: 'left', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: '#334155' }}>Item Description</th>}
                 {showHsnCol && (
                   <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 65 }}>HSN/SAC</th>
                 )}
@@ -1149,8 +1186,11 @@ export default function InvoiceDocument({
                 {showBatchCol && (
                   <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 55 }}>Batch</th>
                 )}
-                <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 42 }}>Qty</th>
-                <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: '#334155', width: 72 }}>Rate</th>
+                {showExpiryCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 58 }}>Expiry</th>}
+                {showMfgCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 58 }}>Mfg.</th>}
+                {showMrpCol && <th style={{ textAlign: 'right', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 58 }}>MRP</th>}
+                {showQtyCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 42 }}>Qty</th>}
+                {showRateCol && <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: '#334155', width: 72 }}>Rate</th>}
                 {showDiscCol && (
                   <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: '#334155', width: 52 }}>Disc.</th>
                 )}
@@ -1163,19 +1203,18 @@ export default function InvoiceDocument({
                 {showCessCol && (
                   <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: '#334155', width: 54 }}>CESS</th>
                 )}
-                <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: '#334155', width: 84 }}>Amount</th>
+                {showTotalCol && <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: '#334155', width: 84 }}>Amount</th>}
               </tr>
             </thead>
             <tbody>
               {items.map((item, idx) => (
                 <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0' }}>
-                  <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#64748B' }}>{idx + 1}</td>
+                  {showSerialCol && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#64748B' }}>{idx + 1}</td>}
                   {showSkuCol && (
                     <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#475569' }}>{item.sku || '—'}</td>
                   )}
-                  <td style={{ padding: '6px 6px', fontSize: 10.5, color: '#0F172A', fontWeight: '500' }}>
-                    {item.name}
-                  </td>
+                  {showBarcodeCol && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9, color: '#64748B' }}>{item.barcode || '—'}</td>}
+                  {showItemName && <td style={{ padding: '6px 6px', fontSize: 10.5, color: '#0F172A', fontWeight: '500' }}>{item.name}</td>}
                   {showHsnCol && (
                     <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#64748B' }}>{item.hsn || '—'}</td>
                   )}
@@ -1185,8 +1224,11 @@ export default function InvoiceDocument({
                   {showBatchCol && (
                     <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#64748B' }}>{item.batch || '—'}</td>
                   )}
-                  <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 10.5, color: '#0F172A' }}>{item.qty}</td>
-                  <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 10.5, color: '#0F172A' }}>{fmt(item.rate)}</td>
+                  {showExpiryCol && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#64748B' }}>{item.expiry || '—'}</td>}
+                  {showMfgCol && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#64748B' }}>{item.manufacturing || '—'}</td>}
+                  {showMrpCol && <td style={{ padding: '6px 4px', textAlign: 'right', fontSize: 9.5, color: '#64748B' }}>{Number(item.mrp) > 0 ? fmt(item.mrp) : '—'}</td>}
+                  {showQtyCol && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 10.5, color: '#0F172A' }}>{item.qty}</td>}
+                  {showRateCol && <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 10.5, color: '#0F172A' }}>{fmt(item.rate)}</td>}
                   {showDiscCol && (
                     <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 9.5, color: '#64748B' }}>
                       {item.disc ? `${item.disc}%` : '—'}
@@ -1201,9 +1243,9 @@ export default function InvoiceDocument({
                   {showCessCol && (
                     <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 9.5, color: '#64748B' }}>{fmt(0)}</td>
                   )}
-                  <td style={{ padding: '6px 6px', textAlign: 'right', fontWeight: '700', fontSize: 10.5, color: '#0F172A' }}>
+                  {showTotalCol && <td style={{ padding: '6px 6px', textAlign: 'right', fontWeight: '700', fontSize: 10.5, color: '#0F172A' }}>
                     {fmt(item.total)}
-                  </td>
+                  </td>}
                 </tr>
               ))}
             </tbody>

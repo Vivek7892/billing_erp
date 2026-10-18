@@ -143,7 +143,7 @@ export function StatCard({
         'border-l-2',
         selectedColor.accent,
         'bg-[var(--surface)]',
-        'p-3.5 sm:p-4',
+        'px-3 py-2 sm:px-3.5 sm:py-2.5',
         'shadow-[var(--shadow-xs)]',
         'transition-all duration-150',
         active ? 'border-[var(--primary)] ring-2 ring-[var(--primary)]/15' : '',
@@ -153,14 +153,14 @@ export function StatCard({
         className,
       ].join(' ')}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-2.5">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)] leading-tight">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] leading-tight truncate">
             {label}
           </p>
 
           <p
-            className="mt-1.5 truncate text-xl font-bold tracking-tight text-[var(--ink)] leading-none"
+            className="mt-0.5 truncate font-mono text-base sm:text-lg font-bold tracking-tight text-[var(--ink)] leading-tight"
             style={{
               fontVariantNumeric: 'tabular-nums',
               fontFeatureSettings: '"tnum"',
@@ -170,7 +170,7 @@ export function StatCard({
           </p>
 
           {sub && (
-            <p className="mt-1.5 truncate text-xs text-[var(--muted)]">
+            <p className="mt-0.5 truncate text-[10px] text-[var(--muted)]">
               {sub}
             </p>
           )}
@@ -179,12 +179,12 @@ export function StatCard({
         {Icon && (
           <div
             className={[
-              'flex h-8 w-8 shrink-0 items-center justify-center',
+              'flex h-6 w-6 shrink-0 items-center justify-center',
               'rounded-md border',
               selectedColor.icon,
             ].join(' ')}
           >
-            <Icon size={16} strokeWidth={1.8} />
+            <Icon size={13} strokeWidth={2} />
           </div>
         )}
       </div>

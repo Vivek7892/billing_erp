@@ -180,7 +180,7 @@ function BufferedNumber({ value, onCommit, max, allowZero = false, onClamp, clas
 // Cart line (same props as before; now a compact list item instead of a table row)
 // Cart line (table row in current bill table)
 // ---------------------------------------------------------------------------
-function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, onRemove }) {
+function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, onBatch, onRemove }) {
   const gross = item.unit_price * item.qty
   const discountAmount = gross * item.discount_percent / 100
   const basic = gross - discountAmount
@@ -194,6 +194,10 @@ function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, on
           <span className="pb-item-title" title={item.product_name}>{item.product_name}</span>
           {item.sku && <span className="pb-item-code-inline" title={`SKU: ${item.sku}`}>{item.sku}</span>}
         </div>
+        {item.batches?.length > 0 && <select aria-label={`Batch for ${item.product_name}`} className="mt-1 max-w-full rounded border border-slate-300 bg-white px-1 py-0.5 text-[11px]" value={item.batch_id || ''} onChange={e => onBatch(item.id, e.target.value)}>
+          <option value="">Select batch</option>
+          {item.batches.filter(batch => batch.active && Number(batch.quantity) > 0).map(batch => <option key={batch.id} value={batch.id}>{batch.batch_number} · {batch.quantity} available{batch.expiry_date ? ` · exp ${batch.expiry_date}` : ''}</option>)}
+        </select>}
         {overStock && <div className="pb-item-sub pb-text-red">Available stock: {stock}</div>}
         <div className="pb-mobile-only pb-item-mobile-rate">
           @ {fmt(item.unit_price)}
@@ -907,8 +911,10 @@ export default function NewBill() {
         : [...prev, recalc({
             id: product.id, product_name: product.name, sku: product.sku,
             barcode: product.barcode || '', unit: product.unit || '',
-            hsn_code: product.hsn_code || '', mrp: Number(product.mrp || product.selling_price),
-            unit_price: Number(product.selling_price), qty: 1, discount_percent: 0,
+            hsn_code: product.hsn_code || '', batches: product.batches || [],
+            batch_id: product.batches?.find(batch => batch.active && Number(batch.quantity) > 0)?.id || '',
+            mrp: Number(product.batches?.find(batch => batch.active && Number(batch.quantity) > 0)?.mrp ?? product.mrp ?? 0),
+            unit_price: Number(product.batches?.find(batch => batch.active && Number(batch.quantity) > 0)?.selling_rate ?? product.selling_price), qty: 1, discount_percent: 0,
             gst_percent: Number(product.gst_percent || 0), total: 0,
           })]
     })
@@ -937,6 +943,14 @@ export default function NewBill() {
   const updateDiscount = useCallback((id, pct) => {
     const value = Math.min(100, Math.max(0, Number(pct) || 0))
     setCart(prev => prev.map(item => item.id === id ? recalc({ ...item, discount_percent: value }) : item))
+  }, [])
+
+  const updateBatch = useCallback((id, batchId) => {
+    setCart(prev => prev.map(item => {
+      if (item.id !== id) return item
+      const batch = item.batches?.find(row => String(row.id) === String(batchId))
+      return recalc({ ...item, batch_id: batchId, mrp: Number(batch?.mrp ?? 0), unit_price: Number(batch?.selling_rate ?? item.unit_price) })
+    }))
   }, [])
 
   const removeItem = useCallback(id => setCart(x => x.filter(i => i.id !== id)), [])
@@ -1325,6 +1339,7 @@ export default function NewBill() {
         notes,
         items: cart.map(i => ({
           product_id: i.id,
+          ...(i.batch_id ? { batch_id: Number(i.batch_id) } : {}),
           quantity: i.qty,
           unit_price: i.unit_price,
           discount_percent: i.discount_percent,
@@ -2197,6 +2212,7 @@ export default function NewBill() {
                       justAdded={item.id === lastAddedId}
                       onQty={updateQty}
                       onDiscount={updateDiscount}
+                      onBatch={updateBatch}
                       onRemove={removeItem}
                     />
                   ))

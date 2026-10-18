@@ -712,49 +712,46 @@ export default function Customers() {
           ERP SUMMARY (Tokenized Surfaces, Clean & Accessible)
       ====================================================== */}
 
-      <section className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-xs">
-        <div className="border-b border-[var(--line)] bg-[var(--surface-subtle)] px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-[var(--ink)]">
-          Customer Ledger Summary
-        </div>
-        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
-          <div className="p-3.5 bg-[var(--surface)]">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
+        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x divide-[var(--line)]">
+          <div className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-[var(--surface)]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
               Total Customers
             </span>
-            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[var(--ink)]">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
               {stats.total}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">{stats.customersWithDue} with pending credit</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">{stats.customersWithDue} with pending credit</p>
           </div>
 
-          <div className="p-3.5 bg-[var(--surface)]">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          <div className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-[var(--surface)]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
               Total Outstanding
             </span>
-            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-red-600 dark:text-red-400">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-red-600 dark:text-red-400 tabular-nums truncate">
               {currency(stats.totalOutstanding)}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">Pending receivable balance</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">Pending receivable balance</p>
           </div>
 
-          <div className="p-3.5 bg-[var(--surface)]">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          <div className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-[var(--surface)]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
               Total Credit Limit
             </span>
-            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-[#1E3A5F] dark:text-sky-400">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[#1E3A5F] dark:text-sky-400 tabular-nums truncate">
               {currency(stats.totalCreditLimit)}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">Combined authorized limit</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">Combined authorized limit</p>
           </div>
 
-          <div className="p-3.5 bg-[var(--surface)]">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          <div className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-[var(--surface)]">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
               Linked Bills
             </span>
-            <p className="mt-1 font-mono text-lg sm:text-xl font-bold text-teal-600 dark:text-teal-400">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-teal-600 dark:text-teal-400 tabular-nums truncate">
               {stats.totalBills}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">Completed customer sales</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">Completed customer sales</p>
           </div>
         </div>
       </section>
@@ -859,15 +856,15 @@ export default function Customers() {
             ================================================== */}
 
             <div className="hidden lg:block overflow-x-auto min-h-[220px] pb-4">
-              <table className="erp-table table-fixed w-full text-left border-collapse min-w-[850px]">
+              <table className="erp-table w-full text-left border-collapse min-w-[1050px]">
                 <colgroup>
-                  <col style={{ width: '26%' }} />
+                  <col style={{ width: '24%' }} />
                   <col style={{ width: '20%' }} />
-                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '13%' }} />
                   <col style={{ width: '12%' }} />
                   <col style={{ width: '12%' }} />
                   <col style={{ width: '6%' }} />
-                  <col style={{ width: '10%' }} />
+                  <col style={{ width: '13%' }} />
                 </colgroup>
                 <thead className="bg-[var(--surface-subtle)] border-b border-[var(--line)] text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
                   <tr>
@@ -968,16 +965,16 @@ export default function Customers() {
                         </td>
 
                         {/* Actions */}
-                        <td className="px-4 py-3.5 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                        <td className="w-[13%] min-w-[170px] px-2 py-2 text-right">
+                          <div className="flex items-center justify-end gap-1 whitespace-nowrap">
                             {outstanding > 0 && (
                               <button
                                 type="button"
                                 onClick={() => setPayTarget(customer)}
-                                className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-2.5 py-1 text-xs font-bold shadow-xs transition"
+                                className="inline-flex h-7 shrink-0 items-center gap-0.5 rounded-md bg-emerald-600 px-1.5 text-[10px] font-medium text-white whitespace-nowrap hover:bg-emerald-700 transition-colors"
                                 title={`Collect payment (${currency(outstanding)} due)`}
                               >
-                                <IndianRupee size={12} />
+                                <IndianRupee size={10} strokeWidth={2} />
                                 <span>Collect</span>
                               </button>
                             )}
@@ -985,41 +982,40 @@ export default function Customers() {
                             <button
                               type="button"
                               onClick={() => openView(customer)}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:border-[var(--line-strong)] transition"
+                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:border-[var(--line-strong)] transition"
                               title="View customer"
                             >
-                              <Eye size={14} />
+                              <Eye size={13} />
                             </button>
 
                             <button
                               type="button"
                               onClick={() => openEdit(customer)}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:border-[var(--line-strong)] transition"
+                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:border-[var(--line-strong)] transition"
                               title="Edit customer"
                             >
-                              <Edit2 size={14} />
+                              <Edit2 size={13} />
                             </button>
 
-                            {/* Secondary Menu Popover */}
-                            <div className="relative">
+                            <div className="relative shrink-0">
                               <button
                                 type="button"
                                 onClick={e => {
                                   e.stopPropagation()
                                   setActiveMenuId(current => current === customer.id ? null : customer.id)
                                 }}
-                                className={`flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--line-strong)] transition ${
+                                className={`flex h-7 w-7 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--line-strong)] transition ${
                                   activeMenuId === customer.id ? 'border-[var(--line-strong)] bg-[var(--surface-hover)]' : ''
                                 }`}
                                 title="More actions"
                               >
-                                <MoreHorizontal size={15} />
+                                <MoreHorizontal size={14} />
                               </button>
 
                               {activeMenuId === customer.id && (
                                 <div
                                   className={`absolute right-0 z-50 w-44 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1 shadow-xl ${
-                                    isLastRows ? 'bottom-full mb-1' : 'top-9'
+                                    isLastRows ? 'bottom-full mb-1' : 'top-8'
                                   }`}
                                   onClick={e => e.stopPropagation()}
                                 >

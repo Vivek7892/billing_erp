@@ -266,14 +266,24 @@ class ApprovalService:
             elif approval_req.request_type == 'stock_adjustment':
                 from .inventory_service import InventoryService
                 proposed = approval_req.proposed_data
-                InventoryService.adjust_stock(
-                    product_id=approval_req.entity_id,
-                    quantity=Decimal(str(proposed['quantity'])),
-                    transaction_type=proposed.get('transaction_type', 'adjustment'),
-                    notes=f"Approved: {approval_req.reason or review_notes}".strip(),
-                    business=business,
-                    created_by=approval_req.requested_by or admin_user,
-                )
+                if proposed.get('batch_id'):
+                    InventoryService.move_stock(
+                        product_id=proposed['product_id'], batch_id=proposed['batch_id'],
+                        quantity=Decimal(str(proposed['quantity'])),
+                        transaction_type=proposed.get('transaction_type', 'adjustment'),
+                        notes=f"Approved: {approval_req.reason or review_notes}".strip(),
+                        business=business, user=approval_req.requested_by or admin_user,
+                        reference=f"APPROVAL:{approval_req.pk}",
+                    )
+                else:
+                    InventoryService.adjust_stock(
+                        product_id=approval_req.entity_id,
+                        quantity=Decimal(str(proposed['quantity'])),
+                        transaction_type=proposed.get('transaction_type', 'adjustment'),
+                        notes=f"Approved: {approval_req.reason or review_notes}".strip(),
+                        business=business,
+                        created_by=approval_req.requested_by or admin_user,
+                    )
 
             elif approval_req.request_type == 'invoice_cancellation':
                 from .invoice_service import InvoiceService

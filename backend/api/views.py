@@ -35,6 +35,7 @@ from .permissions import (
 from .supabase_storage import SupabaseStorageError, upload_shop_logo
 from .pagination import NoPagination, StandardPagination
 from .utils import audit_event
+from .services.inventory_service import InventoryService
 from .services.report_service import ReportService
 from django_filters.rest_framework import DjangoFilterBackend
 from PIL import Image as PILImage
@@ -1224,6 +1225,90 @@ class ProductViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class ProductBatchViewSet(viewsets.ModelViewSet):
+    serializer_class = ProductBatchSerializer
+    permission_classes = [IsManagerOrReadOnly]
+    pagination_class = NoPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['product', 'active']
+    search_fields = ['batch_number', 'product__name', 'product__sku']
+
+    def get_queryset(self):
+        return ProductBatch.objects.select_related('product').filter(business=self.request.user.business)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        quantity = Decimal(str(self.request.data.get('quantity', 0)))
+        if quantity < 0:
+            raise serializers.ValidationError({'quantity': 'Quantity cannot be negative.'})
+        batch = serializer.save(business=self.request.user.business, quantity=0)
+        approval_payload = None
+        if quantity:
+            from .services.approval_service import ApprovalService
+            required, rule = ApprovalService.should_require_approval(
+                batch.business, request.user, 'stock_adjustment', quantity=quantity,
+            )
+            if required:
+                approval_payload = ApprovalService.create_approval_request(
+                    business=batch.business, requested_by=request.user, request_type='stock_adjustment',
+                    entity_type='ProductBatch', entity_id=batch.pk, entity_name=f'{batch.product.name} / {batch.batch_number}',
+                    current_data={'quantity': '0'},
+                    proposed_data={'product_id': batch.product_id, 'batch_id': batch.pk, 'quantity': str(quantity), 'transaction_type': 'stock_in'},
+                    threshold_rule=rule, reason=request.data.get('reason', ''), request=request,
+                )
+        if quantity and not approval_payload:
+            InventoryService.move_stock(
+                product_id=batch.product_id, batch_id=batch.pk, quantity=quantity,
+                transaction_type='stock_in', business=self.request.user.business,
+                user=self.request.user, reference=f'BATCH:{batch.batch_number}',
+                notes='Opening batch stock', unit_cost=batch.purchase_rate,
+            )
+        audit_event(self.request, 'BATCH_CREATED', 'ProductBatch', batch.pk,
+                    entity_name=batch.batch_number, after={'product_id': batch.product_id, 'quantity': str(quantity)})
+        data = ProductBatchSerializer(batch).data
+        if approval_payload:
+            data = {**data, 'requires_approval': True, 'approval_request_id': approval_payload.pk}
+        return Response(data, status=status.HTTP_202_ACCEPTED if approval_payload else status.HTTP_201_CREATED)
+
+    def perform_update(self, serializer):
+        batch = self.get_object()
+        requested_qty = self.request.data.get('quantity')
+        updated = serializer.save(quantity=batch.quantity)
+        if requested_qty is not None:
+            delta = Decimal(str(requested_qty)) - batch.quantity
+            if delta:
+                from .services.approval_service import ApprovalService
+                required, rule = ApprovalService.should_require_approval(
+                    batch.business, self.request.user, 'stock_adjustment', quantity=delta,
+                )
+                if required:
+                    self._approval_payload = ApprovalService.create_approval_request(
+                        business=batch.business, requested_by=self.request.user, request_type='stock_adjustment',
+                        entity_type='ProductBatch', entity_id=batch.pk, entity_name=f'{batch.product.name} / {batch.batch_number}',
+                        current_data={'quantity': str(batch.quantity)},
+                        proposed_data={'product_id': batch.product_id, 'batch_id': batch.pk, 'quantity': str(delta), 'transaction_type': 'adjustment'},
+                        threshold_rule=rule, reason=self.request.data.get('reason', ''), request=self.request,
+                    )
+                else:
+                    InventoryService.move_stock(
+                        product_id=batch.product_id, batch_id=batch.pk, quantity=delta,
+                        transaction_type='adjustment', business=self.request.user.business,
+                        user=self.request.user, reference=f'BATCH:{batch.batch_number}',
+                        notes='Batch stock adjustment', unit_cost=batch.purchase_rate,
+                    )
+        audit_event(self.request, 'BATCH_UPDATED', 'ProductBatch', updated.pk,
+                    entity_name=updated.batch_number, after=ProductBatchSerializer(updated).data)
+
+    def update(self, request, *args, **kwargs):
+        self._approval_payload = None
+        response = super().update(request, *args, **kwargs)
+        if self._approval_payload:
+            response.data = {**response.data, 'requires_approval': True, 'approval_request_id': self._approval_payload.pk}
+            response.status_code = status.HTTP_202_ACCEPTED
+        return response
+
+
 class CustomerViewSet(viewsets.ModelViewSet):
     serializer_class = CustomerSerializer
     permission_classes = [IsCashierOrAdmin]
@@ -1328,7 +1413,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         entity_id = instance.id
         entity_name = instance.name
-        before = {'name': instance.name, 'mobile': instance.mobile, 'credit_limit': float(instance.credit_limit or 0), 'balance': float(instance.balance or 0)}
+        before = {'name': instance.name, 'mobile': instance.mobile, 'credit_limit': float(instance.credit_limit or 0), 'outstanding_amount': float(instance.outstanding_amount or 0)}
         instance.delete()
         audit_event(
             self.request,
@@ -2147,6 +2232,58 @@ class SettingViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def bulk_update(self, request):
+        # Keep the legacy key/value API compatible while preventing arbitrary keys
+        # from being created by stale or malformed clients.
+        known_keys = set(self.all(request).data.keys())
+        known_keys.difference_update({'active_templates', 'template_settings'})
+        from .services.approval_service import ApprovalService
+        known_keys.update(ApprovalService.DEFAULT_SETTINGS)
+        incoming_keys = set(request.data.keys()) - {'reason', '_reason'}
+        unknown_keys = incoming_keys - known_keys
+        if unknown_keys:
+            return Response({'detail': 'Unknown setting keys.', 'keys': sorted(unknown_keys)}, status=400)
+
+        bool_keys = {key for key in incoming_keys if key.startswith(('show_', 'enable_', 'allow_', 'thermal_', 'upi_qr_', 'approval_')) and key.endswith(('_enabled', '_area', '_col', '_cols', '_qr', '_details', '_logo', '_address', '_phone', '_email', '_gstin', '_pan', '_summary', '_words', '_status', '_mode', '_due', '_terms', '_footer', '_business_name', '_customer_address', '_place_of_supply', '_stock', '_expiry', '_charge'))}
+        bool_keys.update({
+            'prevent_expired_batch_sale', 'barcode_bold', 'round_off', 'reverse_charge',
+            'hsn_summary_on_invoice', 'cess_enabled', 'upi_qr_enabled', 'advance_payment_enabled',
+            'open_cash_drawer', 'print_duplicate', 'einvoice_enabled', 'approval_admin_bypass', 'custom_theme_enabled',
+            'approval_refund_enabled', 'approval_stock_adjustment_enabled', 'approval_price_change_enabled',
+        } & incoming_keys)
+        bool_keys.update(key for key in incoming_keys if key.startswith(('thermal_show_', 'barcode_show_', 'enable_')))
+        for key in bool_keys:
+            if key in request.data and str(request.data[key]).lower() not in ('true', 'false', '1', '0', 'yes', 'no'):
+                return Response({'detail': f'{key} must be a boolean.'}, status=400)
+        numeric_rules = {
+            'invoice_start_number': (1, None), 'invoice_due_days': (0, 3650),
+            'default_gst_rate': (0, 100), 'approval_price_change_pct': (0, 100),
+            'approval_refund_threshold': (0, None), 'approval_stock_adjustment_qty': (0, None),
+            'copies_per_bill': (1, 10), 'low_stock_threshold': (0, None), 'reminder_due_days': (0, 3650),
+            'barcode_height': (10, 200), 'barcode_width': (1, 4),
+        }
+        for key, (minimum, maximum) in numeric_rules.items():
+            if key in request.data:
+                try:
+                    number = Decimal(str(request.data[key]))
+                    if not number.is_finite() or number < minimum or (maximum is not None and number > maximum):
+                        raise ValueError
+                    if key in ('invoice_start_number', 'invoice_due_days', 'copies_per_bill', 'reminder_due_days', 'barcode_width', 'barcode_height') and number != number.to_integral_value():
+                        raise ValueError
+                except Exception:
+                    return Response({'detail': f'{key} has an invalid numeric value.'}, status=400)
+        enum_rules = {
+            'gst_reg_type': {'regular', 'composition', 'unregistered'},
+            'tax_on_price': {'inclusive', 'exclusive'},
+            'invoice_border_style': {'solid', 'dashed', 'double'},
+            'invoice_header_layout': {'logo_left', 'split', 'center', 'corporate_bar', 'name_only'},
+            'invoice_table_style': {'clean', 'striped', 'bold'},
+            'invoice_layout': {'standard', 'compact', 'thermal'},
+            'thermal_paper_width': {'58', '80', '2', '3', '58mm', '80mm'},
+        }
+        for key, choices in enum_rules.items():
+            if key in request.data and str(request.data[key]).lower() not in choices:
+                return Response({'detail': f'{key} must be one of: {", ".join(sorted(choices))}.'}, status=400)
+
         previous = {
             setting.key: setting.value
             for setting in self.get_queryset().filter(key__in=request.data.keys())
@@ -2301,6 +2438,8 @@ class SettingViewSet(viewsets.ModelViewSet):
             'show_discount_col': 'true', 'show_hsn_col': 'true',
             'show_sku_col': 'false', 'show_unit_col': 'false',
             'show_batch_col': 'false', 'show_expiry_col': 'false',
+            'show_mrp_col': 'false',
+            'show_barcode_col': 'false',
             'show_tax_cols': 'true', 'show_signature_area': 'false',
             'show_fssai_on_invoice': 'false', 'show_cin_on_invoice': 'false',
             'invoice_notes': '', 'invoice_footer': '',
@@ -2341,10 +2480,48 @@ class SettingViewSet(viewsets.ModelViewSet):
             # System
             'currency': biz.currency if biz else '₹',
             'allow_negative_stock': 'false',
+            'expiry_tracking_enabled': 'true',
+            'prevent_expired_batch_sale': 'false',
             # Policies & Legal
             'terms_url': '', 'privacy_url': '', 'refund_url': '',
             'return_url': '', 'shipping_url': '',
         }
+        from .services.approval_service import ApprovalService
+        defaults.update(ApprovalService.DEFAULT_SETTINGS)
+        # Keep every key exposed by the current Settings UI in the server schema,
+        # including legacy renderer and print options that have no dedicated model column.
+        defaults.update({
+            'invoice_title': 'TAX INVOICE', 'invoice_theme_secondary': '#64748B',
+            'custom_theme_enabled': 'false',
+            'invoice_border_style': 'solid', 'invoice_layout': 'standard',
+            'invoice_table_style': 'clean', 'invoice_theme_color': '#1e3a5f',
+            'show_rate_col': 'true', 'show_total_col': 'true',
+            'thermal_paper_width': '80', 'thermal_title': 'RECEIPT', 'thermal_terms': '',
+            'thermal_show_logo': 'true', 'thermal_show_invoice_no': 'true', 'thermal_show_date': 'true',
+            'thermal_show_time': 'true', 'thermal_show_cashier': 'true', 'thermal_show_payment_mode': 'true',
+            'thermal_show_place_of_supply': 'true', 'thermal_show_customer_name': 'true',
+            'thermal_show_customer_phone': 'true', 'thermal_show_customer_gstin': 'true',
+            'thermal_show_sku': 'true', 'thermal_show_qty': 'true', 'thermal_show_rate': 'true',
+            'thermal_show_total': 'true',
+            'thermal_show_discount': 'true', 'thermal_show_tax': 'true', 'thermal_show_party_balance': 'true',
+            'thermal_show_upi_qr': 'true',
+            'thermal_show_bill_qr': 'true', 'thermal_show_party_balance': 'true',
+            'thermal_show_item_desc': 'true', 'thermal_show_batch': 'false',
+            'thermal_show_expiry': 'false', 'thermal_show_mrp': 'false',
+            'thermal_show_barcode': 'false', 'thermal_show_terms': 'true',
+            'thermal_show_customer_address': 'true',
+            'barcode_align': 'center', 'barcode_bold': 'true', 'barcode_font_size': 'medium',
+            'barcode_height': '36', 'barcode_width': '2', 'barcode_label_size': '50x25',
+            'barcode_printer_type': 'thermal', 'barcode_show_business_name': 'true',
+            'barcode_show_code': 'true', 'barcode_show_mrp': 'true', 'barcode_show_product_name': 'true',
+            'barcode_show_selling_price': 'true', 'barcode_show_sku': 'true',
+            'default_payment_terms': '', 'enable_low_stock_notification': 'true',
+            'enable_whatsapp_reminders': 'false', 'low_stock_threshold': '5', 'reminder_due_days': '7',
+            'show_alternate_unit': 'false', 'show_business_name': 'true', 'show_free_qty': 'false',
+            'show_customer_name': 'true', 'show_item_description': 'true', 'show_item_name': 'true',
+            'show_invoice_time': 'true', 'show_mfg_date': 'false', 'show_price_history': 'false',
+            'show_qty_col': 'true', 'show_sr_no': 'true', 'show_shop_name': 'true',
+        })
         saved = {s.key: s.value for s in self.get_queryset()}
         merged = {**defaults, **saved}
         if merged.get('place_of_supply') and not merged.get('shop_state'):

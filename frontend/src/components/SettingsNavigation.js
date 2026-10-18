@@ -20,6 +20,7 @@ export const SETTINGS_TABS = [
   { id: 'approvals', label: 'Approval Settings', icon: ShieldCheck },
   { id: 'tax', label: 'Tax & GST', icon: Percent },
   { id: 'payments', label: 'Payment & Bank', icon: CreditCard },
+  { id: 'inventory', label: 'Inventory & Batches', icon: Tag },
   { id: 'reminders', label: 'Reminders', icon: Bell },
   { id: 'account', label: 'Account', icon: UserCheck },
   { id: 'pricing', label: 'Pricing', icon: Tag },

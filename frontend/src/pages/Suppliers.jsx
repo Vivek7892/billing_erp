@@ -1560,24 +1560,24 @@ export default function Suppliers() {
       {/* ======================================================
           ERP METRICS SUMMARY (Strict ERP Standard)
       ====================================================== */}
-      <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] mb-4">
-        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
-          <div className="p-3 sm:p-3.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] mb-4 shadow-2xs">
+        <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x divide-[var(--line)]">
+          <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
               Total Suppliers
             </span>
-            <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
               {suppliers.length}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">Registered suppliers</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">Registered suppliers</p>
           </div>
 
-          <div className="p-3 sm:p-3.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
               Outstanding Payable
             </span>
             <p
-              className={`mt-1 font-mono text-lg font-bold ${
+              className={`mt-0.5 font-mono text-base sm:text-lg font-bold tabular-nums truncate ${
                 totalOutstanding > 0
                   ? 'text-red-600 dark:text-red-400'
                   : 'text-teal-600 dark:text-teal-400'
@@ -1585,27 +1585,27 @@ export default function Suppliers() {
             >
               {fmt(totalOutstanding)}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">Total amount payable</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">Total amount payable</p>
           </div>
 
-          <div className="p-3 sm:p-3.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
               Suppliers With Due
             </span>
-            <p className="mt-1 font-mono text-lg font-bold text-amber-600 dark:text-amber-400">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400 tabular-nums truncate">
               {suppliersWithDue}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">Accounts requiring payment</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">Accounts requiring payment</p>
           </div>
 
-          <div className="p-3 sm:p-3.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+          <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
               Linked Products
             </span>
-            <p className="mt-1 font-mono text-lg font-bold text-teal-600 dark:text-teal-400">
+            <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-teal-600 dark:text-teal-400 tabular-nums truncate">
               {suppliedProductCount}
             </p>
-            <p className="text-[10px] text-[var(--muted)]">Inventory products linked</p>
+            <p className="text-[10px] text-[var(--muted)] truncate">Inventory products linked</p>
           </div>
         </div>
       </div>
@@ -2060,7 +2060,7 @@ export default function Suppliers() {
                                 title="Edit supplier"
                               >
                                 <Pencil size={12} />
-                                <span className="hidden xl:inline">Edit</span>
+                                <span className="hidden xl:inline truncate">Edit</span>
                               </button>
 
                               <button

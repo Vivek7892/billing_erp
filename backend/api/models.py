@@ -188,6 +188,45 @@ class Product(models.Model):
         return 'in_stock'
 
 
+class ProductBatch(models.Model):
+    """A separately traceable lot of stock belonging to one business product."""
+    business = models.ForeignKey(Business, on_delete=models.CASCADE, related_name='product_batches')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='batches')
+    batch_number = models.CharField(max_length=100)
+    manufacturing_date = models.DateField(null=True, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    mrp = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+    purchase_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+    selling_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [('business', 'product', 'batch_number')]
+        ordering = ['expiry_date', 'created_at']
+        constraints = [
+            models.CheckConstraint(check=Q(mrp__gte=0), name='batch_mrp_nonnegative'),
+            models.CheckConstraint(check=Q(purchase_rate__gte=0), name='batch_purchase_rate_nonnegative'),
+            models.CheckConstraint(check=Q(selling_rate__gte=0), name='batch_selling_rate_nonnegative'),
+            models.CheckConstraint(check=Q(quantity__gte=0), name='batch_quantity_nonnegative'),
+        ]
+
+    @property
+    def inventory_status(self):
+        if self.quantity <= 0:
+            return 'OUT_OF_STOCK'
+        if self.expiry_date:
+            from datetime import timedelta
+            today = timezone.localdate()
+            if self.expiry_date < today:
+                return 'EXPIRED'
+            if self.expiry_date <= today + timedelta(days=30):
+                return 'NEAR_EXPIRY'
+        return 'ACTIVE'
+
+
 class Customer(models.Model):
     business = models.ForeignKey(Business, on_delete=models.CASCADE, null=True, blank=True)
     name = models.CharField(max_length=200)
@@ -357,9 +396,15 @@ class ShortLink(models.Model):
 class InvoiceItem(models.Model):
     invoice = models.ForeignKey(Invoice, related_name='items', on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
+    batch = models.ForeignKey('ProductBatch', on_delete=models.SET_NULL, null=True, blank=True, related_name='invoice_items')
     product_name = models.CharField(max_length=200)
     hsn_code = models.CharField(max_length=20, blank=True)
     sku = models.CharField(max_length=100, blank=True)
+    barcode = models.CharField(max_length=100, blank=True, default='')
+    unit = models.CharField(max_length=20, blank=True, default='')
+    batch_number = models.CharField(max_length=100, blank=True, default='')
+    manufacturing_date = models.DateField(null=True, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
     mrp = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -404,6 +449,7 @@ class InventoryTransaction(models.Model):
     ]
     business = models.ForeignKey(Business, on_delete=models.CASCADE, null=True, blank=True)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    batch = models.ForeignKey('ProductBatch', on_delete=models.SET_NULL, null=True, blank=True, related_name='inventory_transactions')
     transaction_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     quantity = models.DecimalField(max_digits=10, decimal_places=2)
     before_stock = models.DecimalField(max_digits=10, decimal_places=2)

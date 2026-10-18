@@ -99,7 +99,7 @@ function ReportDateField({ label, value, min, max, onChange, id }) {
   }
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-none">
+   <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-none">
       <label
         htmlFor={id}
         className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]"
@@ -116,7 +116,7 @@ function ReportDateField({ label, value, min, max, onChange, id }) {
           onBlur={() => setDraft(formatDateInput(value))}
           placeholder="DD/MM/YYYY"
           aria-label={`${label} date in DD/MM/YYYY format`}
-          className="input h-9 w-full min-w-0 pr-8 text-xs font-mono font-semibold tracking-wide sm:w-32 focus:ring-1 focus:ring-[#1E3A5F]"
+         className="input h-8 min-h-8 w-full min-w-0 pr-7 text-xs font-mono font-semibold tracking-wide sm:w-28 focus:ring-1 focus:ring-[#1E3A5F]"
         />
         <input
           ref={dateInputRef}
@@ -443,12 +443,12 @@ export default function Reports() {
               type="button"
               onClick={() => fetchReport(tab, appliedDates)}
               disabled={loading}
-              className="btn-secondary inline-flex h-8 min-w-0 items-center justify-center gap-1.5 px-2 text-[11px] font-semibold sm:h-9 sm:px-3 sm:text-xs"
+              className="btn-secondary inline-flex h-8 min-w-0 items-center justify-center gap-1 px-2 text-[11px] font-semibold sm:h-9 sm:gap-1.5 sm:px-3 sm:text-xs"
               title="Refresh report data"
               aria-label="Refresh report data"
             >
               <RefreshCw
-                size={13}
+                size={14}
                 className={loading ? 'animate-spin text-[#1E3A5F]' : 'text-[var(--muted)]'}
               />
               <span>Refresh</span>
@@ -496,98 +496,111 @@ export default function Reports() {
           DATE RANGE & FILTER CONTROLS
       ====================================================== */}
       {tab !== 'customers' ? (
-        <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 shadow-xs sm:px-4" aria-label="Report date filters">
-          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-end sm:justify-between">
-            <div className="min-w-0">
-              <div className="mb-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] font-semibold text-[var(--ink)]">
-                <Calendar size={14} className="text-[var(--primary)]" />
-                <span>Date range</span>
-                <span className="font-normal text-[var(--muted)]">
-                  {formatDateInput(appliedDates.start)} – {formatDateInput(appliedDates.end)}
-                </span>
-              </div>
-              <div className="scrollbar-none flex items-center gap-1 overflow-x-auto pb-0.5">
-              {[
-                ['Today', getToday(), getToday()],
-                ['This Month', getMonthStart(), getToday()],
-                ['Last 30 Days', getLast30Days(), getToday()],
-                ['Last 90 Days', getLast90Days(), getToday()],
-              ].map(([label, fDate, tDate]) => {
-                const isSelected =
-                  appliedDates.start === fDate && appliedDates.end === tDate
-                return (
-                  <button
-                    key={label}
-                    type="button"
-                    onClick={() => handlePreset(fDate, tDate)}
-                    className={`min-h-8 rounded-md border px-2 py-1 text-[10px] font-medium whitespace-nowrap transition-colors ${
-                      isSelected
-                        ? 'border-[var(--primary)] bg-[var(--primary)] text-white font-semibold'
-                        : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-subtle)] hover:text-[var(--ink)]'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                )
-              })}
-              </div>
-            </div>
+  <section
+    className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 shadow-xs sm:px-2.5"
+    aria-label="Report date filters"
+  >
+    <div className="flex flex-col gap-1.5 lg:flex-row lg:items-center lg:justify-between">
 
-            <div className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-end gap-2 sm:flex sm:w-auto sm:flex-nowrap">
-              <ReportDateField
-                id="report-from-date"
-                label="Start date"
-                value={startDate}
-                max={endDate}
-                onChange={setStartDate}
-              />
-              <ReportDateField
-                id="report-to-date"
-                label="End date"
-                value={endDate}
-                min={startDate}
-                onChange={setEndDate}
-              />
-              <div className="col-span-2 flex justify-end gap-1.5 sm:col-span-1">
-                <button
-                  type="button"
-                  onClick={handleApplyFilters}
-                  disabled={isDateInvalid || loading}
-                  className="btn-primary h-9 min-w-16 px-3 text-[11px] font-semibold justify-center whitespace-nowrap"
-                >
-                  Apply
-                </button>
+      {/* Date presets */}
+      <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
+        <Calendar
+          size={13}
+          className="shrink-0 text-[var(--muted)]"
+        />
 
-                <button
-                  type="button"
-                  onClick={handleResetFilters}
-                  disabled={loading}
-                  title="Reset date filter to This Month"
-                  aria-label="Reset date range to this month"
-                  className="btn-secondary h-9 w-9 px-0 text-xs font-medium text-[var(--muted)] hover:text-[var(--ink)]"
-                >
-                  <RotateCcw size={13} />
-                </button>
-              </div>
-            </div>
-          </div>
+        {[
+          ['Today', getToday(), getToday()],
+          ['This Month', getMonthStart(), getToday()],
+          ['Last 30 Days', getLast30Days(), getToday()],
+          ['Last 90 Days', getLast90Days(), getToday()],
+        ].map(([label, fDate, tDate]) => {
+          const isSelected =
+            appliedDates.start === fDate &&
+            appliedDates.end === tDate
 
-          {isDateInvalid && (
-            <p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-rose-600" role="alert">
-              <AlertCircle size={13} />
-              Start date cannot be after end date.
-            </p>
-          )}
-        </section>
-        
-      ) : (
-        <div className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] px-3.5 py-2.5 text-xs text-[var(--muted)]">
-          <Info size={14} className="shrink-0 text-[#1E3A5F] dark:text-slate-300" />
-          <span>
-            Customer receivables reflect real-time outstanding ledger amounts as of today. Date range filtering does not apply.
-          </span>
-        </div>
-      )}
+          return (
+            <button
+              key={label}
+              type="button"
+              onClick={() => handlePreset(fDate, tDate)}
+              className={`h-7 whitespace-nowrap rounded-md px-2 text-[10px] font-medium transition-colors ${
+                isSelected
+                  ? 'bg-[#1E3A5F] text-white font-semibold'
+                  : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
+              }`}
+            >
+              {label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Custom date range + actions */}
+      <div className="flex shrink-0 items-end gap-1">
+        <ReportDateField
+          id="report-from-date"
+          label="Start Date"
+          value={startDate}
+          max={endDate}
+          onChange={setStartDate}
+        />
+
+        <ReportDateField
+          id="report-to-date"
+          label="End Date"
+          value={endDate}
+          min={startDate}
+          onChange={setEndDate}
+        />
+
+        <button
+          type="button"
+          onClick={handleApplyFilters}
+          disabled={isDateInvalid || loading}
+          className="btn-primary h-8 min-h-8 min-w-14 px-2 text-[10px] font-semibold justify-center whitespace-nowrap"
+        >
+          Apply
+        </button>
+
+        <button
+          type="button"
+          onClick={handleResetFilters}
+          disabled={loading}
+          title="Reset date filter to This Month"
+          aria-label="Reset date range to this month"
+          className="btn-secondary inline-flex h-8 min-h-8 items-center gap-1 px-2 text-[10px] font-semibold text-[var(--muted)] hover:text-[var(--ink)]"
+        >
+          <RotateCcw
+            size={12}
+          />
+          <span>Reset</span>
+        </button>
+      </div>
+    </div>
+
+    {isDateInvalid && (
+      <p
+        className="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-rose-600"
+        role="alert"
+      >
+        <AlertCircle size={12} />
+        Start date cannot be after end date.
+      </p>
+    )}
+  </section>
+) : (
+  <div className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] px-3 py-2 text-[11px] text-[var(--muted)]">
+    <Info
+      size={13}
+      className="shrink-0 text-[#1E3A5F] dark:text-slate-300"
+    />
+    <span>
+      Customer receivables reflect real-time outstanding ledger amounts as of today.
+      Date range filtering does not apply.
+    </span>
+  </div>
+)}
 
       {/* =====================================================
           REPORT BODY CONTENT

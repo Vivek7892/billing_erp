@@ -77,6 +77,19 @@ export const productService = {
     const response = await http.post('/inventory/import/', formData)
     return unwrapResponse(response)
   },
+
+  async getBatches(productId) {
+    const response = await http.get('/product-batches/', { params: { product: productId } })
+    return listData(response)
+  },
+
+  async createBatch(data) {
+    return unwrapResponse(await http.post('/product-batches/', data))
+  },
+
+  async updateBatch(id, data) {
+    return unwrapResponse(await http.patch(`/product-batches/${id}/`, data))
+  },
 }
 
 export default productService

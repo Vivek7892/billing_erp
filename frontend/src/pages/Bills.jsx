@@ -66,10 +66,10 @@ const fmt = v =>
 const DATE_FILTERS = [
   { label: 'Today', value: 'today' },
   { label: 'Yesterday', value: 'yesterday' },
-  { label: 'This week', value: 'this_week' },
-  { label: 'This month', value: 'this_month' },
+  { label: 'This Week', value: 'this_week' },
+  { label: 'This Month', value: 'this_month' },
   { label: 'Custom', value: 'custom' },
-  { label: 'All time', value: '' },
+  { label: 'All Time', value: '' },
 ]
 
 const STATUS_FILTERS = [
@@ -508,7 +508,7 @@ function InvoiceActions({
         <button
           type="button"
           onClick={() => onCollect?.(bill)}
-          className="btn-success btn-sm inline-flex shrink-0 items-center gap-1"
+          className="btn-success btn-sm compact-table-action inline-flex shrink-0 items-center gap-1"
           title={`Collect payment (${fmt(bill.balance_due)} due)`}
         >
           <IndianRupee size={11} />
@@ -921,7 +921,7 @@ function InvoiceModal({
               <h3 className="text-xs font-bold text-[var(--ink)]">Invoice document</h3>
               <span className="text-[10px] text-[var(--muted-light)]">Swipe horizontally to view the full page</span>
             </div>
-            <div className="flex max-w-full justify-start overflow-x-auto sm:justify-center">
+            <div className="flex max-w-full justify-start overflow-x-auto sm:justify-center  ">
               <InvoiceDocument
                 invoice={selected}
                 settings={settings}
@@ -1291,17 +1291,17 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
         role="dialog"
         aria-modal="true"
         aria-labelledby="collect-payment-title"
-        className="flex max-h-[calc(100dvh-24px)] w-full max-w-md flex-col overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-xl outline-none"
+        className="flex max-h-[calc(100dvh-24px)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-2xl outline-none"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3.5 sm:px-5">
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#1E3A5F] text-white">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1E3A5F] text-white shadow-sm">
               <CircleDollarSign size={18} />
             </div>
             <div className="min-w-0">
-              <h2 id="collect-payment-title" className="text-sm font-semibold text-[var(--ink)] sm:text-base">
+              <h2 id="collect-payment-title" className="text-base font-bold text-[var(--ink)]">
                 Collect Payment
               </h2>
               <p className="truncate text-xs text-[var(--muted)]">
@@ -1319,9 +1319,10 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
         </div>
 
         {/* Content */}
-        <form onSubmit={handleSubmit} className="max-h-[calc(100dvh-112px)] space-y-4 overflow-y-auto p-4 sm:max-h-[72vh] sm:p-5">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:space-y-5 sm:p-6">
           {/* Summary Strip */}
-          <div className="grid grid-cols-3 gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-2.5 text-center sm:gap-2 sm:p-3">
+          <div className="grid grid-cols-3 gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-2.5 text-center sm:gap-3 sm:p-3">
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Total Bill
@@ -1338,7 +1339,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                 {fmt(paidAmount)}
               </p>
             </div>
-            <div className="rounded-lg bg-[var(--surface)] p-1 border border-amber-300 dark:border-amber-700">
+            <div className="rounded-lg border border-amber-300 bg-amber-50/70 p-1 dark:border-amber-700 dark:bg-amber-950/25">
               <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
                 Balance Due
               </span>
@@ -1349,16 +1350,16 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
           </div>
 
           {/* Amount Input */}
-          <div>
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold text-[var(--ink)]">
+              <label className="text-sm font-bold text-[var(--ink)]">
                 Amount to Collect (₹) <span className="text-rose-500">*</span>
               </label>
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => handleAmountChange(String(balanceDue))}
-              className="min-h-9 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11px] font-semibold text-[#1E3A5F] transition hover:bg-[var(--surface-elevated)] dark:text-sky-300"
+              className="min-h-8 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[10px] font-semibold text-[#1E3A5F] transition hover:bg-[var(--surface-elevated)] dark:text-sky-300"
                 >
                   Pay Full ({fmt(balanceDue)})
                 </button>
@@ -1366,7 +1367,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                   <button
                     type="button"
                     onClick={() => handleAmountChange(String((balanceDue / 2).toFixed(2)))}
-                    className="rounded-lg px-2.5 py-1 text-[11px] font-semibold bg-[var(--surface)] text-[var(--ink-secondary)] border border-[var(--line)] hover:border-[var(--line-strong)] transition"
+                    className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[10px] font-semibold text-[var(--ink-secondary)] transition hover:border-[var(--line-strong)]"
                   >
                     50%
                   </button>
@@ -1387,11 +1388,12 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                 value={amount}
                 onChange={e => handleAmountChange(e.target.value)}
                 placeholder="0.00"
-                className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] pl-9 pr-3 py-2.5 text-base font-mono font-bold text-[var(--ink)] placeholder:text-[var(--placeholder)] focus:border-[#1E3A5F] focus:ring-2 focus:ring-[#1E3A5F]/15 outline-none transition"
+                className={`h-12 w-full rounded-lg border bg-[var(--surface)] pl-9 pr-3 text-lg font-mono font-bold text-[var(--ink)] outline-none transition focus:border-[#1E3A5F] focus:ring-2 focus:ring-[#1E3A5F]/15 ${error ? 'border-rose-400' : 'border-[var(--line)]'}`}
+                aria-invalid={Boolean(error)}
               />
             </div>
             {error && (
-              <p className="mt-1.5 text-xs font-medium text-rose-500 flex items-center gap-1">
+              <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-xs font-medium text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300" role="alert">
                 <AlertCircle size={13} />
                 {error}
               </p>
@@ -1400,10 +1402,10 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
 
           {/* Payment Method Selector — Cash, UPI, Card */}
           <div>
-            <label className="text-xs font-bold text-[var(--ink)] mb-1.5 block">
+            <label className="mb-2 block text-sm font-bold text-[var(--ink)]">
               Payment Method
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {METHODS.map(m => {
                 const Icon = m.icon
                 const selected = method === m.id
@@ -1412,7 +1414,8 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                     key={m.id}
                     type="button"
                     onClick={() => setMethod(m.id)}
-                    className={`flex min-h-[58px] flex-col items-center justify-center rounded-lg border p-2 text-xs font-semibold transition ${
+                    aria-pressed={selected}
+                    className={`flex min-h-16 flex-col items-center justify-center rounded-xl border p-2 text-[11px] font-semibold transition ${
                       selected
                         ? 'border-[#1E3A5F] bg-[#1E3A5F] text-white shadow-xs'
                         : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:border-[var(--line-strong)]'
@@ -1428,27 +1431,21 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
 
           {/* Dynamic Content Based on Method */}
           {method === 'upi' ? (
-            <div className="space-y-3 rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-3 text-center sm:p-4">
-              <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#1E3A5F] dark:text-sky-400">
-                <QrCode size={16} />
-                <span>Scan QR with Any UPI App</span>
+            <div className="grid grid-cols-1 items-center gap-3 rounded-xl border border-sky-200 bg-sky-50/60 p-3 dark:border-sky-900 dark:bg-sky-950/20 sm:grid-cols-[132px_1fr] sm:p-4">
+              <div className="mx-auto flex w-fit items-center justify-center rounded-xl border border-slate-200 bg-white p-2 shadow-xs">
+                <QRCodeSVG value={upiUri} size={112} level="M" includeMargin={false} />
               </div>
 
-              <div className="mx-auto flex w-fit items-center justify-center p-3 bg-white rounded-xl border border-slate-200 shadow-xs">
-                <QRCodeSVG
-                  value={upiUri}
-                  size={136}
-                  level="M"
-                  includeMargin={false}
-                />
-              </div>
-
-              <div>
-                <p className="font-mono text-base font-bold text-[var(--ink)]">
+              <div className="min-w-0 text-center sm:text-left">
+                <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#1E3A5F] dark:text-sky-400 sm:justify-start">
+                  <QrCode size={16} />
+                  <span>Scan QR with Any UPI App</span>
+                </div>
+                <p className="mt-2 font-mono text-xl font-bold text-[var(--ink)]">
                   {fmt(amountNum)}
                 </p>
-                <div className="mt-1 flex items-center justify-center gap-1.5 text-xs text-[var(--muted)]">
-                  <span className="font-mono">{effectiveUpiId}</span>
+                <div className="mt-1 flex flex-wrap items-center justify-center gap-1.5 text-xs text-[var(--muted)] sm:justify-start">
+                  <span className="break-all font-mono">{effectiveUpiId}</span>
                   <button
                     type="button"
                     onClick={handleCopyUpi}
@@ -1465,26 +1462,33 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
               </div>
             </div>
           ) : method === 'card' ? (
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3.5 shadow-xs">
+            <div className="flex items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3.5">
+              <CreditCard size={18} className="mt-0.5 shrink-0 text-[#1E3A5F] dark:text-sky-400" />
+              <div>
               <p className="text-xs font-semibold text-[var(--ink)]">
                 Card / POS Terminal Collection
               </p>
               <p className="mt-1 text-[11px] text-[var(--muted)]">
                 Swipe or tap customer card on your card machine for {fmt(amountNum)}. Enter auth code or card details below.
               </p>
+              </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3.5 shadow-xs">
+            <div className="flex items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3.5">
+              <IndianRupee size={18} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <div>
               <p className="text-xs font-semibold text-[var(--ink)]">
                 Cash Collection
               </p>
               <p className="mt-1 text-[11px] text-[var(--muted)]">
                 Collect {fmt(amountNum)} in physical cash from customer. Provide receipt if requested.
               </p>
+              </div>
             </div>
           )}
 
           {/* Reference / Transaction ID */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="text-xs font-medium text-[var(--ink-secondary)] mb-1 block">
               {method === 'upi' ? 'UPI UTR / Reference No. (Optional)' : method === 'card' ? 'Card Auth Code / Last 4 Digits (Optional)' : 'Receipt / Cash Ref (Optional)'}
@@ -1511,34 +1515,39 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
               className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] focus:border-[#1E3A5F] outline-none transition"
             />
           </div>
+          </div>
 
           {/* Actions */}
-          <div className="flex flex-col-reverse gap-2 border-t border-[var(--line)] pt-3 sm:flex-row sm:justify-end sm:gap-2.5">
+          </div>
+          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-[var(--line)] bg-[var(--surface)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <p className="hidden text-[11px] text-[var(--muted)] sm:block">Payment will appear in this invoice’s history.</p>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:gap-2.5">
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="min-h-11 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-4 py-2.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:border-[var(--line-strong)] hover:text-[var(--ink)] sm:w-auto"
+              className="min-h-10 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-[var(--ink-secondary)] transition hover:border-[var(--line-strong)] hover:text-[var(--ink)] sm:w-auto"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting || Boolean(error) || !amount}
-              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#1E3A5F] px-5 py-2.5 text-xs font-semibold text-white transition hover:bg-[#162F4D] disabled:opacity-50 sm:w-auto"
+              className="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#1E3A5F] px-5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#162F4D] disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-48 sm:w-auto"
             >
               {submitting ? (
                 <>
                   <Spinner size={14} />
-                  <span>Recording…</span>
+                  <span role="status" aria-live="polite">Recording payment…</span>
                 </>
               ) : (
                 <>
                   <IndianRupee size={14} />
-                  <span>Record Payment ({fmt(parseFloat(amount) || 0)})</span>
+                  <span>Record payment · {fmt(parseFloat(amount) || 0)}</span>
                 </>
               )}
             </button>
+            </div>
           </div>
         </form>
       </div>
@@ -1898,6 +1907,25 @@ export default function Bills() {
   }, [visibleBills])
 
   /* -------------------------------------------------------
+     PAGINATION HELPERS
+  ------------------------------------------------------- */
+  const totalInvoices = count || visibleBills.length
+  const totalPages = Math.max(1, Math.ceil(totalInvoices / pageSize))
+
+  const paginationPages = useMemo(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1)
+    }
+    if (page <= 4) {
+      return [1, 2, 3, 4, 5, '...', totalPages]
+    }
+    if (page >= totalPages - 3) {
+      return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
+    }
+    return [1, '...', page - 1, page, page + 1, '...', totalPages]
+  }, [page, totalPages])
+
+  /* -------------------------------------------------------
      ACTIVE FILTERS STATE
   ------------------------------------------------------- */
   const hasActiveFilters = Boolean(
@@ -1928,150 +1956,161 @@ export default function Bills() {
   ======================================================= */
   return (
     <div className="min-h-full">
-      <div className="mx-auto max-w-[1600px] space-y-4 overflow-x-hidden pb-4">
+      <div className="mx-auto max-w-[1600px] space-y-3 pb-6">
         {/* =================================================
-            HEADER
+            PAGE HEADER (Compact, aligned on one row)
         ================================================= */}
-        <div className="flex flex-col gap-3 border-b border-[var(--line)] pb-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between pb-2 border-b border-[var(--line)]">
           <div>
-            <div className="mb-1 flex items-center gap-2 text-[var(--muted-light)]">
-              <Receipt size={13} />
-              <span>Sales</span>
-              <span>/</span>
-              <span className="text-[var(--muted)]">Invoices</span>
-            </div>
-
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--ink)] sm:text-2xl">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[var(--ink)]">
               Billing &amp; Invoices
             </h1>
-
-            <p className="mt-0.5 text-xs text-[var(--muted)] sm:text-sm">
-              Manage sales, payments, customer credit and invoices.
+            <p className="text-xs text-[var(--muted)] mt-0.5">
+              Manage sales, payments, customer credit and invoices
             </p>
           </div>
 
-          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-            {/* Horizontal Scrollable Action Pills for Mobile */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-              <button
-                type="button"
-                onClick={() => navigate('/sales/payments')}
-                className="inline-flex min-h-[42px] whitespace-nowrap items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] shadow-none transition hover:bg-[var(--surface-hover)]"
-                title="Payment Sheet & Collection"
-              >
-                <CreditCard size={14} />
-                <span>Payments</span>
-              </button>
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
+            <button
+              type="button"
+              onClick={() => navigate('/sales/payments')}
+              className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
+              title="Payment Sheet & Collection"
+            >
+              <CreditCard size={13} />
+              <span>Payments</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => navigate('/billing/drafts')}
-                className="inline-flex min-h-[42px] whitespace-nowrap items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] shadow-none transition hover:bg-[var(--surface-hover)]"
-                title="Parked Bills"
-              >
-                <Clock3 size={14} />
-                <span>Parked</span>
-                {draftCount > 0 && (
-                  <span className="rounded-full bg-[#1E3A5F] px-1.5 py-0.2 text-[10px] font-bold text-white">
-                    {draftCount}
-                  </span>
-                )}
-              </button>
+            <button
+              type="button"
+              onClick={() => navigate('/billing/drafts')}
+              className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
+              title="Parked Bills"
+            >
+              <Clock3 size={13} />
+              <span>Parked</span>
+              {draftCount > 0 && (
+                <span className="rounded-full bg-[#1E3A5F] px-1.5 py-0.2 text-[10px] font-bold text-white">
+                  {draftCount}
+                </span>
+              )}
+            </button>
 
-              <button
-                type="button"
-                onClick={exportCsv}
-                disabled={loading || visibleBills.length === 0}
-                className="inline-flex min-h-[42px] whitespace-nowrap items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] shadow-none transition hover:bg-[var(--surface-hover)] active:scale-95 disabled:opacity-50"
-                title="Export visible invoices to CSV"
-              >
-                <Download size={14} />
-                <span>Export CSV</span>
-              </button>
+            <button
+              type="button"
+              onClick={exportCsv}
+              disabled={loading || visibleBills.length === 0}
+              className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 disabled:opacity-50"
+              title="Export visible invoices to CSV"
+            >
+              <Download size={13} />
+              <span>Export CSV</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => load(page, search)}
-                disabled={loading}
-                className="inline-flex min-h-[42px] whitespace-nowrap items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] shadow-none transition hover:bg-[var(--surface-hover)] active:scale-95"
-                title="Refresh invoices table"
-              >
-                <RefreshCw size={14} className={loading ? 'animate-spin text-[#1E3A5F]' : ''} />
-                <span>Refresh</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => load(page, search)}
+              disabled={loading}
+              className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
+              title="Refresh invoices table"
+            >
+              <RefreshCw size={13} className={loading ? 'animate-spin text-[#1E3A5F]' : ''} />
+              <span>Refresh</span>
+            </button>
 
             <button
               type="button"
               onClick={() => navigate('/billing/new')}
-              className="btn-primary inline-flex min-h-[42px] w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold text-white shadow-none transition active:scale-95 shrink-0"
+              className="btn-primary h-8 sm:h-8.5 px-3.5 text-xs font-semibold text-white inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 shadow-xs"
             >
-              <Plus size={15} />
+              <Plus size={14} />
               <span>New Bill</span>
             </button>
           </div>
         </div>
 
         {/* =================================================
-            ERP METRICS SUMMARY (Table-Based)
+            COMPACT KPI STRIP (~70-80px height, single container)
         ================================================= */}
-        <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-xs">
-          <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-5 sm:divide-y-0 sm:divide-x">
-            <div className="p-3 sm:p-3.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] overflow-hidden shadow-2xs">
+          <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-5 sm:divide-y-0 sm:divide-x divide-[var(--line)]">
+            {/* Total Sales */}
+            <div className="px-3.5 py-2.5 sm:px-4 sm:py-3 min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
                 Total Sales
               </span>
-              <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+              <div className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
                 {fmt(totals.revenue)}
-              </p>
-              <p className="text-[10px] text-[var(--muted)]">{totals.completed} completed bills</p>
+              </div>
+              <div className="text-[11px] text-[var(--muted)] truncate">
+                {totals.completed} {totals.completed === 1 ? 'bill' : 'bills'}
+              </div>
             </div>
-            <div className="p-3 sm:p-3.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+
+            {/* Collected */}
+            <div className="px-3.5 py-2.5 sm:px-4 sm:py-3 min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
                 Collected
               </span>
-              <p className="mt-1 font-mono text-lg font-bold text-teal-700 dark:text-teal-400">
+              <div className="mt-0.5 font-mono text-base sm:text-lg font-bold text-emerald-700 dark:text-emerald-400 tabular-nums truncate">
                 {fmt(totals.paid)}
-              </p>
-              <p className="text-[10px] text-[var(--muted)]">Total collected</p>
+              </div>
+              <div className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80 truncate">
+                {totals.revenue > 0 ? `${Math.round((totals.paid / totals.revenue) * 100)}%` : '100%'}
+              </div>
             </div>
-            <div className="p-3 sm:p-3.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+
+            {/* Balance Due */}
+            <div className="px-3.5 py-2.5 sm:px-4 sm:py-3 min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
                 Balance Due
               </span>
-              <p className={`mt-1 font-mono text-lg font-bold ${totals.due > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-[var(--ink)]'}`}>
+              <div className={`mt-0.5 font-mono text-base sm:text-lg font-bold tabular-nums truncate ${
+                totals.due > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-[var(--ink)]'
+              }`}>
                 {fmt(totals.due)}
-              </p>
-              <p className="text-[10px] text-[var(--muted)]">Outstanding credit</p>
+              </div>
+              <div className="text-[11px] text-[var(--muted)] truncate">
+                Outstanding
+              </div>
             </div>
-            <div className="p-3 sm:p-3.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+
+            {/* GST / Tax */}
+            <div className="px-3.5 py-2.5 sm:px-4 sm:py-3 min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
                 GST / Tax
               </span>
-              <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+              <div className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
                 {fmt(totals.tax)}
-              </p>
-              <p className="text-[10px] text-[var(--muted)]">Across listed bills</p>
+              </div>
+              <div className="text-[11px] text-[var(--muted)] truncate">
+                Tax collected
+              </div>
             </div>
-            <div className="p-3 sm:p-3.5 col-span-2 sm:col-span-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+
+            {/* Average Bill */}
+            <div className="px-3.5 py-2.5 sm:px-4 sm:py-3 min-w-0 col-span-2 sm:col-span-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
                 Average Bill
               </span>
-              <p className="mt-1 font-mono text-lg font-bold text-[#1E3A5F] dark:text-slate-200">
+              <div className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[#1E3A5F] dark:text-slate-200 tabular-nums truncate">
                 {fmt(totals.average)}
-              </p>
-              <p className="text-[10px] text-[var(--muted)]">Average per sale</p>
+              </div>
+              <div className="text-[11px] text-[var(--muted)] truncate">
+                Per sale
+              </div>
             </div>
           </div>
         </div>
 
         {/* =================================================
-            FILTER & SEARCH TOOLBAR
+            COMPACT FILTER & SEARCH TOOLBAR
         ================================================= */}
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-xs sm:p-3 space-y-2.5">
-          {/* Quick Status Filter Pills with live item counts */}
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 sm:p-2.5 shadow-2xs space-y-2">
+          {/* Status Pills & Date Presets */}
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+            {/* Quick Status Filter Pills with live item counts */}
+            <div className="flex items-center gap-1 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
               {[
                 { label: 'All', value: '', count: statusCounts.all },
                 { label: 'Paid', value: 'paid', count: statusCounts.paid },
@@ -2083,14 +2122,14 @@ export default function Bills() {
                   key={st.value}
                   type="button"
                   onClick={() => setStatusFilter(st.value)}
-                  className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold border transition ${
+                  className={`shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-semibold border transition ${
                     statusFilter === st.value
                       ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-2xs'
                       : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)]'
                   }`}
                 >
                   <span>{st.label}</span>
-                  <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                  <span className={`text-[10px] font-mono px-1 rounded-full ${
                     statusFilter === st.value
                       ? 'bg-white/20 text-white'
                       : 'bg-[var(--surface-subtle)] text-[var(--muted)]'
@@ -2114,10 +2153,10 @@ export default function Bills() {
                       setEndDate('')
                     }
                   }}
-                  className={`shrink-0 px-2.5 py-1 rounded-md text-[11px] font-semibold border transition ${
+                  className={`shrink-0 h-8 px-2.5 rounded-md text-xs font-semibold border transition ${
                     dateFilter === f.value
                       ? 'bg-slate-800 text-white border-slate-800 dark:bg-slate-700 dark:border-slate-700'
-                      : 'border-[var(--line)] text-[var(--muted)] hover:bg-[var(--surface-hover)]'
+                      : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
                   }`}
                 >
                   {f.label}
@@ -2128,7 +2167,7 @@ export default function Bills() {
 
           {/* Custom Date Range Picker (shown when 'Custom' preset is selected) */}
           {dateFilter === 'custom' && (
-            <div className="flex flex-col gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-2 text-xs sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+            <div className="flex flex-col gap-2 rounded-md border border-[var(--line)] bg-[var(--surface-subtle)] p-2 text-xs sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
               <div className="flex items-center gap-1.5 font-medium text-[var(--ink-secondary)]">
                 <CalendarDays size={14} className="text-[#1E3A5F] dark:text-sky-400" />
                 <span>Custom Date Range:</span>
@@ -2141,7 +2180,7 @@ export default function Bills() {
                     setStartDate(e.target.value)
                     setPage(1)
                   }}
-                  className="min-w-0 w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-2 text-xs text-[var(--ink)] outline-none focus:border-[#1E3A5F] sm:w-auto"
+                  className="min-w-0 h-8 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 text-xs text-[var(--ink)] outline-none focus:border-[#1E3A5F] sm:w-auto"
                   title="Start date"
                   aria-label="Start date"
                 />
@@ -2153,7 +2192,7 @@ export default function Bills() {
                     setEndDate(e.target.value)
                     setPage(1)
                   }}
-                  className="min-w-0 w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-2 text-xs text-[var(--ink)] outline-none focus:border-[#1E3A5F] sm:w-auto"
+                  className="min-w-0 h-8 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 text-xs text-[var(--ink)] outline-none focus:border-[#1E3A5F] sm:w-auto"
                   title="End date"
                   aria-label="End date"
                 />
@@ -2165,10 +2204,10 @@ export default function Bills() {
                       setEndDate('')
                       setPage(1)
                     }}
-                    className="rounded p-1 text-[var(--muted)] hover:text-rose-600 transition"
+                    className="h-8 rounded p-1 text-[var(--muted)] hover:text-rose-600 transition"
                     title="Clear custom dates"
                   >
-                    <X size={13} />
+                    <X size={14} />
                   </button>
                 )}
               </div>
@@ -2178,14 +2217,11 @@ export default function Bills() {
           {/* Search Bar + Controls */}
           <div className="flex w-full items-center gap-2">
             {/* Search */}
-            <div className="group relative flex min-w-0 flex-1 items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-                <Search size={14} strokeWidth={2.2} />
-              </div>
-
+            <div className="group relative flex min-w-0 flex-1 items-center h-[34px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 transition hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-1 focus-within:ring-[#1E3A5F]/20">
+              <Search size={14} className="shrink-0 text-[var(--muted)] group-focus-within:text-[#1E3A5F] dark:group-focus-within:text-sky-300 mr-2" />
               <input
                 ref={searchInputRef}
-                className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
+                className="w-full bg-transparent text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
                 placeholder="Search invoice number, customer name or phone... (Ctrl+K)"
                 value={search}
                 onChange={e => {
@@ -2193,7 +2229,6 @@ export default function Bills() {
                   setPage(1)
                 }}
               />
-
               {search ? (
                 <button
                   type="button"
@@ -2201,60 +2236,57 @@ export default function Bills() {
                     setSearch('')
                     setPage(1)
                   }}
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95"
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
                   aria-label="Clear search"
                   title="Clear search"
                 >
-                  <X size={13} strokeWidth={2.5} />
+                  <X size={13} />
                 </button>
               ) : (
-                <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
+                <kbd className="hidden sm:inline-flex shrink-0 items-center rounded border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)]">
                   Ctrl+K
                 </kbd>
               )}
             </div>
 
             {/* Filter Toggle Button */}
-            <div className="relative shrink-0">
-              <button
-                type="button"
-                onClick={() => setAdvancedFiltersOpen(v => !v)}
-                className={`inline-flex min-h-[42px] items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-semibold shadow-xs transition ${
-                  paymentMethodFilter || minAmount || maxAmount || advancedFiltersOpen
-                    ? 'border-[#1E3A5F] bg-blue-50 text-[#1E3A5F] dark:border-blue-600 dark:bg-blue-950/50 dark:text-sky-300'
-                    : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:border-slate-300'
-                }`}
-                title="Toggle advanced filters"
-                aria-label="Toggle advanced filters"
-              >
-                <SlidersHorizontal size={14} />
-                <span className="hidden sm:inline">Filters</span>
-
-                {(paymentMethodFilter || minAmount || maxAmount) && (
-                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#1E3A5F] px-1 text-[9px] text-white">
-                    {[paymentMethodFilter, minAmount || maxAmount].filter(Boolean).length}
-                  </span>
-                )}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setAdvancedFiltersOpen(v => !v)}
+              className={`inline-flex h-[34px] items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-semibold shadow-2xs transition shrink-0 ${
+                paymentMethodFilter || minAmount || maxAmount || advancedFiltersOpen
+                  ? 'border-[#1E3A5F] bg-blue-50 text-[#1E3A5F] dark:border-blue-600 dark:bg-blue-950/50 dark:text-sky-300'
+                  : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)]'
+              }`}
+              title="Toggle advanced filters"
+              aria-label="Toggle advanced filters"
+            >
+              <SlidersHorizontal size={13} />
+              <span>Filters</span>
+              {(paymentMethodFilter || minAmount || maxAmount) && (
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#1E3A5F] px-1 text-[9px] text-white">
+                  {[paymentMethodFilter, minAmount || maxAmount].filter(Boolean).length}
+                </span>
+              )}
+            </button>
 
             {/* Clear All Filters Button */}
             {hasActiveFilters && (
               <button
                 type="button"
                 onClick={handleClearAllFilters}
-                className="inline-flex min-h-[42px] items-center justify-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300 shrink-0"
+                className="inline-flex h-[34px] items-center justify-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300 shrink-0"
                 title="Reset all search and filter conditions"
               >
                 <X size={13} />
-                <span className="hidden md:inline">Reset</span>
+                <span className="hidden sm:inline">Reset</span>
               </button>
             )}
           </div>
 
           {/* Expandable Advanced Filters Drawer */}
           {advancedFiltersOpen && (
-            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-3 text-xs animate-in fade-in">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 rounded-md border border-[var(--line)] bg-[var(--surface-subtle)] p-2.5 text-xs">
               <div>
                 <label className="block text-[11px] font-semibold text-[var(--ink-secondary)] mb-1">
                   Payment Method
@@ -2265,7 +2297,7 @@ export default function Bills() {
                     setPaymentMethodFilter(e.target.value)
                     setPage(1)
                   }}
-                  className="w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-medium text-[var(--ink)] outline-none focus:border-[#1E3A5F]"
+                  className="w-full h-8 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 text-xs font-medium text-[var(--ink)] outline-none focus:border-[#1E3A5F]"
                 >
                   <option value="">All Payment Methods</option>
                   <option value="cash">Cash</option>
@@ -2286,7 +2318,7 @@ export default function Bills() {
                   onChange={e => setMinAmount(e.target.value)}
                   placeholder="0.00"
                   min="0"
-                  className="w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs text-[var(--ink)] outline-none focus:border-[#1E3A5F]"
+                  className="w-full h-8 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 text-xs text-[var(--ink)] outline-none focus:border-[#1E3A5F]"
                 />
               </div>
 
@@ -2300,7 +2332,7 @@ export default function Bills() {
                   onChange={e => setMaxAmount(e.target.value)}
                   placeholder="Any amount"
                   min="0"
-                  className="w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs text-[var(--ink)] outline-none focus:border-[#1E3A5F]"
+                  className="w-full h-8 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 text-xs text-[var(--ink)] outline-none focus:border-[#1E3A5F]"
                 />
               </div>
             </div>
@@ -2311,7 +2343,7 @@ export default function Bills() {
             BULK ACTION BAR (Visible when items selected)
         ================================================= */}
         {selectedIds.size > 0 && (
-          <div className="flex items-center justify-between gap-3 rounded-md border border-[#1E3A5F]/20 bg-blue-50/90 dark:border-blue-900/60 dark:bg-blue-950/40 px-3.5 py-2 text-xs text-[var(--ink)] shadow-xs animate-in fade-in">
+          <div className="flex items-center justify-between gap-3 rounded-md border border-[#1E3A5F]/20 bg-blue-50/90 dark:border-blue-900/60 dark:bg-blue-950/40 px-3 py-1.5 text-xs text-[var(--ink)] shadow-2xs">
             <div className="flex items-center gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#1E3A5F] text-[10px] font-bold text-white">
                 {selectedIds.size}
@@ -2320,57 +2352,31 @@ export default function Bills() {
                 {selectedIds.size} {selectedIds.size === 1 ? 'invoice' : 'invoices'} selected
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={exportSelectedCsv}
-                className="inline-flex items-center gap-1.5 rounded border border-[#1E3A5F] bg-[#1E3A5F] hover:bg-[#162a45] px-2.5 py-1 text-xs font-semibold text-white shadow-2xs transition active:scale-95"
+                className="inline-flex h-7 items-center gap-1.5 rounded border border-[#1E3A5F] bg-[#1E3A5F] hover:bg-[#162a45] px-2.5 text-xs font-semibold text-white shadow-2xs transition active:scale-95"
               >
-                <Download size={13} />
-                <span>Export Selected (CSV)</span>
+                <Download size={12} />
+                <span>Export Selected</span>
               </button>
               <button
                 type="button"
                 onClick={() => setSelectedIds(new Set())}
-                className="inline-flex items-center gap-1 rounded border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] px-2 py-1 text-xs font-medium text-[var(--ink-secondary)] transition"
+                className="inline-flex h-7 items-center gap-1 rounded border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] px-2 text-xs font-medium text-[var(--ink-secondary)] transition"
               >
                 <X size={12} />
-                <span>Clear Selection</span>
+                <span>Clear</span>
               </button>
             </div>
           </div>
         )}
 
         {/* =================================================
-            INVOICE TABLE
+            INVOICE TABLE CONTAINER
         ================================================= */}
-        <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-xs">
-          {/* Table header bar */}
-          <div className="flex items-center justify-between border-b border-[var(--line-subtle)] px-3.5 py-3 sm:px-5">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">
-                  Invoices
-                </h2>
-
-                <span className="rounded-sm bg-[var(--surface-elevated)] border border-[var(--line)] px-2 py-0.5 text-[10px] font-bold text-[var(--muted)]">
-                  {visibleBills.length}
-                </span>
-              </div>
-
-              <p className="mt-0.5 text-[11px] text-[var(--muted-light)]">
-                {count
-                  ? `${count.toLocaleString('en-IN')} invoices in total`
-                  : 'Recent billing transactions'}
-              </p>
-            </div>
-
-            <div className="hidden items-center gap-1.5 text-[11px] text-[var(--muted-light)] sm:flex">
-              <Clock3 size={12} />
-              <span>Real-time billing stream</span>
-            </div>
-          </div>
-
+        <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
           {/* Table content / loading / empty */}
           {loading ? (
             <TableSkeleton rows={10} cols={11} label="Loading bills" />
@@ -2383,7 +2389,7 @@ export default function Bills() {
           ) : (
             <>
               {/* Mobile cards view (sm:hidden) */}
-              <div className="hidden">
+              <div className="sm:hidden divide-y divide-[var(--line-subtle)]">
                 {visibleBills.map(bill => (
                   <MobileInvoiceCard
                     key={bill.id}
@@ -2404,26 +2410,26 @@ export default function Bills() {
               </div>
 
               {/* Desktop / Tablet Semantic Table */}
-              <div className="overflow-x-auto min-h-[220px] pb-4">
-                <table className="erp-table w-full text-xs min-w-[1175px]" style={{ tableLayout: 'fixed' }}>
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="erp-table w-full text-xs min-w-[1150px] border-collapse" style={{ tableLayout: 'fixed' }}>
                   <colgroup>
-                    <col style={{ width: '40px' }} />  {/* Selection Checkbox */}
-                    <col style={{ width: '130px' }} /> {/* Invoice */}
-                    <col style={{ width: '190px' }} /> {/* Customer */}
-                    <col style={{ width: '135px' }} /> {/* Date & Time */}
-                    <col style={{ width: '75px' }} />  {/* Items */}
-                    <col style={{ width: '120px' }} /> {/* Total */}
-                    <col style={{ width: '110px' }} /> {/* Paid */}
-                    <col style={{ width: '120px' }} /> {/* Balance Due */}
-                    <col style={{ width: '105px' }} /> {/* Payment Method */}
-                    <col style={{ width: '105px' }} /> {/* Status */}
-                    <col style={{ width: '135px' }} /> {/* Actions */}
+                    <col style={{ width: '38px' }} />  {/* Selection Checkbox */}
+                    <col style={{ width: '125px' }} /> {/* Invoice */}
+                    <col style={{ width: '170px' }} /> {/* Customer */}
+                    <col style={{ width: '125px' }} /> {/* Date & Time */}
+                    <col style={{ width: '60px' }} />  {/* Items */}
+                    <col style={{ width: '110px' }} /> {/* Total */}
+                    <col style={{ width: '100px' }} /> {/* Paid */}
+                    <col style={{ width: '110px' }} /> {/* Balance Due */}
+                    <col style={{ width: '90px' }} />  {/* Payment Method */}
+                    <col style={{ width: '95px' }} />  {/* Status */}
+                    <col style={{ width: '160px' }} /> {/* Actions */}
                   </colgroup>
 
-                  <thead>
-                    <tr className="border-b border-[var(--line)] bg-[var(--surface-subtle)] text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                  <thead className="sticky top-0 z-10 bg-[var(--surface-subtle)] border-b border-[var(--line)] text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                    <tr>
                       {/* Selection Checkbox */}
-                      <th className="px-2 py-3 text-center">
+                      <th className="px-2 py-2.5 text-center">
                         <input
                           ref={masterCheckboxRef}
                           type="checkbox"
@@ -2435,52 +2441,52 @@ export default function Bills() {
                       </th>
 
                       {/* 1. Invoice (Left) */}
-                      <th className="px-3 py-3 text-left">
+                      <th className="px-3 py-2.5 text-left">
                         Invoice
                       </th>
 
                       {/* 2. Customer (Left) */}
-                      <th className="px-3 py-3 text-left">
+                      <th className="px-3 py-2.5 text-left">
                         Customer
                       </th>
 
                       {/* 3. Date & Time (Left) */}
-                      <th className="px-3 py-3 text-left">
+                      <th className="px-3 py-2.5 text-left">
                         Date &amp; Time
                       </th>
 
                       {/* 4. Items (Center) */}
-                      <th className="px-2 py-3 text-center">
+                      <th className="px-2 py-2.5 text-center">
                         Items
                       </th>
 
                       {/* 5. Total (Right) */}
-                      <th className="px-3 py-3 text-right">
+                      <th className="px-3 py-2.5 text-right">
                         Total
                       </th>
 
                       {/* 6. Paid (Right) */}
-                      <th className="px-3 py-3 text-right">
+                      <th className="px-3 py-2.5 text-right">
                         Paid
                       </th>
 
                       {/* 7. Balance Due (Right) */}
-                      <th className="px-3 py-3 text-right">
-                        Balance Due
+                      <th className="px-3 py-2.5 text-right">
+                        Balance
                       </th>
 
                       {/* 8. Payment Method (Left) */}
-                      <th className="px-3 py-3 text-left truncate">
+                      <th className="px-3 py-2.5 text-left truncate">
                         Payment
                       </th>
 
                       {/* 9. Status (Center) */}
-                      <th className="px-2 py-3 text-center">
+                      <th className="px-2 py-2.5 text-center">
                         Status
                       </th>
 
                       {/* 10. Actions (Center) */}
-                      <th className="px-2 py-3 text-center">
+                      <th className="px-2 py-2.5 text-center">
                         Actions
                       </th>
                     </tr>
@@ -2499,14 +2505,14 @@ export default function Bills() {
                       return (
                         <tr
                           key={bill.id}
-                          className={`group transition-colors ${
+                          className={`h-[58px] group transition-colors ${
                             isSelected
                               ? 'bg-blue-50/70 dark:bg-blue-950/30'
                               : 'hover:bg-[var(--surface-hover)]'
                           }`}
                         >
                           {/* Selection Checkbox */}
-                          <td className="px-2 py-2.5 text-center">
+                          <td className="px-2 py-2 text-center align-middle">
                             <input
                               type="checkbox"
                               checked={isSelected}
@@ -2517,11 +2523,11 @@ export default function Bills() {
                           </td>
 
                           {/* 1. Invoice (Left) */}
-                          <td className="px-3 py-2.5 text-left">
+                          <td className="px-3 py-2 text-left align-middle">
                             <button
                               type="button"
                               onClick={() => setSelected(bill)}
-                              className="font-mono text-xs font-bold text-[#1E3A5F] dark:text-sky-400 hover:underline truncate block max-w-full text-left"
+                              className="font-mono text-xs font-bold text-[#1E3A5F] dark:text-sky-400 hover:underline block max-w-full text-left break-all"
                               title={`View invoice ${bill.invoice_number}`}
                             >
                               {bill.invoice_number}
@@ -2532,7 +2538,7 @@ export default function Bills() {
                           </td>
 
                           {/* 2. Customer (Left) */}
-                          <td className="px-3 py-2.5 text-left">
+                          <td className="px-3 py-2 text-left align-middle">
                             <div
                               className="truncate font-semibold text-xs text-[var(--ink)]"
                               title={bill.customer_name || 'Walk-in customer'}
@@ -2549,13 +2555,13 @@ export default function Bills() {
                               </div>
                             ) : (
                               <div className="text-[10px] text-[var(--muted-light)] mt-0.5">
-                                Unknown / No phone
+                                Walk-in customer
                               </div>
                             )}
                           </td>
 
                           {/* 3. Date & Time (Left) */}
-                          <td className="px-3 py-2.5 text-left">
+                          <td className="px-3 py-2 text-left align-middle">
                             <div className="text-xs font-medium text-[var(--ink)] whitespace-nowrap">
                               {formatDate(bill.created_at)}
                             </div>
@@ -2565,7 +2571,7 @@ export default function Bills() {
                           </td>
 
                           {/* 4. Items (Center) */}
-                          <td className="px-2 py-2.5 text-center">
+                          <td className="px-2 py-2 text-center align-middle">
                             <span
                               className="inline-flex items-center justify-center gap-1 rounded bg-[var(--surface-subtle)] border border-[var(--line)] px-2 py-0.5 text-[11px] font-semibold text-[var(--ink-secondary)]"
                               title={`${bill.items?.length || 0} item${(bill.items?.length || 0) === 1 ? '' : 's'} in invoice`}
@@ -2576,7 +2582,7 @@ export default function Bills() {
                           </td>
 
                           {/* 5. Total (Right) */}
-                          <td className="px-3 py-2.5 text-right">
+                          <td className="px-3 py-2 text-right align-middle">
                             <div className="font-mono text-xs sm:text-sm font-bold tabular-nums text-[var(--ink)]">
                               {fmt(total)}
                             </div>
@@ -2588,14 +2594,14 @@ export default function Bills() {
                           </td>
 
                           {/* 6. Paid (Right) */}
-                          <td className="px-3 py-2.5 text-right">
+                          <td className="px-3 py-2 text-right align-middle">
                             <div className="font-mono text-xs sm:text-sm font-semibold tabular-nums text-teal-700 dark:text-teal-400">
                               {fmt(paid)}
                             </div>
                           </td>
 
                           {/* 7. Balance Due (Right) */}
-                          <td className="px-3 py-2.5 text-right">
+                          <td className="px-3 py-2 text-right align-middle">
                             <div className={`font-mono text-xs sm:text-sm font-bold tabular-nums ${balance > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-[var(--muted-light)]'}`}>
                               {fmt(balance)}
                             </div>
@@ -2608,21 +2614,21 @@ export default function Bills() {
                           </td>
 
                           {/* 8. Payment Method (Left) */}
-                          <td className="px-3 py-2.5 text-left">
+                          <td className="px-3 py-2 text-left align-middle">
                             <div className="truncate">
                               <PaymentBadge method={bill.payment_method} />
                             </div>
                           </td>
 
                           {/* 9. Status (Center) */}
-                          <td className="px-2 py-2.5 text-center">
+                          <td className="px-2 py-2 text-center align-middle">
                             <div className="flex justify-center">
                               <StatusPill bill={bill} />
                             </div>
                           </td>
 
                           {/* 10. Actions (Center) */}
-                          <td className="px-2 py-2.5 text-center">
+                          <td className="px-2 py-2 text-center align-middle">
                             <InvoiceActions
                               bill={bill}
                               shopName={shopName}
@@ -2649,35 +2655,40 @@ export default function Bills() {
           )}
 
           {/* =================================================
-              PAGINATION & PAGE SIZE SELECTOR
+              INTEGRATED SUBTLE PAGINATION FOOTER
           ================================================= */}
-          <div className="flex flex-col gap-3 border-t border-[var(--line-subtle)] px-3.5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-            <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--muted)]">
+          <div className="flex flex-col gap-2.5 border-t border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 sm:h-12 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+            {/* Left: Showing count */}
+            <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
               <span>
                 Showing{' '}
                 <strong className="font-semibold text-[var(--ink)]">
-                  {count > 0 ? (page - 1) * pageSize + 1 : 0}
-                </strong>{' '}
-                to{' '}
+                  {totalInvoices > 0 ? (page - 1) * pageSize + 1 : 0}
+                </strong>
+                –
                 <strong className="font-semibold text-[var(--ink)]">
-                  {Math.min(page * pageSize, count || visibleBills.length)}
+                  {Math.min(page * pageSize, totalInvoices)}
                 </strong>{' '}
                 of{' '}
                 <strong className="font-semibold text-[var(--ink)]">
-                  {count || visibleBills.length}
+                  {totalInvoices}
                 </strong>{' '}
                 invoices
               </span>
+            </div>
 
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] text-[var(--muted-light)]">Rows per page:</span>
+            {/* Right: Page size selector + Page navigation buttons */}
+            <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+              {/* Rows per page */}
+              <div className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
+                <span className="text-[11px] text-[var(--muted-light)]">Rows:</span>
                 <select
                   value={pageSize}
                   onChange={e => {
                     setPageSize(Number(e.target.value))
                     setPage(1)
                   }}
-                  className="rounded border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-xs font-semibold text-[var(--ink)] outline-none focus:border-[#1E3A5F]"
+                  className="h-7 rounded border border-[var(--line)] bg-[var(--surface)] px-2 text-xs font-semibold text-[var(--ink)] outline-none focus:border-[#1E3A5F]"
                 >
                   <option value={10}>10</option>
                   <option value={25}>25</option>
@@ -2685,32 +2696,62 @@ export default function Bills() {
                   <option value={100}>100</option>
                 </select>
               </div>
-            </div>
 
-            <div className="flex items-center gap-1.5 self-end sm:self-auto">
-              <button
-                disabled={page === 1 || loading}
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                className="inline-flex items-center gap-1 rounded border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Previous Page"
-              >
-                <ChevronLeft size={14} />
-                <span>Prev</span>
-              </button>
+              {/* Navigation buttons */}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  className="inline-flex h-7 items-center justify-center rounded border border-[var(--line)] bg-[var(--surface)] px-2 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Previous Page"
+                  title="Previous Page"
+                >
+                  <ChevronLeft size={14} />
+                  <span className="hidden sm:inline ml-0.5">Prev</span>
+                </button>
 
-              <span className="flex h-7 min-w-7 items-center justify-center rounded bg-[var(--primary)] px-2 font-mono text-xs font-bold text-white">
-                {page}
-              </span>
+                {/* Desktop page buttons with ellipsis */}
+                <div className="hidden sm:flex items-center gap-1">
+                  {paginationPages.map((pg, i) =>
+                    pg === '...' ? (
+                      <span key={`ellipsis-${i}`} className="px-1 text-xs text-[var(--muted)]">
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={pg}
+                        type="button"
+                        onClick={() => setPage(pg)}
+                        className={`h-7 min-w-7 px-2 rounded text-xs font-mono font-semibold transition ${
+                          page === pg
+                            ? 'bg-[#1E3A5F] text-white shadow-2xs'
+                            : 'border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
+                        }`}
+                      >
+                        {pg}
+                      </button>
+                    )
+                  )}
+                </div>
 
-              <button
-                disabled={loading || (count ? page * pageSize >= count : bills.length < pageSize)}
-                onClick={() => setPage(p => p + 1)}
-                className="inline-flex items-center gap-1 rounded border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Next Page"
-              >
-                <span>Next</span>
-                <ChevronRight size={14} />
-              </button>
+                {/* Mobile page indicator */}
+                <span className="sm:hidden font-mono text-xs font-semibold text-[var(--ink)] px-2">
+                  {page} / {totalPages}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={page >= totalPages || loading}
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  className="inline-flex h-7 items-center justify-center rounded border border-[var(--line)] bg-[var(--surface)] px-2 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Next Page"
+                  title="Next Page"
+                >
+                  <span className="hidden sm:inline mr-0.5">Next</span>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
           </div>
         </div>

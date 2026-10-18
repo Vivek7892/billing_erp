@@ -92,6 +92,7 @@ class SalesReturnService:
                         movement_key=f'sales-return:{return_obj.pk}:item:{invoice_item.pk}',
                         reference_type='sales_return',
                         reference_id=return_obj.pk,
+                        batch_id=invoice_item.batch_id,
                     )
 
             return_obj.refund_amount = refund_total
