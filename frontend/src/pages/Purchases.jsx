@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import api from '../api'
 import { Badge, PageHeader, Modal, Spinner, EmptyState, ConfirmDialog, TableSkeleton } from '../components/UI'
 import toast from 'react-hot-toast'
+import { PurchaseEmptyIllustration } from '../components/visuals'
 import {
   Plus, Trash2, Printer, Package, ChevronDown, ChevronRight,
   Building2, Phone, Mail, MapPin, Edit2, Search, Save,
@@ -1585,7 +1586,9 @@ export default function Purchases() {
                 </div>
               </div>
 
-              {filteredPOs.length === 0 ? <EmptyState message="No purchase orders yet" /> : (
+              {filteredPOs.length === 0 ? (
+                <PurchaseEmptyIllustration onNewPurchase={() => setPoModal(true)} />
+              ) : (
                 <div className={`overflow-hidden ${cardCls}`}>
                   {/* Mobile PO Cards (< 640px) */}
                   <div className="divide-y divide-[var(--line-subtle)] sm:hidden">

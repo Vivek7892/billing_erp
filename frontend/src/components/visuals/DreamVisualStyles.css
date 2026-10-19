@@ -1,0 +1,1412 @@
+/* ==========================================================================
+   Dreamwithtech Billing ERP — Fintech Visual Design System
+   Inspired by the provided mobile UI reference:
+   - Clean fintech aesthetic
+   - White rounded cards
+   - Light gray application background
+   - Strong royal/deep blue CTAs
+   - Cyan secondary accent
+   - Yellow promotional accent
+   - Soft shadows
+   - Generous spacing
+   ========================================================================== */
+
+:root {
+  /* ------------------------------------------------------------------------
+     BRAND COLORS
+  ------------------------------------------------------------------------ */
+
+  --dwt-primary: #0057B8;
+  --dwt-primary-dark: #003F8F;
+  --dwt-primary-hover: #004A9F;
+
+  --dwt-cyan: #16A9D8;
+  --dwt-cyan-dark: #0E7490;
+
+  --dwt-yellow: #FFE500;
+  --dwt-yellow-soft: #FFF9C4;
+
+  --dwt-success: #10B981;
+  --dwt-success-dark: #059669;
+
+  /* ------------------------------------------------------------------------
+     APPLICATION COLORS
+  ------------------------------------------------------------------------ */
+
+  --dwt-bg: #F5F6F8;
+  --dwt-surface: #FFFFFF;
+  --dwt-surface-soft: #F8FAFC;
+
+  --dwt-ink: #111111;
+  --dwt-secondary: #555555;
+  --dwt-muted: #888888;
+
+  --dwt-border: #E5E7EB;
+  --dwt-border-soft: #EEF0F3;
+
+  /* ------------------------------------------------------------------------
+     BLUE TINTS
+  ------------------------------------------------------------------------ */
+
+  --dwt-blue-50: #F0F7FF;
+  --dwt-blue-100: #E6F1FF;
+  --dwt-blue-200: #CFE3FF;
+
+  --dwt-cyan-50: #EFFBFE;
+  --dwt-cyan-100: #DDF6FC;
+
+  /* ------------------------------------------------------------------------
+     RADIUS SYSTEM
+  ------------------------------------------------------------------------ */
+
+  --dwt-radius-xs: 8px;
+  --dwt-radius-sm: 12px;
+  --dwt-radius-md: 16px;
+  --dwt-radius-lg: 22px;
+  --dwt-radius-xl: 26px;
+  --dwt-radius-2xl: 30px;
+  --dwt-radius-pill: 9999px;
+
+  /* ------------------------------------------------------------------------
+     SPACING
+  ------------------------------------------------------------------------ */
+
+  --dwt-page-padding: 20px;
+  --dwt-section-gap: 20px;
+  --dwt-card-padding: 20px;
+
+  /* ------------------------------------------------------------------------
+     SHADOWS
+  ------------------------------------------------------------------------ */
+
+  --dwt-shadow-xs:
+    0 1px 3px rgba(17, 24, 39, 0.05);
+
+  --dwt-shadow-sm:
+    0 2px 8px rgba(17, 24, 39, 0.06);
+
+  --dwt-shadow-md:
+    0 6px 20px rgba(17, 24, 39, 0.08);
+
+  --dwt-shadow-lg:
+    0 10px 30px rgba(17, 24, 39, 0.10);
+
+  --dwt-shadow-blue:
+    0 6px 18px rgba(0, 87, 184, 0.16);
+
+  /* ------------------------------------------------------------------------
+     TRANSITIONS
+  ------------------------------------------------------------------------ */
+
+  --dwt-transition-fast:
+    150ms ease;
+
+  --dwt-transition:
+    220ms ease;
+
+  --dwt-transition-slow:
+    320ms ease;
+}
+
+
+/* ==========================================================================
+   PAGE / APPLICATION BACKGROUND
+========================================================================== */
+
+.dwt-app {
+  min-height: 100vh;
+  background: var(--dwt-bg);
+  color: var(--dwt-ink);
+}
+
+.dwt-page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--dwt-page-padding);
+}
+
+
+/* ==========================================================================
+   PRIMARY VISUAL CARD
+========================================================================== */
+
+.dwt-visual-card {
+  position: relative;
+  overflow: hidden;
+
+  width: 100%;
+
+  border-radius: var(--dwt-radius-xl);
+  border: 1px solid var(--dwt-border-soft);
+
+  background: var(--dwt-surface);
+
+  box-shadow: var(--dwt-shadow-sm);
+
+  transition:
+    transform var(--dwt-transition),
+    border-color var(--dwt-transition),
+    box-shadow var(--dwt-transition);
+}
+
+
+/* Soft blue promotional/card variant */
+
+.dwt-visual-card-blue {
+  background:
+    linear-gradient(
+      135deg,
+      #F0FAFF 0%,
+      #EAF7FC 55%,
+      #FFFFFF 100%
+    );
+
+  border-color: rgba(22, 169, 216, 0.10);
+}
+
+
+/* Yellow promotional variant */
+
+.dwt-visual-card-yellow {
+  background:
+    linear-gradient(
+      135deg,
+      #FFFDE7 0%,
+      #FFF9C4 100%
+    );
+
+  border-color: rgba(255, 229, 0, 0.20);
+}
+
+
+/* Blue branded variant */
+
+.dwt-visual-card-primary {
+  background:
+    linear-gradient(
+      135deg,
+      var(--dwt-primary-dark) 0%,
+      var(--dwt-primary) 100%
+    );
+
+  border-color: transparent;
+  color: #FFFFFF;
+}
+
+
+/* ==========================================================================
+   CARD HOVER
+========================================================================== */
+
+.dwt-visual-card:hover {
+  transform: translateY(-2px);
+
+  border-color: rgba(0, 87, 184, 0.16);
+
+  box-shadow: var(--dwt-shadow-md);
+}
+
+
+/* Don't lift static cards */
+
+.dwt-visual-card-static:hover {
+  transform: none;
+  box-shadow: var(--dwt-shadow-sm);
+}
+
+
+/* ==========================================================================
+   ASPECT RATIO
+========================================================================== */
+
+.dwt-16-9 {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+}
+
+.dwt-visual-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dwt-visual-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+
+/* ==========================================================================
+   CONTENT CARD
+========================================================================== */
+
+.dwt-card {
+  background: var(--dwt-surface);
+  border: 1px solid var(--dwt-border-soft);
+
+  border-radius: var(--dwt-radius-xl);
+
+  padding: var(--dwt-card-padding);
+
+  box-shadow: var(--dwt-shadow-sm);
+}
+
+
+/* ==========================================================================
+   SMALL CARD / TILE
+========================================================================== */
+
+.dwt-tile {
+  background: #FFFFFF;
+
+  border: 1px solid var(--dwt-border-soft);
+  border-radius: var(--dwt-radius-lg);
+
+  padding: 16px;
+
+  box-shadow: var(--dwt-shadow-xs);
+
+  transition:
+    transform var(--dwt-transition),
+    box-shadow var(--dwt-transition),
+    border-color var(--dwt-transition);
+}
+
+.dwt-tile:hover {
+  transform: translateY(-1px);
+
+  border-color: rgba(0, 87, 184, 0.15);
+
+  box-shadow: var(--dwt-shadow-sm);
+}
+
+
+/* ==========================================================================
+   PRIMARY BUTTON
+========================================================================== */
+
+.dwt-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  min-height: 48px;
+
+  padding: 0 22px;
+
+  border: none;
+  border-radius: var(--dwt-radius-pill);
+
+  background: var(--dwt-primary);
+  color: #FFFFFF;
+
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+
+  cursor: pointer;
+
+  box-shadow: var(--dwt-shadow-blue);
+
+  transition:
+    background var(--dwt-transition-fast),
+    transform var(--dwt-transition-fast),
+    box-shadow var(--dwt-transition-fast);
+}
+
+.dwt-btn-primary:hover {
+  background: var(--dwt-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(0, 87, 184, 0.22);
+}
+
+.dwt-btn-primary:active {
+  transform: translateY(0);
+  box-shadow: var(--dwt-shadow-sm);
+}
+
+
+/* ==========================================================================
+   SECONDARY BUTTON
+========================================================================== */
+
+.dwt-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  min-height: 46px;
+
+  padding: 0 20px;
+
+  border: 1px solid var(--dwt-border);
+
+  border-radius: var(--dwt-radius-pill);
+
+  background: #FFFFFF;
+  color: var(--dwt-primary);
+
+  font-size: 15px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background var(--dwt-transition),
+    border-color var(--dwt-transition),
+    transform var(--dwt-transition);
+}
+
+.dwt-btn-secondary:hover {
+  background: var(--dwt-blue-50);
+  border-color: rgba(0, 87, 184, 0.20);
+  transform: translateY(-1px);
+}
+
+
+/* ==========================================================================
+   CYAN BUTTON
+========================================================================== */
+
+.dwt-btn-cyan {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 46px;
+
+  padding: 0 20px;
+
+  border: none;
+  border-radius: var(--dwt-radius-pill);
+
+  background: var(--dwt-cyan);
+  color: #FFFFFF;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background var(--dwt-transition),
+    transform var(--dwt-transition);
+}
+
+.dwt-btn-cyan:hover {
+  background: var(--dwt-cyan-dark);
+  transform: translateY(-1px);
+}
+
+
+/* ==========================================================================
+   BADGES / PILLS
+========================================================================== */
+
+.dwt-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  min-height: 28px;
+
+  padding: 4px 11px;
+
+  border-radius: var(--dwt-radius-pill);
+
+  background: var(--dwt-blue-100);
+
+  color: var(--dwt-primary);
+
+  border: 1px solid rgba(0, 87, 184, 0.10);
+
+  font-size: 12px;
+  font-weight: 700;
+
+  letter-spacing: 0;
+
+  text-transform: none;
+}
+
+
+.dwt-badge-cyan {
+  background: var(--dwt-cyan-100);
+  color: var(--dwt-cyan-dark);
+  border-color: rgba(22, 169, 216, 0.12);
+}
+
+
+.dwt-badge-success {
+  background: #ECFDF5;
+  color: var(--dwt-success-dark);
+  border-color: rgba(16, 185, 129, 0.14);
+}
+
+
+.dwt-badge-yellow {
+  background: #FFFBE6;
+  color: #8A7000;
+  border-color: rgba(255, 229, 0, 0.20);
+}
+
+
+/* ==========================================================================
+   ICON CONTAINERS
+========================================================================== */
+
+.dwt-icon-box {
+  width: 46px;
+  height: 46px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 14px;
+
+  background: var(--dwt-blue-50);
+
+  color: var(--dwt-primary);
+
+  border: 1px solid rgba(0, 87, 184, 0.08);
+}
+
+
+.dwt-icon-box-cyan {
+  background: var(--dwt-cyan-50);
+  color: var(--dwt-cyan-dark);
+}
+
+
+.dwt-icon-box-yellow {
+  background: #FFFDE7;
+  color: #8A7000;
+}
+
+
+.dwt-icon-box-success {
+  background: #ECFDF5;
+  color: var(--dwt-success-dark);
+}
+
+
+/* ==========================================================================
+   SECTION HEADER
+========================================================================== */
+
+.dwt-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 16px;
+
+  margin-bottom: 16px;
+}
+
+
+.dwt-section-title {
+  margin: 0;
+
+  color: var(--dwt-ink);
+
+  font-size: 24px;
+  font-weight: 800;
+
+  letter-spacing: -0.025em;
+}
+
+
+.dwt-section-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  color: var(--dwt-cyan);
+
+  font-size: 15px;
+  font-weight: 700;
+
+  text-decoration: none;
+}
+
+
+/* ==========================================================================
+   HEADINGS
+========================================================================== */
+
+.dwt-heading-xl {
+  margin: 0;
+
+  color: var(--dwt-ink);
+
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 800;
+
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+
+
+.dwt-heading-lg {
+  margin: 0;
+
+  color: var(--dwt-ink);
+
+  font-size: 28px;
+  font-weight: 800;
+
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+
+.dwt-heading-md {
+  margin: 0;
+
+  color: var(--dwt-ink);
+
+  font-size: 20px;
+  font-weight: 750;
+
+  line-height: 1.25;
+}
+
+
+.dwt-body {
+  color: var(--dwt-secondary);
+
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+
+.dwt-muted {
+  color: var(--dwt-muted);
+}
+
+
+/* ==========================================================================
+   INPUTS
+========================================================================== */
+
+.dwt-input {
+  width: 100%;
+
+  min-height: 48px;
+
+  padding: 0 16px;
+
+  border: 1px solid var(--dwt-border);
+
+  border-radius: 14px;
+
+  background: #FFFFFF;
+
+  color: var(--dwt-ink);
+
+  font-size: 15px;
+
+  outline: none;
+
+  transition:
+    border-color var(--dwt-transition),
+    box-shadow var(--dwt-transition);
+}
+
+.dwt-input::placeholder {
+  color: #A0A5AD;
+}
+
+.dwt-input:focus {
+  border-color: var(--dwt-primary);
+
+  box-shadow:
+    0 0 0 3px rgba(0, 87, 184, 0.10);
+}
+
+
+/* ==========================================================================
+   DIVIDERS
+========================================================================== */
+
+.dwt-divider {
+  width: 100%;
+  height: 1px;
+
+  background: var(--dwt-border-soft);
+}
+
+
+/* ==========================================================================
+   PROMOTIONAL BANNER
+========================================================================== */
+
+.dwt-promo {
+  position: relative;
+  overflow: hidden;
+
+  border-radius: var(--dwt-radius-xl);
+
+  padding: 20px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #EAF9FD 0%,
+      #DFF6FC 45%,
+      #F8FDFF 100%
+    );
+
+  border: 1px solid rgba(22, 169, 216, 0.08);
+}
+
+
+/* Yellow promotional banner */
+
+.dwt-promo-yellow {
+  background:
+    linear-gradient(
+      135deg,
+      #FFFDE7 0%,
+      #FFF9C4 100%
+    );
+
+  border-color: rgba(255, 229, 0, 0.12);
+}
+
+
+/* ==========================================================================
+   FLOATING BOTTOM NAVIGATION
+========================================================================== */
+
+.dwt-bottom-nav {
+  position: fixed;
+
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+
+  z-index: 100;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+
+  min-height: 72px;
+
+  padding: 8px 12px;
+
+  background: rgba(255, 255, 255, 0.96);
+
+  border: 1px solid rgba(17, 24, 39, 0.06);
+
+  border-radius: 36px;
+
+  box-shadow:
+    0 10px 35px rgba(17, 24, 39, 0.14),
+    0 2px 8px rgba(17, 24, 39, 0.06);
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+
+.dwt-bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 4px;
+
+  min-width: 58px;
+
+  color: var(--dwt-secondary);
+
+  font-size: 11px;
+  font-weight: 600;
+
+  transition:
+    color var(--dwt-transition),
+    transform var(--dwt-transition);
+}
+
+
+.dwt-bottom-nav-item svg {
+  width: 24px;
+  height: 24px;
+}
+
+
+.dwt-bottom-nav-item.active {
+  color: var(--dwt-primary);
+}
+
+
+.dwt-bottom-nav-item:hover {
+  transform: translateY(-1px);
+  color: var(--dwt-primary);
+}
+
+
+/* ==========================================================================
+   STAT / METRIC
+========================================================================== */
+
+.dwt-stat {
+  padding: 18px;
+
+  border-radius: var(--dwt-radius-lg);
+
+  background: #FFFFFF;
+
+  border: 1px solid var(--dwt-border-soft);
+
+  box-shadow: var(--dwt-shadow-xs);
+}
+
+
+.dwt-stat-value {
+  margin-top: 6px;
+
+  color: var(--dwt-ink);
+
+  font-size: 28px;
+  font-weight: 800;
+
+  letter-spacing: -0.03em;
+}
+
+
+.dwt-stat-label {
+  color: var(--dwt-secondary);
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+
+/* ==========================================================================
+   5-SECOND ANIMATION SYSTEM
+========================================================================== */
+
+
+/* Subtle stage transition */
+
+@keyframes dwt-stage-fade {
+  0%, 18% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+
+  20%, 98% {
+    opacity: 0.35;
+    transform: scale(0.985) translateY(2px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+
+/* Soft blue pulse */
+
+@keyframes dwt-pulse-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 0 0 rgba(0, 87, 184, 0);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 5px rgba(22, 169, 216, 0.08),
+      0 6px 18px rgba(0, 87, 184, 0.10);
+  }
+}
+
+
+/* Flow line */
+
+@keyframes dwt-dash-flow {
+  0% {
+    stroke-dashoffset: 60;
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+
+/* Checkmark */
+
+@keyframes dwt-check-pop {
+  0%, 65% {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  72% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+
+  78% {
+    transform: scale(0.97);
+    opacity: 1;
+  }
+
+  85%, 96% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+
+/* Balance reduction */
+
+@keyframes dwt-balance-reduce {
+  0%, 20% {
+    width: 100%;
+    opacity: 1;
+  }
+
+  45% {
+    width: 75%;
+  }
+
+  65% {
+    width: 35%;
+  }
+
+  80%, 95% {
+    width: 0%;
+    opacity: 0.35;
+  }
+
+  100% {
+    width: 100%;
+    opacity: 1;
+  }
+}
+
+
+/* Inventory */
+
+@keyframes dwt-stock-pulse {
+  0%, 25% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  35% {
+    transform: translateY(-4px);
+    opacity: 0.6;
+  }
+
+  50%, 85% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+
+/* Chart */
+
+@keyframes dwt-chart-grow {
+  0%, 10% {
+    transform: scaleY(0.15);
+    opacity: 0.3;
+  }
+
+  50%, 85% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scaleY(0.15);
+    opacity: 0.3;
+  }
+}
+
+
+/* ==========================================================================
+   ANIMATION UTILITIES
+========================================================================== */
+
+.dwt-animate-dash {
+  stroke-dasharray: 6 4;
+  animation: dwt-dash-flow 3s linear infinite;
+}
+
+
+.dwt-animate-check {
+  transform-origin: center;
+  animation: dwt-check-pop 5s ease-in-out infinite;
+}
+
+
+.dwt-animate-chart {
+  transform-origin: bottom;
+  animation:
+    dwt-chart-grow
+    5s cubic-bezier(0.4, 0, 0.2, 1)
+    infinite;
+}
+
+
+.dwt-animate-pulse {
+  animation:
+    dwt-pulse-glow
+    3s ease-in-out
+    infinite;
+}
+
+
+/* ==========================================================================
+   DARK MODE
+========================================================================== */
+
+.dark {
+  --dwt-bg: #0F172A;
+  --dwt-surface: #111827;
+  --dwt-surface-soft: #172033;
+
+  --dwt-ink: #F8FAFC;
+  --dwt-secondary: #CBD5E1;
+  --dwt-muted: #94A3B8;
+
+  --dwt-border: #263449;
+  --dwt-border-soft: #1E293B;
+
+  --dwt-blue-50: #102442;
+  --dwt-blue-100: #12315A;
+
+  --dwt-cyan-50: #0D2A36;
+  --dwt-cyan-100: #123E4C;
+}
+
+
+.dark .dwt-visual-card,
+.dark .dwt-card,
+.dark .dwt-tile,
+.dark .dwt-stat {
+  background: var(--dwt-surface);
+
+  border-color: var(--dwt-border);
+
+  box-shadow:
+    0 6px 24px rgba(0, 0, 0, 0.25);
+}
+
+
+.dark .dwt-input {
+  background: var(--dwt-surface);
+  color: var(--dwt-ink);
+  border-color: var(--dwt-border);
+}
+
+
+.dark .dwt-bottom-nav {
+  background: rgba(17, 24, 39, 0.96);
+  border-color: rgba(255, 255, 255, 0.08);
+
+  box-shadow:
+    0 10px 35px rgba(0, 0, 0, 0.40);
+}
+
+
+/* ==========================================================================
+   MOBILE OPTIMIZATION
+========================================================================== */
+
+@media (max-width: 640px) {
+
+  :root {
+    --dwt-page-padding: 16px;
+    --dwt-card-padding: 18px;
+  }
+
+  .dwt-section-title {
+    font-size: 22px;
+  }
+
+  .dwt-heading-lg {
+    font-size: 24px;
+  }
+
+  .dwt-heading-md {
+    font-size: 18px;
+  }
+
+  .dwt-visual-card,
+  .dwt-card {
+    border-radius: 24px;
+  }
+
+  .dwt-bottom-nav {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+
+    min-height: 68px;
+  }
+}
+
+
+/* ==========================================================================
+   ACCESSIBILITY
+========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+.payment-sparkle-burst {
+  position: absolute;
+  inset: -32px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.sparkle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0);
+  animation: payment-sparkle-burst 850ms ease-out forwards;
+}
+
+.sparkle-1 {
+  color: #0057B8;
+  --x: -32px;
+  --y: -28px;
+  --scale: 1.15;
+}
+
+.sparkle-2 {
+  color: #16A9D8;
+  --x: 32px;
+  --y: -30px;
+  --scale: 1;
+}
+
+.sparkle-3 {
+  color: #F59E0B;
+  --x: -40px;
+  --y: 0px;
+  --scale: 1.2;
+}
+
+.sparkle-4 {
+  color: #10B981;
+  --x: 40px;
+  --y: 2px;
+  --scale: 1;
+}
+
+.sparkle-5 {
+  color: #8B5CF6;
+  --x: -27px;
+  --y: 32px;
+  --scale: 1.1;
+}
+
+.sparkle-6 {
+  color: #F97316;
+  --x: 28px;
+  --y: 34px;
+  --scale: 1.15;
+}
+
+.sparkle-7 {
+  color: #EF4444;
+  --x: -15px;
+  --y: -40px;
+  --scale: 1.4;
+}
+
+.sparkle-8 {
+  color: #06B6D4;
+  --x: 15px;
+  --y: 42px;
+  --scale: 1.3;
+}
+
+@keyframes payment-sparkle-burst {
+  0% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      translate(0, 0)
+      scale(0);
+  }
+
+  20% {
+    opacity: 1;
+    transform:
+      translate(-50%, -50%)
+      translate(calc(var(--x) * 0.45), calc(var(--y) * 0.45))
+      scale(0.8);
+  }
+
+  70% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      translate(var(--x), var(--y))
+      scale(var(--scale));
+  }
+}
+.payment-sparkle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0);
+  animation: payment-sparkle-burst 850ms ease-out forwards;
+}
+
+.sparkle-1 {
+  color: #0057B8;
+  --x: -38px;
+  --y: -32px;
+  --scale: 1.2;
+}
+
+.sparkle-2 {
+  color: #16A9D8;
+  --x: 40px;
+  --y: -34px;
+  --scale: 1.1;
+}
+
+.sparkle-3 {
+  color: #F59E0B;
+  --x: -48px;
+  --y: 0;
+  --scale: 1.3;
+}
+
+.sparkle-4 {
+  color: #10B981;
+  --x: 48px;
+  --y: 2px;
+  --scale: 1.15;
+}
+
+.sparkle-5 {
+  color: #8B5CF6;
+  --x: -35px;
+  --y: 38px;
+  --scale: 1.2;
+}
+
+.sparkle-6 {
+  color: #F97316;
+  --x: 36px;
+  --y: 40px;
+  --scale: 1.2;
+}
+
+.sparkle-7 {
+  color: #EF4444;
+  --x: -14px;
+  --y: -48px;
+  --scale: 1.5;
+}
+
+.sparkle-8 {
+  color: #06B6D4;
+  --x: 16px;
+  --y: 50px;
+  --scale: 1.4;
+}
+
+@keyframes payment-sparkle-burst {
+  0% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      translate(0, 0)
+      scale(0);
+  }
+
+  20% {
+    opacity: 1;
+    transform:
+      translate(-50%, -50%)
+      translate(
+        calc(var(--x) * 0.35),
+        calc(var(--y) * 0.35)
+      )
+      scale(0.9);
+  }
+
+  70% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      translate(var(--x), var(--y))
+      scale(var(--scale));
+  }
+}
+.animate-payment-content {
+  animation: payment-content-in 500ms ease-out both;
+}
+
+@keyframes payment-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.payment-sparkle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0;
+
+  transform:
+    translate(-50%, -50%)
+    translate(0, 0)
+    scale(0);
+
+  animation: payment-sparkle-burst 900ms ease-out forwards;
+}
+
+.sparkle-1 {
+  color: #0057B8;
+  --x: -42px;
+  --y: -34px;
+  --scale: 1.25;
+}
+
+.sparkle-2 {
+  color: #16A9D8;
+  --x: 44px;
+  --y: -36px;
+  --scale: 1.2;
+}
+
+.sparkle-3 {
+  color: #F59E0B;
+  --x: -52px;
+  --y: 0;
+  --scale: 1.35;
+}
+
+.sparkle-4 {
+  color: #10B981;
+  --x: 52px;
+  --y: 2px;
+  --scale: 1.2;
+}
+
+.sparkle-5 {
+  color: #8B5CF6;
+  --x: -38px;
+  --y: 40px;
+  --scale: 1.25;
+}
+
+.sparkle-6 {
+  color: #F97316;
+  --x: 40px;
+  --y: 42px;
+  --scale: 1.25;
+}
+
+.sparkle-7 {
+  color: #EF4444;
+  --x: -12px;
+  --y: -52px;
+  --scale: 1.5;
+}
+
+.sparkle-8 {
+  color: #06B6D4;
+  --x: 14px;
+  --y: 54px;
+  --scale: 1.45;
+}
+
+@keyframes payment-sparkle-burst {
+  0% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      translate(0, 0)
+      scale(0);
+  }
+
+  15% {
+    opacity: 1;
+    transform:
+      translate(-50%, -50%)
+      translate(
+        calc(var(--x) * 0.25),
+        calc(var(--y) * 0.25)
+      )
+      scale(0.8);
+  }
+
+  65% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      translate(var(--x), var(--y))
+      scale(var(--scale));
+  }
+}

@@ -6,6 +6,8 @@ import { Badge, PageHeader, Modal, Spinner, EmptyState, Pagination, TableSkeleto
 import { STOCK_STATUS } from '../constants'
 import toast from 'react-hot-toast'
 import BarcodePrintModal from '../components/BarcodePrintModal'
+import { InformationalBanner } from '../components/visual-content'
+import { InventoryWorkflowVisual } from '../components/visuals'
 import {
   Boxes,
   RefreshCw,
@@ -107,6 +109,7 @@ export default function Stock() {
   const [historyList, setHistoryList] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [barcodeProduct, setBarcodeProduct] = useState(null)
+  const [workflowModal, setWorkflowModal] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -422,6 +425,16 @@ export default function Stock() {
         <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
           <button
             type="button"
+            onClick={() => setWorkflowModal(true)}
+            className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
+            title="View Real-Time Inventory Lifecycle"
+          >
+            <Boxes size={13} className="text-[#0057B8] dark:text-sky-400" />
+            <span>Workflow</span>
+          </button>
+
+          <button
+            type="button"
             onClick={exportStockCSV}
             disabled={loading || products.length === 0}
             className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 disabled:opacity-50"
@@ -443,6 +456,7 @@ export default function Stock() {
           </button>
         </div>
       </div>
+
 
       {/* =====================================================
           INVENTORY KPI STRIP (Ultra-compact ~70-85px)
@@ -675,13 +689,12 @@ export default function Stock() {
         {loading ? (
           <TableSkeleton rows={10} cols={8} label="Loading inventory stock" />
         ) : filteredProducts.length === 0 ? (
-          <div className="px-4 py-16">
+          <div className="px-4 py-12 flex flex-col items-center">
+            {!isFilterActive && (
+              <InventoryWorkflowVisual className="w-full max-w-md mb-4 border-0 shadow-none bg-transparent" />
+            )}
             <EmptyState
-              message={
-                isFilterActive
-                  ? 'No inventory items match your search or filter criteria'
-                  : 'No products found in inventory'
-              }
+              
               action={
                 isFilterActive ? (
                   <button
@@ -1025,6 +1038,10 @@ export default function Stock() {
           </div>
         )}
       </div>
+      <InformationalBanner
+        tip="Pro Tip: Use barcode scanners to adjust stock counts instantly, or download the Excel inventory template to perform batch stock updates."
+        className="mt-4"
+      />
 
       {/* =====================================================
           STOCK ADJUSTMENT MODAL
@@ -1322,6 +1339,18 @@ export default function Stock() {
         onClose={() => setBarcodeProduct(null)}
         product={barcodeProduct}
       />
+
+      {/* Real-time Inventory Workflow Visual Modal */}
+      {workflowModal && (
+        <Modal
+          isOpen={workflowModal}
+          onClose={() => setWorkflowModal(false)}
+          title="Real-Time Inventory Workflow"
+          size="lg"
+        >
+          <InventoryWorkflowVisual className="w-full border-0 shadow-none p-0" />
+        </Modal>
+      )}
     </div>
   )
 }

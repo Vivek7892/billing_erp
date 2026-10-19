@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import api from '../api'
 import { PageHeader, Spinner } from '../components/UI'
+import { InformationalBanner } from '../components/visual-content'
+import { ReportsAnalyticsVisual } from '../components/visuals'
 import {
   TrendingUp,
   Package,
@@ -16,6 +18,7 @@ import {
   AlertCircle,
   Info,
   RotateCcw,
+  X,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -201,6 +204,7 @@ export default function Reports() {
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState('')
   const [error, setError] = useState('')
+  const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false)
 
   const activeRequestRef = useRef(0)
   const abortControllerRef = useRef(null)
@@ -420,6 +424,16 @@ export default function Reports() {
           <div className="grid w-full grid-cols-2 gap-1.5 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-2">
             <button
               type="button"
+              onClick={() => setAnalyticsModalOpen(true)}
+              className="btn-secondary inline-flex h-8 min-w-0 items-center justify-center gap-1 px-2 text-[11px] font-semibold sm:h-9 sm:gap-1.5 sm:px-3 sm:text-xs"
+              title="View Real-Time Analytics Engine Lifecycle"
+            >
+              <TrendingUp size={14} className="text-[#0057B8] dark:text-sky-400" />
+              <span className="truncate">Analytics Flow</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => handleExport('pdf')}
               disabled={Boolean(exporting) || loading}
               className="btn-secondary inline-flex h-8 min-w-0 items-center justify-center gap-1 px-2 text-[11px] font-semibold sm:h-9 sm:gap-1.5 sm:px-3 sm:text-xs"
@@ -456,6 +470,7 @@ export default function Reports() {
           </div>
         }
       />
+
 
       {/* =====================================================
           CATEGORY NAVIGATION TABS
@@ -643,6 +658,10 @@ export default function Reports() {
           </div>
         ) : null}
       </div>
+      <InformationalBanner
+        tip="Pro Tip: You can export CA-ready GSTR-1, GSTR-3B, and Balance Sheets in Excel and PDF formats anytime."
+        className="my-3"
+      />
       <footer className="flex flex-col gap-1 border-t border-[var(--line)] pt-3 text-[11px] text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between">
         <span>{tab === 'customers' ? 'Receivables are current as of today.' : `Reporting period: ${formatDateInput(appliedDates.start)} – ${formatDateInput(appliedDates.end)}`}</span>
         <span>Amounts are shown in INR</span>
@@ -1685,6 +1704,39 @@ function ExpenseReportView({ data }) {
                 </tr>
               </tfoot>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Executive Analytics Engine Visual Modal */}
+      {analyticsModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/65 backdrop-blur-xs"
+          onClick={() => setAnalyticsModalOpen(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="relative w-full max-w-xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-5 overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-[#0057B8]/10 text-[#0057B8] dark:text-sky-400">
+                  <TrendingUp size={16} />
+                </span>
+                <h3 className="text-sm font-bold text-[var(--ink)]">Executive Analytics Engine</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAnalyticsModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                aria-label="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <ReportsAnalyticsVisual className="w-full border-0 shadow-none p-0" />
           </div>
         </div>
       )}

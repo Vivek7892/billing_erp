@@ -4,7 +4,7 @@ import { Eye, EyeOff, LockKeyhole, ShieldCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../AuthContext'
 import { getRememberMePreference } from '../services/tokenStorage'
-import retailVisual from '../assets/login-retail-visual.png'
+import { LoginIllustration } from '../components/visuals'
 import './Login.css'
 
 export default function Login() {
@@ -179,21 +179,18 @@ export default function Login() {
         </div>
       </section>
 
-      <aside className="login-visual" aria-label="Dreamwithtech retail management system">
-        <div className="login-visual-artwork">
-          <img
-            src={retailVisual}
-            alt="Dreamwithtech retail ERP dashboard on a desktop monitor, with rice, flour and cooking oil products."
-          />
+      <aside className="login-visual" aria-label="Dreamwithtech Billing ERP System">
+        <div className="login-visual-artwork !p-0">
+          <LoginIllustration />
         </div>
         <div className="login-visual-caption">
           <span>ABOUT DREAMWITHTECH</span>
-          <h2>Retail operations, connected.</h2>
+          <h2>Enterprise operations, connected.</h2>
           <p>
-            Dreamwithtech POS &amp; Billing ERP brings billing, inventory,
-            customers, payments and reports into one workspace.
+            Dreamwithtech Billing ERP brings billing, inventory,
+            customers, payments, credit collection and analytics into one workspace.
           </p>
-          <small>Operated by ShopEase Retail Technologies with Sri Balaji Store.</small>
+          <small>Dreamwithtech Enterprise Technologies &copy; {new Date().getFullYear()}</small>
           <a href="mailto:connectwithvvivek@gmail.com">Contact support</a>
         </div>
       </aside>

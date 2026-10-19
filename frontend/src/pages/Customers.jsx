@@ -11,6 +11,7 @@ import {
   TableSkeleton,
   EmptyState,
 } from '../components/UI'
+import { CreditCollectedVisual, CustomerEmptyIllustration } from '../components/visuals'
 import toast from 'react-hot-toast'
 import CommunicationHistory from '../components/CommunicationHistory'
 import { QRCodeSVG } from 'qrcode.react'
@@ -120,10 +121,11 @@ export function CustomerCollectPaymentModal({
   onClose,
   onSuccess,
 }) {
-  const modalRef = useRef(null)
   const outstanding = Number(customer?.outstanding_amount || 0)
 
-  const [amount, setAmount] = useState(outstanding > 0 ? String(outstanding) : '')
+  const [amount, setAmount] = useState(
+    outstanding > 0 ? String(outstanding) : ''
+  )
   const [method, setMethod] = useState('cash')
   const [reference, setReference] = useState('')
   const [notes, setNotes] = useState('')
@@ -132,49 +134,72 @@ export function CustomerCollectPaymentModal({
   const [copiedUpi, setCopiedUpi] = useState(false)
 
   useEffect(() => {
-    if (customer && outstanding > 0) {
-      setAmount(String(outstanding))
-      setError('')
-      setReference('')
-      setNotes('')
-    }
+    if (!customer) return
+
+    setAmount(outstanding > 0 ? String(outstanding) : '')
+    setMethod('cash')
+    setReference('')
+    setNotes('')
+    setError('')
+    setCopiedUpi(false)
   }, [customer, outstanding])
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose?.()
+    const handleKeyDown = event => {
+      if (event.key === 'Escape' && !submitting) {
+        onClose?.()
+      }
     }
+
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [onClose, submitting])
 
   if (!customer) return null
 
-  const handleAmountChange = (val) => {
-    setAmount(val)
+  const amountNum = parseFloat(amount) || 0
+
+  const handleAmountChange = value => {
+    setAmount(value)
     setError('')
-    const num = parseFloat(val)
-    if (isNaN(num) || num <= 0) {
-      setError('Amount must be greater than zero')
-    } else if (num > outstanding) {
-      setError(`Amount cannot exceed outstanding balance (${currency(outstanding)})`)
+
+    const num = parseFloat(value)
+
+    if (Number.isNaN(num) || num <= 0) {
+      setError('Enter an amount greater than zero.')
+      return
+    }
+
+    if (num > outstanding) {
+      setError(
+        `Amount cannot exceed ${currency(outstanding)}.`
+      )
     }
   }
 
-  const handleSubmit = async (e) => {
-    e?.preventDefault?.()
+  const handleSubmit = async event => {
+    event?.preventDefault?.()
+
     const num = parseFloat(amount)
-    if (isNaN(num) || num <= 0) {
-      setError('Please enter a valid amount greater than zero.')
+
+    if (Number.isNaN(num) || num <= 0) {
+      setError('Enter a valid payment amount.')
       return
     }
+
     if (num > outstanding) {
-      setError(`Amount cannot exceed outstanding balance (${currency(outstanding)}).`)
+      setError(
+        `Amount cannot exceed ${currency(outstanding)}.`
+      )
       return
     }
 
     setSubmitting(true)
     setError('')
+
     try {
       const res = await customerService.recordPayment(customer.id, {
         amount: num,
@@ -182,209 +207,536 @@ export function CustomerCollectPaymentModal({
         reference: reference.trim(),
         notes: notes.trim(),
       })
-      toast.success(`Payment of ${currency(num)} recorded for ${customer.name}!`)
-      window.dispatchEvent(new CustomEvent('pos:payment-collected', { detail: res }))
+
+      toast.success(
+        `${currency(num)} payment recorded for ${customer.name}.`
+      )
+
+      window.dispatchEvent(
+        new CustomEvent('pos:payment-collected', {
+          detail: res,
+        })
+      )
+
       onSuccess?.(res)
-      onClose()
+      onClose?.()
     } catch (err) {
-      const msg = err?.response?.data?.detail || err?.response?.data?.amount || err?.message || 'Failed to record customer payment'
-      setError(typeof msg === 'string' ? msg : JSON.stringify(msg))
-      toast.error('Failed to record customer payment')
+      const msg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.amount ||
+        err?.message ||
+        'Failed to record customer payment.'
+
+      setError(
+        typeof msg === 'string'
+          ? msg
+          : JSON.stringify(msg)
+      )
+
+      toast.error('Failed to record customer payment.')
     } finally {
       setSubmitting(false)
     }
   }
 
-  // Payment methods: ONLY Cash, UPI, and Card. Online/Bank is removed!
   const METHODS = [
-    { id: 'cash', label: 'Cash', icon: IndianRupee },
-    { id: 'upi', label: 'UPI / QR', icon: QrCode },
-    { id: 'card', label: 'Card / POS', icon: CreditCard },
+    {
+      id: 'cash',
+      label: 'Cash',
+      icon: IndianRupee,
+    },
+    {
+      id: 'upi',
+      label: 'UPI',
+      icon: QrCode,
+    },
+    {
+      id: 'card',
+      label: 'Card',
+      icon: CreditCard,
+    },
   ]
 
   const upiId = shopSettings?.shop_upi_id || ''
-  const merchantName = shopSettings?.upi_merchant_name || shopName || 'Sri Balaji Store'
-  const amountNum = parseFloat(amount) || 0
-  const effectiveUpiId = upiId || 'merchant@upi'
-  const upiNote = `Credit Pay - ${customer.name}`
-  const upiUri = `upi://pay?pa=${encodeURIComponent(effectiveUpiId)}&pn=${encodeURIComponent(merchantName)}&am=${amountNum > 0 ? amountNum.toFixed(2) : '1.00'}&cu=INR&tn=${encodeURIComponent(upiNote)}`
+  const merchantName =
+    shopSettings?.upi_merchant_name ||
+    shopName ||
+    'Sri Balaji Store'
 
-  const handleCopyUpi = () => {
-    if (!effectiveUpiId) return
-    navigator.clipboard.writeText(effectiveUpiId)
-    setCopiedUpi(true)
-    toast.success('UPI ID copied')
-    setTimeout(() => setCopiedUpi(false), 2000)
+  const effectiveUpiId =
+    upiId || 'merchant@upi'
+
+  const upiNote = `Credit Pay - ${customer.name}`
+
+  const upiUri =
+    `upi://pay?pa=${encodeURIComponent(effectiveUpiId)}` +
+    `&pn=${encodeURIComponent(merchantName)}` +
+    `&am=${amountNum > 0 ? amountNum.toFixed(2) : '1.00'}` +
+    `&cu=INR` +
+    `&tn=${encodeURIComponent(upiNote)}`
+
+  const handleCopyUpi = async () => {
+    try {
+      await navigator.clipboard.writeText(effectiveUpiId)
+      setCopiedUpi(true)
+      toast.success('UPI ID copied')
+
+      setTimeout(() => {
+        setCopiedUpi(false)
+      }, 1800)
+    } catch {
+      toast.error('Unable to copy UPI ID')
+    }
   }
 
   return (
     <Modal
       open={Boolean(customer)}
-      onClose={onClose}
-      title="Collect Customer Payment"
+      onClose={() => !submitting && onClose?.()}
+      title="Collect Payment"
       subtitle={`${customer.name}${customer.mobile ? ` · ${customer.mobile}` : ''}`}
       size="md"
       footer={
-        <div className="flex w-full items-center justify-end gap-2.5">
+        <div className="flex w-full gap-2">
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="min-h-[44px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+            className="
+              min-h-[44px]
+              flex-1
+              rounded-xl
+              border
+              border-[var(--line)]
+              bg-[var(--surface)]
+              px-4
+              py-2.5
+              text-xs
+              font-semibold
+              text-[var(--ink)]
+              hover:bg-[var(--surface-hover)]
+              transition
+              disabled:opacity-50
+            "
           >
             Cancel
           </button>
+
           <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={submitting || Boolean(error) || !amount}
-            className="min-h-[44px] flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-6 py-2 text-xs font-bold text-white shadow-sm disabled:opacity-50 transition"
+            type="submit"
+            form="customer-payment-form"
+            disabled={
+              submitting ||
+              !amount ||
+              Boolean(error)
+            }
+            className="
+              min-h-[44px]
+              flex-[1.5]
+              inline-flex
+              items-center
+              justify-center
+              gap-2
+              rounded-xl
+              bg-emerald-600
+              px-4
+              py-2.5
+              text-xs
+              font-bold
+              text-white
+              shadow-sm
+              hover:bg-emerald-700
+              active:bg-emerald-800
+              transition
+              disabled:opacity-50
+            "
           >
             {submitting ? (
               <>
                 <Spinner size={14} />
-                <span>Recording…</span>
+                <span>Recording...</span>
               </>
             ) : (
               <>
-                <IndianRupee size={14} />
-                <span>Record {currency(parseFloat(amount) || 0)}</span>
+                <CheckCircle2 size={15} />
+                <span>
+                  Record {currency(amountNum)}
+                </span>
               </>
             )}
           </button>
         </div>
       }
     >
+      <form
+        id="customer-payment-form"
+        onSubmit={handleSubmit}
+        className="
+          w-full
+          max-h-[calc(100dvh-150px)]
+          overflow-y-auto
+          px-3
+          py-3
+          sm:px-4
+          sm:py-4
+          space-y-3
+        "
+      >
 
-        {/* Content */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-3.5">
-          {/* Outstanding banner */}
-          <div className="grid grid-cols-2 gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3">
-            <div className="rounded-lg bg-[var(--surface)] p-2 border border-[var(--line)] text-center">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted)] block">Credit Limit</span>
-              <p className="mt-0.5 font-mono text-sm font-semibold text-[var(--ink)]">{currency(customer.credit_limit || 0)}</p>
-            </div>
-            <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 p-2 border border-amber-300 dark:border-amber-700 text-center">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 block">Outstanding Due</span>
-              <p className="mt-0.5 font-mono text-sm font-bold text-amber-600 dark:text-amber-400">{currency(outstanding)}</p>
-            </div>
-          </div>
+        {/* Compact animation */}
+        <CreditCollectedVisual
+          customerName={customer.name}
+          className="mb-1"
+        />
 
-          {/* Amount */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold text-[var(--ink)]">Amount (₹) <span className="text-rose-500">*</span></label>
-              <div className="flex gap-1.5">
-                <button type="button" onClick={() => handleAmountChange(String(outstanding))}
-                  className="rounded-lg px-2 py-1 text-[11px] font-semibold bg-[var(--surface)] text-emerald-700 dark:text-emerald-400 border border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 transition">
-                  Full {currency(outstanding)}
-                </button>
-                {outstanding > 100 && (
-                  <button type="button" onClick={() => handleAmountChange(String((outstanding / 2).toFixed(2)))}
-                    className="rounded-lg px-2 py-1 text-[11px] font-semibold bg-[var(--surface)] text-[var(--ink-secondary)] border border-[var(--line)] hover:border-[var(--line-strong)] transition">
-                    50%
-                  </button>
-                )}
-              </div>
-            </div>
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[var(--muted)]">
-                <IndianRupee size={15} />
-              </div>
-              <input type="number" step="0.01" min="0.01" max={outstanding} required
-                value={amount} onChange={e => handleAmountChange(e.target.value)} placeholder="0.00"
-                className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] pl-8 pr-3 py-2.5 text-base font-mono font-bold text-[var(--ink)] placeholder:text-[var(--placeholder)] focus:border-[#1E3A5F] focus:ring-2 focus:ring-[#1E3A5F]/15 outline-none transition" />
-            </div>
-            {error && (
-              <p className="mt-1.5 text-xs font-medium text-rose-500 flex items-center gap-1">
-                <AlertCircle size={12} />{error}
+        {/* Customer + Outstanding */}
+        <div
+          className="
+            rounded-xl
+            border
+            border-[var(--line)]
+            bg-[var(--surface)]
+            p-3
+          "
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                Customer
               </p>
-            )}
-          </div>
 
-          {/* Payment Method */}
-          <div>
-            <label className="text-xs font-bold text-[var(--ink)] mb-1.5 block">Payment Method</label>
-            <div className="grid grid-cols-3 gap-2">
-              {METHODS.map(m => {
-                const Icon = m.icon
-                const selected = method === m.id
-                return (
-                  <button key={m.id} type="button" onClick={() => setMethod(m.id)}
-                    className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl border text-xs font-semibold transition ${
-                      selected ? 'border-[#1E3A5F] bg-[#1E3A5F] text-white shadow-sm' : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:border-[var(--line-strong)]'
-                    }`}>
-                    <Icon size={17} />
-                    <span>{m.label}</span>
-                  </button>
-                )
-              })}
+              <p className="mt-0.5 truncate text-sm font-bold text-[var(--ink)]">
+                {customer.name}
+              </p>
+            </div>
+
+            <div className="shrink-0 text-right">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                Due
+              </p>
+
+              <p className="font-mono text-lg font-black text-amber-600 dark:text-amber-400">
+                {currency(outstanding)}
+              </p>
             </div>
           </div>
+        </div>
 
-          {/* Method-specific content */}
-          {method === 'upi' ? (
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-4 text-center space-y-3">
-              {/* QR Code */}
-              <div className="mx-auto w-fit p-3 bg-white rounded-xl border-2 border-[#1E3A5F]/20 shadow-sm">
-                <QRCodeSVG value={upiUri} size={160} level="M" includeMargin={false} />
-              </div>
+        {/* Amount */}
+        <div>
+          <div className="mb-1.5 flex items-center justify-between">
+            <label className="text-xs font-bold text-[var(--ink)]">
+              Amount to collect
+            </label>
 
-              {/* Amount display */}
-              <div>
-                <p className="font-mono text-lg font-black text-[#1E3A5F] dark:text-sky-300">{currency(amountNum)}</p>
-                <p className="text-[10px] text-[var(--muted)] mt-0.5">Scan to pay · {customer.name}</p>
-              </div>
+            <button
+              type="button"
+              onClick={() =>
+                handleAmountChange(String(outstanding))
+              }
+              className="
+                min-h-[32px]
+                rounded-lg
+                border
+                border-emerald-300
+                bg-emerald-50
+                px-2.5
+                text-[10px]
+                font-bold
+                text-emerald-700
+                hover:bg-emerald-100
+                dark:border-emerald-800
+                dark:bg-emerald-950/40
+                dark:text-emerald-300
+              "
+            >
+              Full Due
+            </button>
+          </div>
 
-              {/* UPI ID row */}
-              <div className="flex items-center justify-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2">
-                <span className="font-mono text-xs font-semibold text-[var(--ink)] truncate">{effectiveUpiId}</span>
-                <button type="button" onClick={handleCopyUpi}
-                  className="shrink-0 inline-flex items-center gap-1 text-[11px] font-semibold text-[#1E3A5F] dark:text-sky-400 hover:underline">
-                  {copiedUpi ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
-                  <span>{copiedUpi ? 'Copied' : 'Copy'}</span>
-                </button>
-              </div>
+          <div className="relative">
+            <IndianRupee
+              size={16}
+              className="
+                pointer-events-none
+                absolute
+                left-3
+                top-1/2
+                -translate-y-1/2
+                text-[var(--muted)]
+              "
+            />
 
-              {/* Payment app logos */}
-              <div className="flex items-center justify-center gap-4 pt-1">
-                <GooglePayLogo height={20} />
-                <PhonePeLogo height={20} />
-                <PaytmLogo height={20} />
-                <UpiLogo height={20} />
-              </div>
-            </div>
-          ) : method === 'card' ? (
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3.5">
-              <p className="text-xs font-semibold text-[var(--ink)]">Card / POS Terminal</p>
-              <p className="mt-1 text-[11px] text-[var(--muted)]">Swipe or tap card on POS machine for {currency(amountNum)}. Enter approval code below.</p>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3.5">
-              <p className="text-xs font-semibold text-[var(--ink)]">Cash Collection</p>
-              <p className="mt-1 text-[11px] text-[var(--muted)]">Collect {currency(amountNum)} in cash. Settles oldest unpaid bills first (FIFO).</p>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0.01"
+              max={outstanding}
+              value={amount}
+              onChange={event =>
+                handleAmountChange(event.target.value)
+              }
+              placeholder="0.00"
+              className="
+                min-h-[48px]
+                w-full
+                rounded-xl
+                border
+                border-[var(--line)]
+                bg-[var(--surface)]
+                pl-9
+                pr-3
+                text-lg
+                font-mono
+                font-bold
+                text-[var(--ink)]
+                outline-none
+                focus:border-[#1E3A5F]
+                focus:ring-2
+                focus:ring-[#1E3A5F]/15
+              "
+            />
+          </div>
+
+          {error && (
+            <div className="mt-1.5 flex items-start gap-1.5 text-[11px] font-medium text-rose-500">
+              <AlertCircle
+                size={13}
+                className="mt-0.5 shrink-0"
+              />
+              <span>{error}</span>
             </div>
           )}
+        </div>
 
-          {/* Reference */}
-          <div>
-            <label className="text-xs font-medium text-[var(--ink-secondary)] mb-1 block">
-              {method === 'upi' ? 'UPI UTR / Reference (Optional)' : method === 'card' ? 'Card Auth Code (Optional)' : 'Cash Receipt Ref (Optional)'}
-            </label>
-            <input type="text" value={reference} onChange={e => setReference(e.target.value)}
-              placeholder={method === 'upi' ? '12-digit UTR' : method === 'card' ? 'Auth #9872' : 'Cash ref'}
-              className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] focus:border-[#1E3A5F] outline-none transition" />
+        {/* Payment method */}
+        <div>
+          <label className="mb-1.5 block text-xs font-bold text-[var(--ink)]">
+            Payment method
+          </label>
+
+          <div className="grid grid-cols-3 gap-2">
+            {METHODS.map(item => {
+              const Icon = item.icon
+              const selected = method === item.id
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    setMethod(item.id)
+                    setError('')
+                  }}
+                  className={`
+                    min-h-[58px]
+                    rounded-xl
+                    border
+                    flex
+                    flex-col
+                    items-center
+                    justify-center
+                    gap-1
+                    transition
+                    ${
+                      selected
+                        ? 'border-[#1E3A5F] bg-[#1E3A5F] text-white shadow-sm'
+                        : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:border-[var(--line-strong)]'
+                    }
+                  `}
+                >
+                  <Icon size={18} />
+                  <span className="text-[10px] font-bold">
+                    {item.label}
+                  </span>
+                </button>
+              )
+            })}
           </div>
+        </div>
 
-          {/* Notes */}
-          <div>
-            <label className="text-xs font-medium text-[var(--ink-secondary)] mb-1 block">Notes (Optional)</label>
-            <input type="text" value={notes} onChange={e => setNotes(e.target.value)}
-              placeholder="e.g. Cleared credit dues"
-              className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] focus:border-[#1E3A5F] outline-none transition" />
+        {/* UPI */}
+        {method === 'upi' && (
+          <div
+            className="
+              rounded-xl
+              border
+              border-[var(--line)]
+              bg-[var(--surface-subtle)]
+              p-3
+            "
+          >
+            <div className="flex items-center gap-3">
+              <div className="shrink-0 rounded-lg bg-white p-2 shadow-sm">
+                <QRCodeSVG
+                  value={upiUri}
+                  size={112}
+                  level="M"
+                  includeMargin={false}
+                />
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                  Scan to pay
+                </p>
+
+                <p className="mt-1 font-mono text-lg font-black text-[#1E3A5F] dark:text-sky-300">
+                  {currency(amountNum)}
+                </p>
+
+                <div className="mt-1.5 flex min-w-0 items-center gap-1.5">
+                  <span className="truncate font-mono text-[10px] font-semibold text-[var(--ink-secondary)]">
+                    {effectiveUpiId}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={handleCopyUpi}
+                    className="
+                      shrink-0
+                      inline-flex
+                      items-center
+                      gap-1
+                      rounded-md
+                      px-1.5
+                      py-1
+                      text-[10px]
+                      font-bold
+                      text-[#1E3A5F]
+                      hover:bg-[var(--surface)]
+                      dark:text-sky-400
+                    "
+                  >
+                    {copiedUpi ? (
+                      <Check
+                        size={11}
+                        className="text-emerald-500"
+                      />
+                    ) : (
+                      <Copy size={11} />
+                    )}
+
+                    {copiedUpi ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        </form>
+        )}
 
+        {/* Card */}
+        {method === 'card' && (
+          <div
+            className="
+              rounded-xl
+              border
+              border-[var(--line)]
+              bg-[var(--surface-subtle)]
+              p-3
+            "
+          >
+            <div className="flex items-center gap-2">
+              <CreditCard
+                size={16}
+                className="text-[#1E3A5F] dark:text-sky-400"
+              />
+
+              <div>
+                <p className="text-xs font-bold text-[var(--ink)]">
+                  Card / POS
+                </p>
+
+                <p className="mt-0.5 text-[10px] text-[var(--muted)]">
+                  Collect {currency(amountNum)} through the POS terminal.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reference */}
+        <div>
+          <label className="mb-1 block text-[11px] font-semibold text-[var(--ink-secondary)]">
+            {method === 'upi'
+              ? 'UPI UTR / Reference'
+              : method === 'card'
+                ? 'Card Auth Code'
+                : 'Cash Receipt Ref'}
+            <span className="ml-1 font-normal text-[var(--muted)]">
+              optional
+            </span>
+          </label>
+
+          <input
+            type="text"
+            value={reference}
+            onChange={event =>
+              setReference(event.target.value)
+            }
+            placeholder={
+              method === 'upi'
+                ? 'Enter UTR'
+                : method === 'card'
+                  ? 'Enter auth code'
+                  : 'Enter receipt reference'
+            }
+            className="
+              min-h-[42px]
+              w-full
+              rounded-xl
+              border
+              border-[var(--line)]
+              bg-[var(--surface)]
+              px-3
+              text-xs
+              font-medium
+              text-[var(--ink)]
+              outline-none
+              focus:border-[#1E3A5F]
+              focus:ring-2
+              focus:ring-[#1E3A5F]/10
+            "
+          />
+        </div>
+
+        {/* Notes */}
+        <div>
+          <label className="mb-1 block text-[11px] font-semibold text-[var(--ink-secondary)]">
+            Notes
+            <span className="ml-1 font-normal text-[var(--muted)]">
+              optional
+            </span>
+          </label>
+
+          <input
+            type="text"
+            value={notes}
+            onChange={event =>
+              setNotes(event.target.value)
+            }
+            placeholder="Optional collection note"
+            className="
+              min-h-[42px]
+              w-full
+              rounded-xl
+              border
+              border-[var(--line)]
+              bg-[var(--surface)]
+              px-3
+              text-xs
+              font-medium
+              text-[var(--ink)]
+              outline-none
+              focus:border-[#1E3A5F]
+              focus:ring-2
+              focus:ring-[#1E3A5F]/10
+            "
+          />
+        </div>
+
+      </form>
     </Modal>
   )
 }
@@ -826,29 +1178,22 @@ export default function Customers() {
         {loading ? (
           <TableSkeleton rows={8} cols={5} label="Loading customers" />
         ) : displayed.length === 0 ? (
-          <EmptyState
-            icon={Users}
-            title={hasSearch || onlyCredit ? 'No customers match your filters' : 'No customers yet'}
-            description={
-              hasSearch || onlyCredit
-                ? 'Try adjusting your search terms or credit filter.'
-                : 'Add your first customer to track ledger balance, invoices, and communication.'
-            }
-            action={
-              hasSearch || onlyCredit
-                ? {
-                    label: 'Clear Filters',
-                    onClick: () => {
-                      setSearch('')
-                      setOnlyCredit(false)
-                    },
-                  }
-                : {
-                    label: 'Add First Customer',
-                    onClick: openAdd,
-                  }
-            }
-          />
+          !hasSearch && !onlyCredit ? (
+            <CustomerEmptyIllustration onAddCustomer={openAdd} />
+          ) : (
+            <EmptyState
+              icon={Users}
+              title="No customers match your filters"
+              description="Try adjusting your search terms or credit filter."
+              action={{
+                label: 'Clear Filters',
+                onClick: () => {
+                  setSearch('')
+                  setOnlyCredit(false)
+                },
+              }}
+            />
+          )
         ) : (
           <>
             {/* =================================================

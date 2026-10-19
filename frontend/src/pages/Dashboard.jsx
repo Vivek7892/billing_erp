@@ -15,6 +15,7 @@ import {
   Package,
   Plus,
   RefreshCw,
+  Workflow,
 } from 'lucide-react'
 import {
   Area,
@@ -29,6 +30,11 @@ import api from '../api'
 import { Badge, Spinner } from '../components/UI'
 import { useShop } from '../components/Layout'
 import DashboardBannerCarousel from './DashboardBannerCarousel'
+import {
+  DashboardVideoGuides,
+  InformationalBanner,
+  EcosystemVisualModal,
+} from '../components/visual-content'
 
 const EMPTY = {
   today_sales: 0,
@@ -126,6 +132,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
+  const [ecosystemModalOpen, setEcosystemModalOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
 
   useEffect(() => {
@@ -304,7 +311,11 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <DashboardBannerCarousel />
+      {/* -------------------------------------------------------------
+          DASHBOARD BANNER CAROUSEL (Below Name on Top, Above Business Insights)
+      -------------------------------------------------------------- */}
+      <DashboardBannerCarousel className="my-3" />
+
 
       {/* -------------------------------------------------------------
           ERROR BANNER
@@ -369,7 +380,7 @@ export default function Dashboard() {
           <span className="shrink-0 rounded-full bg-[var(--surface-elevated)] px-2 py-1 text-xs font-semibold text-[var(--muted)]">{attentionItems.length} items</span>
         </div>
         {attentionItems.length ? (
-          <div className="mt-3 grid grid-cols-4 gap-2 border-t border-[var(--line-subtle)] pt-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-3 grid grid-cols-1 gap-2 border-t border-[var(--line-subtle)] pt-3 sm:grid-cols-2 lg:grid-cols-3">
             {attentionItems.map(item => (
               <div key={item.key} className="min-w-0 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-3 py-2.5">
                 <div className="flex items-center justify-between gap-2">
@@ -456,6 +467,16 @@ export default function Dashboard() {
           >
             <FileText size={13} />
             <span>Reports</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setEcosystemModalOpen(true)}
+            className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95 sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
+            title="View Connected Enterprise Ecosystem Architecture"
+          >
+            <Workflow size={13} className="text-[#0057B8] dark:text-sky-400" />
+            <span>Ecosystem</span>
           </button>
         </div>
       </section>
@@ -873,6 +894,25 @@ export default function Dashboard() {
         </section>
       </div>
 
+      {/* -------------------------------------------------------------
+          BOTTOM HELPFUL RESOURCES: Clean Video Guides & Pro Tip Strip
+      -------------------------------------------------------------- */}
+      <DashboardVideoGuides />
+
+      <div className="mt-4">
+        <InformationalBanner
+          tip="Pro Tip: Press F2 anytime on the billing screen to immediately search products, or F4 to complete the transaction."
+          actionText="Try Billing"
+          onActionClick={() => navigate('/billing/new')}
+          className="my-0"
+        />
+      </div>
+
+      {/* Connected Architecture & Ecosystem Modal */}
+      <EcosystemVisualModal
+        isOpen={ecosystemModalOpen}
+        onClose={() => setEcosystemModalOpen(false)}
+      />
     </div>
   )
 }

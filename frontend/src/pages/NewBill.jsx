@@ -53,6 +53,7 @@ import { Modal, ConfirmDialog, SearchBar } from '../components/UI'
 import { useNavigate } from 'react-router-dom'
 import RazorpayPaymentModal from '../features/billing/RazorpayPaymentModal'
 import { PAYMENT_METHODS, PAYMENT_STATUS, INVOICE_STATUS } from '../constants'
+import { BillingWorkflowVisual, PaymentCompletedVisual } from '../components/visuals'
 
 // ---------------------------------------------------------------------------
 // Configuration switches (UI-level validation only)
@@ -2219,10 +2220,12 @@ export default function NewBill() {
                 ) : (
                   <tr>
                     <td colSpan="6" className="pb-bill-empty-td">
-                      <div className="pb-bill-empty-content">
-                        <ShoppingCart size={32} className="pb-muted" />
-                        <div className="pb-strong">No items added</div>
-                        <div className="pb-sub">Search or scan a product to start the bill.</div>
+                      <div className="pb-bill-empty-content py-4">
+                        <BillingWorkflowVisual className="w-full max-w-lg mb-3 border-0 bg-transparent shadow-none" compact />
+                        <div className="flex items-center justify-center gap-2">
+                          <ShoppingCart size={20} className="pb-muted" />
+                          <span className="pb-strong text-xs">Ready for Sale · Scan barcode or search product to begin</span>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -3215,27 +3218,19 @@ export default function NewBill() {
       {/* ============================ DEDICATED SALE COMPLETED SCREEN ============================ */}
       <Modal open={showSuccess && Boolean(lastInvoice?.id)} onClose={() => setShowSuccess(false)} title="" size="md">
         <div className="-mt-2 pb-sale-success space-y-3.5">
-          {/* Hero success banner */}
-          <div className="rounded-xl border border-emerald-200 bg-[var(--surface)] p-4 sm:p-5 dark:border-emerald-900">
-            <div className="flex min-w-0 items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
-                <CheckCircle2 size={25} strokeWidth={2} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-[var(--ink)]">
-                  Sale completed
-                </p>
-                <p className="mt-0.5 font-mono text-2xl font-bold tracking-tight text-[var(--ink)] sm:text-3xl">{fmt(lastInvoice?.grand_total)}</p>
-                <p className="mt-1 flex flex-wrap items-center gap-x-1 text-xs text-[var(--muted)]">
-                  <span className="font-mono font-semibold">#{lastInvoice?.invoice_number || 'INV'}</span>
-                  {lastInvoice?.customer_name && lastInvoice.customer_name !== 'Walk-in Customer'
-                    ? ` · ${lastInvoice.customer_name}` : ' · Walk-in Customer'}
-                </p>
-              </div>
-            </div>
-          </div>
+          {/* Animated 5-second Payment Completed Visual */}
+       <PaymentCompletedVisual
+  amount={fmt(lastInvoice?.grand_total || 0).replace(/[^\d.,]/g, '')}
+  invoiceNo={lastInvoice?.invoice_number || 'INV'}
+  customerName={
+    lastInvoice?.customer_name ||
+    lastInvoice?.customer?.name ||
+    'Walk-in Customer'
+  }
+  className="mb-2"
+/>
 
-          {/* Payment summary breakdown */}
+        {/* Payment summary breakdown */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-3">
               <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Method</p>

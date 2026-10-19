@@ -1,0 +1,652 @@
+/* ==========================================================================
+   Dreamwithtech Billing ERP — Visual-Content & Promotional Ads System
+   Brand Palette:
+     - Primary Blue: #0057B8
+     - Primary Dark: #003F8F
+     - Accent Cyan:  #16A9D8
+     - Accent Yellow:#FFE500
+     - Background:   #F5F6F8
+     - Surface:      #FFFFFF
+     - Text Primary: #111111
+     - Text Muted:   #888888
+   Corners: 20px - 26px (Default 22px)
+   Spacing: 20px consistent rhythm
+   ========================================================================== */
+
+:root {
+  --dwt-blue-primary: #0057B8;
+  --dwt-blue-dark: #003F8F;
+  --dwt-cyan: #16A9D8;
+  --dwt-yellow: #FFE500;
+  --dwt-bg: #F5F6F8;
+  --dwt-surface: #FFFFFF;
+  --dwt-text-dark: #111111;
+  --dwt-text-secondary: #555555;
+  --dwt-text-muted: #888888;
+  --dwt-radius: 22px;
+  --dwt-shadow-subtle: 0 2px 14px rgba(0, 87, 184, 0.04), 0 1px 3px rgba(0, 0, 0, 0.03);
+  --dwt-shadow-hover: 0 6px 20px rgba(0, 87, 184, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+/* -------------------------------------------------------------
+   COMPACT PROMOTIONAL BANNER (16:5 to 3:1 on Desktop)
+-------------------------------------------------------------- */
+.dwt-promo-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 104px;
+  max-height: 136px;
+  padding: 16px 24px;
+  background-color: #ffffff;
+  border-radius: var(--dwt-radius);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: var(--dwt-shadow-subtle);
+  overflow: hidden;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
+  margin: 20px 0;
+}
+
+.dark .dwt-promo-banner {
+  background-color: #0f172a;
+  border-color: rgba(51, 65, 85, 0.7);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+.dwt-promo-banner:hover {
+  box-shadow: var(--dwt-shadow-hover);
+  border-color: rgba(0, 87, 184, 0.25);
+}
+
+/* Subtle background accent glow */
+.dwt-promo-banner-glow {
+  position: absolute;
+  right: -40px;
+  top: -40px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(22, 169, 216, 0.08) 0%, rgba(0, 87, 184, 0.03) 60%, transparent 80%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.dark .dwt-promo-banner-glow {
+  background: radial-gradient(circle, rgba(22, 169, 216, 0.12) 0%, rgba(0, 87, 184, 0.05) 60%, transparent 80%);
+}
+
+.dwt-promo-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  max-width: 65%;
+}
+
+.dwt-promo-header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dwt-badge-ad {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #003F8F;
+  background-color: rgba(0, 87, 184, 0.09);
+  border: 1px solid rgba(0, 87, 184, 0.18);
+  border-radius: 9999px;
+  line-height: 1.2;
+}
+
+.dark .dwt-badge-ad {
+  color: #38bdf8;
+  background-color: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.25);
+}
+
+.dwt-badge-ad.yellow-accent {
+  background-color: rgba(255, 229, 0, 0.22);
+  border-color: rgba(230, 200, 0, 0.4);
+  color: #856404;
+}
+
+.dark .dwt-badge-ad.yellow-accent {
+  background-color: rgba(255, 229, 0, 0.16);
+  border-color: rgba(255, 229, 0, 0.3);
+  color: #fde047;
+}
+
+.dwt-promo-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111111;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.dark .dwt-promo-title {
+  color: #f8fafc;
+}
+
+.dwt-promo-desc {
+  font-size: 12.5px;
+  color: #555555;
+  line-height: 1.35;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dark .dwt-promo-desc {
+  color: #94a3b8;
+}
+
+.dwt-promo-actions {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.dwt-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 9999px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #0057B8 0%, #003F8F 100%);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 87, 184, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  white-space: nowrap;
+}
+
+.dwt-cta-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 87, 184, 0.35);
+  filter: brightness(1.05);
+}
+
+.dwt-cta-btn.secondary {
+  color: #003F8F;
+  background: #f0f6ff;
+  border: 1px solid rgba(0, 87, 184, 0.2);
+  box-shadow: none;
+}
+
+.dark .dwt-cta-btn.secondary {
+  color: #7dd3fc;
+  background: rgba(14, 165, 233, 0.1);
+  border-color: rgba(14, 165, 233, 0.25);
+}
+
+.dwt-promo-media-slot {
+  width: 140px;
+  max-width: 180px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* -------------------------------------------------------------
+   SHORT VIDEO CARD (Clean, Simple, Minimalist)
+-------------------------------------------------------------- */
+.dwt-simple-video-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+}
+
+.dark .dwt-simple-video-card {
+  background: #0f172a;
+  border-color: rgba(51, 65, 85, 0.7);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+.dwt-simple-video-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 87, 184, 0.35);
+}
+
+.dark .dwt-simple-video-card:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+/* -------------------------------------------------------------
+   LEGACY SHORT VIDEO CARD
+-------------------------------------------------------------- */
+.dwt-video-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 290px;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: var(--dwt-radius);
+  overflow: hidden;
+  box-shadow: var(--dwt-shadow-subtle);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  cursor: pointer;
+}
+
+.dark .dwt-video-card {
+  background: #0f172a;
+  border-color: rgba(51, 65, 85, 0.7);
+}
+
+.dwt-video-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--dwt-shadow-hover);
+  border-color: rgba(0, 87, 184, 0.3);
+}
+
+.dwt-video-thumb-container {
+  position: relative;
+  width: 100%;
+  height: 120px;
+  background: linear-gradient(135deg, #003F8F 0%, #0057B8 50%, #16A9D8 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.dwt-video-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.dwt-video-card:hover .dwt-video-thumb-img {
+  transform: scale(1.04);
+}
+
+.dwt-video-play-btn {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  color: #0057B8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease, background 0.2s ease;
+  z-index: 3;
+}
+
+.dwt-video-card:hover .dwt-video-play-btn {
+  transform: scale(1.12);
+  background: #ffffff;
+  color: #003F8F;
+}
+
+.dwt-video-duration-pill {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  padding: 2px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: monospace;
+  background: rgba(17, 17, 17, 0.8);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  border-radius: 6px;
+  z-index: 3;
+}
+
+.dwt-video-body {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dwt-video-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111111;
+  line-height: 1.3;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dark .dwt-video-title {
+  color: #f1f5f9;
+}
+
+.dwt-video-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #888888;
+  margin-top: 4px;
+}
+
+/* -------------------------------------------------------------
+   VISUAL CONTENT CAROUSEL
+-------------------------------------------------------------- */
+.dwt-carousel-wrapper {
+  position: relative;
+  width: 100%;
+  margin: 20px 0;
+}
+
+.dwt-carousel-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--dwt-radius);
+}
+
+.dwt-carousel-track {
+  display: flex;
+  transition: transform 0.35s cubic-bezier(0.2, 0, 0, 1);
+  width: 100%;
+}
+
+.dwt-carousel-slide {
+  flex: 0 0 100%;
+  width: 100%;
+}
+
+.dwt-carousel-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  color: #111111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.dwt-carousel-wrapper:hover .dwt-carousel-nav-btn {
+  opacity: 1;
+}
+
+.dark .dwt-carousel-nav-btn {
+  background: rgba(30, 41, 59, 0.9);
+  border-color: rgba(51, 65, 85, 0.8);
+  color: #f8fafc;
+}
+
+.dwt-carousel-nav-btn.prev {
+  left: 10px;
+}
+
+.dwt-carousel-nav-btn.next {
+  right: 10px;
+}
+
+.dwt-carousel-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.dwt-carousel-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background-color: #cbd5e1;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.dwt-carousel-dot.active {
+  width: 18px;
+  background-color: #0057B8;
+}
+
+.dark .dwt-carousel-dot {
+  background-color: #475569;
+}
+
+.dark .dwt-carousel-dot.active {
+  background-color: #38bdf8;
+}
+
+/* -------------------------------------------------------------
+   INFORMATIONAL BANNER / TIP STRIP
+-------------------------------------------------------------- */
+.dwt-info-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 18px;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  border-left: 4px solid #0057B8;
+  border-radius: 16px;
+  margin: 16px 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+}
+
+.dark .dwt-info-banner {
+  background: #0f172a;
+  border-color: rgba(51, 65, 85, 0.6);
+  border-left-color: #38bdf8;
+}
+
+.dwt-info-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: #333333;
+}
+
+.dark .dwt-info-banner-content {
+  color: #cbd5e1;
+}
+
+.dwt-info-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background-color: rgba(0, 87, 184, 0.08);
+  color: #0057B8;
+  flex-shrink: 0;
+}
+
+.dark .dwt-info-icon-badge {
+  background-color: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+}
+
+/* -------------------------------------------------------------
+   MINI VIDEO MODAL (Not full screen)
+-------------------------------------------------------------- */
+.dwt-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: dwtFadeIn 0.2s ease-out;
+}
+
+.dwt-modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 580px;
+  background: #ffffff;
+  border-radius: var(--dwt-radius);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: dwtSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .dwt-modal-card {
+  background: #0f172a;
+  border-color: rgba(51, 65, 85, 0.8);
+}
+
+.dwt-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.dark .dwt-modal-header {
+  border-color: rgba(51, 65, 85, 0.6);
+}
+
+.dwt-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(241, 245, 249, 0.8);
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.dwt-modal-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.dark .dwt-modal-close {
+  background: #1e293b;
+  color: #94a3b8;
+}
+
+.dark .dwt-modal-close:hover {
+  background: #334155;
+  color: #f8fafc;
+}
+
+/* -------------------------------------------------------------
+   RESPONSIVE LAYOUT (Mobile-first)
+-------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .dwt-promo-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    max-height: none;
+    min-height: auto;
+    padding: 14px 16px;
+    border-radius: 18px;
+  }
+
+  .dwt-promo-content {
+    max-width: 100%;
+  }
+
+  .dwt-promo-actions {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 4px;
+  }
+
+  .dwt-promo-media-slot {
+    display: none;
+  }
+
+  .dwt-promo-title {
+    font-size: 14px;
+  }
+
+  .dwt-promo-desc {
+    font-size: 12px;
+    -webkit-line-clamp: 2;
+  }
+
+  .dwt-video-card {
+    max-width: 100%;
+  }
+}
+
+/* -------------------------------------------------------------
+   SUBTLE ANIMATIONS (Fade, gentle slide, gentle pulse)
+-------------------------------------------------------------- */
+@keyframes dwtFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dwtSlideUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes dwtPulseGlow {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.05); opacity: 1; }
+}
+
+.dwt-pulse-glow {
+  animation: dwtPulseGlow 4s ease-in-out infinite;
+}
+

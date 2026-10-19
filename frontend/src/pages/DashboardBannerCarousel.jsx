@@ -55,7 +55,7 @@ const slides = [
   },
 ]
 
-export default function DashboardBannerCarousel() {
+export default function DashboardBannerCarousel({ className = '' } = {}) {
   const [activeIndex, setActiveIndex] = useState(0)
   const [paused, setPaused] = useState(false)
   const [dragStartX, setDragStartX] = useState(null)
@@ -113,7 +113,7 @@ export default function DashboardBannerCarousel() {
 
   return (
     <section
-      className="dashboard-welcome-banner"
+      className={`dashboard-welcome-banner ${className}`.trim()}
       aria-label="ERP dashboard highlights"
       aria-roledescription="carousel"
       onMouseEnter={() => setPaused(true)}

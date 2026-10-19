@@ -9,6 +9,7 @@ import { INVOICE_STATUS, PAYMENT_STATUS, PAYMENT_METHODS } from '../constants'
 import toast from 'react-hot-toast'
 import InvoiceDocument from '../components/InvoiceDocument'
 import CommunicationHistory from '../components/CommunicationHistory'
+import { InvoiceEmptyIllustration } from '../components/visuals'
 
 import { QRCodeSVG } from 'qrcode.react'
 import {
@@ -2381,11 +2382,13 @@ export default function Bills() {
           {loading ? (
             <TableSkeleton rows={10} cols={11} label="Loading bills" />
           ) : visibleBills.length === 0 ? (
-            <EmptyState
-              icon={ShoppingCart}
-              title="No invoices found"
-              description="Try changing your search, date range, or payment status filters."
-            />
+            <>
+             
+                <InvoiceEmptyIllustration
+                title={search || statusFilter !== 'all' ? "No invoices match your filters" : "No Invoices Generated Yet"}
+                description={search || statusFilter !== 'all' ? "Try changing your search, date range, or payment status filters." : "Start billing customers with high-speed barcode scanning, dynamic UPI QR and automated GST calculations."}
+              />
+            </>
           ) : (
             <>
               {/* Mobile cards view (sm:hidden) */}
@@ -2866,3 +2869,4 @@ export default function Bills() {
     </div>
   )
 }
+  

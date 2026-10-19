@@ -1,13 +1,13 @@
-# ShopEase POS — Retail Billing & Inventory Management System
+# Dreamwithtech Billing ERP — Modern Enterprise Billing, Inventory & POS Platform
 
-A full-stack POS system built with **Django REST Framework** + **React + Vite + Tailwind CSS**.
+A production-grade Enterprise Resource Planning (ERP) and Point of Sale (POS) system built with **Django REST Framework** + **React + Vite + Tailwind CSS**.
 
 ---
 
-## Quick Start
+## ⚡ Quick Start
 
 ### 1. Start Backend
-```
+```bash
 start_backend.bat
 ```
 Or manually:
@@ -15,10 +15,10 @@ Or manually:
 cd backend
 python manage.py runserver
 ```
-Backend runs at: http://localhost:8000
+Backend runs at: `http://localhost:8000`
 
 ### 2. Start Frontend
-```
+```bash
 start_frontend.bat
 ```
 Or manually:
@@ -26,181 +26,124 @@ Or manually:
 cd frontend
 npm run dev
 ```
-Frontend runs at: http://localhost:3000
+Frontend runs at: `http://localhost:3000`
 
 ---
 
-## Default Login Credentials
+## 🔑 Default Login Credentials
 
 | Role    | Username | Password    |
 |---------|----------|-------------|
 | Admin   | admin    | admin123    |
 | Cashier | cashier  | cashier123  |
+| Manager | manager  | manager123  |
 
 ---
 
-## Features
+## 🧹 Database Reset & Demo Seeding
 
-### Dashboard
-- Today's sales, bills, profit
-- Low stock alerts
-- Sales charts (7-day, monthly)
-- Top products, payment distribution
-- Recent bills
+### Reset All Products, Bills & Reports Data (Keeping Users & Profile Settings)
+To cleanly wipe all products, batches, bills, purchases, inventory transactions, ledgers, and reports data **without losing Users, Business Profiles, or App Settings**:
+```bash
+cd backend
+python manage.py reset_data
+```
+> [!NOTE]
+> This command preserves all `User` login accounts, `Business` profile identity, and `Setting` key-value pairs (including thermal printing configurations).
 
-### New Bill / POS
-- Fast product search (name, SKU, barcode)
-- Keyboard-friendly (Enter to add product)
-- Cart with qty, discount, GST per item
-- Customer selection / walk-in
-- Mixed payment (Cash + UPI + Card + Credit + **PhonePe**)
-- Auto invoice numbering
-- Save, Print (PDF), New Bill
-
-### Bills
-- Full invoice history
-- Date filters (Today, Yesterday, Week, Month)
-- View, Download PDF, Cancel, Refund
-- Stock auto-restored on cancel/refund
-
-### Products
-- Full CRUD with category, supplier, GST
-- Stock status indicators
-- Search and filter
-
-### Inventory
-- Current stock view
-- Stock adjustment (in/out/damaged/returned)
-- Full transaction history
-
-### Purchases
-- Purchase orders with multiple items
-- Auto stock increase on save
-- Supplier management
-
-### Customers
-- Customer profiles
-- Credit/outstanding tracking
-- Purchase history
-
-### Reports (Admin only)
-- Sales report with daily chart
-- Product sales report
-- Profit report (revenue vs cost)
-- GST report by rate
-- Customer credit report
-- Payment method report
-
-### Users (Admin only)
-- Admin and Cashier roles
-- Role-based access control
-
-### Settings (Admin only)
-- Shop info, GSTIN
-- Invoice prefix and numbering
-- Tax, currency, printer settings
-
----
-
-## Tech Stack
-
-**Backend:** Django 4.2, Django REST Framework, SimpleJWT, ReportLab (PDF), SQLite
-
-**Frontend:** React 18, Vite, Tailwind CSS v4, Recharts, React Router, Axios, React Hot Toast, Lucide Icons
-
----
-
-## Database
-
-SQLite (default). For production, switch to PostgreSQL in `backend/core/settings.py`.
-
----
-
-## Re-seed Demo Data
-
+### Seed Full Comprehensive Demo Data
 ```bash
 cd backend
 python manage.py seed_data
 ```
-
-Adds 33 products, 10 customers, 4 suppliers, 10 categories, 15 sample invoices.
+*(Add `--clean` to wipe previous demo records before seeding).*
 
 ---
 
-## PhonePe Payment Gateway Setup
+## 🎨 Visual-Content, Promotional Ads & Video System
 
-### 1. Get Credentials
-- **Sandbox/UAT**: Use the public test credentials (already in `.env.example`).
-- **Production**: Register at [PhonePe Business](https://business.phonepe.com/) and get your `Merchant ID`, `Salt Key`, and `Salt Index`.
+Dreamwithtech Billing ERP includes a clean, compact visual-content system with dedicated, reusable slots for:
+- **Promotional Ads / Feature Banners** (16:5 or 3:1 ratio on desktop, compact cards on mobile)
+- **Short Video Guide Cards** (small thumbnail cards with play button, opening a compact modal player)
+- **Informational Tips & Shortcuts** (compact banners with keyboard shortcuts like F2/F4)
+- **Minimal Vector Illustrations** (lightweight section accents with brand palette)
 
-### 2. Configure Backend Environment
+### Brand Palette & Design Tokens
+- **Primary Blue:** `#0057B8`
+- **Primary Dark:** `#003F8F`
+- **Accent Cyan:** `#16A9D8`
+- **Accent Yellow:** `#FFE500`
+- **Background:** `#F5F6F8`
+- **Surface:** `#FFFFFF` (Dark: `#0F172A`)
+- **Card Corners:** `20px` – `26px` (Default: `22px`)
+- **Spacing:** `20px` vertical rhythm
 
-Copy `backend/.env.example` to `backend/.env` and fill in:
+---
 
-```env
-# Sandbox testing
-PHONEPE_ENV=UAT
-PHONEPE_MERCHANT_ID=PGTESTPAYUAT
-PHONEPE_SALT_KEY=099eb0cd-02cf-4dc2-a4c3-df3f7d11b3b4
-PHONEPE_SALT_INDEX=1
+## 📸 How to Upload Custom Images, Banners & Videos
 
-# IMPORTANT: Set to your deployed frontend URL (Vercel URL in production)
-FRONTEND_URL=https://your-app.vercel.app
-```
+You can easily replace the built-in SVG vector artwork with your own custom images, GIFs, and videos. Simply drop your files into the corresponding public directories—the application automatically detects them with zero code modifications!
 
-For production:
-```env
-PHONEPE_ENV=PRODUCTION
-PHONEPE_MERCHANT_ID=<your-merchant-id>
-PHONEPE_SALT_KEY=<your-salt-key>
-PHONEPE_SALT_INDEX=<your-salt-index>
-FRONTEND_URL=https://your-app.vercel.app
-```
+### 1. Promotional Banners
+Located in:
+📁 **`frontend/public/assets/dreamwithtech/ads/`**
 
-### 3. Run Migration
+| Filename | Resolution | Where it appears & Content |
+|---|---|---|
+| `dashboard-banner-hero.png` | `3168 x 1344` (~21:9) | Dashboard top carousel (Flagship Hero: POS setup, thermal receipt, barcode scanner) |
+| `ad-billing-speed.png` | `2752 x 1536` (16:9) | Dashboard top carousel & POS ("Create Bills in Seconds. Bill Faster. Serve Better.") |
+| `ad-customer-credit.png` | `2752 x 1536` (16:9) | Dashboard top carousel & Customers ("Keep Every Customer Relationship Organized.") |
+| `ad-business-erp.png` | `2752 x 1536` (16:9) | Dashboard top carousel & Reports ("Streamline Your Business with Dreamwithtech ERP") |
 
-```bash
-cd backend
-python manage.py migrate
-```
+---
 
-### 4. PhonePe Billing Flow
+### 2. Video Tutorials & Thumbnail Posters (10s HD MP4s)
+Located in:
+📁 **`frontend/public/assets/dreamwithtech/videos/`**
 
-```
-1. Add items to cart
-2. Select PhonePe as payment method
-3. Click "Save Bill" → bill saved with status=pending
-4. PhonePe modal opens automatically
-5. Click "Pay with PhonePe" → redirected to PhonePe checkout
-6. Customer completes payment on PhonePe
-7. PhonePe redirects to /billing/phonepe-callback
-8. Backend verifies payment with PhonePe API
-9. On success: invoice marked PAID, Payment record created
-10. Receipt/invoice available for print/download
-```
+| Video File (`.mp4`) | Poster Thumbnail (`.jpg`) | Tutorial Topic & Workflow |
+|---|---|---|
+| `fast-billing.mp4` | `fast-billing.jpg` | POS fast billing, barcode scanning & continuous receipt |
+| `inventory-control.mp4` | `inventory-control.jpg` | Live stock deduction, alerts & adjustments |
+| `overview-guide.mp4` | `overview-guide.jpg` | Unified dashboard, module tour & navigation |
+| `business-workflow.mp4` | `business-workflow.jpg` | End-to-end sales, inventory & payment lifecycle |
+| `reports-analytics.mp4` | `reports-analytics.jpg` | GSTR-1, GSTR-3B tax reports & profit analytics |
 
-### 5. New API Endpoints
+---
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/payments/phonepe/initiate/` | Create PhonePe payment, returns `payment_url` |
-| POST | `/api/payments/phonepe/verify/` | Verify payment status with PhonePe, marks invoice PAID |
-| POST | `/api/payments/phonepe/webhook/` | S2S callback from PhonePe (register in merchant dashboard) |
+### 3. General Page Visuals & Illustrations
+Located in:
+📁 **`frontend/public/assets/dreamwithtech/illustrations/`** & **`frontend/public/assets/dreamwithtech/`**
 
-### 6. Security Notes
+| Filename | Purpose |
+|---|---|
+| `login-illustration.png` | Right column artwork for split-screen login page |
+| `invoice-empty.(svg\|png)` | Bills page empty state illustration |
+| `customer-empty.(svg\|png)` | Customers directory empty state |
+| `purchase-empty.(svg\|png)` | Purchases list empty state |
 
-- PhonePe credentials are **never** exposed to the frontend.
-- The bill amount is always taken from the **saved invoice** on the backend — the frontend cannot modify it.
-- A bill is only marked `PAID` after the backend calls PhonePe's status API and confirms `COMPLETED`.
-- Duplicate payment protection: if an `initiated`/`pending` transaction already exists for an invoice, the same `payment_url` is returned.
-- Amount mismatch between PhonePe response and our record causes the transaction to be marked `failed`.
-- All PhonePe operations are idempotent — safe to retry.
+---
 
-### 7. Deployment (Vercel Frontend)
+## 🖨️ Thermal Printing & Bill Receipt System
 
-Set `FRONTEND_URL` in your backend environment to your Vercel deployment URL:
-```
-FRONTEND_URL=https://your-app.vercel.app
-```
+The ERP includes native support for high-speed continuous thermal receipts:
+- **Paper Widths:** `58mm` and `80mm` continuous paper.
+- **Dynamic Content Height:** `@page { size: 58mm auto; margin: 0; }` / `@page { size: 80mm auto; margin: 0; }` with zero cutoffs.
+- **Dynamic UPI QR Code:** Generates scannable UPI intent strings (`upi://pay?pa=...&pn=...&am=...&cu=INR`).
+- **Configurable Header & Footer:** Business GSTIN, FSSAI, Phone, Address, customizable return terms.
 
-PhonePe will redirect to `{FRONTEND_URL}/billing/phonepe-callback?txn=<id>` after payment.
+---
+
+## 📱 Content Hierarchy Rules
+The interface follows a strict content hierarchy:
+$$\text{ERP functionality} \longrightarrow \text{Important business info} \longrightarrow \text{Small promotional banner (16:5 / 3:1)} \longrightarrow \text{Optional video / illustration}$$
+
+- **Dashboard:**
+  1. Store Header & Action Controls (New Bill, Reports, Refresh)
+  2. Promotional Banner Carousel (Below store name, above Business Insights)
+  3. Business Insights Snapshot (Sales, Collections, Profit, Receivables)
+  4. Attention Required & Quick Actions
+  5. 7-Day Sales Performance & Today's Collection Charts
+  6. Recent Transactions Table
+  7. Top Products & Low Stock Alerts
+  8. Short Video Guide & Billing Pro Tips
