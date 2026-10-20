@@ -25,6 +25,17 @@ router.register('communication-logs', views.CommunicationLogViewSet, basename='c
 router.register('approval-requests', views.ApprovalRequestViewSet, basename='approval-request')
 
 urlpatterns = [
+    path('auth/register/', views.RegisterView.as_view(), name='register'),
+    path('auth/verify-otp/', views.VerifyOTPView.as_view(), name='verify-otp'),
+    path('auth/verify-email/', views.VerifyOTPView.as_view(), name='verify-email'),
+    path('auth/resend-verification/', views.ResendVerificationView.as_view(), name='resend-verification'),
+    path('auth/onboarding-status/', views.OnboardingStatusView.as_view(), name='onboarding-status'),
+    path('auth/onboarding/reports-viewed/', views.OnboardingReportsViewedView.as_view(), name='onboarding-reports-viewed'),
+    path('auth/onboarding-progress/', views.OnboardingProgressView.as_view(), name='onboarding-progress'),
+    path('auth/onboarding/complete/', views.OnboardingCompleteView.as_view(), name='onboarding-complete'),
+    path('auth/onboarding/dismiss-checklist/', views.OnboardingDismissChecklistView.as_view(), name='onboarding-dismiss-checklist'),
+    path('auth/password-reset/', views.PasswordResetRequestView.as_view(), name='password-reset-request'),
+    path('auth/password-reset-confirm/', views.PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
     path('auth/login/', views.LoginView.as_view(), name='login'),
     path('auth/super-admin/login/', views.SuperAdminLoginView.as_view(), name='super-admin-login'),
     path('auth/super-admin/dashboard/', views.SuperAdminDashboardView.as_view(), name='super-admin-dashboard'),

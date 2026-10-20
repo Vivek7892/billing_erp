@@ -167,8 +167,14 @@ http.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    // Login credential failures should not trigger refresh/logout loop
-    if (originalRequest?.url?.includes('/auth/login/')) {
+    // Public auth endpoint failures should not trigger refresh/logout loop
+    if (
+      originalRequest?.url?.includes('/auth/login/') ||
+      originalRequest?.url?.includes('/auth/register/') ||
+      originalRequest?.url?.includes('/auth/verify-otp/') ||
+      originalRequest?.url?.includes('/auth/verify-email/') ||
+      originalRequest?.url?.includes('/auth/password-reset')
+    ) {
       return Promise.reject(error)
     }
 

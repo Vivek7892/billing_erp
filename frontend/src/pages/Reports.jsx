@@ -208,6 +208,7 @@ export default function Reports() {
 
   const activeRequestRef = useRef(0)
   const abortControllerRef = useRef(null)
+  const reportsViewedRef = useRef(false)
 
   // Validation
   const isDateInvalid = tab !== 'customers' && startDate > endDate
@@ -241,6 +242,11 @@ export default function Reports() {
 
         if (reqId === activeRequestRef.current) {
           setData(response.data)
+          if (!reportsViewedRef.current) {
+            reportsViewedRef.current = true
+            api.post('/auth/onboarding/reports-viewed/')
+              .catch(() => { reportsViewedRef.current = false })
+          }
         }
       } catch (err) {
         if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {

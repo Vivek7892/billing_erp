@@ -104,6 +104,39 @@ export default function ThermalReceipt({
   const cashierName = inv.created_by_name || inv.created_by?.first_name || inv.created_by?.username || ''
   const paymentMode = (inv.payment_method || settings.default_payment_method || 'CASH').toUpperCase()
 
+  // Dynamically proportioned column widths so hidden columns never leave gaps
+  const colWidths80 = useMemo(() => {
+    let itemW = 44
+    let qtyW = showQty ? 16 : 0
+    let rateW = showRate ? 20 : 0
+    let totalW = showTotal ? 20 : 0
+    if (!qtyW && !rateW && !totalW) {
+      itemW = 100
+    } else {
+      const sum = itemW + qtyW + rateW + totalW
+      itemW = (itemW / sum) * 100
+      if (qtyW) qtyW = (qtyW / sum) * 100
+      if (rateW) rateW = (rateW / sum) * 100
+      if (totalW) totalW = (totalW / sum) * 100
+    }
+    return {
+      item: `${itemW.toFixed(1)}%`,
+      qty: qtyW ? `${qtyW.toFixed(1)}%` : '0%',
+      rate: rateW ? `${rateW.toFixed(1)}%` : '0%',
+      total: totalW ? `${totalW.toFixed(1)}%` : '0%',
+    }
+  }, [showQty, showRate, showTotal])
+
+  const colWidths58 = useMemo(() => {
+    let itemW = 60
+    let totalW = showTotal ? 40 : 0
+    if (!totalW) itemW = 100
+    return {
+      item: `${itemW}%`,
+      total: totalW ? `${totalW}%` : '0%',
+    }
+  }, [showTotal])
+
   const items = Array.isArray(inv.items) ? inv.items : []
   const subtotal = Number(inv.subtotal || 0)
   const discountTotal = Number(inv.discount_amount || 0)
@@ -265,10 +298,10 @@ export default function ThermalReceipt({
           className="font-bold uppercase text-black pb-0.5 flex justify-between"
           style={{ fontSize: is58mm ? '8px' : '9px', borderBottom: '1px solid #000' }}
         >
-          <span style={{ width: is58mm ? '55%' : '48%' }}>ITEM</span>
-          {showQty && <span className="text-right" style={{ width: is58mm ? '20%' : '14%' }}>QTY</span>}
-          {showRate && !is58mm && <span className="text-right" style={{ width: '18%' }}>RATE</span>}
-          {showTotal && <span className="text-right" style={{ width: is58mm ? '25%' : '20%' }}>AMT</span>}
+          <span style={{ width: is58mm ? colWidths58.item : colWidths80.item }}>ITEM</span>
+          {showQty && !is58mm && <span className="text-right" style={{ width: colWidths80.qty }}>QTY</span>}
+          {showRate && !is58mm && <span className="text-right" style={{ width: colWidths80.rate }}>RATE</span>}
+          {showTotal && <span className="text-right" style={{ width: is58mm ? colWidths58.total : colWidths80.total }}>AMT</span>}
         </div>
 
         {/* Item Rows */}
@@ -321,25 +354,25 @@ export default function ThermalReceipt({
                     </div>
                   </div>
                 ) : (
-                  /* 80mm clean row */
+                  /* 80mm clean row - dynamically sized columns without blank gaps */
                   <div>
                     <div className="flex justify-between items-baseline" style={{ fontSize: '10px' }}>
-                      <span className="font-semibold text-black break-words" style={{ width: '48%' }}>
+                      <span className="font-semibold text-black break-words" style={{ width: colWidths80.item }}>
                         {name}
                         {item.unit && <span className="font-normal"> ({item.unit})</span>}
                       </span>
                       {showQty && (
-                        <span className="text-right tabular-nums text-black" style={{ width: '14%' }}>
+                        <span className="text-right tabular-nums text-black" style={{ width: colWidths80.qty }}>
                           {qty}
                         </span>
                       )}
                       {showRate && (
-                        <span className="text-right tabular-nums text-black" style={{ width: '18%' }}>
+                        <span className="text-right tabular-nums text-black" style={{ width: colWidths80.rate }}>
                           ₹{fmt(rate)}
                         </span>
                       )}
                       {showTotal && (
-                        <span className="text-right font-bold tabular-nums text-black" style={{ width: '20%' }}>
+                        <span className="text-right font-bold tabular-nums text-black" style={{ width: colWidths80.total }}>
                           ₹{fmt(total)}
                         </span>
                       )}

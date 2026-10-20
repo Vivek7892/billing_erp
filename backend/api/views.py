@@ -5,8 +5,14 @@ from rest_framework.decorators import action
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
+from django.core import signing
 from django.http import HttpResponse, Http404
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
+import secrets
+from django.conf import settings
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from rest_framework.permissions import IsAuthenticated
 from django.urls import reverse
 from django.db.models import Sum, Count, Q, F
 from django.utils import timezone
@@ -46,6 +52,21 @@ class LoginRateThrottle(AnonRateThrottle):
     scope = 'login'
 
 
+class RegisterRateThrottle(AnonRateThrottle):
+    rate = '10/min'
+    scope = 'register'
+
+
+class OTPVerifyRateThrottle(AnonRateThrottle):
+    rate = '10/min'
+    scope = 'otp_verify'
+
+
+class PasswordResetRateThrottle(AnonRateThrottle):
+    rate = '5/min'
+    scope = 'password_reset'
+
+
 def _report_value(value):
     if value is None:
         return ''
@@ -54,6 +75,33 @@ def _report_value(value):
     if isinstance(value, Decimal):
         return f'{value:.2f}'
     return str(value)
+
+
+def _send_onboarding_welcome_email(user):
+    try:
+        from api.emails import send_onboarding_welcome_email
+        send_onboarding_welcome_email(user)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(
+            f"Failed to send onboarding welcome email to {user.email}: {e}"
+        )
+
+
+def _send_registration_notification_email(user, request, business=None, shop_registered=False):
+    try:
+        from api.emails import send_registration_notification_email
+        send_registration_notification_email(
+            user,
+            business=business,
+            request=request,
+            shop_registered=shop_registered,
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(
+            f"Failed to send registration notification for {user.email}: {e}"
+        )
 
 
 def _rupee(value):
@@ -447,8 +495,13 @@ class LoginView(APIView):
     throttle_classes = [LoginRateThrottle]
 
     def post(self, request):
-        username = request.data.get('username')
+        raw_username = request.data.get('username')
         password = request.data.get('password')
+        username = raw_username
+        if username and '@' in str(username):
+            user_by_email = User.objects.filter(email__iexact=str(username).strip()).first()
+            if user_by_email:
+                username = user_by_email.username
         user = authenticate(username=username, password=password)
         if not user or not user.is_active:
             audit_event(
@@ -478,6 +531,518 @@ class LoginView(APIView):
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'user': UserSerializer(user).data,
+        })
+
+
+class RegisterView(APIView):
+    permission_classes = []
+    throttle_classes = [RegisterRateThrottle]
+
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        full_name = data.get('full_name', '').strip()
+        first_name = ''
+        last_name = ''
+        if full_name:
+            parts = full_name.split(' ', 1)
+            first_name = parts[0]
+            if len(parts) > 1:
+                last_name = parts[1]
+
+        with transaction.atomic():
+            user = User.objects.create(
+                username=data['username'],
+                email=data['email'],
+                first_name=first_name,
+                last_name=last_name,
+                phone=data.get('phone', ''),
+                role='owner',
+                is_active=True,
+                is_verified=False,
+                onboarding_completed=False,
+                onboarding_step='business'
+            )
+            user.set_password(data['password'])
+            user.save()
+
+            audit_event(
+                request,
+                'USER_REGISTERED',
+                'User',
+                entity_id=user.id,
+                entity_name=user.username,
+                after={'role': user.role, 'email': user.email},
+                reason='Public self-registration',
+                result='success',
+                user=user
+            )
+
+        require_verification = getattr(settings, 'REQUIRE_OTP_VERIFICATION', False) or getattr(settings, 'REQUIRE_EMAIL_VERIFICATION', False)
+
+        if require_verification:
+            _send_registration_notification_email(user, request)
+            otp = f"{secrets.randbelow(900000) + 100000}"
+            expires_at = timezone.now() + timedelta(minutes=10)
+            OTPRecord.objects.create(
+                identifier=user.email,
+                purpose='signup',
+                otp_hash=OTPRecord.hash_otp(otp),
+                expires_at=expires_at
+            )
+            try:
+                from api.emails import send_otp_verification_email
+                send_otp_verification_email(user, otp)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Failed to send verification email to {user.email}: {e}")
+
+            return Response({
+                'require_verification': True,
+                'identifier': user.email,
+                'message': 'Account created. Please verify your email with the code sent.'
+            }, status=status.HTTP_201_CREATED)
+
+        user.is_verified = True
+        user.save(update_fields=['is_verified'])
+        _send_registration_notification_email(user, request)
+        _send_onboarding_welcome_email(user)
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'require_verification': False,
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': UserSerializer(user).data
+        }, status=status.HTTP_201_CREATED)
+
+
+class VerifyOTPView(APIView):
+    permission_classes = []
+    throttle_classes = [OTPVerifyRateThrottle]
+
+    def post(self, request):
+        identifier = str(request.data.get('identifier', '')).strip().lower()
+        otp = str(request.data.get('otp', '')).strip()
+        purpose = str(request.data.get('purpose', 'signup')).strip().lower()
+
+        if not identifier or not otp:
+            return Response({'error': 'Identifier and verification code are required.'}, status=400)
+        if purpose not in ('signup', 'login', 'reset'):
+            return Response({'error': 'Verification purpose is invalid.'}, status=400)
+
+        record = OTPRecord.objects.filter(
+            identifier__iexact=identifier,
+            purpose=purpose,
+            is_used=False
+        ).order_by('-created_at').first()
+
+        if not record or record.expires_at < timezone.now():
+            return Response({'error': 'Verification code has expired or is invalid. Please request a new one.'}, status=400)
+
+        if record.attempts >= 5:
+            return Response({'error': 'Too many failed attempts. Please request a new verification code.'}, status=400)
+
+        if record.otp_hash != OTPRecord.hash_otp(otp):
+            record.attempts += 1
+            record.save(update_fields=['attempts'])
+            remaining = max(0, 5 - record.attempts)
+            return Response({'error': f'Invalid verification code. {remaining} attempt(s) remaining.'}, status=400)
+
+        record.is_verified = True
+        record.is_used = True
+        record.save(update_fields=['is_verified', 'is_used'])
+
+        user = User.objects.filter(Q(email__iexact=identifier) | Q(phone=identifier)).first()
+        if purpose == 'reset':
+            if not user or not user.is_active:
+                return Response({'error': 'Verification code has expired or is invalid. Please request a new one.'}, status=400)
+            token = signing.dumps(
+                {'user_id': user.pk, 'password': user.password},
+                salt='password-reset-otp',
+            )
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            return Response({
+                'status': 'verified',
+                'message': 'Email verified. You can now set a new password.',
+                'uid': uid,
+                'token': token,
+            })
+
+        if user:
+            user.is_verified = True
+            user.save(update_fields=['is_verified'])
+            if purpose == 'signup':
+                _send_onboarding_welcome_email(user)
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'status': 'verified',
+                'message': 'Verification successful.',
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'user': UserSerializer(user).data
+            })
+
+        return Response({
+            'status': 'verified',
+            'message': 'Code verified successfully.'
+        })
+
+
+class ResendVerificationView(APIView):
+    permission_classes = []
+    throttle_classes = [OTPVerifyRateThrottle]
+
+    def post(self, request):
+        identifier = str(request.data.get('identifier', '')).strip().lower()
+        purpose = str(request.data.get('purpose', 'signup')).strip().lower()
+
+        if not identifier:
+            return Response({'error': 'Identifier is required.'}, status=400)
+        if purpose not in ('signup', 'login', 'reset'):
+            return Response({'error': 'Verification purpose is invalid.'}, status=400)
+
+        if purpose == 'reset' and not User.objects.filter(email__iexact=identifier, is_active=True).exists():
+            return Response({'message': 'If an account exists with that email, a new verification code has been sent.'})
+
+        recent = OTPRecord.objects.filter(
+            identifier__iexact=identifier,
+            purpose=purpose
+        ).order_by('-created_at').first()
+
+        if recent and recent.last_resend_at:
+            elapsed = (timezone.now() - recent.last_resend_at).total_seconds()
+            if elapsed < 60:
+                wait_sec = int(60 - elapsed)
+                return Response({'error': f'Please wait {wait_sec} seconds before requesting a new code.'}, status=429)
+
+        otp = f"{secrets.randbelow(900000) + 100000}"
+        expires_at = timezone.now() + timedelta(minutes=10)
+
+        OTPRecord.objects.create(
+            identifier=identifier,
+            purpose=purpose,
+            otp_hash=OTPRecord.hash_otp(otp),
+            expires_at=expires_at,
+            last_resend_at=timezone.now(),
+            resend_count=(recent.resend_count + 1) if recent else 1
+        )
+
+        try:
+            from api.emails import send_otp_verification_email
+            send_otp_verification_email(identifier, otp, purpose=purpose)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to resend verification email to {identifier}: {e}")
+
+        return Response({'message': 'A new verification code has been sent.'})
+
+
+class OnboardingStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        business = user.business
+
+        is_completed = user.has_completed_onboarding
+        current_step = 'completed' if is_completed else (business.onboarding_step if business else user.onboarding_step)
+
+        checklist = {
+            'profile_completed': bool(business and business.name and business.business_type),
+            'product_added': Product.objects.filter(business=business).exists() if business else False,
+            'invoice_created': Invoice.objects.filter(business=business).exists() if business else False,
+            'receipt_configured': Setting.objects.filter(business=business, key__in=['printer_type', 'printer_format', 'thermal_paper_width']).exists() if business else False,
+            'reports_viewed': Setting.objects.filter(business=business, key='checklist_reports_viewed', value='true').exists() if business else False,
+            'checklist_dismissed': Setting.objects.filter(business=business, key='checklist_dismissed', value='true').exists() if business else False,
+        }
+
+        return Response({
+            'onboarding_completed': is_completed,
+            'current_step': current_step,
+            'business': BusinessSerializer(business).data if business else None,
+            'checklist': checklist
+        })
+
+
+class OnboardingReportsViewedView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        business = request.user.business
+        if not business:
+            return Response({'error': 'Complete your business profile first.'}, status=400)
+
+        Setting.objects.update_or_create(
+            business=business,
+            key='checklist_reports_viewed',
+            defaults={'value': 'true'},
+        )
+        return Response({'status': 'recorded'})
+
+
+class OnboardingProgressView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        user = request.user
+        step = str(request.data.get('step', '')).strip().lower()
+
+        if user.role not in ['owner', 'admin'] and user.business:
+            return Response({'error': 'Only business owners can update onboarding configuration.'}, status=403)
+
+        if step == 'business':
+            serializer = OnboardingBusinessStepSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            v = serializer.validated_data
+
+            business_created = False
+            with transaction.atomic():
+                if user.business:
+                    business = user.business
+                    for k, val in v.items():
+                        setattr(business, k, val)
+                    business.onboarding_step = 'preferences'
+                    business.save()
+                else:
+                    business = Business.objects.create(
+                        name=v['name'],
+                        business_type=v['business_type'],
+                        owner_name=v.get('owner_name') or f"{user.first_name} {user.last_name}".strip() or user.username,
+                        email=v.get('email') or user.email,
+                        mobile=v.get('mobile') or user.phone,
+                        address=v.get('address', ''),
+                        state=v.get('state', ''),
+                        city=v.get('city', ''),
+                        pincode=v.get('pincode', ''),
+                        onboarding_step='preferences'
+                    )
+                    business_created = True
+                    user.business = business
+                    user.onboarding_step = 'preferences'
+                    user.save(update_fields=['business', 'onboarding_step'])
+
+            if business_created:
+                _send_registration_notification_email(
+                    user,
+                    request,
+                    business=business,
+                    shop_registered=True,
+                )
+
+            return Response({
+                'status': 'success',
+                'current_step': 'preferences',
+                'business': BusinessSerializer(user.business).data
+            })
+
+        elif step == 'preferences':
+            if not user.business:
+                return Response({'error': 'Please complete Step 1 (Business details) first.'}, status=400)
+
+            serializer = OnboardingPreferencesStepSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            v = serializer.validated_data
+
+            business = user.business
+            business.gst_registered = v.get('gst_registered', False)
+            business.gstin = v.get('gstin', '')
+            business.tax_enabled = v.get('tax_enabled', True)
+            business.currency = v.get('currency', '₹')
+            business.invoice_prefix = v.get('invoice_prefix', 'INV')
+            business.invoice_start_number = v.get('invoice_start_number', 1001)
+            business.invoice_format = v.get('invoice_format', 'thermal-80mm')
+            business.onboarding_step = 'choices'
+            business.save()
+
+            user.onboarding_step = 'choices'
+            user.save(update_fields=['onboarding_step'])
+
+            if business.invoice_format == 'thermal-58mm':
+                Setting.objects.update_or_create(business=business, key='thermal_paper_width', defaults={'value': '58'})
+                Setting.objects.update_or_create(business=business, key='printer_format', defaults={'value': 'thermal-58mm'})
+            elif business.invoice_format == 'thermal-80mm':
+                Setting.objects.update_or_create(business=business, key='thermal_paper_width', defaults={'value': '80'})
+                Setting.objects.update_or_create(business=business, key='printer_format', defaults={'value': 'thermal-80mm'})
+            elif business.invoice_format == 'A4':
+                Setting.objects.update_or_create(business=business, key='printer_format', defaults={'value': 'A4'})
+
+            return Response({
+                'status': 'success',
+                'current_step': 'choices',
+                'business': BusinessSerializer(business).data
+            })
+
+        elif step == 'choices':
+            if not user.business:
+                return Response({'error': 'Please complete Business setup first.'}, status=400)
+
+            first_product_data = request.data.get('first_product')
+            if first_product_data and isinstance(first_product_data, dict) and first_product_data.get('name'):
+                prod_serializer = OnboardingProductItemSerializer(data=first_product_data)
+                prod_serializer.is_valid(raise_exception=True)
+                pv = prod_serializer.validated_data
+
+                cat = None
+                cat_name = pv.get('category_name', '').strip()
+                if cat_name:
+                    cat, _ = Category.objects.get_or_create(business=user.business, name=cat_name)
+
+                sku = f"PRD-{secrets.randbelow(89999) + 10000}"
+                Product.objects.create(
+                    business=user.business,
+                    name=pv['name'],
+                    sku=sku,
+                    selling_price=pv['selling_price'],
+                    purchase_price=pv.get('purchase_price') or 0,
+                    mrp=pv.get('mrp') or pv['selling_price'],
+                    unit=pv.get('unit', 'pcs'),
+                    current_stock=pv.get('current_stock', 0),
+                    category=cat
+                )
+
+            business = user.business
+            business.onboarding_step = 'review'
+            business.save(update_fields=['onboarding_step'])
+            user.onboarding_step = 'review'
+            user.save(update_fields=['onboarding_step'])
+
+            return Response({
+                'status': 'success',
+                'current_step': 'review',
+                'business': BusinessSerializer(business).data
+            })
+
+        return Response({'error': 'Invalid step specified.'}, status=400)
+
+
+class OnboardingCompleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if not user.business:
+            return Response({'error': 'Cannot complete onboarding without a business profile.'}, status=400)
+
+        business = user.business
+        if not business.name or not business.business_type:
+            return Response({'error': 'Business name and business type are required to complete onboarding.'}, status=400)
+
+        with transaction.atomic():
+            business.onboarding_completed = True
+            business.onboarding_step = 'completed'
+            business.onboarding_completed_at = timezone.now()
+            business.save()
+
+            user.onboarding_completed = True
+            user.onboarding_step = 'completed'
+            user.save(update_fields=['onboarding_completed', 'onboarding_step'])
+
+            audit_event(
+                request,
+                'ONBOARDING_COMPLETED',
+                'Business',
+                entity_id=str(business.id),
+                entity_name=business.name,
+                after={'owner': user.username, 'business': business.name},
+                reason='Onboarding wizard completed',
+                result='success',
+                user=user,
+                business=business
+            )
+
+        return Response({
+            'status': 'completed',
+            'message': 'Onboarding successfully completed.',
+            'user': UserSerializer(user).data,
+            'business': BusinessSerializer(business).data
+        })
+
+
+class OnboardingDismissChecklistView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if request.user.business:
+            Setting.objects.update_or_create(
+                business=request.user.business,
+                key='checklist_dismissed',
+                defaults={'value': 'true'}
+            )
+        return Response({'status': 'dismissed'})
+
+
+class PasswordResetRequestView(APIView):
+    permission_classes = []
+    throttle_classes = [PasswordResetRateThrottle]
+
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+
+        user = User.objects.filter(email__iexact=email, is_active=True).first()
+        if user:
+            otp = f"{secrets.randbelow(900000) + 100000}"
+            OTPRecord.objects.create(
+                identifier=user.email,
+                purpose='reset',
+                otp_hash=OTPRecord.hash_otp(otp),
+                expires_at=timezone.now() + timedelta(minutes=10),
+            )
+
+            try:
+                from api.emails import send_otp_verification_email
+                send_otp_verification_email(user, otp, purpose='reset')
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Failed to send password reset code to {user.email}: {e}")
+
+        return Response({
+            'detail': 'If an account exists with that email, a password reset code has been sent.'
+        })
+
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = []
+    throttle_classes = [PasswordResetRateThrottle]
+
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        v = serializer.validated_data
+
+        try:
+            uid = force_str(urlsafe_base64_decode(v['uid']))
+            user = User.objects.get(pk=uid, is_active=True)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response({'error': 'Password reset verification is invalid or has expired.'}, status=400)
+
+        try:
+            reset_grant = signing.loads(v['token'], salt='password-reset-otp', max_age=600)
+        except signing.BadSignature:
+            return Response({'error': 'Password reset verification is invalid or has expired.'}, status=400)
+
+        if str(reset_grant.get('user_id')) != str(user.pk) or reset_grant.get('password') != user.password:
+            return Response({'error': 'Password reset verification is invalid or has expired.'}, status=400)
+
+        user.set_password(v['new_password'])
+        user.save()
+
+        audit_event(
+            request,
+            'PASSWORD_RESET_SUCCESS',
+            'User',
+            entity_id=user.id,
+            entity_name=user.username,
+            reason='Password reset after email OTP verification',
+            result='success',
+            user=user
+        )
+
+        return Response({
+            'detail': 'Password has been successfully reset. You can now sign in with your new password.'
         })
 
 
@@ -566,6 +1131,11 @@ class UserViewSet(viewsets.ModelViewSet):
             entity_name=user.username,
             after={'username': user.username, 'role': user.role, 'email': user.email},
             reason=self.request.data.get('reason', 'User created by administrator'),
+        )
+        _send_registration_notification_email(
+            user,
+            self.request,
+            business=self.request.user.business,
         )
 
     def update(self, request, *args, **kwargs):

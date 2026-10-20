@@ -55,6 +55,7 @@ import paytmLogo from '../assets/paytm.svg'
 import upiLogo from '../assets/upi.svg'
 import { Spinner } from '../components/UI'
 import { SETTINGS_TABS } from '../components/SettingsNavigation'
+import TemplateCustomizerModal from '../components/TemplateCustomizerModal'
 import './Settings.css'
 
 /* =====================================================================
@@ -349,6 +350,7 @@ export default function Settings() {
   const [showCustomTheme, setShowCustomTheme] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [removingLogo, setRemovingLogo] = useState(false)
+  const [customizingTemplate, setCustomizingTemplate] = useState(null)
 
   // Print Settings Tab sub-view: 'thermal' or 'barcode'
   const [printSubTab, setPrintSubTab] = useState('thermal')
@@ -485,6 +487,19 @@ export default function Settings() {
       toast.error(error.response?.data?.error || 'Unable to update the active invoice template')
     } finally {
       setSavingTemplateId(null)
+    }
+  }
+
+  const handleResetTemplate = async template => {
+    if (!template?.id) return
+    if (!window.confirm(`Reset "${template.name}" to factory default settings?`)) return
+    try {
+      await api.post(`/settings/templates/${template.id}/reset/`)
+      toast.success(`${template.name} reset to factory defaults`)
+      await loadSettings()
+      window.dispatchEvent(new CustomEvent('shop-settings-updated'))
+    } catch {
+      toast.error('Failed to reset template')
     }
   }
 
@@ -1029,6 +1044,23 @@ export default function Settings() {
                             <h3 className="min-w-0 truncate text-[9px] font-bold text-slate-900" title={template.name}>{template.name}</h3>
                             {isDefault && <span className="shrink-0 text-[7px] font-bold text-indigo-700">Selected</span>}
                           </div>
+                          <div className="mt-1 flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setCustomizingTemplate(template)}
+                              className="flex-1 rounded bg-slate-100 px-1 py-0.5 text-[8px] font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700"
+                            >
+                              Customize
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleResetTemplate(template)}
+                              title="Reset to default"
+                              className="rounded p-0.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                            >
+                              <RotateCcw size={10} />
+                            </button>
+                          </div>
                         </article>
                       )
                     })}
@@ -1371,10 +1403,16 @@ export default function Settings() {
                     description="Print bank name, account number & IFSC in invoice footer."
                   />
                   <CheckboxField
-                    checked={isTrue(settings.enable_invoice_qr, true)}
-                    onChange={v => setField('enable_invoice_qr', String(v))}
+                    checked={isTrue(settings.show_upi_qr_on_invoice, true)}
+                    onChange={v => setField('show_upi_qr_on_invoice', String(v))}
                     label="Payment QR Code (UPI)"
                     description="Print dynamic UPI QR for customer scan-to-pay."
+                  />
+                  <CheckboxField
+                    checked={isTrue(settings.enable_invoice_qr, true)}
+                    onChange={v => setField('enable_invoice_qr', String(v))}
+                    label="Digital Bill / Verification QR Code"
+                    description="Print invoice verification & digital bill download QR code."
                   />
                   <CheckboxField
                     checked={isTrue(settings.show_signature_area, true)}
@@ -3124,6 +3162,31 @@ export default function Settings() {
                         {selected && <span className="inline-flex items-center gap-1 rounded-full bg-indigo-600 px-2 py-1 text-[10px] font-bold text-white"><Check size={12} /> Selected</span>}
                       </div>
                       <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-600">{template.desc}</p>
+                      <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={e => {
+                            e.stopPropagation()
+                            setShowAllTemplates(false)
+                            setCustomizingTemplate(template)
+                          }}
+                          className="flex items-center gap-1 rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 cursor-pointer"
+                        >
+                          <Sliders size={13} /> Customize
+                        </span>
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={e => {
+                            e.stopPropagation()
+                            handleResetTemplate(template)
+                          }}
+                          className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
+                        >
+                          <RotateCcw size={12} /> Reset
+                        </span>
+                      </div>
                     </button>
                   )
                 })}
@@ -3167,6 +3230,22 @@ export default function Settings() {
           </div>
         </div>
       )}
+
+      {/* Template Customizer Modal */}
+      {customizingTemplate && (
+        <TemplateCustomizerModal
+          isOpen={Boolean(customizingTemplate)}
+          onClose={() => setCustomizingTemplate(null)}
+          templateId={customizingTemplate?.id}
+          templateMeta={customizingTemplate}
+          globalSettings={settings}
+          onSaved={async () => {
+            await loadSettings()
+            window.dispatchEvent(new CustomEvent('shop-settings-updated'))
+          }}
+        />
+      )}
+
 
     </div>
   )

@@ -12,15 +12,179 @@ class BusinessSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
 
+import re
+
+GSTIN_REGEX = re.compile(r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$')
+PHONE_REGEX = re.compile(r'^(\+91[\-\s]?)?[6789]\d{9}$')
+
+
+def normalize_phone_number(val):
+    if not val:
+        return ''
+    digits = re.sub(r'\D', '', str(val))
+    if digits.startswith('91') and len(digits) == 12:
+        digits = digits[2:]
+    return digits
+
+
+class RegisterSerializer(serializers.Serializer):
+    full_name = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    username = serializers.CharField(max_length=150, min_length=3)
+    email = serializers.EmailField()
+    phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, min_length=8)
+    terms_accepted = serializers.BooleanField(required=True)
+
+    def validate_username(self, value):
+        val = value.strip().lower()
+        if not re.match(r'^[a-z0-9_.]+$', val):
+            raise serializers.ValidationError('Username can only contain lowercase letters, numbers, dots, and underscores.')
+        if User.objects.filter(username__iexact=val).exists():
+            raise serializers.ValidationError('This username is already taken.')
+        return val
+
+    def validate_email(self, value):
+        val = value.strip().lower()
+        if User.objects.filter(email__iexact=val).exists():
+            raise serializers.ValidationError('An account with this email already exists.')
+        return val
+
+    def validate_phone(self, value):
+        val = value.strip()
+        if not val:
+            return ''
+        normalized = normalize_phone_number(val)
+        if len(normalized) != 10 or not normalized.isdigit():
+            raise serializers.ValidationError('Enter a valid 10-digit Indian mobile number.')
+        return normalized
+
+    def validate_terms_accepted(self, value):
+        if not value:
+            raise serializers.ValidationError('You must accept the terms and conditions to register.')
+        return value
+
+    def validate(self, attrs):
+        password = attrs.get('password')
+        confirm = attrs.get('confirm_password')
+        if password != confirm:
+            raise serializers.ValidationError({'confirm_password': 'Passwords do not match.'})
+        if not re.search(r'[A-Za-z]', password) or not re.search(r'\d', password):
+            raise serializers.ValidationError({'password': 'Password must contain at least one letter and one number.'})
+        return attrs
+
+
+class OnboardingBusinessStepSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=200)
+    business_type = serializers.CharField(max_length=100)
+    owner_name = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    mobile = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    address = serializers.CharField(required=False, allow_blank=True)
+    state = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    city = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    pincode = serializers.CharField(max_length=10, required=False, allow_blank=True)
+
+    def validate_name(self, value):
+        val = value.strip()
+        if not val:
+            raise serializers.ValidationError('Business or shop name is required.')
+        return val
+
+    def validate_business_type(self, value):
+        val = value.strip()
+        if not val:
+            raise serializers.ValidationError('Please select a business type.')
+        return val
+
+    def validate_mobile(self, value):
+        val = value.strip()
+        if not val:
+            return ''
+        normalized = normalize_phone_number(val)
+        if len(normalized) != 10:
+            raise serializers.ValidationError('Enter a valid 10-digit mobile number.')
+        return normalized
+
+    def validate_pincode(self, value):
+        val = value.strip()
+        if not val:
+            return ''
+        if not (len(val) == 6 and val.isdigit()):
+            raise serializers.ValidationError('PIN code must be 6 digits.')
+        return val
+
+
+class OnboardingPreferencesStepSerializer(serializers.Serializer):
+    gst_registered = serializers.BooleanField(default=False)
+    gstin = serializers.CharField(max_length=15, required=False, allow_blank=True)
+    tax_enabled = serializers.BooleanField(default=True)
+    currency = serializers.CharField(max_length=10, default='₹')
+    invoice_prefix = serializers.CharField(max_length=20, default='INV')
+    invoice_start_number = serializers.IntegerField(default=1001, min_value=1)
+    invoice_format = serializers.ChoiceField(
+        choices=['thermal-80mm', 'thermal-58mm', 'A4'],
+        default='thermal-80mm'
+    )
+
+    def validate(self, attrs):
+        gst_reg = attrs.get('gst_registered', False)
+        gstin = attrs.get('gstin', '').strip().upper()
+        if gst_reg:
+            if not gstin:
+                raise serializers.ValidationError({'gstin': 'GSTIN is required when GST registered is selected.'})
+            if not GSTIN_REGEX.match(gstin):
+                raise serializers.ValidationError({'gstin': 'Enter a valid 15-character GSTIN format (e.g. 29ABCDE1234F1Z5).'})
+            attrs['gstin'] = gstin
+        else:
+            attrs['gstin'] = gstin
+        return attrs
+
+
+class OnboardingProductItemSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=200)
+    selling_price = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0)
+    purchase_price = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0, required=False, default=0)
+    mrp = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0, required=False, default=0)
+    unit = serializers.CharField(max_length=20, default='pcs')
+    current_stock = serializers.DecimalField(max_digits=10, decimal_places=2, default=0)
+    category_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        return value.strip().lower()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uid = serializers.CharField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(min_length=8)
+    confirm_password = serializers.CharField(min_length=8)
+
+    def validate(self, attrs):
+        if attrs.get('new_password') != attrs.get('confirm_password'):
+            raise serializers.ValidationError({'confirm_password': 'Passwords do not match.'})
+        pwd = attrs.get('new_password')
+        if not re.search(r'[A-Za-z]', pwd) or not re.search(r'\d', pwd):
+            raise serializers.ValidationError({'new_password': 'Password must contain at least one letter and one number.'})
+        return attrs
+
+
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
     business_name = serializers.CharField(source='business.name', read_only=True)
+    onboarding_completed = serializers.BooleanField(source='has_completed_onboarding', read_only=True)
+    onboarding_step = serializers.CharField(read_only=True)
 
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone',
-                  'is_active', 'password', 'business', 'business_name', 'is_verified']
-        read_only_fields = ['business', 'is_verified']
+                  'is_active', 'password', 'business', 'business_name', 'is_verified',
+                  'onboarding_completed', 'onboarding_step']
+        read_only_fields = ['business', 'is_verified', 'onboarding_completed', 'onboarding_step']
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)

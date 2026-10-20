@@ -2027,7 +2027,18 @@ export default function NewBill() {
                       <div className="pb-bill-empty-content">
                         <Package size={28} className="pb-text-muted" />
                         <div className="pb-strong">No products found</div>
-                        <div className="pb-sub">Try a different search query or category filter.</div>
+                        <div className="pb-sub">
+                          {products.length
+                            ? 'Try a different search query or category filter.'
+                            : 'Add products to your inventory to start building this bill.'}
+                        </div>
+                        <button
+                          type="button"
+                          className="pb-btn-add mt-2"
+                          onClick={() => navigate('/inventory/products')}
+                        >
+                          <Plus size={13} /> Add Product
+                        </button>
                         {(search || catFilter) && (
                           <button
                             type="button"

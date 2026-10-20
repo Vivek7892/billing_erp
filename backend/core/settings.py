@@ -55,6 +55,7 @@ ALLOWED_HOSTS = [
         default=(
             'localhost,'
             '127.0.0.1,'
+            'testserver,'
             'billing-erp-7ga7.onrender.com'
         )
     ).split(',')
@@ -391,6 +392,9 @@ REST_FRAMEWORK = {
         'anon': '20/min',
         'user': '300/min',
         'login': '10/min',
+        'register': '10/min',
+        'otp_verify': '10/min',
+        'password_reset': '5/min',
     },
 }
 
@@ -502,4 +506,27 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = (
 SECURE_HSTS_PRELOAD = False
 
 # Frontend public URL for digital bills and redirects
-FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000').rstrip('/')
+
+# ============================================================
+# EMAIL CONFIGURATION
+# ============================================================
+
+EMAIL_BACKEND = config(
+    'EMAIL_BACKEND',
+    default='django.core.mail.backends.smtp.EmailBackend'
+)
+EMAIL_HOST = config('EMAIL_HOST', default='')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Dreamwithtech Billing ERP <dreamwithtech.dev@gmail.com>')
+EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=15, cast=int)
+REGISTRATION_NOTIFICATION_EMAIL = config(
+    'REGISTRATION_NOTIFICATION_EMAIL',
+    default='connectwithvvivek@gmail.com',
+)
+REQUIRE_EMAIL_VERIFICATION = config('REQUIRE_EMAIL_VERIFICATION', default=False, cast=bool)
+REQUIRE_OTP_VERIFICATION = config('REQUIRE_OTP_VERIFICATION', default=False, cast=bool)

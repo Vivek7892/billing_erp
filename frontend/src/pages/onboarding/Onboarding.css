@@ -1,0 +1,409 @@
+/* Dreamwithtech Billing ERP — Onboarding Wizard Styles */
+
+.onboarding-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--app-bg, #F8FAFC);
+  color: var(--ink, #0F172A);
+  font-family: inherit;
+}
+
+.onboarding-header {
+  padding: 18px 24px;
+  background: var(--surface, #FFFFFF);
+  border-bottom: 1px solid var(--line, #E2E8F0);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.onboarding-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.onboarding-brand img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.onboarding-brand-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.onboarding-brand-title strong {
+  font-size: 15px;
+  font-weight: 750;
+  color: #0057B8;
+  letter-spacing: -0.02em;
+}
+
+.onboarding-brand-title small {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--muted, #64748B);
+  text-transform: uppercase;
+}
+
+.onboarding-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 32px 16px 48px;
+  width: 100%;
+  max-width: 840px;
+  margin: 0 auto;
+}
+
+/* Stepper Indicator */
+.onboarding-stepper {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  position: relative;
+}
+
+.onboarding-step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 2;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.onboarding-step-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--surface, #FFFFFF);
+  border: 2px solid var(--line, #CBD5E1);
+  color: var(--muted, #64748B);
+  transition: all 0.25s ease;
+}
+
+.onboarding-step-item.active .onboarding-step-circle {
+  border-color: #0057B8;
+  background: #0057B8;
+  color: #FFFFFF;
+  box-shadow: 0 0 0 4px rgba(0, 87, 184, 0.16);
+}
+
+.onboarding-step-item.completed .onboarding-step-circle {
+  border-color: #10B981;
+  background: #10B981;
+  color: #FFFFFF;
+}
+
+.onboarding-step-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted, #64748B);
+  text-align: center;
+}
+
+.onboarding-step-item.active .onboarding-step-label {
+  color: #0057B8;
+  font-weight: 700;
+}
+
+.onboarding-step-item.completed .onboarding-step-label {
+  color: var(--ink, #0F172A);
+}
+
+.onboarding-stepper-line {
+  position: absolute;
+  top: 19px;
+  left: 20px;
+  right: 20px;
+  height: 2px;
+  background: var(--line, #E2E8F0);
+  z-index: 1;
+}
+
+.onboarding-stepper-progress {
+  height: 100%;
+  background: #0057B8;
+  transition: width 0.35s ease;
+}
+
+/* Card Body */
+.onboarding-card {
+  width: 100%;
+  background: var(--surface, #FFFFFF);
+  border: 1px solid var(--line, #E2E8F0);
+  border-radius: 20px;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+  padding: clamp(24px, 4vw, 36px);
+}
+
+.onboarding-title-area {
+  margin-bottom: 24px;
+}
+
+.onboarding-title-area h2 {
+  font-size: 22px;
+  font-weight: 750;
+  color: var(--ink, #0F172A);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.onboarding-title-area p {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted, #64748B);
+}
+
+/* Grid & Inputs */
+.onboarding-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+}
+
+.onboarding-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.onboarding-field.col-span-2 {
+  grid-column: span 2 / span 2;
+}
+
+.onboarding-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink, #1E293B);
+}
+
+.onboarding-field input,
+.onboarding-field select,
+.onboarding-field textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line, #CBD5E1);
+  background: var(--surface, #FFFFFF);
+  color: var(--ink, #0F172A);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.onboarding-field input:focus,
+.onboarding-field select:focus,
+.onboarding-field textarea:focus {
+  border-color: #0057B8;
+  box-shadow: 0 0 0 3px rgba(0, 87, 184, 0.12);
+}
+
+.onboarding-field-error {
+  font-size: 11px;
+  color: #EF4444;
+  margin-top: 2px;
+}
+
+/* Format Card Selector */
+.onboarding-format-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.onboarding-format-card {
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px solid var(--line, #E2E8F0);
+  background: var(--surface, #FFFFFF);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.onboarding-format-card:hover {
+  border-color: #93C5FD;
+  background: #F8FAFC;
+}
+
+.onboarding-format-card.selected {
+  border-color: #0057B8;
+  background: rgba(0, 87, 184, 0.04);
+}
+
+.onboarding-format-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink, #0F172A);
+}
+
+.onboarding-format-desc {
+  font-size: 11px;
+  color: var(--muted, #64748B);
+  line-height: 1.3;
+}
+
+/* Switch & Toggle */
+.onboarding-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line, #E2E8F0);
+  background: var(--surface-subtle, #F8FAFC);
+}
+
+/* Actions Footer */
+.onboarding-footer {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line, #E2E8F0);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.onboarding-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 24px;
+  border-radius: 10px;
+  background: #0057B8;
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 87, 184, 0.24);
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.onboarding-btn-primary:hover:not(:disabled) {
+  background: #003F8F;
+}
+
+.onboarding-btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.onboarding-btn-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.onboarding-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border-radius: 10px;
+  background: var(--surface, #FFFFFF);
+  color: var(--ink, #334155);
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid var(--line, #CBD5E1);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.onboarding-btn-secondary:hover {
+  background: var(--surface-hover, #F1F5F9);
+}
+
+/* Review Summary Cards */
+.onboarding-review-card {
+  border-radius: 14px;
+  border: 1px solid var(--line, #E2E8F0);
+  background: var(--surface-subtle, #F8FAFC);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+
+.onboarding-review-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line, #E2E8F0);
+}
+
+.onboarding-review-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink, #0F172A);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.onboarding-review-edit {
+  font-size: 11px;
+  font-weight: 600;
+  color: #0057B8;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+}
+
+.onboarding-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  font-size: 12px;
+}
+
+.onboarding-review-item dt {
+  color: var(--muted, #64748B);
+  font-size: 11px;
+}
+
+.onboarding-review-item dd {
+  color: var(--ink, #0F172A);
+  font-weight: 600;
+  margin: 2px 0 0;
+}
+
+@media (max-width: 640px) {
+  .onboarding-grid {
+    grid-template-columns: 1fr;
+  }
+  .onboarding-field.col-span-2 {
+    grid-column: span 1 / span 1;
+  }
+  .onboarding-format-grid {
+    grid-template-columns: 1fr;
+  }
+  .onboarding-step-label {
+    display: none;
+  }
+}
+

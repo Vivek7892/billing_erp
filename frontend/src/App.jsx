@@ -14,6 +14,11 @@ import SessionExpiredModal from './components/SessionExpiredModal'
 
 // Lazy-loaded pages for route-level code splitting
 const Login = lazy(() => import('./pages/Login'))
+const Register = lazy(() => import('./pages/Register'))
+const VerifyOTP = lazy(() => import('./pages/VerifyOTP'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
+const Onboarding = lazy(() => import('./pages/onboarding/Onboarding'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const NewBill = lazy(() => import('./pages/NewBill'))
 const Drafts = lazy(() => import('./pages/Drafts'))
@@ -78,6 +83,11 @@ function Guard({ children, adminOnly = false, roles }) {
     return <Navigate to={`/login?redirect=${encodeURIComponent(currentPath)}`} replace />
   }
 
+  // Redirect users who haven't completed onboarding to the setup wizard
+  if (!user.onboarding_completed) {
+    return <Navigate to="/onboarding" replace />
+  }
+
   if (adminOnly && ![ROLES.ADMIN, ROLES.OWNER].includes(user.role)) {
     return <Layout><Forbidden /></Layout>
   }
@@ -87,6 +97,24 @@ function Guard({ children, adminOnly = false, roles }) {
   }
 
   return <Layout>{children}</Layout>
+}
+
+/* -------------------------------------------------------
+   Onboarding Guard (Requires authenticated session)
+------------------------------------------------------- */
+
+function OnboardingGuard({ children }) {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return <LoadingScreen />
+  }
+
+  if (!user) {
+    return <Navigate to="/login?redirect=%2Fonboarding" replace />
+  }
+
+  return children
 }
 
 /* -------------------------------------------------------
@@ -110,7 +138,30 @@ function AppRoutes() {
     <Routes>
       {/* Authentication & Public Pages */}
       <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/verify-otp" element={<VerifyOTP />} />
+      <Route path="/verify-email" element={<VerifyOTP />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+
+      {/* Onboarding Wizard Routes */}
+      <Route
+        path="/onboarding"
+        element={
+          <OnboardingGuard>
+            <Onboarding />
+          </OnboardingGuard>
+        }
+      />
+      <Route
+        path="/onboarding/*"
+        element={
+          <OnboardingGuard>
+            <Onboarding />
+          </OnboardingGuard>
+        }
+      />
 
       {/* Dashboard */}
       <Route

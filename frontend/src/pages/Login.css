@@ -1,4 +1,5 @@
 .login-shell {
+  color-scheme: light;
   display: grid;
   min-height: 100vh;
   min-height: 100svh;
@@ -426,13 +427,15 @@
   z-index: 1;
   display: grid;
   width: min(100%, 760px);
+  aspect-ratio: 2400 / 1792;
   place-items: center;
+  transform: translateY(-22px);
 }
 
-.login-visual-artwork img {
+.login-illustration-image {
   display: block;
   width: 100%;
-  max-height: min(76vh, 820px);
+  height: 100%;
   border: 1px solid rgba(215, 222, 231, 0.65);
   border-radius: 18px;
   object-fit: contain;
@@ -594,4 +597,120 @@
   .login-spinner {
     animation-duration: 1.5s;
   }
+}
+
+/* -------------------------------------------------------------
+   AUTH EXPANDED STYLES: REGISTER, FORGOT, VERIFY, RESET
+-------------------------------------------------------------- */
+
+.login-switch-action {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 13px;
+  color: #64748B;
+}
+
+.login-switch-link {
+  color: #0057B8;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.login-switch-link:hover {
+  color: #003F8F;
+  text-decoration: underline;
+}
+
+.login-phone-wrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid #CBD5E1;
+  border-radius: 9px;
+  background: #FFFFFF;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.login-phone-wrap:focus-within {
+  border-color: #0057B8;
+  box-shadow: 0 0 0 3px rgba(0, 87, 184, 0.15);
+}
+
+.login-phone-prefix {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  height: 42px;
+  background: #F8FAFC;
+  border-right: 1px solid #E2E8F0;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  user-select: none;
+}
+
+.login-phone-wrap input {
+  flex: 1;
+  border: none !important;
+  box-shadow: none !important;
+  height: 42px;
+  padding: 0 12px;
+  font-size: 14px;
+  outline: none;
+}
+
+.password-strength-container {
+  margin-top: 6px;
+}
+
+.password-strength-bars {
+  display: flex;
+  gap: 4px;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.password-strength-segment {
+  flex: 1;
+  height: 100%;
+  border-radius: 2px;
+  background: #E2E8F0;
+  transition: background-color 0.25s ease;
+}
+
+.password-strength-label {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.strength-weak { color: #EF4444; }
+.strength-fair { color: #F59E0B; }
+.strength-good { color: #10B981; }
+.strength-strong { color: #0057B8; }
+
+.login-consent-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.login-consent-label input {
+  margin-top: 2px;
+  accent-color: #0057B8;
+}
+
+.login-consent-label a {
+  color: #0057B8;
+  text-decoration: underline;
 }

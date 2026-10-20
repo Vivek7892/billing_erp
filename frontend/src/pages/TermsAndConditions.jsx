@@ -52,18 +52,11 @@ export default function TermsAndConditions() {
       <header className="sticky top-0 z-30 border-b border-[var(--line)] bg-[var(--surface)]/95 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors hover:text-[var(--ink)]"
-              aria-label="Go back"
-            >
-              <ArrowLeft size={16} />
-            </button>
+          
             <div className="flex items-center gap-2.5">
-              <img src="/logo.png" alt="ShopEase Logo" className="h-7 w-7 object-contain" />
+              <img src="/logo.png" alt="Dreamwithtech" className="h-7 w-7 object-contain" />
               <div>
-                <span className="text-sm font-bold tracking-tight text-[var(--ink)]">ShopEase POS</span>
+                <span className="text-sm font-bold tracking-tight text-[var(--ink)]">Dreamwithtech</span>
                 <span className="hidden text-[11px] font-semibold text-[var(--muted)] sm:inline">
                   {' '}· Terms of Service
                 </span>
@@ -102,7 +95,7 @@ export default function TermsAndConditions() {
               Terms &amp; Conditions
             </h1>
             <p className="mt-3 text-sm leading-relaxed text-[var(--muted)] sm:text-base">
-              Please read these Terms and Conditions carefully before accessing or using ShopEase POS &amp; Billing ERP. These terms govern your use of our point-of-sale software, cloud synchronization, inventory tracking, GST invoice generation, and integrated payment services.
+              Please read these Terms and Conditions carefully before accessing or using DreamwithtechPOS &amp; Billing ERP. These terms govern your use of our point-of-sale software, cloud synchronization, inventory tracking, GST invoice generation, and integrated payment services.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-4 text-xs font-medium text-[var(--muted)]">

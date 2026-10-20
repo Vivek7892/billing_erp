@@ -49,8 +49,36 @@ export function AuthProvider({ children }) {
     return data.user
   }
 
+  const register = async (payload, rememberMe = getRememberMePreference()) => {
+    const { data } = await http.post('/auth/register/', payload)
+    if (!data.require_verification && data.access && data.user) {
+      saveAuthSession(data, rememberMe)
+      setUser(data.user)
+    }
+    return data
+  }
+
+  const updateUser = useCallback(userData => {
+    setUser(prev => {
+      const updated = typeof userData === 'function' ? userData(prev) : { ...prev, ...userData }
+      saveAuthUser(updated)
+      return updated
+    })
+  }, [])
+
+  const refreshMe = useCallback(async () => {
+    try {
+      const { data } = await http.get('/auth/me/')
+      setUser(data)
+      saveAuthUser(data)
+      return data
+    } catch {
+      return null
+    }
+  }, [])
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateUser, refreshMe, loading }}>
       {children}
     </AuthContext.Provider>
   )

@@ -1,5 +1,5 @@
-import { useId, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useId, useState, useEffect } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Eye, EyeOff, LockKeyhole, ShieldCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../AuthContext'
@@ -13,9 +13,27 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
   const [rememberMe, setRememberMe] = useState(getRememberMePreference)
-  const { login } = useAuth()
+  const { user, login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const passwordErrorId = useId()
+
+  // Redirect authenticated users away from login
+  useEffect(() => {
+    if (user) {
+      if (!user.onboarding_completed) {
+        navigate('/onboarding', { replace: true })
+      } else {
+        const params = new URLSearchParams(location.search)
+        const redirect = params.get('redirect')
+        if (redirect && redirect.startsWith('/') && !redirect.startsWith('//') && !redirect.includes('/login') && !redirect.includes('/register')) {
+          navigate(redirect, { replace: true })
+        } else {
+          navigate('/', { replace: true })
+        }
+      }
+    }
+  }, [user, navigate, location.search])
 
   const updateField = (field, value) => {
     setForm(previous => ({ ...previous, [field]: value }))
@@ -46,9 +64,19 @@ export default function Login() {
     setErrors({})
 
     try {
-      await login(form.username.trim(), form.password, rememberMe)
+      const loggedUser = await login(form.username.trim(), form.password, rememberMe)
       toast.success('Welcome back!')
-      navigate('/')
+      if (loggedUser && !loggedUser.onboarding_completed) {
+        navigate('/onboarding', { replace: true })
+      } else {
+        const params = new URLSearchParams(location.search)
+        const redirect = params.get('redirect')
+        if (redirect && redirect.startsWith('/') && !redirect.startsWith('//') && !redirect.includes('/login') && !redirect.includes('/register')) {
+          navigate(redirect, { replace: true })
+        } else {
+          navigate('/', { replace: true })
+        }
+      }
     } catch (error) {
       const status = error?.response?.status
       const message = !error?.response
@@ -144,18 +172,24 @@ export default function Login() {
                   />
                   <span>Remember me</span>
                 </label>
-                <button
-                  type="button"
+                <Link
+                  to="/forgot-password"
                   className="login-forgot"
-                  onClick={() => toast('Please contact your administrator to reset your password.')}
                 >
                   Forgot password?
-                </button>
+                </Link>
               </div>
 
               <button type="submit" className="login-submit" disabled={loading}>
                 {loading ? <><span className="login-spinner" aria-hidden="true" />Signing in...</> : 'Sign in'}
               </button>
+
+              <div className="login-switch-action">
+                <span>New to Dreamwithtech?</span>{' '}
+                <Link to="/register" className="login-switch-link">
+                  Create an account
+                </Link>
+              </div>
             </form>
 
             <div className="login-security-note">

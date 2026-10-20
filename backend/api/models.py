@@ -42,6 +42,14 @@ class Business(models.Model):
     invoice_start_number = models.PositiveIntegerField(default=1001)
     currency = models.CharField(max_length=10, default='₹')
     tax_enabled = models.BooleanField(default=True)
+    state = models.CharField(max_length=100, blank=True, default='')
+    city = models.CharField(max_length=100, blank=True, default='')
+    pincode = models.CharField(max_length=10, blank=True, default='')
+    gst_registered = models.BooleanField(default=False)
+    invoice_format = models.CharField(max_length=30, default='thermal-80mm')
+    onboarding_completed = models.BooleanField(default=False)
+    onboarding_step = models.CharField(max_length=50, default='business')
+    onboarding_completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -63,6 +71,16 @@ class User(AbstractUser):
     failed_login_attempts = models.PositiveSmallIntegerField(default=0)
     last_failed_login = models.DateTimeField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
+    onboarding_completed = models.BooleanField(default=False)
+    onboarding_step = models.CharField(max_length=50, default='business')
+
+    @property
+    def has_completed_onboarding(self):
+        if self.onboarding_completed:
+            return True
+        if self.business and getattr(self.business, 'onboarding_completed', False):
+            return True
+        return False
 
     def __str__(self):
         return f"{self.username} ({self.role})"

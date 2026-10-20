@@ -79,6 +79,7 @@ _BASE_DEFAULTS: Dict[str, Any] = {
     'show_business_pan': 'true',
     'invoice_header_layout': 'logo_left',
     'header_alignment': 'left',
+    'invoice_title': 'TAX INVOICE',
 
     # Invoice Fields
     'show_customer_name': 'true',
@@ -225,12 +226,21 @@ _TEMPLATE_SPECIFIC_OVERRIDES: Dict[str, Dict[str, Any]] = {
 }
 
 
-def _to_bool(val: Any) -> bool:
-    if val is None:
-        return True
+def to_bool(val: Any, default: bool = True) -> bool:
+    """Robust boolean normalization supporting strings, ints, bools, and truthy/falsy values."""
+    if val is None or val == "":
+        return default
     if isinstance(val, bool):
         return val
-    return str(val).strip().lower() in ('true', '1', 'yes', 'on')
+    s = str(val).strip().lower()
+    if s in ('true', '1', 'yes', 'on'):
+        return True
+    if s in ('false', '0', 'no', 'off'):
+        return False
+    return default
+
+
+_to_bool = to_bool  # Backward-compatible alias
 
 
 def _build_structured_sections(flat_cfg: Dict[str, Any], template_id: str) -> Dict[str, Any]:
@@ -448,10 +458,17 @@ def save_template_config(business: Business, template_id: str, new_config: Dict[
     # 3. Also allow any flat keys passed directly
     for k, v in new_config.items():
         if k not in ('business_info', 'fields', 'layout', 'tax', 'payment', 'page'):
-            if k in default_cfg or k.startswith('show_') or k.startswith('invoice_') or k in (
-                'page_size', 'page_orientation', 'font_size', 'line_spacing', 'margin_size', 'header_alignment', 'auto_cut'
+            if (
+                k in default_cfg
+                or k.startswith(('show_', 'invoice_', 'thermal_', 'header_', 'footer_'))
+                or k in ('page_size', 'page_orientation', 'font_size', 'line_spacing', 'margin_size', 'header_alignment', 'auto_cut', 'round_off', 'cess_enabled', 'custom_theme_enabled')
             ):
-                clean_config[k] = str(v) if not isinstance(v, (dict, list)) else v
+                if isinstance(v, bool):
+                    clean_config[k] = 'true' if v else 'false'
+                elif isinstance(v, (dict, list)):
+                    clean_config[k] = v
+                else:
+                    clean_config[k] = str(v)
 
     record, _ = InvoiceTemplateSetting.objects.update_or_create(
         business=business,
@@ -581,6 +598,270 @@ def get_all_templates_summary(business: Optional[Business]) -> Dict[str, Any]:
     }
 
 
+def normalize_invoice_template_config(cfg: Dict[str, Any], template_id: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Centralized Normalization Contract.
+    Converts raw/merged settings into a type-safe, predictable structure:
+    {
+      header: {}, invoice: {}, party: {}, items: {}, totals: {},
+      payment: {}, qr: {}, footer: {}, theme: {}, thermal: {}
+    }
+    """
+    tid = template_id or cfg.get('invoice_template') or cfg.get('template_id') or 'gst_a4'
+    is_thermal = tid in ('thermal_80', 'thermal_58') or str(cfg.get('printer_type', '')).startswith('thermal')
+    is_58 = tid == 'thermal_58' or str(cfg.get('thermal_paper_width', '')).strip() in ('58', '58mm', '2')
+
+    b_info = cfg.get('business_info') or {}
+    flds = cfg.get('fields') or {}
+    lay = cfg.get('layout') or {}
+    tx = cfg.get('tax') or {}
+    pay = cfg.get('payment') or {}
+    pg = cfg.get('page') or {}
+
+    # Header
+    show_logo = to_bool(cfg.get('show_business_logo', b_info.get('show_logo', True)), True)
+    show_store_name = to_bool(cfg.get('show_business_name', cfg.get('show_shop_name', b_info.get('show_name', True))), True)
+    show_address = to_bool(cfg.get('show_business_address', b_info.get('show_address', True)), True)
+    show_phone = to_bool(cfg.get('show_business_phone', b_info.get('show_phone', True)), True)
+    show_email = to_bool(cfg.get('show_business_email', b_info.get('show_email', True)), True)
+    show_gstin = to_bool(cfg.get('show_business_gstin', b_info.get('show_gstin', True)), True)
+    show_pan = to_bool(cfg.get('show_business_pan', b_info.get('show_pan', True)), True)
+    show_cin = to_bool(cfg.get('show_cin_on_invoice', False), False)
+    show_fssai = to_bool(cfg.get('show_fssai_on_invoice', False), False)
+    header_layout = str(cfg.get('invoice_header_layout', b_info.get('header_layout', 'logo_left')))
+    header_alignment = str(cfg.get('header_alignment', lay.get('header_alignment', 'left')))
+
+    # Invoice Details
+    title = str(cfg.get('invoice_title', 'TAX INVOICE')).strip() or 'TAX INVOICE'
+    prefix = str(cfg.get('invoice_prefix', 'INV-'))
+    start_number = str(cfg.get('invoice_start_number', '1001'))
+    show_time = to_bool(cfg.get('show_invoice_time', True), True)
+    due_days = int(cfg.get('invoice_due_days', 15) or 15)
+    payment_terms = str(cfg.get('default_payment_terms', ''))
+    notes = str(cfg.get('invoice_notes', flds.get('show_notes', '')))
+    terms = str(cfg.get('terms_override', cfg.get('invoice_terms', pay.get('terms_override', ''))))
+    footer = str(cfg.get('footer_text_override', cfg.get('invoice_footer', pay.get('footer_text_override', ''))))
+
+    # Party
+    show_customer_name = to_bool(cfg.get('show_customer_name', flds.get('show_customer_name', True)), True)
+    show_customer_phone = to_bool(cfg.get('show_customer_phone', flds.get('show_customer_phone', True)), True)
+    show_customer_address = to_bool(cfg.get('show_customer_address', flds.get('show_customer_address', True)), True)
+    show_customer_gstin = to_bool(cfg.get('show_customer_gstin', flds.get('show_customer_gstin', True)), True)
+    show_place_of_supply = to_bool(cfg.get('show_place_of_supply', flds.get('show_place_of_supply', True)), True)
+
+    # Item Columns
+    show_sr_no = to_bool(cfg.get('show_sr_no', True), True)
+    show_item_name = to_bool(cfg.get('show_item_name', True), True)
+    show_item_description = to_bool(cfg.get('show_item_description', False), False)
+    show_hsn = to_bool(cfg.get('show_hsn_col', flds.get('show_hsn', True)), True)
+    show_sku = to_bool(cfg.get('show_sku_col', flds.get('show_sku', False)), False)
+    show_barcode = to_bool(cfg.get('show_barcode_col', False), False)
+    show_batch = to_bool(cfg.get('show_batch_col', flds.get('show_batch', False)), False)
+    show_mfg = to_bool(cfg.get('show_mfg_date', False), False)
+    show_exp = to_bool(cfg.get('show_expiry_col', flds.get('show_expiry', False)), False)
+    show_mrp = to_bool(cfg.get('show_mrp_col', False), False)
+    show_qty = to_bool(cfg.get('show_qty_col', True), True)
+    show_unit = to_bool(cfg.get('show_unit_col', flds.get('show_unit', False)), False)
+    show_rate = to_bool(cfg.get('show_rate_col', flds.get('show_rate', True)), True)
+    show_discount = to_bool(cfg.get('show_discount_col', flds.get('show_discount', True)), True)
+    show_tax_cols = to_bool(cfg.get('show_tax_cols', flds.get('show_tax_breakup', True)), True)
+    show_cess = to_bool(cfg.get('cess_enabled', False), False)
+    show_total = to_bool(cfg.get('show_total_col', True), True)
+
+    # Totals
+    show_subtotal = to_bool(cfg.get('show_subtotal', tx.get('show_subtotal', True)), True)
+    show_discount_total = to_bool(cfg.get('show_discount_total', tx.get('show_discount_total', True)), True)
+    show_tax_breakdown = to_bool(cfg.get('show_tax_breakdown', tx.get('show_tax_summary', True)), True)
+    show_round_off = to_bool(cfg.get('show_round_off', cfg.get('round_off', tx.get('show_round_off', True))), True)
+    show_amount_in_words = to_bool(cfg.get('show_amount_in_words', tx.get('show_amount_in_words', True)), True)
+    show_balance_due = to_bool(cfg.get('show_balance_due', pay.get('show_balance_due', True)), True)
+    show_payment_status = to_bool(cfg.get('show_payment_status', True), True)
+    show_payment_mode = to_bool(cfg.get('show_payment_mode', flds.get('show_payment_mode', True)), True)
+    show_payment_summary = to_bool(cfg.get('show_payment_summary', pay.get('show_payment_summary', True)), True)
+
+    # QR Codes (Completely separated to prevent cross-contamination)
+    show_upi_qr_on_invoice = to_bool(cfg.get('show_upi_qr_on_invoice', pay.get('show_upi_qr', True)), True)
+    show_bill_qr_on_invoice = to_bool(cfg.get('enable_invoice_qr', pay.get('show_digital_bill_qr', True)), True)
+    show_upi_qr_on_thermal = to_bool(cfg.get('thermal_show_upi_qr', cfg.get('show_upi_qr_on_thermal', True)), True)
+    show_bill_qr_on_thermal = to_bool(cfg.get('thermal_show_bill_qr', False), False)
+
+    # Payment & Misc
+    show_bank_details = to_bool(cfg.get('show_bank_details', pay.get('show_bank_details', True)), True)
+    show_signature = to_bool(cfg.get('show_signature_area', pay.get('show_signature', False)), False)
+    show_terms = to_bool(cfg.get('show_terms', pay.get('show_terms', True)), True)
+    show_footer = to_bool(cfg.get('show_footer', pay.get('show_footer', True)), True)
+    show_notes = to_bool(cfg.get('show_notes', flds.get('show_notes', True)), True)
+
+    # Theme
+    accent_color = str(cfg.get('invoice_theme_color', lay.get('accent_color', '#1E3A5F')))
+    secondary_color = str(cfg.get('invoice_theme_secondary', lay.get('secondary_color', '#64748B')))
+    font_family = str(cfg.get('invoice_font', lay.get('font_family', 'inter')))
+    border_style = str(cfg.get('invoice_border_style', lay.get('border_style', 'solid')))
+    table_style = str(cfg.get('invoice_table_style', lay.get('table_style', 'clean')))
+
+    # Thermal Specifics
+    thermal_title = str(cfg.get('thermal_title', cfg.get('invoice_title', 'TAX INVOICE'))).strip() or 'TAX INVOICE'
+    thermal_show_logo = to_bool(cfg.get('thermal_show_logo', show_logo), False if is_58 else True)
+    thermal_show_invoice_no = to_bool(cfg.get('thermal_show_invoice_no', True), True)
+    thermal_show_date = to_bool(cfg.get('thermal_show_date', True), True)
+    thermal_show_time = to_bool(cfg.get('thermal_show_time', show_time), True)
+    thermal_show_cashier = to_bool(cfg.get('thermal_show_cashier', False), False)
+    thermal_show_payment_mode = to_bool(cfg.get('thermal_show_payment_mode', show_payment_mode), True)
+    thermal_show_place_of_supply = to_bool(cfg.get('thermal_show_place_of_supply', False), False)
+    thermal_show_customer_name = to_bool(cfg.get('thermal_show_customer_name', show_customer_name), True)
+    thermal_show_customer_phone = to_bool(cfg.get('thermal_show_customer_phone', False), False)
+    thermal_show_customer_address = to_bool(cfg.get('thermal_show_customer_address', False), False)
+    thermal_show_customer_gstin = to_bool(cfg.get('thermal_show_customer_gstin', False), False)
+    thermal_show_sku = to_bool(cfg.get('thermal_show_sku', show_sku), False)
+    thermal_show_barcode = to_bool(cfg.get('thermal_show_barcode', show_barcode), False)
+    thermal_show_hsn = to_bool(cfg.get('thermal_show_hsn', False), False)
+    thermal_show_batch = to_bool(cfg.get('thermal_show_batch', False), False)
+    thermal_show_expiry = to_bool(cfg.get('thermal_show_expiry', False), False)
+    thermal_show_mrp = to_bool(cfg.get('thermal_show_mrp', False), False)
+    thermal_show_qty = to_bool(cfg.get('thermal_show_qty', True), True)
+    thermal_show_rate = to_bool(cfg.get('thermal_show_rate', True), True)
+    thermal_show_total = to_bool(cfg.get('thermal_show_total', True), True)
+    thermal_show_discount = to_bool(cfg.get('thermal_show_discount', False), False)
+    thermal_show_tax = to_bool(cfg.get('thermal_show_tax', False), False)
+    thermal_show_party_balance = to_bool(cfg.get('thermal_show_party_balance', False), False)
+    thermal_show_terms = to_bool(cfg.get('thermal_show_terms', False), False)
+    thermal_show_footer = to_bool(cfg.get('thermal_show_footer', show_footer), True)
+    thermal_terms = str(cfg.get('thermal_terms', terms))
+    thermal_footer = str(cfg.get('receipt_footer', footer or 'Thank you for shopping with us!'))
+
+    return {
+        'template_id': tid,
+        'header': {
+            'showLogo': show_logo,
+            'showStoreName': show_store_name,
+            'showAddress': show_address,
+            'showPhone': show_phone,
+            'showEmail': show_email,
+            'showGstin': show_gstin,
+            'showPan': show_pan,
+            'showCin': show_cin,
+            'showFssai': show_fssai,
+            'layout': header_layout,
+            'alignment': header_alignment,
+            'storeNameOverride': str(cfg.get('store_name_override', b_info.get('store_name_override', ''))),
+            'addressOverride': str(cfg.get('address_override', b_info.get('address_override', ''))),
+            'phoneOverride': str(cfg.get('phone_override', b_info.get('phone_override', ''))),
+            'emailOverride': str(cfg.get('email_override', b_info.get('email_override', ''))),
+            'gstinOverride': str(cfg.get('gstin_override', b_info.get('gstin_override', ''))),
+        },
+        'invoice': {
+            'title': title,
+            'prefix': prefix,
+            'startNumber': start_number,
+            'showTime': show_time,
+            'dueDays': due_days,
+            'paymentTerms': payment_terms,
+            'notes': notes,
+            'terms': terms,
+            'footer': footer,
+        },
+        'party': {
+            'showName': show_customer_name,
+            'showPhone': show_customer_phone,
+            'showAddress': show_customer_address,
+            'showGstin': show_customer_gstin,
+            'showPlaceOfSupply': show_place_of_supply,
+        },
+        'items': {
+            'showSrNo': show_sr_no,
+            'showName': show_item_name,
+            'showDescription': show_item_description,
+            'showHsn': show_hsn,
+            'showSku': show_sku,
+            'showBarcode': show_barcode,
+            'showBatch': show_batch,
+            'showMfgDate': show_mfg,
+            'showExpiryDate': show_exp,
+            'showMrp': show_mrp,
+            'showQty': show_qty,
+            'showUnit': show_unit,
+            'showRate': show_rate,
+            'showDiscount': show_discount,
+            'showTaxCols': show_tax_cols,
+            'showCess': show_cess,
+            'showTotal': show_total,
+        },
+        'totals': {
+            'showSubtotal': show_subtotal,
+            'showDiscountTotal': show_discount_total,
+            'showTaxBreakdown': show_tax_breakdown,
+            'showRoundOff': show_round_off,
+            'showAmountInWords': show_amount_in_words,
+            'showBalanceDue': show_balance_due,
+            'showPaymentStatus': show_payment_status,
+            'showPaymentMode': show_payment_mode,
+            'showPaymentSummary': show_payment_summary,
+        },
+        'payment': {
+            'showUpiQr': show_upi_qr_on_invoice,
+            'showBankDetails': show_bank_details,
+            'showSignature': show_signature,
+            'upiQrSize': str(cfg.get('upi_qr_size_a4', 'medium')),
+        },
+        'qr': {
+            'showUpiQrOnInvoice': show_upi_qr_on_invoice,
+            'showBillQrOnInvoice': show_bill_qr_on_invoice,
+            'showUpiQrOnThermal': show_upi_qr_on_thermal,
+            'showBillQrOnThermal': show_bill_qr_on_thermal,
+        },
+        'footer': {
+            'showFooter': show_footer,
+            'showTerms': show_terms,
+            'showNotes': show_notes,
+            'footerText': footer,
+            'termsText': terms,
+        },
+        'theme': {
+            'accentColor': accent_color,
+            'secondaryColor': secondary_color,
+            'fontFamily': font_family,
+            'borderStyle': border_style,
+            'tableStyle': table_style,
+            'customThemeEnabled': to_bool(cfg.get('custom_theme_enabled', False), False),
+        },
+        'thermal': {
+            'paperWidth': 58 if is_58 else 80,
+            'is58mm': is_58,
+            'is80mm': not is_58,
+            'title': thermal_title,
+            'showLogo': thermal_show_logo,
+            'showInvoiceNo': thermal_show_invoice_no,
+            'showDate': thermal_show_date,
+            'showTime': thermal_show_time,
+            'showCashier': thermal_show_cashier,
+            'showPaymentMode': thermal_show_payment_mode,
+            'showPlaceOfSupply': thermal_show_place_of_supply,
+            'showCustomerName': thermal_show_customer_name,
+            'showCustomerPhone': thermal_show_customer_phone,
+            'showCustomerAddress': thermal_show_customer_address,
+            'showCustomerGstin': thermal_show_customer_gstin,
+            'showSku': thermal_show_sku,
+            'showBarcode': thermal_show_barcode,
+            'showHsn': thermal_show_hsn,
+            'showBatch': thermal_show_batch,
+            'showExpiry': thermal_show_expiry,
+            'showMrp': thermal_show_mrp,
+            'showQty': thermal_show_qty,
+            'showRate': thermal_show_rate,
+            'showDiscount': thermal_show_discount,
+            'showTax': thermal_show_tax,
+            'showTotal': thermal_show_total,
+            'showPartyBalance': thermal_show_party_balance,
+            'showUpiQr': show_upi_qr_on_thermal,
+            'showBillQr': show_bill_qr_on_thermal,
+            'showTerms': thermal_show_terms,
+            'showFooter': thermal_show_footer,
+            'termsText': thermal_terms,
+            'footerText': thermal_footer,
+        }
+    }
+
+
 def resolve_invoice_template_settings(
     invoice: Any,
     template_id: Optional[str] = None,
@@ -588,13 +869,14 @@ def resolve_invoice_template_settings(
 ) -> Dict[str, Any]:
     """
     Given an invoice and optional requested template/printer format,
-    resolves the effective configuration by combining:
-    1. Base business profile settings from Setting table
-    2. Active template for the requested format
-    3. Template-specific settings overrides
+    resolves the effective configuration adhering strictly to the precedence hierarchy:
+      1. Template-specific saved settings (InvoiceTemplateSetting record)
+      2. Thermal-specific settings (for thermal templates)
+      3. Global business profile settings (Setting table)
+      4. System default for the template
     """
     business = getattr(invoice, 'business', None)
-    base_settings = {s.key: s.value for s in Setting.objects.filter(business=business)}
+    base_settings = {s.key: s.value for s in Setting.objects.filter(business=business)} if business else {}
     active_map = get_active_templates(business)
 
     # 1. Determine effective template_id
@@ -612,32 +894,120 @@ def resolve_invoice_template_settings(
         else:
             effective_tpl = active_map.get('default', 'gst_a4')
 
-    # 2. Load template-specific configuration
-    tpl_cfg = get_template_config(business, effective_tpl)
+    effective_tpl = LEGACY_TEMPLATE_ALIASES.get(effective_tpl, effective_tpl)
 
-    # 3. Merge: base profile settings (identity, bank, UPI, GST) as foundations,
-    # overlaying template-specific display, layout, typography and column settings.
-    merged = deepcopy(base_settings)
-    merged.update(tpl_cfg)
+    # 2. Start from template factory defaults
+    default_cfg = get_default_config(effective_tpl)
+    merged = deepcopy(default_cfg)
 
-    # Business-level visibility switches are master controls across every
-    # template. A saved template may further hide an element, but cannot turn
-    # it back on after it has been disabled globally.
-    global_logo = base_settings.get('show_business_logo')
-    if global_logo is not None:
-        merged['show_business_logo'] = 'true' if (
-            _to_bool(global_logo) and _to_bool(tpl_cfg.get('show_business_logo', True))
-        ) else 'false'
+    # 3. Layer base global business settings onto defaults
+    merged.update(base_settings)
 
-    has_global_name = 'show_business_name' in base_settings or 'show_shop_name' in base_settings
-    if has_global_name:
-        show_name = (
-            _to_bool(base_settings.get('show_business_name', True))
-            and _to_bool(base_settings.get('show_shop_name', True))
-            and _to_bool(tpl_cfg.get('show_business_name', True))
-        )
-        merged['show_business_name'] = 'true' if show_name else 'false'
-        merged['show_shop_name'] = 'true' if show_name and _to_bool(tpl_cfg.get('show_shop_name', True)) else 'false'
+    # 4. If this is a thermal template, ensure thermal-specific settings take precedence
+    is_thermal = effective_tpl.startswith('thermal') or (printer or '').lower().startswith('thermal')
+    if is_thermal:
+        thermal_map = {
+            'show_business_logo': 'thermal_show_logo',
+            'show_customer_name': 'thermal_show_customer_name',
+            'show_customer_phone': 'thermal_show_customer_phone',
+            'show_customer_address': 'thermal_show_customer_address',
+            'show_customer_gstin': 'thermal_show_customer_gstin',
+            'show_place_of_supply': 'thermal_show_place_of_supply',
+            'show_qty_col': 'thermal_show_qty',
+            'show_rate_col': 'thermal_show_rate',
+            'show_total_col': 'thermal_show_total',
+            'show_discount_col': 'thermal_show_discount',
+            'show_tax_cols': 'thermal_show_tax',
+            'show_sku_col': 'thermal_show_sku',
+            'show_barcode_col': 'thermal_show_barcode',
+            'show_batch_col': 'thermal_show_batch',
+            'show_expiry_col': 'thermal_show_expiry',
+            'show_mrp_col': 'thermal_show_mrp',
+            'show_upi_qr_on_thermal': 'thermal_show_upi_qr',
+            'show_terms': 'thermal_show_terms',
+            'show_footer': 'thermal_show_footer',
+        }
+        for gen_k, therm_k in thermal_map.items():
+            if therm_k in base_settings:
+                merged[therm_k] = base_settings[therm_k]
+                merged[gen_k] = base_settings[therm_k]
+
+    # 5. Layer template-specific saved configuration (Highest Precedence)
+    if business:
+        tpl_record = InvoiceTemplateSetting.objects.filter(
+            business=business, template_id=effective_tpl
+        ).first()
+        if tpl_record and tpl_record.config:
+            tpl_saved = tpl_record.config
+            # Apply flat overrides
+            for k, v in tpl_saved.items():
+                if k not in ('business_info', 'fields', 'layout', 'tax', 'payment', 'page'):
+                    merged[k] = v
+
+            # Translate structured sections if present
+            b_info = tpl_saved.get('business_info') or {}
+            if 'show_logo' in b_info: merged['show_business_logo'] = 'true' if to_bool(b_info['show_logo']) else 'false'
+            if 'show_name' in b_info: merged['show_business_name'] = 'true' if to_bool(b_info['show_name']) else 'false'
+            if 'show_address' in b_info: merged['show_business_address'] = 'true' if to_bool(b_info['show_address']) else 'false'
+            if 'show_phone' in b_info: merged['show_business_phone'] = 'true' if to_bool(b_info['show_phone']) else 'false'
+            if 'show_email' in b_info: merged['show_business_email'] = 'true' if to_bool(b_info['show_email']) else 'false'
+            if 'show_gstin' in b_info: merged['show_business_gstin'] = 'true' if to_bool(b_info['show_gstin']) else 'false'
+            if 'show_pan' in b_info: merged['show_business_pan'] = 'true' if to_bool(b_info['show_pan']) else 'false'
+            if 'header_layout' in b_info: merged['invoice_header_layout'] = str(b_info['header_layout'])
+            if 'store_name_override' in b_info: merged['store_name_override'] = str(b_info['store_name_override'])
+            if 'address_override' in b_info: merged['address_override'] = str(b_info['address_override'])
+
+            flds = tpl_saved.get('fields') or {}
+            if 'show_customer_name' in flds: merged['show_customer_name'] = 'true' if to_bool(flds['show_customer_name']) else 'false'
+            if 'show_customer_phone' in flds: merged['show_customer_phone'] = 'true' if to_bool(flds['show_customer_phone']) else 'false'
+            if 'show_customer_address' in flds: merged['show_customer_address'] = 'true' if to_bool(flds['show_customer_address']) else 'false'
+            if 'show_customer_gstin' in flds: merged['show_customer_gstin'] = 'true' if to_bool(flds['show_customer_gstin']) else 'false'
+            if 'show_hsn' in flds: merged['show_hsn_col'] = 'true' if to_bool(flds['show_hsn']) else 'false'
+            if 'show_sku' in flds: merged['show_sku_col'] = 'true' if to_bool(flds['show_sku']) else 'false'
+            if 'show_unit' in flds: merged['show_unit_col'] = 'true' if to_bool(flds['show_unit']) else 'false'
+            if 'show_rate' in flds: merged['show_rate_col'] = 'true' if to_bool(flds['show_rate']) else 'false'
+            if 'show_discount' in flds: merged['show_discount_col'] = 'true' if to_bool(flds['show_discount']) else 'false'
+            if 'show_tax_breakup' in flds: merged['show_tax_cols'] = 'true' if to_bool(flds['show_tax_breakup']) else 'false'
+            if 'show_payment_mode' in flds: merged['show_payment_mode'] = 'true' if to_bool(flds['show_payment_mode']) else 'false'
+            if 'show_place_of_supply' in flds: merged['show_place_of_supply'] = 'true' if to_bool(flds['show_place_of_supply']) else 'false'
+            if 'show_notes' in flds: merged['show_notes'] = 'true' if to_bool(flds['show_notes']) else 'false'
+
+            lay = tpl_saved.get('layout') or {}
+            if 'font_family' in lay: merged['invoice_font'] = str(lay['font_family'])
+            if 'compact_mode' in lay: merged['font_size'] = 'compact' if lay['compact_mode'] else 'normal'
+            if 'accent_color' in lay: merged['invoice_theme_color'] = str(lay['accent_color'])
+            if 'secondary_color' in lay: merged['invoice_theme_secondary'] = str(lay['secondary_color'])
+            if 'border_style' in lay: merged['invoice_border_style'] = str(lay['border_style'])
+            if 'table_style' in lay: merged['invoice_table_style'] = str(lay['table_style'])
+
+            tx = tpl_saved.get('tax') or {}
+            if 'show_subtotal' in tx: merged['show_subtotal'] = 'true' if to_bool(tx['show_subtotal']) else 'false'
+            if 'show_discount_total' in tx: merged['show_discount_total'] = 'true' if to_bool(tx['show_discount_total']) else 'false'
+            if 'show_tax_summary' in tx: merged['show_tax_breakdown'] = 'true' if to_bool(tx['show_tax_summary']) else 'false'
+            if 'show_round_off' in tx: merged['show_round_off'] = 'true' if to_bool(tx['show_round_off']) else 'false'
+            if 'show_amount_in_words' in tx: merged['show_amount_in_words'] = 'true' if to_bool(tx['show_amount_in_words']) else 'false'
+
+            pay = tpl_saved.get('payment') or {}
+            if 'show_upi_qr' in pay:
+                val = 'true' if to_bool(pay['show_upi_qr']) else 'false'
+                merged['show_upi_qr_on_invoice'] = val
+                merged['show_upi_qr_on_thermal'] = val
+            if 'show_bank_details' in pay: merged['show_bank_details'] = 'true' if to_bool(pay['show_bank_details']) else 'false'
+            if 'show_payment_summary' in pay: merged['show_payment_summary'] = 'true' if to_bool(pay['show_payment_summary']) else 'false'
+            if 'show_balance_due' in pay: merged['show_balance_due'] = 'true' if to_bool(pay['show_balance_due']) else 'false'
+            if 'show_terms' in pay: merged['show_terms'] = 'true' if to_bool(pay['show_terms']) else 'false'
+            if 'show_signature' in pay: merged['show_signature_area'] = 'true' if to_bool(pay['show_signature']) else 'false'
+            if 'show_footer' in pay: merged['show_footer'] = 'true' if to_bool(pay['show_footer']) else 'false'
+            if 'show_digital_bill_qr' in pay: merged['enable_invoice_qr'] = 'true' if to_bool(pay['show_digital_bill_qr']) else 'false'
+            if 'footer_text_override' in pay: merged['footer_text_override'] = str(pay['footer_text_override'])
+            if 'terms_override' in pay: merged['terms_override'] = str(pay['terms_override'])
+
+            pg = tpl_saved.get('page') or {}
+            if 'page_size' in pg: merged['page_size'] = str(pg['page_size'])
+            if 'orientation' in pg: merged['page_orientation'] = str(pg['orientation'])
+            if 'thermal_roll_width' in pg: merged['paper_width'] = '58' if '58' in str(pg['thermal_roll_width']) else '80'
 
     merged['invoice_template'] = effective_tpl
+    merged['template_id'] = effective_tpl
+    merged['normalized'] = normalize_invoice_template_config(merged, effective_tpl)
     return merged

@@ -1,16 +1,16 @@
-import DreamVisualContainer from './DreamVisualContainer'
-import loginIllustration from '../../assets/login-illustration.png'
+import loginIllustration from '../../assets/login-illustration.webp'
 
 export default function LoginIllustration({ className = '', uploadedSrc }) {
   return (
-    <DreamVisualContainer
-      slotKey="login-illustration"
-      title="Dreamwithtech Billing ERP"
-      uploadedSrc={uploadedSrc || loginIllustration}
-      className={`w-full h-full min-h-[480px] bg-white border-0 rounded-none shadow-none ${className}`}
-      hideBadge
-    >
-      <div className="w-full h-full flex items-center justify-center bg-white overflow-hidden" />
-    </DreamVisualContainer>
+    <img
+      src={uploadedSrc || loginIllustration}
+      alt="Dreamwithtech Billing ERP dashboard, checkout, inventory, and analytics"
+      className={`login-illustration-image ${className}`}
+      width="1200"
+      height="896"
+      loading="eager"
+      fetchPriority="high"
+      decoding="async"
+    />
   )
 }

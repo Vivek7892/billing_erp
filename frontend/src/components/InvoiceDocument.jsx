@@ -55,7 +55,11 @@ export function numberToIndianWords(num) {
 
 export function isTrue(val, defaultVal = true) {
   if (val === undefined || val === null || val === '') return defaultVal
-  return val === 'true' || val === true || val === 1 || val === '1'
+  if (typeof val === 'boolean') return val
+  const str = String(val).trim().toLowerCase()
+  if (str === 'true' || str === '1' || str === 'yes' || str === 'on') return true
+  if (str === 'false' || str === '0' || str === 'no' || str === 'off') return false
+  return defaultVal
 }
 
 function InvoiceModePicker({ mode, onModeChange, settings = {} }) {
@@ -237,7 +241,13 @@ export default function InvoiceDocument({
 
   // Document status
   const isCancelled = inv.status === 'cancelled'
-  const docHeading = isCancelled ? 'CANCELLED INVOICE' : 'TAX INVOICE'
+  const configuredDocTitle = (
+    (templateConfig?.invoice_title && String(templateConfig.invoice_title).trim())
+    || (tLayout?.invoice_title && String(tLayout.invoice_title).trim())
+    || (s.invoice_title && String(s.invoice_title).trim())
+    || 'TAX INVOICE'
+  )
+  const docHeading = isCancelled ? 'CANCELLED INVOICE' : configuredDocTitle
   const paymentStatus = isCancelled ? 'CANCELLED' : (inv.payment_status || 'PAID').toUpperCase()
 
   // Items and totals
@@ -298,11 +308,17 @@ export default function InvoiceDocument({
   const showDiscCol = (tFields.show_discount !== undefined ? tFields.show_discount : isTrue(s.show_discount_col, true)) && items.some(i => Number(i.disc) > 0)
   const showTaxCols = (tFields.show_tax_breakup !== undefined ? tFields.show_tax_breakup : isTrue(s.show_tax_cols, true)) && s.gst_reg_type !== 'unregistered'
   const thermal = effectiveMode === 'thermal'
-  const showQtyCol = thermal ? isTrue(s.thermal_show_qty, true) : isTrue(s.show_qty_col, true)
-  const showRateCol = thermal ? isTrue(s.thermal_show_rate, true) : isTrue(s.show_rate_col, true)
-  const showTotalCol = thermal ? isTrue(s.thermal_show_total, true) : isTrue(s.show_total_col, true)
-  const showSerialCol = isTrue(s.show_sr_no, true)
-  const showItemName = isTrue(s.show_item_name, true)
+  const showSerialCol = isTrue(tFields.show_sr_no !== undefined ? tFields.show_sr_no : s.show_sr_no, true)
+  const showItemName = isTrue(tFields.show_item_name !== undefined ? tFields.show_item_name : s.show_item_name, true)
+  const showQtyCol = thermal
+    ? isTrue(s.thermal_show_qty, true)
+    : isTrue(tFields.show_qty !== undefined ? tFields.show_qty : s.show_qty_col, true)
+  const showRateCol = thermal
+    ? isTrue(s.thermal_show_rate, true)
+    : isTrue(tFields.show_rate !== undefined ? tFields.show_rate : s.show_rate_col, true)
+  const showTotalCol = thermal
+    ? isTrue(s.thermal_show_total, true)
+    : isTrue(tFields.show_total !== undefined ? tFields.show_total : s.show_total_col, true)
   const showThermalBatch = isTrue(s.thermal_show_batch, showBatchCol)
   const showThermalExpiry = isTrue(s.thermal_show_expiry, showExpiryCol)
   const showThermalMrp = isTrue(s.thermal_show_mrp, showMrpCol)
@@ -326,8 +342,8 @@ export default function InvoiceDocument({
   ].filter(Boolean).join(' | ')
   const showBankDetails = isTrue(tPayment.show_bank_details, isTrue(s.show_bank_details, true)) && Boolean(bankDetailsText)
   const upiId = s.shop_upi_id || ''
-  const showUpiA4 = isTrue(tPayment.show_upi_qr, isTrue(s.show_upi_qr_on_invoice, true)) && Boolean(upiId)
-  const showUpiThermal = isTrue(s.thermal_show_upi_qr, isTrue(tPayment.show_upi_qr, isTrue(s.show_upi_qr_on_thermal, true))) && Boolean(upiId)
+  const showUpiA4 = isTrue(tPayment.show_upi_qr !== undefined ? tPayment.show_upi_qr : s.show_upi_qr_on_invoice, true) && Boolean(upiId)
+  const showUpiThermal = isTrue(s.thermal_show_upi_qr !== undefined ? s.thermal_show_upi_qr : (tPayment.show_upi_qr !== undefined ? tPayment.show_upi_qr : s.show_upi_qr_on_thermal), true) && Boolean(upiId)
   const is58mm = mode === 'thermal_58' || (mode === 'thermal' && (s.thermal_paper_width === '58' || s.thermal_paper_width === '58mm' || s.thermal_paper_width === '2' || s.printer_type === 'thermal_58')) || tPage.thermal_roll_width === '58mm' || (s.invoice_template === 'thermal_58' && mode !== 'thermal_80' && mode !== 'a4' && mode !== 'half_a4')
 
   const qrSizeA4 = ({ small: 64, medium: 78, large: 96 })[s.upi_qr_size_a4] || 78
@@ -336,10 +352,10 @@ export default function InvoiceDocument({
     : ({ small: 72, medium: 92, large: 110 })[s.upi_qr_size_thermal] || 92
   const qrValue = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(shopName)}&am=${grandTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(invoiceNo)}`
 
-  // Digital Bill QR Code ("Scan to View Bill")
+  // Digital Bill QR Code ("Scan to View Bill") - completely separate from payment UPI QR
   const showDigitalBillQr = effectiveMode === 'thermal'
-    ? isTrue(s.thermal_show_bill_qr, isTrue(s.enable_invoice_qr, true))
-    : isTrue(tPayment.show_digital_bill_qr, isTrue(s.enable_invoice_qr, true))
+    ? isTrue(s.thermal_show_bill_qr, false)
+    : isTrue(tPayment.show_digital_bill_qr !== undefined ? tPayment.show_digital_bill_qr : s.enable_invoice_qr, true)
   const digitalBillUrl = inv.short_url
     || (inv.public_token ? `${window.location.origin}/bill/${inv.public_token}` : `${window.location.origin}/bill/${inv.id || 'preview'}`)
     || (inv.id ? `http://127.0.0.1:8000/s/${inv.public_token ? inv.public_token.slice(0, 6) : inv.id}/` : '')

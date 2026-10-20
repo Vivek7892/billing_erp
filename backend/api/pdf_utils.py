@@ -512,8 +512,8 @@ def _section_title(text):
 
 
 def resolve_document_mode(s, invoice):
-    # All A4 documents use the final TAX INVOICE presentation.
-    return "TAX INVOICE", True
+    title = str(s.get("invoice_title", "")).strip() or "TAX INVOICE"
+    return title, True
 
 
 def _logo_for_a4(s, max_width_mm=26, max_height_mm=22):
@@ -686,7 +686,8 @@ def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
     payment_mode = getattr(invoice, "payment_method", None) or s.get("default_payment_method") or "CASH"
 
     is_cancelled = getattr(invoice, "status", None) == "cancelled"
-    doc_heading = "CANCELLED INVOICE" if is_cancelled else "TAX INVOICE"
+    configured_title = str(s.get("invoice_title", "")).strip() or "TAX INVOICE"
+    doc_heading = "CANCELLED INVOICE" if is_cancelled else configured_title
     doc_color = colors.HexColor("#DC2626") if is_cancelled else ACCENT
 
     control = [
@@ -695,7 +696,13 @@ def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
         [para(f"<b>Invoice No:</b> {_fmt_value(invoice.invoice_number)}", size=8.0, align=TA_RIGHT, color=colors.HexColor("#0F172A"))],
     ]
     if inv_date:
-        control.append([para(f"<b>Invoice Date:</b> {inv_date}", size=7.5, align=TA_RIGHT, color=colors.HexColor("#334155"))])
+        date_str = inv_date
+        if s.flag("show_invoice_time", True) and getattr(invoice, "created_at", None):
+            try:
+                date_str += f" {invoice.created_at.strftime('%H:%M')}"
+            except Exception:
+                pass
+        control.append([para(f"<b>Invoice Date:</b> {date_str}", size=7.5, align=TA_RIGHT, color=colors.HexColor("#334155"))])
     if has_val(payment_mode) and s.flag("show_payment_mode", True):
         control.append([para(f"<b>Payment Mode:</b> {str(payment_mode).upper()}", size=7.5, align=TA_RIGHT, color=colors.HexColor("#334155"))])
 
@@ -811,12 +818,15 @@ def build_items_table(s, invoice, show_tax, interstate):
         amount = igst if kind == "igst" else (sgst if kind == "sgst" else cgst)
         return cell(currency(amount), size=6.8, align=TA_RIGHT)
 
-    columns = [("sl", "S.No", 8, TA_CENTER, lambda i, idx: cell(str(idx), 6.8, TA_CENTER))]
+    columns = []
+    if s.flag("show_sr_no", True):
+        columns.append(("sl", "S.No", 8, TA_CENTER, lambda i, idx: cell(str(idx), 6.8, TA_CENTER)))
     if show_sku:
         columns.append(("sku", "Item Code", 13, TA_CENTER, lambda i, idx: cell(_fmt_value(getattr(i, "sku", "")), 6.5, TA_CENTER)))
     if show_barcode:
         columns.append(("barcode", "Barcode", 18, TA_CENTER, lambda i, idx: cell(_fmt_value(getattr(i, "barcode", "")), 6.0, TA_CENTER)))
-    columns.append(("item", "Item Description", 50, TA_LEFT, lambda i, idx: cell(_fmt_value(i.product_name), 7.2, TA_LEFT)))
+    if s.flag("show_item_name", True):
+        columns.append(("item", "Item Description", 50, TA_LEFT, lambda i, idx: cell(_fmt_value(i.product_name), 7.2, TA_LEFT)))
     if show_hsn:
         columns.append(("hsn", "HSN/SAC", 12, TA_CENTER, lambda i, idx: cell(_fmt_value(i.hsn_code), 6.5, TA_CENTER)))
     if show_unit:
@@ -829,7 +839,8 @@ def build_items_table(s, invoice, show_tax, interstate):
         columns.append(("exp", "EXP", 9, TA_CENTER, lambda i, idx: cell(short_date(getattr(i, "expiry_date", None)), 6.1, TA_CENTER)))
     if show_mrp:
         columns.append(("mrp", "MRP", 12, TA_RIGHT, lambda i, idx: cell(currency(getattr(i, "mrp", 0)), 6.5, TA_RIGHT)))
-    columns.append(("qty", "Qty", 10, TA_CENTER, lambda i, idx: cell(qty_text(i), 7.0, TA_CENTER)))
+    if s.flag("show_qty_col", True):
+        columns.append(("qty", "Qty", 10, TA_CENTER, lambda i, idx: cell(qty_text(i), 7.0, TA_CENTER)))
     if s.flag("show_rate_col", True):
         columns.append(("rate", "Rate", 16, TA_RIGHT, lambda i, idx: cell(currency(i.unit_price), 6.8, TA_RIGHT)))
     if show_discount:
@@ -842,7 +853,14 @@ def build_items_table(s, invoice, show_tax, interstate):
             columns.append(("cgst", "CGST", 14, TA_RIGHT, lambda i, idx: tax_cell(i, "cgst")))
     if show_cess:
         columns.append(("cess", "CESS", 10, TA_RIGHT, lambda i, idx: cell(currency(getattr(i, "cess_amount", 0)), 6.2, TA_RIGHT)))
-    columns.append(("total", "Amount", 20, TA_RIGHT, lambda i, idx: cell(currency(i.total), 7.2, TA_RIGHT, True)))
+    if s.flag("show_total_col", True):
+        columns.append(("total", "Amount", 20, TA_RIGHT, lambda i, idx: cell(currency(i.total), 7.2, TA_RIGHT, True)))
+
+    if not columns:
+        columns = [
+            ("item", "Item Description", 60, TA_LEFT, lambda i, idx: cell(_fmt_value(i.product_name), 7.2, TA_LEFT)),
+            ("total", "Amount", 40, TA_RIGHT, lambda i, idx: cell(currency(i.total), 7.2, TA_RIGHT, True)),
+        ]
 
     ratios = [c[2] for c in columns]
     scale = BODY_W / (sum(ratios) * mm)
@@ -1037,19 +1055,18 @@ def build_payment_and_bank(s, invoice):
 
     status_color = colors.HexColor("#DC2626") if status in ("CANCELLED", "FAILED") else (colors.HexColor("#16A34A") if status == "PAID" else colors.HexColor("#D97706"))
 
+    active_cols = []
+    active_cols.append(("status", "PAYMENT STATUS", status, status_color, TA_LEFT))
+    active_cols.append(("paid", "AMOUNT PAID", currency(paid), colors.HexColor("#0F172A"), TA_CENTER))
+    if s.flag("show_balance_due", True):
+        active_cols.append(("balance", "BALANCE DUE", currency(balance), colors.HexColor("#DC2626") if balance > 0 else colors.HexColor("#0F172A"), TA_CENTER))
+    if s.flag("show_payment_mode", True):
+        active_cols.append(("mode", "MODE", mode, colors.HexColor("#0F172A"), TA_RIGHT))
+
+    col_w_payment = [BODY_W / len(active_cols) for _ in active_cols]
     rows = [
-        [
-            para("PAYMENT STATUS", size=6.8, bold=True, color=colors.HexColor("#475569")),
-            col_header("AMOUNT PAID"),
-            col_header("BALANCE DUE") if s.flag("show_balance_due", True) else para("", size=1),
-            col_header("MODE") if s.flag("show_payment_mode", True) else para("", size=1),
-        ],
-        [
-            para(status, size=8.2, bold=True, color=status_color),
-            col_val(currency(paid)),
-            col_val(currency(balance), color=colors.HexColor("#DC2626") if balance > 0 else None) if s.flag("show_balance_due", True) else para("", size=1),
-            col_val(mode) if s.flag("show_payment_mode", True) else para("", size=1),
-        ],
+        [para(c[1], size=6.8, bold=True, color=colors.HexColor("#475569"), align=c[4]) for c in active_cols],
+        [para(c[2], size=8.2, bold=True, align=c[4], color=c[3]) for c in active_cols],
     ]
 
     bank_raw = str(s.shop_bank_details or "").strip()
@@ -1087,7 +1104,7 @@ def build_payment_and_bank(s, invoice):
         style_cmds.append(("SPAN", (0, 2), (-1, 2)))
     payment_table = _tbl(
         rows,
-        [BODY_W * 0.28, BODY_W * 0.24, BODY_W * 0.24, BODY_W * 0.24],
+        col_w_payment,
         style_cmds,
     )
 
@@ -1466,7 +1483,8 @@ def generate_thermal_invoice_pdf(invoice, template=None):
 
     # 2. Invoice Meta
     is_cancelled = getattr(invoice, "status", None) == "cancelled"
-    doc_title = "CANCELLED INVOICE" if is_cancelled else (s.get("thermal_title") or document_title or "RETAIL INVOICE")
+    configured_thermal_title = str(s.get("thermal_title") or s.get("invoice_title") or document_title or "TAX INVOICE").strip()
+    doc_title = "CANCELLED INVOICE" if is_cancelled else configured_thermal_title
     story.append(Spacer(1, 0.5 * mm))
     story.append(_tpara(doc_title, size=7.0 if is_58mm else 7.8, align=TA_CENTER, bold=True))
 
@@ -1601,14 +1619,18 @@ def generate_thermal_invoice_pdf(invoice, template=None):
         story.append(item_tbl)
 
     else:
-        # 80mm Table Layout
-        col_w = [content_w * 0.44, content_w * 0.14, content_w * 0.20, content_w * 0.22]
-        item_rows = [[
-            _tpara("ITEM", size=6.2, bold=True),
-            _tpara("QTY" if thermal_show_qty else "", size=6.2, align=TA_RIGHT, bold=True),
-            _tpara("RATE" if thermal_show_rate else "", size=6.2, align=TA_RIGHT, bold=True),
-            _tpara("TOTAL" if thermal_show_total else "", size=6.2, align=TA_RIGHT, bold=True),
-        ]]
+        # 80mm Table Layout - dynamically sized columns without blank gaps
+        cols_80 = [("ITEM", 44, TA_LEFT, lambda i, itext: _tpara(itext, size=6.2))]
+        if thermal_show_qty:
+            cols_80.append(("QTY", 16, TA_RIGHT, lambda i, itext: _tpara(_fmt_value(i.quantity), size=6.0, align=TA_RIGHT)))
+        if thermal_show_rate:
+            cols_80.append(("RATE", 20, TA_RIGHT, lambda i, itext: _tpara(currency(i.unit_price), size=6.0, align=TA_RIGHT)))
+        if thermal_show_total:
+            cols_80.append(("TOTAL", 20, TA_RIGHT, lambda i, itext: _tpara(currency(i.total), size=6.2, align=TA_RIGHT, bold=True)))
+
+        total_r = sum(c[1] for c in cols_80)
+        col_w = [content_w * (c[1] / total_r) for c in cols_80]
+        item_rows = [[_tpara(c[0], size=6.2, align=c[2], bold=True) for c in cols_80]]
         tbl_styles = [
             ("LINEBELOW", (0, 0), (-1, 0), 0.5, BORDER),
             ("LEFTPADDING", (0, 0), (-1, -1), 0),
@@ -1640,12 +1662,7 @@ def generate_thermal_invoice_pdf(invoice, template=None):
 
             item_text = p_name + (f"<br/><font size='5.0'>{' | '.join(details)}</font>" if details else "")
 
-            item_rows.append([
-                _tpara(item_text, size=6.2),
-                _tpara(_fmt_value(item.quantity) if thermal_show_qty else "", size=6.0, align=TA_RIGHT),
-                _tpara(currency(item.unit_price) if thermal_show_rate else "", size=6.0, align=TA_RIGHT),
-                _tpara(currency(item.total) if thermal_show_total else "", size=6.2, align=TA_RIGHT, bold=True),
-            ])
+            item_rows.append([c[3](item, item_text) for c in cols_80])
             tbl_styles.append(("TOPPADDING", (0, r_idx), (-1, r_idx), 1.0))
             tbl_styles.append(("BOTTOMPADDING", (0, r_idx), (-1, r_idx), 1.0))
             r_idx += 1

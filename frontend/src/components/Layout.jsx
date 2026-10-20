@@ -971,7 +971,7 @@ function ProfileMenu({ user }) {
   const location = useLocation()
   const [open, setOpen] = useState(false)
   const menuRef = useRef(null)
-  const displayName = user?.first_name || user?.username || user?.email || 'User'
+  const displayName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username || user?.email || 'User'
   const initials = displayName.trim().charAt(0).toUpperCase() || 'U'
 
   useEffect(() => {
@@ -998,20 +998,60 @@ function ProfileMenu({ user }) {
     navigate('/login', { replace: true })
   }
 
+  const profileActions = () => (
+    <>
+      <div className="border-b border-[var(--line)] p-2">
+        <button
+          type="button"
+          role="menuitem"
+          aria-pressed={theme === 'dark'}
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          onClick={toggleTheme}
+          className="flex min-h-10 w-full items-center justify-between rounded-md px-2.5 text-xs font-medium text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)]"
+        >
+          <span className="inline-flex items-center gap-2">
+            {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
+            {theme === 'dark' ? 'Dark mode' : 'Light mode'}
+          </span>
+          <span className={`flex h-4 w-7 items-center rounded-full p-0.5 transition-colors ${theme === 'dark' ? 'bg-[var(--primary)]' : 'bg-[var(--line-strong)]'}`} aria-hidden="true">
+            <span className={`h-3 w-3 rounded-full bg-white shadow-sm transition-transform ${theme === 'dark' ? 'translate-x-3' : 'translate-x-0'}`} />
+          </span>
+        </button>
+      </div>
+
+      <div className="space-y-0.5 p-1.5">
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => { setOpen(false); navigate('/settings') }}
+          className="flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-xs font-medium text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
+        >
+          <Settings size={15} /> Settings
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          onClick={handleSignOut}
+          className="flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+        >
+          <LogOut size={15} /> Sign out
+        </button>
+      </div>
+    </>
+  )
+
   return (
     <div className="relative shrink-0" ref={menuRef}>
       <button
         type="button"
         onClick={() => setOpen(value => !value)}
-        aria-label="Open profile menu"
-        aria-haspopup="menu"
+        aria-label="Open account options"
         aria-expanded={open}
-        className="inline-flex h-10 max-w-[110px] items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] py-1 pl-1 pr-2 text-[var(--ink-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] sm:max-w-[180px] sm:gap-2 sm:pr-2.5"
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] sm:h-10 sm:w-auto sm:max-w-[180px] sm:justify-start sm:gap-2 sm:py-1 sm:pl-1 sm:pr-2.5"
       >
         <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-xs font-bold text-[var(--primary-contrast)]">
           {initials}
         </span>
-        <span className="text-[11px] font-semibold sm:hidden">Profile</span>
         <span className="hidden max-w-28 truncate text-xs font-semibold sm:inline">{displayName}</span>
         <ChevronDown size={14} className={`hidden text-[var(--muted)] transition-transform sm:block ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -1020,53 +1060,52 @@ function ProfileMenu({ user }) {
         <div
           role="menu"
           aria-label="Profile menu"
-          className="absolute right-0 top-full z-50 mt-2 w-[min(18rem,calc(100vw-1rem))] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-lg"
+          className="absolute right-0 top-full z-50 mt-2 hidden w-[min(18rem,calc(100vw-1rem))] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-lg sm:block"
         >
           <div className="flex items-center gap-3 border-b border-[var(--line)] px-3 py-3">
             <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-sm font-bold text-[var(--primary-contrast)]">{initials}</span>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-[var(--ink)]">{displayName}</p>
-              <p className="truncate text-[11px] text-[var(--muted)]">{user?.email || user?.role || 'Signed in'}</p>
+              <p className="truncate text-[11px] text-[var(--muted)]">{user?.email || 'Signed in'}</p>
+              {user?.role && <p className="mt-0.5 text-[10px] capitalize text-[var(--muted)]">{user.role}</p>}
             </div>
           </div>
+          {profileActions()}
+        </div>
+      )}
 
-          <div className="border-b border-[var(--line)] p-2">
-            <button
-              type="button"
-              role="menuitem"
-              aria-pressed={theme === 'dark'}
-              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-              onClick={toggleTheme}
-              className="flex min-h-10 w-full items-center justify-between rounded-md px-2.5 text-xs font-medium text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)]"
-            >
-              <span className="inline-flex items-center gap-2">
-                {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
-                {theme === 'dark' ? 'Dark mode' : 'Light mode'}
-              </span>
-              <span className={`flex h-4 w-7 items-center rounded-full p-0.5 transition-colors ${theme === 'dark' ? 'bg-[var(--primary)]' : 'bg-[var(--line-strong)]'}`} aria-hidden="true">
-                <span className={`h-3 w-3 rounded-full bg-white shadow-sm transition-transform ${theme === 'dark' ? 'translate-x-3' : 'translate-x-0'}`} />
-              </span>
-            </button>
-          </div>
-
-          <div className="space-y-0.5 p-1.5">
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => { setOpen(false); navigate('/settings') }}
-              className="flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-xs font-medium text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
-            >
-              <Settings size={15} /> Settings
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={handleSignOut}
-              className="flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
-            >
-              <LogOut size={15} /> Sign out
-            </button>
-          </div>
+      {open && (
+        <div className="fixed inset-0 z-[100] sm:hidden" role="presentation">
+          <button
+            type="button"
+            aria-label="Close profile drawer"
+            className="absolute inset-0 h-full w-full bg-slate-950/45 backdrop-blur-[2px]"
+            onClick={() => setOpen(false)}
+          />
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="Profile and account options"
+            className="absolute inset-x-3 bottom-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-2xl"
+          >
+            <div className="flex items-center gap-3 border-b border-[var(--line)] px-4 py-4">
+              <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-sm font-bold text-[var(--primary-contrast)]">{initials}</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-[var(--ink)]">{displayName}</p>
+                <p className="truncate text-xs text-[var(--muted)]">{user?.email || 'Signed in'}</p>
+                {user?.role && <p className="mt-0.5 text-[10px] capitalize text-[var(--muted)]">{user.role}</p>}
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Close profile drawer"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--muted)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            {profileActions()}
+          </section>
         </div>
       )}
     </div>

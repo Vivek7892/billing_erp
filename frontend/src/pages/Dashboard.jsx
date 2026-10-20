@@ -30,6 +30,7 @@ import api from '../api'
 import { Badge, Spinner } from '../components/UI'
 import { useShop } from '../components/Layout'
 import DashboardBannerCarousel from './DashboardBannerCarousel'
+import FirstUseChecklist from '../components/FirstUseChecklist'
 import {
   DashboardVideoGuides,
   InformationalBanner,
@@ -315,6 +316,9 @@ export default function Dashboard() {
           DASHBOARD BANNER CAROUSEL (Below Name on Top, Above Business Insights)
       -------------------------------------------------------------- */}
       <DashboardBannerCarousel className="my-3" />
+
+      {/* Getting Started First-Use Checklist */}
+      <FirstUseChecklist className="my-3" />
 
 
       {/* -------------------------------------------------------------

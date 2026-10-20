@@ -1,58 +1,32 @@
 import { useEffect, useState } from 'react'
 import {
-  Wallet,
-  ArrowDown,
   CheckCircle2,
+  Sparkles,
   IndianRupee,
+  Receipt,
+  CreditCard,
 } from 'lucide-react'
 import DreamVisualContainer from './DreamVisualContainer'
-
-const PHASES = [
-  {
-    title: 'Outstanding Credit',
-    amount: '₹4,500',
-    label: 'Credit Due',
-    icon: Wallet,
-  },
-  {
-    title: 'Collecting Payment',
-    amount: '₹4,500',
-    label: 'Receiving',
-    icon: ArrowDown,
-  },
-  {
-    title: 'Payment Received',
-    amount: '₹4,500',
-    label: 'Allocating',
-    icon: IndianRupee,
-  },
-  {
-    title: 'Credit Cleared',
-    amount: '₹0',
-    label: 'Settled',
-    icon: CheckCircle2,
-  },
-]
 
 export default function CreditCollectedVisual({
   className = '',
   customerName = 'Rajesh Kumar',
   uploadedSrc,
 }) {
-  const [phase, setPhase] = useState(0)
+  const [collected, setCollected] = useState(false)
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setPhase((current) => (current + 1) % PHASES.length)
+    const timer = setTimeout(() => {
+      setCollected(true)
     }, 1800)
 
-    return () => clearInterval(timer)
+    return () => clearTimeout(timer)
   }, [])
 
-  const current = PHASES[phase]
-  const Icon = current.icon
-  const isCleared = phase === 3
-  const progress = ((phase + 1) / PHASES.length) * 100
+  const outstanding = 4500
+  const collectedAmount = collected ? 4500 : 0
+  const remaining = outstanding - collectedAmount
+  const progress = (collectedAmount / outstanding) * 100
 
   return (
     <DreamVisualContainer
@@ -60,167 +34,276 @@ export default function CreditCollectedVisual({
       title="Credit Collection"
       uploadedSrc={uploadedSrc}
       className={`p-0 bg-transparent border-0 ${className}`}
-      badgeText={isCleared ? 'Credit Cleared' : 'Credit Collection'}
-      badgeVariant={isCleared ? 'success' : 'cyan'}
+      badgeText={collected ? 'Collected' : 'Collecting'}
+      badgeVariant={collected ? 'success' : 'cyan'}
     >
-      {/* Animation wrapper */}
       <div className="w-full px-1">
 
-        {/* Single compact card */}
+        {/* Main Card */}
         <div
           className="
+            relative
             w-full
-            h-[170px]
             rounded-xl
             border
             border-slate-200
             dark:border-slate-700
-            bg-slate-50
+            bg-white
             dark:bg-slate-800
             px-4
-            py-3
+            py-3.5
             overflow-hidden
           "
         >
 
-          {/* Customer */}
-          <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">
-            {customerName}
-          </div>
-
-          {/* Main row */}
-          <div className="mt-3 flex items-center justify-between">
-
-            {/* Animated information */}
+          {/* Subtle success glow */}
+          {collected && (
             <div
-              key={`content-${phase}`}
-              className="min-w-0 animate-[creditFade_.35s_ease-out]"
-            >
-              <div className="text-[9px] uppercase tracking-wider text-slate-400">
-                {current.title}
+              className="
+                pointer-events-none
+                absolute
+                -right-10
+                -top-10
+                h-24
+                w-24
+                rounded-full
+                bg-emerald-400/10
+                blur-2xl
+              "
+            />
+          )}
+
+          {/* Header */}
+          <div className="flex items-center justify-between">
+
+            <div className="min-w-0">
+              <div className="text-[10px] uppercase tracking-wider text-slate-400">
+                Customer
               </div>
 
-              <div
-                className={`mt-0.5 text-2xl leading-none font-bold font-mono ${
-                  isCleared
-                    ? 'text-emerald-600'
-                    : 'text-slate-900 dark:text-white'
-                }`}
-              >
-                {current.amount}
-              </div>
-
-              <div className="mt-1 text-[10px] text-slate-400">
-                {current.label}
+              <div className="mt-0.5 truncate text-xs font-semibold text-slate-800 dark:text-white">
+                {customerName}
               </div>
             </div>
 
-            {/* Static-position icon */}
+            {/* Collected Mark */}
             <div
               className={`
                 shrink-0
-                w-9
-                h-9
-                rounded-full
-                flex
+                inline-flex
                 items-center
-                justify-center
-                transition-colors
+                gap-1
+                rounded-full
+                px-2
+                py-1
+                text-[9px]
+                font-bold
+                transition-all
                 duration-500
                 ${
-                  isCleared
-                    ? 'bg-emerald-100 text-emerald-600'
-                    : 'bg-blue-50 text-[#0057B8]'
+                  collected
+                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                    : 'bg-blue-50 text-[#0057B8] dark:bg-blue-900/30'
                 }
               `}
             >
-              <Icon size={18} strokeWidth={2} />
+              <CheckCircle2 size={11} strokeWidth={2.5} />
+              {collected ? 'COLLECTED' : 'PROCESSING'}
+            </div>
+          </div>
+
+          {/* Invoice */}
+          <div className="mt-3 flex items-center gap-2 text-[9px] text-slate-400">
+            <Receipt size={12} />
+            <span>INV-2026-089</span>
+            <span>•</span>
+            <span>20 Oct 2026</span>
+          </div>
+
+          {/* Amount Summary */}
+          <div className="mt-4 grid grid-cols-3 gap-2">
+
+            {/* Outstanding */}
+            <div className="rounded-lg bg-slate-50 px-2.5 py-2 dark:bg-slate-700/50">
+              <div className="text-[8px] uppercase tracking-wide text-slate-400">
+                Outstanding
+              </div>
+
+              <div className="mt-1 flex items-center gap-0.5 text-sm font-bold text-slate-800 dark:text-white">
+                <IndianRupee size={12} />
+                4,500
+              </div>
+            </div>
+
+            {/* Collected */}
+            <div
+              className={`
+                rounded-lg
+                px-2.5
+                py-2
+                transition-colors
+                duration-500
+                ${
+                  collected
+                    ? 'bg-emerald-50 dark:bg-emerald-900/20'
+                    : 'bg-slate-50 dark:bg-slate-700/50'
+                }
+              `}
+            >
+              <div className="text-[8px] uppercase tracking-wide text-slate-400">
+                Collected
+              </div>
+
+              <div
+                className={`
+                  mt-1
+                  flex
+                  items-center
+                  gap-0.5
+                  text-sm
+                  font-bold
+                  ${
+                    collected
+                      ? 'text-emerald-600'
+                      : 'text-slate-800 dark:text-white'
+                  }
+                `}
+              >
+                <IndianRupee size={12} />
+                {collectedAmount.toLocaleString('en-IN')}
+              </div>
+            </div>
+
+            {/* Remaining */}
+            <div className="rounded-lg bg-slate-50 px-2.5 py-2 dark:bg-slate-700/50">
+              <div className="text-[8px] uppercase tracking-wide text-slate-400">
+                Remaining
+              </div>
+
+              <div
+                className={`
+                  mt-1
+                  flex
+                  items-center
+                  gap-0.5
+                  text-sm
+                  font-bold
+                  ${
+                    remaining === 0
+                      ? 'text-emerald-600'
+                      : 'text-slate-800 dark:text-white'
+                  }
+                `}
+              >
+                <IndianRupee size={12} />
+                {remaining.toLocaleString('en-IN')}
+              </div>
             </div>
           </div>
 
           {/* Progress */}
           <div className="mt-4">
 
-            <div className="h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+            <div className="flex items-center justify-between text-[9px]">
+              <span className="font-medium text-slate-500">
+                Payment progress
+              </span>
+
+              <span
+                className={
+                  collected
+                    ? 'font-bold text-emerald-600'
+                    : 'font-semibold text-[#0057B8]'
+                }
+              >
+                {Math.round(progress)}%
+              </span>
+            </div>
+
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
               <div
                 className={`
                   h-full
                   rounded-full
                   transition-all
-                  duration-700
+                  duration-1000
                   ease-out
-                  ${isCleared ? 'bg-emerald-500' : 'bg-[#0057B8]'}
+                  ${
+                    collected
+                      ? 'bg-emerald-500'
+                      : 'bg-[#0057B8]'
+                  }
                 `}
                 style={{
                   width: `${progress}%`,
                 }}
               />
             </div>
+          </div>
 
-            <div className="mt-1 flex items-center justify-between text-[8px] text-slate-400">
-              <span>Outstanding</span>
-              <span>{Math.round(progress)}%</span>
-              <span>Cleared</span>
+          {/* Payment Details */}
+          <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5 dark:border-slate-700">
+
+            <div className="flex items-center gap-1.5 text-[9px] text-slate-500 dark:text-slate-400">
+              <CreditCard size={12} />
+              <span>UPI</span>
             </div>
 
+            <span className="text-[9px] text-slate-400">
+              Ref: UPI-784521
+            </span>
           </div>
         </div>
 
-        {/* Status outside card */}
+        {/* Success Status */}
         <div
-          key={`status-${phase}`}
-          className="mt-1.5 flex items-center justify-center gap-1.5 animate-[statusFade_.3s_ease-out]"
+          className={`
+            relative
+            mt-2
+            flex
+            items-center
+            justify-center
+            gap-1.5
+            transition-all
+            duration-500
+            ${
+              collected
+                ? 'opacity-100'
+                : 'opacity-70'
+            }
+          `}
         >
-          <span
-            className={`
-              w-1.5
-              h-1.5
-              rounded-full
-              ${isCleared
-                ? 'bg-emerald-500'
-                : 'bg-[#16A9D8] animate-pulse'
-              }
-            `}
-          />
+          {collected && (
+            <>
+              <Sparkles
+                size={12}
+                className="text-amber-400"
+              />
 
-          <span
-            className={`
-              text-[10px]
-              font-medium
-              ${isCleared
-                ? 'text-emerald-600'
-                : 'text-slate-500 dark:text-slate-400'
-              }
-            `}
-          >
-            {current.label}
-          </span>
+              <CheckCircle2
+                size={14}
+                className="text-emerald-500"
+                strokeWidth={2.5}
+              />
+
+              <span className="text-[10px] font-semibold text-emerald-600">
+                Credit fully collected
+              </span>
+
+              <Sparkles
+                size={12}
+                className="text-amber-400"
+              />
+            </>
+          )}
+
+          {!collected && (
+            <span className="text-[10px] font-medium text-slate-400">
+              Recording payment...
+            </span>
+          )}
         </div>
       </div>
-
-      <style>{`
-        @keyframes creditFade {
-          from {
-            opacity: 0;
-            transform: translateY(3px);
-          }
-
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes statusFade {
-          from {
-            opacity: 0;
-          }
-
-          to {
-            opacity: 1;
-          }
-        }
-      `}</style>
     </DreamVisualContainer>
   )
 }

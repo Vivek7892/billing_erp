@@ -303,68 +303,52 @@ export function CustomerCollectPaymentModal({
             onClick={onClose}
             disabled={submitting}
             className="
-              min-h-[44px]
+              h-[44px]
               flex-1
               rounded-xl
               border
               border-[var(--line)]
               bg-[var(--surface)]
               px-4
-              py-2.5
-              text-xs
-              font-semibold
-              text-[var(--ink)]
-              hover:bg-[var(--surface-hover)]
-              transition
-              disabled:opacity-50
+        
             "
           >
             Cancel
           </button>
-
-          <button
-            type="submit"
-            form="customer-payment-form"
-            disabled={
-              submitting ||
-              !amount ||
-              Boolean(error)
-            }
-            className="
-              min-h-[44px]
-              flex-[1.5]
-              inline-flex
-              items-center
-              justify-center
-              gap-2
-              rounded-xl
-              bg-emerald-600
-              px-4
-              py-2.5
-              text-xs
-              font-bold
-              text-white
-              shadow-sm
-              hover:bg-emerald-700
-              active:bg-emerald-800
-              transition
-              disabled:opacity-50
-            "
-          >
-            {submitting ? (
-              <>
-                <Spinner size={14} />
-                <span>Recording...</span>
-              </>
-            ) : (
-              <>
-                <CheckCircle2 size={15} />
-                <span>
-                  Record {currency(amountNum)}
-                </span>
-              </>
-            )}
-          </button>
+<button
+  type="submit"
+  form="customer-payment-form"
+  disabled={submitting || !amount || Boolean(error)}
+  className="
+    inline-flex
+    h-10
+    items-center
+    justify-center
+    gap-1.5
+    rounded-lg
+    bg-[#0057B8]
+    px-4
+    text-xs
+    font-semibold
+    text-white
+    transition-colors
+    hover:bg-[#003F8F]
+    disabled:cursor-not-allowed
+    disabled:opacity-50
+  "
+>
+  {submitting ? (
+    <>
+      <Spinner size={13} />
+      <span>Collecting...</span>
+    </>
+  ) : (
+    <>
+      <CheckCircle2 size={14} />
+      <span>Collect Payment</span>
+    </>
+  )}
+</button>
         </div>
       }
     >
