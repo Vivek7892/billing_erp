@@ -120,7 +120,10 @@ TIGHT_GAP = Spacer(1, 1.5 * mm)
 def invoice_settings(invoice, template=None):
     """Settings belong to the invoice's business, merged with template-specific overrides."""
     from .services.template_service import resolve_invoice_template_settings
-    return resolve_invoice_template_settings(invoice, template_id=template)
+    return resolve_invoice_template_settings(
+        invoice,
+        template_id=template,
+    )
 
 
 def setting_value(settings, key, default=""):
@@ -156,7 +159,10 @@ class Settings:
 
 
 def load_settings(invoice, template=None):
-    return Settings(invoice_settings(invoice, template=template))
+    return Settings(invoice_settings(
+        invoice,
+        template=template,
+    ))
 
 
 # ═════════════════════════════════════════════════════════════════════════
@@ -730,19 +736,30 @@ def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
     ]
     if str(s.get("invoice_header_layout", "")).lower() == "corporate_bar":
         control_style.extend([
-            ("LINEABOVE", (0, 0), (-1, 0), 3, ACCENT),
             ("TOPPADDING", (0, 0), (-1, -1), 2.5),
         ])
     right = _tbl(control, [None], control_style)
 
+    header_style = [
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+    ]
+    if str(s.get("invoice_header_layout", "")).lower() == "corporate_bar":
+        header_style.extend([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+            ("BOX", (0, 0), (-1, -1), 0.6, SECONDARY_ACCENT),
+            ("LINEABOVE", (0, 0), (-1, 0), 3, ACCENT),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4 * mm),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4 * mm),
+            ("TOPPADDING", (0, 0), (-1, -1), 3 * mm),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3 * mm),
+        ])
+
     return [
-        _tbl([[identity, right]], [BODY_W * 0.60, BODY_W * 0.40], [
-            ("LEFTPADDING", (0, 0), (-1, -1), 0),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-            ("TOPPADDING", (0, 0), (-1, -1), 0),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ]),
+        _tbl([[identity, right]], [BODY_W * 0.60, BODY_W * 0.40], header_style),
         Spacer(1, 2.2 * mm),
     ]
 
@@ -870,11 +887,13 @@ def build_items_table(s, invoice, show_tax, interstate):
         rows.append([c[4](item, idx) for c in columns])
 
     table_style = str(s.get("invoice_table_style", "clean")).lower()
+    border_style = str(s.get("invoice_border_style", "solid")).lower()
+    item_rule_width = 0.8 if border_style == "double" else 0.4 if border_style == "dashed" else 0.25
+    item_rule_color = ACCENT if border_style == "double" else SECONDARY_ACCENT
     table_commands = [
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F8FAFC")),
         ("LINEABOVE", (0, 0), (-1, 0), 0.75, ACCENT),
         ("LINEBELOW", (0, 0), (-1, 0), 0.75, ACCENT),
-        ("LINEBELOW", (0, 1), (-1, -1), 0.25, SECONDARY_ACCENT),
         ("TOPPADDING", (0, 0), (-1, 0), 3.5),
         ("BOTTOMPADDING", (0, 0), (-1, 0), 3.5),
         ("TOPPADDING", (0, 1), (-1, -1), 3.0),
@@ -883,6 +902,10 @@ def build_items_table(s, invoice, show_tax, interstate):
         ("RIGHTPADDING", (0, 0), (-1, -1), 2.5),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
     ]
+    row_rule = ("LINEBELOW", (0, 1), (-1, -1), item_rule_width, item_rule_color)
+    if border_style == "dashed":
+        row_rule = (*row_rule, 1, [2, 2])
+    table_commands.append(row_rule)
     if table_style == "bold":
         table_commands.append(("BACKGROUND", (0, 0), (-1, 0), ACCENT))
         rows[0] = [para(c[1], size=6.8, bold=True, align=c[3], color=colors.white) for c in columns]
@@ -974,8 +997,8 @@ def build_totals(s, invoice, show_tax, interstate):
 
     grand_index = len(rows)
     rows.append([
-        para("GRAND TOTAL", size=10.0, bold=True, color=colors.HexColor("#0F172A")),
-        para(currency(grand), size=10.5, bold=True, align=TA_RIGHT, color=colors.HexColor("#0F172A")),
+        para("GRAND TOTAL", size=10.0, bold=True, color=ACCENT),
+        para(currency(grand), size=10.5, bold=True, align=TA_RIGHT, color=ACCENT),
     ])
 
     totals_width = 82 * mm
@@ -986,6 +1009,9 @@ def build_totals(s, invoice, show_tax, interstate):
         ("BOTTOMPADDING", (0, grand_index), (-1, grand_index), 3.0),
         ("LEFTPADDING", (0, 0), (-1, -1), 3),
         ("RIGHTPADDING", (0, 0), (-1, -1), 3),
+        ("LINEABOVE", (0, grand_index), (-1, grand_index), 0.8, ACCENT),
+        ("LINEBELOW", (0, grand_index), (-1, grand_index), 0.8, ACCENT),
+        ("BACKGROUND", (0, grand_index), (-1, grand_index), colors.HexColor("#F8FAFC")),
     ])
 
     show_words = s.flag("show_amount_in_words", True)
@@ -1245,7 +1271,10 @@ _PAPER_SIZES = {
 
 def generate_invoice_pdf(invoice, force_a4=False, paper_size=None, template=None):
     """Generate the redesigned monochrome GST invoice (A4, Letter or A5)."""
-    raw_settings = invoice_settings(invoice, template=template)
+    raw_settings = invoice_settings(
+        invoice,
+        template=template,
+    )
     template_name = str(raw_settings.get("invoice_template", "gst_a4")).lower()
     if template_name == "thermal_80" and not force_a4:
         raise ValueError("invoice_template is 'thermal_80' — use generate_thermal_invoice_pdf() instead.")
@@ -1402,7 +1431,10 @@ def generate_thermal_invoice_pdf(invoice, template=None):
     - Fully conditional fields (omitted fields collapse cleanly without whitespace)
     """
     buffer = BytesIO()
-    s = load_settings(invoice, template=template)
+    s = load_settings(
+        invoice,
+        template=template,
+    )
 
     shop_name = _fmt_value(s.get("store_name_override") or s.get("shop_name"), "Business Name Not Configured")
     shop_address = s.get("shop_address")

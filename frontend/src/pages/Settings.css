@@ -132,6 +132,60 @@
   background-color: #fff;
 }
 
+.dark .settings-page .settings-print-preview-paper[class~="bg-white"] {
+  color-scheme: light;
+  background-color: #fff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
+}
+
+.dark .settings-page .settings-template-thumb-paper[class~="bg-white"] {
+  color-scheme: light;
+  background-color: #fff !important;
+}
+
+.dark .settings-page .thermal-live-preview-paper.settings-print-invoice-target[class~="bg-white"],
+.dark .settings-page .barcode-live-preview-paper.settings-print-preview-paper[class~="bg-white"] {
+  color-scheme: light;
+  background: #fff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.dark .settings-page .thermal-live-preview-paper.settings-print-invoice-target .invoice-document-root .thermal-receipt {
+  background: #fff !important;
+  color: #000 !important;
+}
+
+.dark .settings-page .settings-print-preview-stage[class*="bg-slate-100"] {
+  background-color: var(--app-bg) !important;
+}
+
+.dark .settings-page .settings-print-preview-paper [class~="text-slate-900"] {
+  color: #0f172a !important;
+}
+
+.dark .settings-page .settings-print-preview-paper [class~="text-slate-800"] {
+  color: #1e293b !important;
+}
+
+.dark .settings-page .settings-print-preview-paper [class~="text-slate-700"] {
+  color: #334155 !important;
+}
+
+.dark .settings-page .settings-print-preview-paper [class~="text-slate-600"] {
+  color: #475569 !important;
+}
+
+.dark .settings-page .settings-print-preview-paper [class~="text-slate-500"] {
+  color: #64748b !important;
+}
+
+.dark .settings-page .settings-print-preview-paper [class~="text-slate-400"] {
+  color: #94a3b8 !important;
+}
+
 
 @media print {
   body.settings-invoice-print > * {

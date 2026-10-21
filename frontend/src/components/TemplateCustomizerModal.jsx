@@ -43,22 +43,25 @@ export default function TemplateCustomizerModal({
   const [manualScale, setManualScale] = useState(null)
   const previewPaneRef = useRef(null)
 
+  const isThermalTpl = templateId?.startsWith('thermal')
+  const is58mmRoll = (config?.page?.thermal_roll_width === '58mm' || config?.page?.thermal_roll_width === '58') || (templateId === 'thermal_58' && config?.page?.thermal_roll_width !== '80mm')
+  const computedBaseWidth = isThermalTpl ? (is58mmRoll ? 216 : 300) : templateId === 'half_a4' ? 560 : 794
+
   useEffect(() => {
     const pane = previewPaneRef.current
     if (!pane) return undefined
-    const baseWidth = templateId === 'thermal_58' ? 220 : templateId?.startsWith('thermal') ? 302 : templateId === 'half_a4' ? 560 : 794
     const updateScale = () => {
       if (manualScale !== null) return
-      const availableWidth = Math.max(0, pane.clientWidth - 32)
+      const availableWidth = Math.max(0, pane.clientWidth - 24)
       if (availableWidth <= 0) return
-      const fit = availableWidth / baseWidth
-      setPreviewScale(fit >= 1 ? 1 : Math.max(0.35, Number(fit.toFixed(2))))
+      const fit = availableWidth / computedBaseWidth
+      setPreviewScale(fit >= 1 ? 1 : Math.max(0.3, Number(fit.toFixed(2))))
     }
     updateScale()
     const observer = new ResizeObserver(updateScale)
     observer.observe(pane)
     return () => observer.disconnect()
-  }, [templateId, isOpen, loading, manualScale])
+  }, [templateId, isOpen, loading, manualScale, computedBaseWidth])
 
   const effectiveScale = manualScale !== null ? manualScale : previewScale
 
@@ -149,6 +152,8 @@ export default function TemplateCustomizerModal({
       place_of_supply: s.place_of_supply || s.shop_state || 'Karnataka (29)',
       notes: 'Thank you for your business. Keep this bill for warranty.',
       terms: s.invoice_terms || '1. Goods once sold will not be taken back without original bill.\n2. Warranty handled directly by authorized manufacturer.',
+      short_url: 'https://demo.billing/b/demo-01',
+      public_token: 'demo-token-12345',
       subtotal: 1045.0,
       discount_amount: 52.25,
       tax_amount: 59.57,
@@ -218,11 +223,13 @@ export default function TemplateCustomizerModal({
   const tx = config?.tax || {}
   const pay = config?.payment || {}
   const pg = config?.page || {}
-  const baseWidth = templateId === 'thermal_58' ? 216 : templateId?.startsWith('thermal') ? 302 : templateId === 'half_a4' ? 560 : 794
+  const baseWidth = computedBaseWidth
+  const baseHeight = isThermalTpl ? 'auto' : templateId === 'half_a4' ? 792 : 1123
+  const targetPreviewMode = isThermalTpl ? (is58mmRoll ? 'thermal_58' : 'thermal_80') : templateId
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 print:hidden">
-      <div className="relative w-full max-w-6xl max-h-[94dvh] flex flex-col bg-white border border-[#DCE3EC] rounded-xl shadow-2xl overflow-hidden transition-colors">
+      <div className="relative h-[calc(100dvh-1rem)] max-h-[96dvh] w-full max-w-[96vw] flex flex-col bg-white border border-[#DCE3EC] rounded-xl shadow-2xl overflow-hidden transition-colors lg:h-[94dvh]">
         {/* Modal Header */}
         <div className="px-4 py-3 sm:px-6 sm:py-3.5 border-b border-[#DCE3EC]  flex items-center justify-between bg-slate-50  shrink-0">
           <div className="flex items-center gap-3">
@@ -253,7 +260,7 @@ export default function TemplateCustomizerModal({
               type="button"
               onClick={handleReset}
               disabled={resetting || loading}
-              className="min-h-10 px-2.5 sm:px-3 rounded-lg border border-[#DCE3EC] bg-white text-slate-700 hover:bg-slate-100 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
+              className="min-h-11 px-2.5 sm:px-3 rounded-lg border border-[#DCE3EC] bg-white text-slate-700 hover:bg-slate-100 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
               title="Reset this template to factory defaults"
             >
               <RotateCcw size={13} className={resetting ? 'animate-spin' : ''} />
@@ -264,7 +271,7 @@ export default function TemplateCustomizerModal({
               type="button"
               onClick={handleSave}
               disabled={saving || loading}
-              className="min-h-10 px-3.5 sm:px-4 rounded-lg bg-[#1E3A5F] hover:bg-[#162C46] text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition-colors disabled:opacity-50"
+              className="min-h-11 px-3.5 sm:px-4 rounded-lg bg-[#1E3A5F] hover:bg-[#162C46] text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition-colors disabled:opacity-50"
             >
               <Save size={13} />
               <span>{saving ? 'Saving...' : 'Save Settings'}</span>
@@ -273,7 +280,7 @@ export default function TemplateCustomizerModal({
             <button
               type="button"
               onClick={onClose}
-              className="w-10 h-10 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200 flex items-center justify-center transition-colors ml-1"
+              className="min-h-11 min-w-11 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200 flex items-center justify-center transition-colors ml-1"
             >
               <X size={18} />
             </button>
@@ -318,7 +325,7 @@ export default function TemplateCustomizerModal({
           <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
             {/* Left Column: Form & Category Tabs */}
             <div
-              className={`w-full lg:w-[46%] flex flex-col border-r border-[#DCE3EC] bg-white min-h-0 ${
+              className={`w-full lg:w-[42%] flex flex-col border-r border-[#DCE3EC] bg-white min-h-0 ${
                 previewTab === 'preview' ? 'hidden lg:flex' : 'flex'
               }`}
             >
@@ -865,7 +872,7 @@ export default function TemplateCustomizerModal({
             {/* Right Column: Real-time Live Bill Preview */}
             <div
               ref={previewPaneRef}
-              className={`w-full lg:w-[54%] flex flex-col bg-[var(--surface-subtle)] border-l border-[var(--line)] min-h-0 ${
+              className={`w-full lg:w-[58%] flex flex-col bg-[var(--surface-subtle)] border-l border-[var(--line)] min-h-0 ${
                 previewTab === 'editor' ? 'hidden lg:flex' : 'flex'
               }`}
             >
@@ -934,6 +941,7 @@ export default function TemplateCustomizerModal({
                 <div
                   style={{
                     width: Math.round(baseWidth * effectiveScale),
+                    height: isThermalTpl ? 'auto' : Math.round(baseHeight * effectiveScale),
                     overflow: 'visible',
                     display: 'flex',
                     justifyContent: 'center',
@@ -943,17 +951,12 @@ export default function TemplateCustomizerModal({
                     className="origin-top transition-transform duration-150 flex justify-center shadow-md border border-slate-300 rounded-sm bg-white text-black shrink-0"
                     style={{
                       width: baseWidth,
+                      height: isThermalTpl ? 'auto' : baseHeight,
                       transform: `scale(${effectiveScale})`,
-                      transformOrigin: 'top left',
+                      transformOrigin: 'top center',
                     }}
                   >
-                    <InvoiceDocument
-                      invoice={demoInvoice}
-                      settings={globalSettings}
-                      templateConfig={config}
-                      mode={templateId}
-                      showModePicker={false}
-                    />
+                    <InvoiceDocument invoice={demoInvoice} settings={{ ...globalSettings, shop_upi_id: globalSettings?.shop_upi_id || 'merchant@upi', upi_merchant_name: globalSettings?.upi_merchant_name || globalSettings?.shop_name || 'My Store' }} templateConfig={config} mode={targetPreviewMode} showModePicker={false} />
                   </div>
                 </div>
               </div>

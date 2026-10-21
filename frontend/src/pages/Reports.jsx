@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import api from '../api'
 import { PageHeader, Spinner } from '../components/UI'
 import { InformationalBanner } from '../components/visual-content'
@@ -151,15 +152,16 @@ function ReportDateField({ label, value, min, max, onChange, id }) {
 /* ============================================================
    CONFIG & TABS
 ============================================================ */
-const getToday = () => new Date().toISOString().slice(0, 10)
-const getMonthStart = () =>
-  new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-    .toISOString()
-    .slice(0, 10)
-const getLast30Days = () =>
-  new Date(Date.now() - 29 * 86400000).toISOString().slice(0, 10)
-const getLast90Days = () =>
-  new Date(Date.now() - 89 * 86400000).toISOString().slice(0, 10)
+const toLocalDateInput = date => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+const getToday = () => toLocalDateInput(new Date())
+const getMonthStart = () => toLocalDateInput(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+const getLast30Days = () => toLocalDateInput(new Date(Date.now() - 29 * 86400000))
+const getLast90Days = () => toLocalDateInput(new Date(Date.now() - 89 * 86400000))
 
 const TABS = [
   { key: 'sales', label: 'Sales Summary', icon: TrendingUp },
@@ -205,6 +207,17 @@ export default function Reports() {
   const [exporting, setExporting] = useState('')
   const [error, setError] = useState('')
   const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false)
+
+  useEffect(() => {
+    if (!analyticsModalOpen) return undefined
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setAnalyticsModalOpen(false)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [analyticsModalOpen])
 
   const activeRequestRef = useRef(0)
   const abortControllerRef = useRef(null)
@@ -672,6 +685,43 @@ export default function Reports() {
         <span>{tab === 'customers' ? 'Receivables are current as of today.' : `Reporting period: ${formatDateInput(appliedDates.start)} – ${formatDateInput(appliedDates.end)}`}</span>
         <span>Amounts are shown in INR</span>
       </footer>
+      {analyticsModalOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/65 p-3 backdrop-blur-sm sm:p-5"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setAnalyticsModalOpen(false)
+          }}
+          role="presentation"
+        >
+          <section
+            className="relative max-h-[calc(100dvh-24px)] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900 sm:max-h-[88vh]"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reports-analytics-title"
+          >
+            <div className="mb-3 flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="rounded-lg bg-[#0057B8]/10 p-1.5 text-[#0057B8] dark:text-sky-400">
+                  <TrendingUp size={16} />
+                </span>
+                <h3 id="reports-analytics-title" className="text-sm font-bold text-[var(--ink)]">
+                  Executive Analytics Engine
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAnalyticsModalOpen(false)}
+                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                aria-label="Close analytics flow"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <ReportsAnalyticsVisual className="w-full border-0 p-0 shadow-none" />
+          </section>
+        </div>,
+        document.body,
+      )}
     </div>
   )
 }
@@ -1714,38 +1764,6 @@ function ExpenseReportView({ data }) {
         </div>
       )}
 
-      {/* Executive Analytics Engine Visual Modal */}
-      {analyticsModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/65 backdrop-blur-xs"
-          onClick={() => setAnalyticsModalOpen(false)}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div
-            className="relative w-full max-w-xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-5 overflow-hidden"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-[#0057B8]/10 text-[#0057B8] dark:text-sky-400">
-                  <TrendingUp size={16} />
-                </span>
-                <h3 className="text-sm font-bold text-[var(--ink)]">Executive Analytics Engine</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAnalyticsModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                aria-label="Close"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <ReportsAnalyticsVisual className="w-full border-0 shadow-none p-0" />
-          </div>
-        </div>
-      )}
     </div>
   )
 }

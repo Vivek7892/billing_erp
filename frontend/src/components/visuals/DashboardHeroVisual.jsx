@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Plus, BarChart3, ShieldCheck, ArrowUpRight } from 'lucide-react'
 import DreamVisualContainer from './DreamVisualContainer'
-import dashboardHero from '../../assets/dreamwithtech/dashboard-hero.png'
+import dashboardHero from '../../assets/dreamwithtech/dashboard-hero.webp'
 
 export default function DashboardHeroVisual({ className = '', uploadedSrc }) {
   return (

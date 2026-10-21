@@ -152,10 +152,11 @@ export default function InvoiceDocument({
   const tTax = activeTplConfig?.tax || {}
   const tPayment = activeTplConfig?.payment || {}
   const tPage = activeTplConfig?.page || {}
-  const accentColor = s.invoice_theme_color || tLayout.accent_color || '#1E3A5F'
-  const secondaryColor = s.invoice_theme_secondary || tLayout.secondary_color || accentColor
-  const invoiceBorderStyle = s.invoice_border_style || 'solid'
-  const invoiceTableStyle = s.invoice_table_style || 'clean'
+  const useGlobalTheme = isTrue(s.custom_theme_enabled, false)
+  const accentColor = (useGlobalTheme ? s.invoice_theme_color : tLayout.accent_color) || s.invoice_theme_color || '#1E3A5F'
+  const secondaryColor = (useGlobalTheme ? s.invoice_theme_secondary : tLayout.secondary_color) || s.invoice_theme_secondary || accentColor
+  const invoiceBorderStyle = (useGlobalTheme && s.invoice_border_style && s.invoice_border_style !== 'solid' ? s.invoice_border_style : tLayout.border_style) || s.invoice_border_style || 'solid'
+  const invoiceTableStyle = (useGlobalTheme && s.invoice_table_style && s.invoice_table_style !== 'clean' ? s.invoice_table_style : tLayout.table_style) || s.invoice_table_style || 'clean'
 
   // Currency formatter
   const fmt = val => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -386,7 +387,7 @@ export default function InvoiceDocument({
   // THERMAL RECEIPT MODE
   // --------------------------------------------------------------------------
   if (effectiveMode === 'thermal') {
-    const is58 = mode === 'thermal_58' || s.thermal_paper_width === '58' || s.thermal_paper_width === '2' || s.printer_type === 'thermal_58'
+    const is58 = mode === 'thermal_58' || s.thermal_paper_width === '58' || s.thermal_paper_width === '2' || s.printer_type === 'thermal_58' || tPage.thermal_roll_width === '58mm'
     const targetMode = is58 ? 'thermal_58' : 'thermal_80'
     return (
       <div className={`invoice-document-root ${className}`}>
@@ -507,7 +508,7 @@ export default function InvoiceDocument({
 
             <div style={{ borderTop: `1px ${invoiceBorderStyle === 'dashed' ? 'dashed' : 'solid'} ${secondaryColor}66`, marginBottom: 8 }} />
 
-            {/* Bill To & UPI QR */}
+            {/* Bill To Customer Section */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 10 }}>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: 8.5, fontWeight: '700', textTransform: 'uppercase', color: '#475569', letterSpacing: '0.04em' }}>
@@ -526,19 +527,15 @@ export default function InvoiceDocument({
                   <div style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}><b>GSTIN:</b> {custGstin}</div>
                 )}
               </div>
-
-              {showUpiA4 && (
-                <div style={{ textAlign: 'center', fontSize: 8, color: '#475569' }}>
-                  <div style={{ display: 'inline-block', border: '1px solid #E2E8F0', padding: 2, borderRadius: 4, background: '#FFFFFF' }}>
-                    <QRCodeSVG value={qrValue} size={58} />
-                  </div>
-                  <div style={{ marginTop: 1, fontWeight: '600', fontSize: 8 }}>SCAN TO PAY</div>
+              {showPlaceOfSupply && placeOfSupply && (
+                <div style={{ textAlign: 'right', fontSize: 8.5, color: '#475569', shrink: 0 }}>
+                  <b>Place of Supply:</b> {placeOfSupply}
                 </div>
               )}
             </div>
 
             {/* Items Table */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 9.5, marginTop: 2 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 8.5, marginTop: 2, overflowWrap: 'anywhere' }}>
               <thead>
                 <tr style={{ background: invoiceTableStyle === 'bold' ? `${accentColor}18` : `${secondaryColor}10`, borderTop: `1px ${invoiceBorderStyle === 'dashed' ? 'dashed' : 'solid'} ${accentColor}`, borderBottom: `1px ${invoiceBorderStyle === 'dashed' ? 'dashed' : 'solid'} ${accentColor}` }}>
                   {showSerialCol && <th style={{ textAlign: 'center', padding: '4px 3px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 26 }}>#</th>}
@@ -561,7 +558,7 @@ export default function InvoiceDocument({
                 {items.map((item, idx) => (
                   <tr key={idx} style={{ borderBottom: `1px ${invoiceBorderStyle === 'dashed' ? 'dashed' : 'solid'} #E2E8F0`, background: invoiceTableStyle === 'striped' && idx % 2 === 1 ? `${secondaryColor}0A` : '#FFFFFF' }}>
                     {showSerialCol && <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 8.5, color: '#64748B' }}>{idx + 1}</td>}
-                    {showItemName && <td style={{ padding: '4px 4px', fontSize: 9.5, color: '#0F172A', fontWeight: '500', wordBreak: 'break-word' }}>
+                    {showItemName && <td style={{ padding: '4px 4px', fontSize: 8.5, color: '#0F172A', fontWeight: '500', wordBreak: 'break-word' }}>
                       <div>{item.name}</div>
                       {item.sku && showSkuCol && <span style={{ fontSize: 7.5, color: '#64748B' }}>SKU: {item.sku} </span>}
                       {item.barcode && showBarcodeCol && <span style={{ fontSize: 7.5, color: '#64748B' }}>Barcode: {item.barcode} </span>}
@@ -574,8 +571,8 @@ export default function InvoiceDocument({
                     {showHsnCol && (
                       <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 8.5, color: '#64748B' }}>{item.hsn || '—'}</td>
                     )}
-                    {showQtyCol && <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 9.5, color: '#0F172A' }}>{item.qty}</td>}
-                    {showRateCol && <td style={{ padding: '4px 4px', textAlign: 'right', fontSize: 9.5, color: '#0F172A' }}>{fmt(item.rate)}</td>}
+                    {showQtyCol && <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 8.5, color: '#0F172A' }}>{item.qty}</td>}
+                    {showRateCol && <td style={{ padding: '4px 4px', textAlign: 'right', fontSize: 8.5, color: '#0F172A', overflowWrap: 'anywhere' }}>{fmt(item.rate)}</td>}
                     {showDiscCol && (
                       <td style={{ padding: '4px 4px', textAlign: 'right', fontSize: 8.5, color: '#64748B' }}>
                         {item.disc ? `${item.disc}%` : '—'}
@@ -586,7 +583,7 @@ export default function InvoiceDocument({
                         {item.gst ? `${item.gst}%` : '—'}
                       </td>
                     )}
-                    {showTotalCol && <td style={{ padding: '4px 4px', textAlign: 'right', fontWeight: '700', fontSize: 9.5, color: '#0F172A' }}>
+                    {showTotalCol && <td style={{ padding: '4px 4px', textAlign: 'right', fontWeight: '700', fontSize: 8.5, color: '#0F172A', overflowWrap: 'anywhere' }}>
                       {fmt(item.total)}
                     </td>}
                   </tr>
@@ -676,8 +673,8 @@ export default function InvoiceDocument({
               </div>
             </div>
 
-            {/* Payment Summary */}
-            {showPaymentSummary && (
+            {/* Payment Summary, Bank Details & QR Codes */}
+            {(showPaymentSummary || showBankDetails || showUpiA4 || showDigitalBillQr) && (
               <div style={{
                 background: '#F8FAFC',
                 border: '1px solid #CBD5E1',
@@ -686,41 +683,69 @@ export default function InvoiceDocument({
                 padding: '6px 10px',
                 fontSize: 8.5,
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <span style={{ fontSize: 7.5, color: '#475569', fontWeight: '700' }}>STATUS</span><br />
-                    <b style={{
-                      color: paymentStatus === 'PAID' ? '#16A34A' : paymentStatus === 'CANCELLED' ? '#DC2626' : '#D97706',
-                      fontSize: 9.5,
-                    }}>
-                      {paymentStatus}
-                    </b>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {showPaymentSummary && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', alignItems: 'center' }}>
+                        <div>
+                          <span style={{ fontSize: 7.5, color: '#475569', fontWeight: '700' }}>STATUS</span><br />
+                          <b style={{
+                            color: paymentStatus === 'PAID' ? '#16A34A' : paymentStatus === 'CANCELLED' ? '#DC2626' : '#D97706',
+                            fontSize: 9.5,
+                          }}>
+                            {paymentStatus}
+                          </b>
+                        </div>
+                        <div>
+                          <span style={{ fontSize: 7.5, color: '#475569', fontWeight: '700' }}>PAID</span><br />
+                          <b style={{ color: '#0F172A', fontSize: 9.5 }}>{fmt(paidAmount)}</b>
+                        </div>
+                        {showBalanceDue && (
+                          <div>
+                            <span style={{ fontSize: 7.5, color: '#475569', fontWeight: '700' }}>BALANCE DUE</span><br />
+                            <b style={{ color: balanceDue > 0 ? '#DC2626' : '#0F172A', fontSize: 9.5 }}>
+                              {fmt(balanceDue)}
+                            </b>
+                          </div>
+                        )}
+                        {showPaymentMode && (
+                          <div>
+                            <span style={{ fontSize: 7.5, color: '#475569', fontWeight: '700' }}>MODE</span><br />
+                            <b style={{ color: '#0F172A', fontSize: 9.5 }}>{paymentMode}</b>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {showBankDetails && Boolean(bankDetailsText) && (
+                      <div style={{ borderTop: showPaymentSummary ? '1px solid #E2E8F0' : 'none', marginTop: showPaymentSummary ? 4 : 0, paddingTop: showPaymentSummary ? 4 : 0, fontSize: 8, color: '#475569', lineHeight: 1.35 }}>
+                        <b>Bank Details:</b> {bankDetailsText}
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <span style={{ fontSize: 7.5, color: '#475569', fontWeight: '700' }}>PAID</span><br />
-                    <b style={{ color: '#0F172A', fontSize: 9.5 }}>{fmt(paidAmount)}</b>
-                  </div>
-                  {showBalanceDue && (
-                    <div>
-                      <span style={{ fontSize: 7.5, color: '#475569', fontWeight: '700' }}>BALANCE DUE</span><br />
-                      <b style={{ color: balanceDue > 0 ? '#DC2626' : '#0F172A', fontSize: 9.5 }}>
-                        {fmt(balanceDue)}
-                      </b>
-                    </div>
-                  )}
-                  {showPaymentMode && (
-                    <div>
-                      <span style={{ fontSize: 7.5, color: '#475569', fontWeight: '700' }}>MODE</span><br />
-                      <b style={{ color: '#0F172A', fontSize: 9.5 }}>{paymentMode}</b>
+
+                  {/* Scannable QR Codes side-by-side */}
+                  {(showUpiA4 || showDigitalBillQr) && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      {showUpiA4 && qrValue && (
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ display: 'inline-block', border: '1px solid #CBD5E1', padding: 2, borderRadius: 4, background: '#FFFFFF' }}>
+                            <QRCodeSVG value={qrValue} size={52} level="M" />
+                          </div>
+                          <div style={{ marginTop: 1, fontWeight: '700', fontSize: 7.5, color: '#0F766E', letterSpacing: '0.02em' }}>SCAN TO PAY</div>
+                        </div>
+                      )}
+                      {showDigitalBillQr && digitalBillUrl && (
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ display: 'inline-block', border: '1px solid #CBD5E1', padding: 2, borderRadius: 4, background: '#FFFFFF' }}>
+                            <QRCodeSVG value={digitalBillUrl} size={52} level="M" />
+                          </div>
+                          <div style={{ marginTop: 1, fontWeight: '700', fontSize: 7.5, color: '#4F46E5', letterSpacing: '0.02em' }}>VIEW BILL</div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-
-                {showBankDetails && (
-                  <div style={{ borderTop: '1px solid #E2E8F0', marginTop: 4, paddingTop: 4, fontSize: 8, color: '#475569' }}>
-                    <b>Bank Details:</b> {bankDetailsText}
-                  </div>
-                )}
               </div>
             )}
 
@@ -737,23 +762,6 @@ export default function InvoiceDocument({
               }}>
                 <span>Prepared by</span>
                 <span>Authorised Signatory</span>
-              </div>
-            )}
-
-            {/* Scan to View Bill QR */}
-            {showDigitalBillQr && (
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: 8,
-                marginBottom: 2,
-              }}>
-                <QRCodeSVG value={digitalBillUrl} size={qrSizeA4} />
-                <span style={{ fontSize: 8, fontWeight: '700', color: '#475569', marginTop: 2, letterSpacing: '0.02em' }}>
-                  Scan to View Bill
-                </span>
               </div>
             )}
 
@@ -807,8 +815,8 @@ export default function InvoiceDocument({
               marginBottom: 12,
               gap: 18,
               padding: isCorporateA4 ? '12px 14px' : 0,
-              border: isCorporateA4 ? '1px solid #CBD5E1' : undefined,
-              borderTop: isCorporateA4 ? '4px solid #1E3A5F' : undefined,
+              border: isCorporateA4 ? `1px solid ${secondaryColor}` : undefined,
+              borderTop: isCorporateA4 ? `4px solid ${accentColor}` : undefined,
               background: isCorporateA4 ? '#F8FAFC' : undefined,
               borderRadius: isCorporateA4 ? 4 : undefined,
             }}
@@ -856,7 +864,7 @@ export default function InvoiceDocument({
                 fontWeight: '800',
                 fontSize: 18,
                 letterSpacing: '0.03em',
-                color: isCancelled ? '#DC2626' : isCorporateA4 ? '#0F766E' : '#0F172A',
+                color: isCancelled ? '#DC2626' : isCorporateA4 ? accentColor : '#0F172A',
               }}>
                 {docHeading}
               </div>
@@ -887,11 +895,11 @@ export default function InvoiceDocument({
             </div>
           </div>
 
-          <div style={{ borderTop: '1px solid #CBD5E1', marginBottom: 10 }} />
+          <div style={{ borderTop: `1px solid ${secondaryColor}`, marginBottom: 10 }} />
 
-          {/* 2. BILL TO CUSTOMER SECTION & OPTIONAL UPI QR */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-            <div>
+          {/* 2. BILL TO CUSTOMER SECTION */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, gap: 16 }}>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: 9, fontWeight: '700', textTransform: 'uppercase', color: '#475569', letterSpacing: '0.04em', marginBottom: 2 }}>
                 BILL TO
               </div>
@@ -909,65 +917,64 @@ export default function InvoiceDocument({
               )}
             </div>
 
-            {showUpiA4 && (
-              <div style={{ textAlign: 'center', fontSize: 8.5, color: '#475569' }}>
-                <div style={{ fontWeight: '700', marginBottom: 2 }}>UPI PAYMENT</div>
-                <div style={{ display: 'inline-block', border: '1px solid #E2E8F0', padding: 3, borderRadius: 4, background: '#FFFFFF' }}>
-                  <QRCodeSVG value={qrValue} size={qrSizeA4} />
-                </div>
-                <div style={{ marginTop: 2, fontWeight: '600' }}>SCAN TO PAY</div>
-              </div>
-            )}
+            <div style={{ textAlign: 'right', fontSize: 9.5, color: '#475569', flexShrink: 0 }}>
+              {showPlaceOfSupply && placeOfSupply && (
+                <div><b>Place of Supply:</b> {placeOfSupply}</div>
+              )}
+              {inv.shipping_address && (
+                <div style={{ marginTop: 2 }}><b>Ship To:</b> {inv.shipping_address}</div>
+              )}
+            </div>
           </div>
 
           {/* 3. DYNAMIC ITEM TABLE WITH LIGHT SHADED HEADER */}
-          <table className={isCorporateA4 ? 'settings-corporate-table' : undefined} style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10.5, marginTop: 4 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 9.5, marginTop: 4, overflowWrap: 'anywhere' }}>
             <thead>
-              <tr style={{ background: '#F8FAFC', borderTop: '1px solid #334155', borderBottom: '1px solid #334155' }}>
-                {showSerialCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 34 }}>S.No</th>}
+              <tr style={{ background: invoiceTableStyle === 'bold' ? accentColor : '#F8FAFC', borderTop: `1px solid ${accentColor}`, borderBottom: `1px solid ${accentColor}` }}>
+                {showSerialCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 34 }}>S.No</th>}
                 {showSkuCol && (
-                  <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 70 }}>Item Code</th>
+                  <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 70 }}>Item Code</th>
                 )}
-                {showBarcodeCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 75 }}>Barcode</th>}
-                {showItemName && <th style={{ textAlign: 'left', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: '#334155' }}>Item Description</th>}
+                {showBarcodeCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 75 }}>Barcode</th>}
+                {showItemName && <th style={{ textAlign: 'left', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor }}>Item Description</th>}
                 {showHsnCol && (
-                  <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 65 }}>HSN/SAC</th>
+                  <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 65 }}>HSN/SAC</th>
                 )}
                 {showUnitCol && (
-                  <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 45 }}>Unit</th>
+                  <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 45 }}>Unit</th>
                 )}
                 {showBatchCol && (
-                  <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 55 }}>Batch</th>
+                  <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 55 }}>Batch</th>
                 )}
-                {showExpiryCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 58 }}>Expiry</th>}
-                {showMfgCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 58 }}>Mfg.</th>}
-                {showMrpCol && <th style={{ textAlign: 'right', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 58 }}>MRP</th>}
-                {showQtyCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: '#334155', width: 42 }}>Qty</th>}
-                {showRateCol && <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: '#334155', width: 72 }}>Rate</th>}
+                {showExpiryCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 58 }}>Expiry</th>}
+                {showMfgCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 58 }}>Mfg.</th>}
+                {showMrpCol && <th style={{ textAlign: 'right', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 58 }}>MRP</th>}
+                {showQtyCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 42 }}>Qty</th>}
+                {showRateCol && <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 72 }}>Rate</th>}
                 {showDiscCol && (
-                  <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: '#334155', width: 52 }}>Disc.</th>
+                  <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 52 }}>Disc.</th>
                 )}
                 {showTaxCols && (
                   <>
-                    <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: '#334155', width: 62 }}>SGST</th>
-                    <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: '#334155', width: 62 }}>CGST</th>
+                    <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 62 }}>SGST</th>
+                    <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 62 }}>CGST</th>
                   </>
                 )}
                 {showCessCol && (
-                  <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: '#334155', width: 54 }}>CESS</th>
+                  <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 54 }}>CESS</th>
                 )}
-                {showTotalCol && <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: '#334155', width: 84 }}>Amount</th>}
+                {showTotalCol && <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 84 }}>Amount</th>}
               </tr>
             </thead>
             <tbody>
               {items.map((item, idx) => (
-                <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0' }}>
+                <tr key={idx} style={{ borderBottom: `${invoiceBorderStyle === 'double' ? 3 : 1}px ${invoiceBorderStyle} ${secondaryColor}`, background: invoiceTableStyle === 'striped' && idx % 2 === 1 ? '#F1F5F9' : '#FFFFFF' }}>
                   {showSerialCol && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#64748B' }}>{idx + 1}</td>}
                   {showSkuCol && (
                     <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#475569' }}>{item.sku || '—'}</td>
                   )}
                   {showBarcodeCol && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9, color: '#64748B' }}>{item.barcode || '—'}</td>}
-                  {showItemName && <td style={{ padding: '6px 6px', fontSize: 10.5, color: '#0F172A', fontWeight: '500' }}>{item.name}</td>}
+                  {showItemName && <td style={{ padding: '6px 6px', fontSize: 9.5, color: '#0F172A', fontWeight: '500', overflowWrap: 'anywhere' }}>{item.name}</td>}
                   {showHsnCol && (
                     <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#64748B' }}>{item.hsn || '—'}</td>
                   )}
@@ -980,8 +987,8 @@ export default function InvoiceDocument({
                   {showExpiryCol && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#64748B' }}>{item.expiry || '—'}</td>}
                   {showMfgCol && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#64748B' }}>{item.manufacturing || '—'}</td>}
                   {showMrpCol && <td style={{ padding: '6px 4px', textAlign: 'right', fontSize: 9.5, color: '#64748B' }}>{Number(item.mrp) > 0 ? fmt(item.mrp) : '—'}</td>}
-                  {showQtyCol && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 10.5, color: '#0F172A' }}>{item.qty}</td>}
-                  {showRateCol && <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 10.5, color: '#0F172A' }}>{fmt(item.rate)}</td>}
+                  {showQtyCol && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#0F172A', overflowWrap: 'anywhere' }}>{item.qty}</td>}
+                  {showRateCol && <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 9.5, color: '#0F172A', overflowWrap: 'anywhere' }}>{fmt(item.rate)}</td>}
                   {showDiscCol && (
                     <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 9.5, color: '#64748B' }}>
                       {item.disc ? `${item.disc}%` : '—'}
@@ -996,7 +1003,7 @@ export default function InvoiceDocument({
                   {showCessCol && (
                     <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 9.5, color: '#64748B' }}>{fmt(0)}</td>
                   )}
-                  {showTotalCol && <td style={{ padding: '6px 6px', textAlign: 'right', fontWeight: '700', fontSize: 10.5, color: '#0F172A' }}>
+                  {showTotalCol && <td style={{ padding: '6px 6px', textAlign: 'right', fontWeight: '700', fontSize: 9.5, color: '#0F172A', overflowWrap: 'anywhere' }}>
                     {fmt(item.total)}
                   </td>}
                 </tr>
@@ -1083,11 +1090,11 @@ export default function InvoiceDocument({
                 padding: '7px 9px',
                 fontWeight: '800',
                 fontSize: 13.5,
-                borderTop: '1px solid #0F172A',
-                borderBottom: '1px solid #0F172A',
-                background: '#F1F5F9',
+                borderTop: `1px solid ${accentColor}`,
+                borderBottom: `1px solid ${accentColor}`,
+                background: '#F8FAFC',
                 marginTop: 6,
-                color: '#0F172A',
+                color: accentColor,
               }}>
                 <span>GRAND TOTAL</span>
                 <span>{fmt(grandTotal)}</span>
@@ -1095,51 +1102,80 @@ export default function InvoiceDocument({
             </div>
           </div>
 
-          {/* 5. PAYMENT SUMMARY & BANK DETAILS */}
-          {showPaymentSummary && (
+          {/* 5. PAYMENT SUMMARY, BANK DETAILS & SCANNABLE QR CODES (Matches Backend PDF) */}
+          {(showPaymentSummary || showBankDetails || showUpiA4 || showDigitalBillQr) && (
             <div style={{
               background: '#F8FAFC',
-              border: '1px solid #CBD5E1',
-              borderRadius: 4,
+              border: `1px solid ${secondaryColor}35`,
+              borderRadius: 6,
               marginTop: 14,
-              padding: '8px 14px',
+              padding: '10px 14px',
               fontSize: 9.5,
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <span style={{ fontSize: 8.5, color: '#475569', fontWeight: '700' }}>PAYMENT STATUS</span><br />
-                  <b style={{
-                    color: paymentStatus === 'PAID' ? '#16A34A' : paymentStatus === 'CANCELLED' ? '#DC2626' : '#D97706',
-                    fontSize: 11,
-                  }}>
-                    {paymentStatus}
-                  </b>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {showPaymentSummary && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 20px', alignItems: 'center' }}>
+                      <div>
+                        <span style={{ fontSize: 8, color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Status</span><br />
+                        <b style={{
+                          color: paymentStatus === 'PAID' ? '#16A34A' : paymentStatus === 'CANCELLED' ? '#DC2626' : '#D97706',
+                          fontSize: 11,
+                        }}>
+                          {paymentStatus}
+                        </b>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: 8, color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Amount Paid</span><br />
+                        <b style={{ color: '#0F172A', fontSize: 11 }}>{fmt(paidAmount)}</b>
+                      </div>
+                      {showBalanceDue && (
+                        <div>
+                          <span style={{ fontSize: 8, color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Balance Due</span><br />
+                          <b style={{ color: balanceDue > 0 ? '#DC2626' : '#0F172A', fontSize: 11 }}>
+                            {fmt(balanceDue)}
+                          </b>
+                        </div>
+                      )}
+                      {showPaymentMode && (
+                        <div>
+                          <span style={{ fontSize: 8, color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Mode</span><br />
+                          <b style={{ color: '#0F172A', fontSize: 11 }}>{paymentMode}</b>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {showBankDetails && Boolean(bankDetailsText) && (
+                    <div style={{ borderTop: showPaymentSummary ? '1px solid #E2E8F0' : 'none', marginTop: showPaymentSummary ? 8 : 0, paddingTop: showPaymentSummary ? 6 : 0, fontSize: 9, color: '#475569', lineHeight: 1.4 }}>
+                      <b style={{ color: '#0F172A' }}>Bank Details:</b> {bankDetailsText}
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <span style={{ fontSize: 8.5, color: '#475569', fontWeight: '700' }}>AMOUNT PAID</span><br />
-                  <b style={{ color: '#0F172A', fontSize: 11 }}>{fmt(paidAmount)}</b>
-                </div>
-                {showBalanceDue && (
-                  <div>
-                    <span style={{ fontSize: 8.5, color: '#475569', fontWeight: '700' }}>BALANCE DUE</span><br />
-                    <b style={{ color: balanceDue > 0 ? '#DC2626' : '#0F172A', fontSize: 11 }}>
-                      {fmt(balanceDue)}
-                    </b>
-                  </div>
-                )}
-                {showPaymentMode && (
-                  <div>
-                    <span style={{ fontSize: 8.5, color: '#475569', fontWeight: '700' }}>MODE</span><br />
-                    <b style={{ color: '#0F172A', fontSize: 11 }}>{paymentMode}</b>
+
+                {/* QR Blocks matching backend pdf_utils.py */}
+                {(showUpiA4 || showDigitalBillQr) && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                    {showUpiA4 && qrValue && (
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ display: 'inline-block', border: '1px solid #CBD5E1', padding: 3, borderRadius: 5, background: '#FFFFFF', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
+                          <QRCodeSVG value={qrValue} size={qrSizeA4} level="M" />
+                        </div>
+                        <div style={{ marginTop: 2, fontWeight: '700', fontSize: 8, color: '#0F766E', letterSpacing: '0.03em' }}>SCAN TO PAY</div>
+                      </div>
+                    )}
+
+                    {showDigitalBillQr && digitalBillUrl && (
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ display: 'inline-block', border: '1px solid #CBD5E1', padding: 3, borderRadius: 5, background: '#FFFFFF', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
+                          <QRCodeSVG value={digitalBillUrl} size={qrSizeA4} level="M" />
+                        </div>
+                        <div style={{ marginTop: 2, fontWeight: '700', fontSize: 8, color: '#4F46E5', letterSpacing: '0.03em' }}>SCAN TO VIEW BILL</div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-
-              {showBankDetails && (
-                <div style={{ borderTop: '1px solid #E2E8F0', marginTop: 6, paddingTop: 5, fontSize: 9, color: '#475569' }}>
-                  <b>Bank Details:</b> {bankDetailsText}
-                </div>
-              )}
             </div>
           )}
 
@@ -1157,23 +1193,6 @@ export default function InvoiceDocument({
               <span>Prepared by</span>
               <span>Checked by</span>
               <span>Authorised Signatory</span>
-            </div>
-          )}
-
-          {/* Scan to View Bill QR */}
-          {showDigitalBillQr && (
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginTop: 14,
-              marginBottom: 4,
-            }}>
-              <QRCodeSVG value={digitalBillUrl} size={qrSizeA4} />
-              <span style={{ fontSize: 9, fontWeight: '700', color: '#475569', marginTop: 3, letterSpacing: '0.02em' }}>
-                Scan to View Bill
-              </span>
             </div>
           )}
 

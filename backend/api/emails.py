@@ -1,12 +1,74 @@
+import concurrent.futures
 import logging
+import smtplib
+import socket
+import time
 from html import escape
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
+from django.db import connection, transaction
 from django.utils import timezone
 
 
 logger = logging.getLogger(__name__)
+
+# Bounded thread pool executor for background email delivery
+_EMAIL_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
+    max_workers=4,
+    thread_name_prefix="EmailWorker"
+)
+
+
+def _run_email_task(func, *args, **kwargs):
+    """Execute an email delivery task in a background worker thread with retries and connection cleanup."""
+    max_retries = 3
+    base_delay = 1.0
+
+    try:
+        for attempt in range(1, max_retries + 1):
+            try:
+                func(*args, **kwargs)
+                logger.info("Background email task [%s] succeeded on attempt %d", getattr(func, '__name__', str(func)), attempt)
+                return
+            except (smtplib.SMTPException, socket.error, OSError, TimeoutError) as exc:
+                logger.warning(
+                    "Background email task [%s] attempt %d/%d encountered transient error: %s",
+                    getattr(func, '__name__', str(func)), attempt, max_retries, exc
+                )
+                if attempt < max_retries:
+                    time.sleep(base_delay * (2 ** (attempt - 1)))
+                else:
+                    logger.error(
+                        "Background email task [%s] exhausted all %d retries. Delivery failed: %s",
+                        getattr(func, '__name__', str(func)), max_retries, exc, exc_info=True
+                    )
+            except Exception as exc:
+                logger.error(
+                    "Background email task [%s] failed with unexpected error: %s",
+                    getattr(func, '__name__', str(func)), exc, exc_info=True
+                )
+                return
+    finally:
+        try:
+            connection.close()
+        except Exception:
+            pass
+
+
+def enqueue_email_task(func, *args, **kwargs):
+    """Enqueue an email task to run in the background.
+
+    If a database transaction is active, schedules execution via transaction.on_commit
+    so the email is only sent if the database transaction commits successfully.
+    """
+    def _dispatch():
+        _EMAIL_EXECUTOR.submit(_run_email_task, func, *args, **kwargs)
+
+    try:
+        transaction.on_commit(_dispatch)
+    except Exception:
+        _dispatch()
 
 
 def get_from_email():
@@ -47,14 +109,11 @@ def _plain_text_html(content):
 """
 
 
-def send_onboarding_welcome_email(user):
-    """Send a simple text-focused onboarding email for a new user/shop."""
-    recipient = getattr(user, "email", "")
-
+def _send_onboarding_welcome_worker(recipient, display_name):
+    """Worker function to format and send onboarding welcome email."""
     if not recipient:
         return 0
 
-    display_name = _get_user_name(user)
     safe_name = escape(display_name)
 
     frontend_url = getattr(
@@ -176,8 +235,37 @@ def send_onboarding_welcome_email(user):
     return message.send(fail_silently=False)
 
 
-def send_registration_notification_email(user, business=None, request=None, shop_registered=False):
-    """Send a simple text-only registration notification."""
+def send_onboarding_welcome_email(user):
+    """Synchronous sender for onboarding welcome email."""
+    recipient = getattr(user, "email", "") or str(user)
+    display_name = _get_user_name(user) if hasattr(user, "email") else "there"
+    return _send_onboarding_welcome_worker(recipient, display_name)
+
+
+def async_send_onboarding_welcome_email(user_or_email, user_name=None):
+    """Asynchronously enqueue an onboarding welcome email."""
+    if hasattr(user_or_email, "email"):
+        recipient = user_or_email.email
+        display_name = user_name or _get_user_name(user_or_email)
+    else:
+        recipient = str(user_or_email)
+        display_name = user_name or "there"
+
+    enqueue_email_task(_send_onboarding_welcome_worker, recipient, display_name)
+
+
+def _send_registration_notification_worker(
+    full_name,
+    username,
+    email,
+    phone,
+    role,
+    is_verified,
+    biz_info=None,
+    client_ip=None,
+    shop_registered=False,
+):
+    """Worker function to format and send registration notification email to admin."""
     recipient = getattr(
         settings,
         "REGISTRATION_NOTIFICATION_EMAIL",
@@ -187,47 +275,39 @@ def send_registration_notification_email(user, business=None, request=None, shop
     if not recipient:
         return 0
 
-    full_name = user.get_full_name().strip() or "Not provided"
     event_label = "New shop registration" if shop_registered else "New user registration"
 
     details = [
-        ("Full name", full_name),
-        ("Username", user.username),
-        ("Email", user.email),
-        ("Phone", user.phone or "Not provided"),
-        (
-            "Account role",
-            user.get_role_display()
-            if hasattr(user, "get_role_display")
-            else user.role,
-        ),
-        ("Email verified", "Yes" if user.is_verified else "Pending"),
+        ("Full name", full_name or "Not provided"),
+        ("Username", username),
+        ("Email", email),
+        ("Phone", phone or "Not provided"),
+        ("Account role", role or "owner"),
+        ("Email verified", "Yes" if is_verified else "Pending"),
     ]
 
-    if business:
+    if biz_info:
         details.extend(
             [
-                ("Shop name", business.name),
-                ("Business type", business.business_type or "Not provided"),
-                ("Shop owner", business.owner_name or full_name),
-                ("Shop email", business.email or user.email),
-                ("Shop phone", business.mobile or user.phone or "Not provided"),
-                ("Address", business.address or "Not provided"),
-                ("City", business.city or "Not provided"),
-                ("State", business.state or "Not provided"),
-                ("PIN code", business.pincode or "Not provided"),
-                ("GST registered", "Yes" if business.gst_registered else "No"),
-                ("GSTIN", business.gstin or "Not provided"),
-                ("PAN", business.pan or "Not provided"),
+                ("Shop name", biz_info.get("name", "Not provided")),
+                ("Business type", biz_info.get("business_type") or "Not provided"),
+                ("Shop owner", biz_info.get("owner_name") or full_name),
+                ("Shop email", biz_info.get("email") or email),
+                ("Shop phone", biz_info.get("mobile") or phone or "Not provided"),
+                ("Address", biz_info.get("address") or "Not provided"),
+                ("City", biz_info.get("city") or "Not provided"),
+                ("State", biz_info.get("state") or "Not provided"),
+                ("PIN code", biz_info.get("pincode") or "Not provided"),
+                ("GST registered", "Yes" if biz_info.get("gst_registered") else "No"),
+                ("GSTIN", biz_info.get("gstin") or "Not provided"),
+                ("PAN", biz_info.get("pan") or "Not provided"),
             ]
         )
     else:
         details.append(("Shop details", "The user has not completed shop registration yet."))
 
-    if request is not None:
-        details.append(
-            ("Registration IP", request.META.get("REMOTE_ADDR") or "Not available")
-        )
+    if client_ip:
+        details.append(("Registration IP", client_ip))
 
     details.append(
         ("Registered at", timezone.localtime().strftime("%Y-%m-%d %H:%M:%S %Z"))
@@ -247,7 +327,7 @@ def send_registration_notification_email(user, business=None, request=None, shop
         )
     )
 
-    subject_detail = business.name if shop_registered and business else full_name
+    subject_detail = biz_info.get("name") if shop_registered and biz_info else full_name
 
     message = EmailMultiAlternatives(
         subject=f"{event_label}: {subject_detail}",
@@ -259,21 +339,109 @@ def send_registration_notification_email(user, business=None, request=None, shop
     return message.send(fail_silently=False)
 
 
-def send_password_reset_email(user, reset_link):
-    """Send a simple password-reset email."""
-    recipient = getattr(user, "email", "")
+def send_registration_notification_email(user, business=None, request=None, shop_registered=False):
+    """Synchronous sender for registration notification email."""
+    full_name = user.get_full_name().strip() if hasattr(user, "get_full_name") else "Not provided"
+    username = getattr(user, "username", "")
+    email = getattr(user, "email", "")
+    phone = getattr(user, "phone", "")
+    role = (
+        user.get_role_display()
+        if hasattr(user, "get_role_display")
+        else getattr(user, "role", "")
+    )
+    is_verified = getattr(user, "is_verified", False)
 
+    biz_info = None
+    if business:
+        biz_info = {
+            "name": getattr(business, "name", ""),
+            "business_type": getattr(business, "business_type", ""),
+            "owner_name": getattr(business, "owner_name", "") or full_name,
+            "email": getattr(business, "email", "") or email,
+            "mobile": getattr(business, "mobile", "") or phone,
+            "address": getattr(business, "address", ""),
+            "city": getattr(business, "city", ""),
+            "state": getattr(business, "state", ""),
+            "pincode": getattr(business, "pincode", ""),
+            "gst_registered": getattr(business, "gst_registered", False),
+            "gstin": getattr(business, "gstin", ""),
+            "pan": getattr(business, "pan", ""),
+        }
+
+    client_ip = request.META.get("REMOTE_ADDR") if request and hasattr(request, "META") else None
+
+    return _send_registration_notification_worker(
+        full_name=full_name,
+        username=username,
+        email=email,
+        phone=phone,
+        role=role,
+        is_verified=is_verified,
+        biz_info=biz_info,
+        client_ip=client_ip,
+        shop_registered=shop_registered,
+    )
+
+
+def async_send_registration_notification_email(user, business=None, request=None, shop_registered=False):
+    """Asynchronously enqueue a registration notification email to admin."""
+    full_name = user.get_full_name().strip() if hasattr(user, "get_full_name") else "Not provided"
+    username = getattr(user, "username", "")
+    email = getattr(user, "email", "")
+    phone = getattr(user, "phone", "")
+    role = (
+        user.get_role_display()
+        if hasattr(user, "get_role_display")
+        else getattr(user, "role", "")
+    )
+    is_verified = getattr(user, "is_verified", False)
+
+    biz_info = None
+    if business:
+        biz_info = {
+            "name": getattr(business, "name", ""),
+            "business_type": getattr(business, "business_type", ""),
+            "owner_name": getattr(business, "owner_name", "") or full_name,
+            "email": getattr(business, "email", "") or email,
+            "mobile": getattr(business, "mobile", "") or phone,
+            "address": getattr(business, "address", ""),
+            "city": getattr(business, "city", ""),
+            "state": getattr(business, "state", ""),
+            "pincode": getattr(business, "pincode", ""),
+            "gst_registered": getattr(business, "gst_registered", False),
+            "gstin": getattr(business, "gstin", ""),
+            "pan": getattr(business, "pan", ""),
+        }
+
+    client_ip = request.META.get("REMOTE_ADDR") if request and hasattr(request, "META") else None
+
+    enqueue_email_task(
+        _send_registration_notification_worker,
+        full_name=full_name,
+        username=username,
+        email=email,
+        phone=phone,
+        role=role,
+        is_verified=is_verified,
+        biz_info=biz_info,
+        client_ip=client_ip,
+        shop_registered=shop_registered,
+    )
+
+
+def _send_password_reset_worker(recipient, display_name, reset_link):
+    """Worker function to format and send password reset link email."""
     if not recipient:
         return 0
 
-    user_name = _get_user_name(user)
-    safe_name = escape(user_name)
+    safe_name = escape(display_name)
     safe_reset_link = escape(str(reset_link), quote=True)
 
     subject = "Reset your Dreamwithtech password"
 
     text_content = (
-        f"Hello {user_name},\n\n"
+        f"Hello {display_name},\n\n"
         "We received a request to reset your Dreamwithtech password.\n\n"
         f"Reset your password:\n{reset_link}\n\n"
         "This link is valid for a limited time and can only be used once.\n\n"
@@ -304,25 +472,27 @@ def send_password_reset_email(user, reset_link):
     return message.send(fail_silently=False)
 
 
-def send_otp_verification_email(
-    user_or_email,
-    otp,
-    user_name=None,
-    purpose="verification",
-):
-    """Send a simple OTP email for account verification or password reset."""
+def send_password_reset_email(user, reset_link):
+    """Synchronous sender for password reset link email."""
+    recipient = getattr(user, "email", "") or str(user)
+    display_name = _get_user_name(user) if hasattr(user, "email") else "there"
+    return _send_password_reset_worker(recipient, display_name, reset_link)
+
+
+def async_send_password_reset_email(user_or_email, reset_link, user_name=None):
+    """Asynchronously enqueue a password reset link email."""
     if hasattr(user_or_email, "email"):
         recipient = user_or_email.email
-        display_name = (
-            user_name
-            or getattr(user_or_email, "first_name", "")
-            or getattr(user_or_email, "username", "")
-            or "there"
-        )
+        display_name = user_name or _get_user_name(user_or_email)
     else:
         recipient = str(user_or_email)
         display_name = user_name or "there"
 
+    enqueue_email_task(_send_password_reset_worker, recipient, display_name, reset_link)
+
+
+def _send_otp_verification_worker(recipient, otp, display_name, purpose="signup"):
+    """Worker function to format and send OTP code email."""
     if not recipient:
         return 0
 
@@ -375,3 +545,53 @@ def send_otp_verification_email(
     )
     message.attach_alternative(html_content, "text/html")
     return message.send(fail_silently=False)
+
+
+def send_otp_verification_email(
+    user_or_email,
+    otp,
+    user_name=None,
+    purpose="signup",
+):
+    """Synchronous sender for OTP verification email."""
+    if hasattr(user_or_email, "email"):
+        recipient = user_or_email.email
+        display_name = (
+            user_name
+            or getattr(user_or_email, "first_name", "")
+            or getattr(user_or_email, "username", "")
+            or "there"
+        )
+    else:
+        recipient = str(user_or_email)
+        display_name = user_name or "there"
+
+    return _send_otp_verification_worker(recipient, otp, display_name, purpose)
+
+
+def async_send_otp_verification_email(
+    user_or_email,
+    otp,
+    user_name=None,
+    purpose="signup",
+):
+    """Asynchronously enqueue an OTP verification email."""
+    if hasattr(user_or_email, "email"):
+        recipient = user_or_email.email
+        display_name = (
+            user_name
+            or getattr(user_or_email, "first_name", "")
+            or getattr(user_or_email, "username", "")
+            or "there"
+        )
+    else:
+        recipient = str(user_or_email)
+        display_name = user_name or "there"
+
+    enqueue_email_task(
+        _send_otp_verification_worker,
+        recipient,
+        str(otp),
+        display_name,
+        purpose,
+    )

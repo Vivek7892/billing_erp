@@ -31,6 +31,8 @@ export default function VerifyOTP() {
 
   const handleVerify = async e => {
     e.preventDefault()
+    if (loading) return
+
     if (!otp.trim()) {
       setErrors({ otp: 'Please enter the 6-digit verification code' })
       return
@@ -88,7 +90,11 @@ export default function VerifyOTP() {
       toast.success(data.message || 'New verification code sent!')
       setCooldown(60)
     } catch (err) {
-      const msg = err.response?.data?.error || 'Unable to resend verification code.'
+      const data = err.response?.data
+      if (err.response?.status === 429 && data?.wait_seconds) {
+        setCooldown(data.wait_seconds)
+      }
+      const msg = data?.error || data?.detail || 'Unable to resend verification code.'
       toast.error(msg)
     } finally {
       setResending(false)

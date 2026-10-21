@@ -8,6 +8,7 @@ import { Spinner, TableSkeleton, ConfirmDialog, EmptyState, useModalA11y } from 
 import { INVOICE_STATUS, PAYMENT_STATUS, PAYMENT_METHODS } from '../constants'
 import toast from 'react-hot-toast'
 import InvoiceDocument from '../components/InvoiceDocument'
+import TemplateCustomizerModal from '../components/TemplateCustomizerModal'
 import CommunicationHistory from '../components/CommunicationHistory'
 import { InvoiceEmptyIllustration } from '../components/visuals'
 
@@ -697,9 +698,11 @@ function InvoiceModal({
   shopName,
   onCollect,
   onClose,
+  onReloadSettings,
 }) {
   const modalRef = useRef(null)
   const [shareOpen, setShareOpen] = useState(false)
+  const [customizingTpl, setCustomizingTpl] = useState(null)
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false)
   const [historyKey, setHistoryKey] = useState(0)
   const isHalfA4 = settings?.invoice_template === 'half_a4' || settings?.printer_type === 'half_a4' || settings?.invoice_template === 'advanced_gst_a5'
@@ -851,6 +854,25 @@ function InvoiceModal({
                 <span className="hidden xs:inline">PDF</span>
               </button>
 
+              {/* Customize Template Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  const activeMap = settings?.active_templates || {}
+                  const targetId = modalMode === 'half_a4' ? (activeMap.half_a4 || 'half_a4')
+                    : modalMode === 'thermal_58' ? 'thermal_58'
+                    : (modalMode === 'thermal' || modalMode === 'thermal_80') ? (activeMap.thermal || 'thermal_80')
+                    : (activeMap.default || activeMap.a4 || settings?.invoice_template || 'gst_a4')
+                  const meta = (settings?.template_settings?.templates || []).find(t => t.id === targetId) || { id: targetId, name: targetId }
+                  setCustomizingTpl(meta)
+                }}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
+                title="Customize invoice template style, fields, and printing layout"
+              >
+                <SlidersHorizontal size={13} className="text-[#0057B8] dark:text-sky-400" />
+                <span className="hidden sm:inline">Customize Template</span>
+              </button>
+
               {/* Digital Bill Link */}
               <button
                 type="button"
@@ -942,6 +964,24 @@ function InvoiceModal({
             />
           </div>
         </div>
+
+        {/* Template Customizer Modal embedded in Bills */}
+        {customizingTpl && (
+          <TemplateCustomizerModal
+            isOpen={Boolean(customizingTpl)}
+            onClose={() => setCustomizingTpl(null)}
+            templateId={customizingTpl.id}
+            templateMeta={customizingTpl}
+            globalSettings={settings}
+            onSaved={async () => {
+              setCustomizingTpl(null)
+              if (typeof onReloadSettings === 'function') {
+                await onReloadSettings()
+              }
+              toast.success('Template customizations saved')
+            }}
+          />
+        )}
       </div>
     </div>
   )
@@ -1628,19 +1668,21 @@ export default function Bills() {
   /* -------------------------------------------------------
      SHOP SETTINGS
   ------------------------------------------------------- */
-  useEffect(() => {
-    settingsService
-      .getAll()
-      .then(settings => {
-        if (settings) {
-          setShopSettings(settings)
-          if (settings.shop_name) {
-            setShopName(settings.shop_name)
-          }
+  const reloadSettings = useCallback(async () => {
+    try {
+      const s = await settingsService.getAll()
+      if (s) {
+        setShopSettings(s)
+        if (s.shop_name) {
+          setShopName(s.shop_name)
         }
-      })
-      .catch(() => {})
+      }
+    } catch {}
   }, [])
+
+  useEffect(() => {
+    reloadSettings()
+  }, [reloadSettings])
 
   /* -------------------------------------------------------
      RESET PAGE & SELECTIONS ON FILTER CHANGE
@@ -2800,6 +2842,7 @@ export default function Bills() {
         shopName={shopName}
         onCollect={setPayTarget}
         onClose={() => setSelected(null)}
+        onReloadSettings={reloadSettings}
       />
 
       {/* ===================================================

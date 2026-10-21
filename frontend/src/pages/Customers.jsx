@@ -1,9 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
-import api from '../api'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import customerService from '../features/customers/api/customerService'
 import settingsService from '../features/settings/api/settingsService'
 import {
-  Card,
   PageHeader,
   Modal,
   ConfirmDialog,
@@ -15,7 +13,7 @@ import { CreditCollectedVisual, CustomerEmptyIllustration } from '../components/
 import toast from 'react-hot-toast'
 import CommunicationHistory from '../components/CommunicationHistory'
 import { QRCodeSVG } from 'qrcode.react'
-import { GooglePayLogo, PhonePeLogo, PaytmLogo, UpiLogo } from '../components/UpiLogos'
+import { UpiLogo } from '../components/UpiLogos'
 import {
   Plus,
   Search,

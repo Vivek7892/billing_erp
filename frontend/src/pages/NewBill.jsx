@@ -52,7 +52,7 @@ import {
 import { Modal, ConfirmDialog, SearchBar } from '../components/UI'
 import { useNavigate } from 'react-router-dom'
 import RazorpayPaymentModal from '../features/billing/RazorpayPaymentModal'
-import { PAYMENT_METHODS, PAYMENT_STATUS, INVOICE_STATUS } from '../constants'
+import { PAYMENT_METHODS, PAYMENT_STATUS } from '../constants'
 import { BillingWorkflowVisual, PaymentCompletedVisual } from '../components/visuals'
 
 // ---------------------------------------------------------------------------
@@ -185,7 +185,6 @@ function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, on
   const gross = item.unit_price * item.qty
   const discountAmount = gross * item.discount_percent / 100
   const basic = gross - discountAmount
-  const gst = basic * item.gst_percent / 100
   const overStock = Number.isFinite(stock) && item.qty > stock
   return (
     <tr className={`pb-bill-tr${overStock ? ' pb-tr-warn' : ''}${justAdded ? ' pb-tr-added' : ''}`}>
@@ -997,14 +996,11 @@ export default function NewBill() {
     discount,
     taxableBeforeBillDiscount,
     billDiscount,
-    itemTax,
     tax,
-    raw,
     roundOff,
     grandTotal,
     taxableAmount,
     totalQty,
-    cartItemsTotal,
   } = useMemo(() => {
     const sub = cart.reduce((sum, item) => sum + item.unit_price * item.qty, 0)
     const disc = cart.reduce((sum, item) => sum + (item.unit_price * item.qty * item.discount_percent) / 100, 0)
@@ -1200,19 +1196,7 @@ export default function NewBill() {
     return `${API_BASE_URL}/invoices/${invoiceId}/pdf/${query ? `?${query}` : ''}`
   }
 
-  const openInvoiceDocument = (invoiceId, thermal = false) => {
-    if (!invoiceId) {
-      toast.error('Complete the sale first')
-      return
-    }
 
-    const url = getInvoicePdfUrl(invoiceId, thermal)
-    const win = window.open(url, '_blank', 'noopener,noreferrer')
-    if (!win) {
-      toast.error('Allow pop-ups to view the invoice')
-      return
-    }
-  }
 
   // Open the PDF and automatically invoke the browser print dialog.
   // The popup is opened synchronously from the button click so Chrome/Edge
@@ -1589,10 +1573,7 @@ export default function NewBill() {
     return Number.isFinite(s) && s <= 0
   }
   // Display helpers for product cards (service / untracked items show no stock line).
-  const hasStockInfo = p => {
-    const s = p?.current_stock
-    return p?.track_stock !== false && !p?.is_service && s !== undefined && s !== null && s !== ''
-  }
+
   const isLowStock = p => {
     const n = Number(p?.current_stock)
     return Number.isFinite(n) && n > 0 && n <= LOW_STOCK_THRESHOLD

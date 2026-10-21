@@ -9,11 +9,11 @@ import {
   LayoutDashboard,
 } from 'lucide-react'
 
-import currentBanner from '../assets/dashboard-banner-v2.png'
-import inventoryBanner from '../assets/dashboard-banners/inventory.png'
-import billingBanner from '../assets/dashboard-banners/billing.png'
-import reportsBanner from '../assets/dashboard-banners/reports.png'
-import paymentsBanner from '../assets/dashboard-banners/payments.png'
+import currentBanner from '../assets/dashboard-banner-v2.webp'
+import inventoryBanner from '../assets/dashboard-banners/inventory.webp'
+import billingBanner from '../assets/dashboard-banners/billing.webp'
+import reportsBanner from '../assets/dashboard-banners/reports.webp'
+import paymentsBanner from '../assets/dashboard-banners/payments.webp'
 
 import './DashboardBanner.css'
 

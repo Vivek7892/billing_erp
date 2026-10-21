@@ -14,6 +14,7 @@ export default function ForgotPassword() {
 
   const handleSubmit = async e => {
     e.preventDefault()
+    if (loading) return
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setError('Please enter a valid email address')
       return

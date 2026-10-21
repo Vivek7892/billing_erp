@@ -340,14 +340,14 @@ export default function ThermalReceipt({
                       {name}
                     </div>
 
-                    <div className="flex justify-between items-baseline" style={{ fontSize: '8.5px' }}>
-                      <span className="text-black">
+                    <div className="flex justify-between items-baseline" style={{ fontSize: '8px' }}>
+                        <span className="text-black" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
                         {showQty && qty}
                         {showQty && showRate && ` × ₹${fmt(rate)}`}
                         {item.unit && ` (${item.unit})`}
                       </span>
                       {showTotal && (
-                        <span className="font-bold text-black tabular-nums">
+                        <span className="font-bold text-black tabular-nums" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
                           ₹{fmt(total)}
                         </span>
                       )}
@@ -356,23 +356,23 @@ export default function ThermalReceipt({
                 ) : (
                   /* 80mm clean row - dynamically sized columns without blank gaps */
                   <div>
-                    <div className="flex justify-between items-baseline" style={{ fontSize: '10px' }}>
-                      <span className="font-semibold text-black break-words" style={{ width: colWidths80.item }}>
+                    <div className="flex justify-between items-baseline" style={{ fontSize: '9px' }}>
+                      <span className="font-semibold text-black break-words" style={{ width: colWidths80.item, minWidth: 0, overflowWrap: 'anywhere' }}>
                         {name}
                         {item.unit && <span className="font-normal"> ({item.unit})</span>}
                       </span>
                       {showQty && (
-                        <span className="text-right tabular-nums text-black" style={{ width: colWidths80.qty }}>
+                        <span className="text-right tabular-nums text-black" style={{ width: colWidths80.qty, minWidth: 0, overflowWrap: 'anywhere' }}>
                           {qty}
                         </span>
                       )}
                       {showRate && (
-                        <span className="text-right tabular-nums text-black" style={{ width: colWidths80.rate }}>
+                        <span className="text-right tabular-nums text-black" style={{ width: colWidths80.rate, minWidth: 0, overflowWrap: 'anywhere' }}>
                           ₹{fmt(rate)}
                         </span>
                       )}
                       {showTotal && (
-                        <span className="text-right font-bold tabular-nums text-black" style={{ width: colWidths80.total }}>
+                        <span className="text-right font-bold tabular-nums text-black" style={{ width: colWidths80.total, minWidth: 0, overflowWrap: 'anywhere' }}>
                           ₹{fmt(total)}
                         </span>
                       )}

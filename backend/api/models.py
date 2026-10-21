@@ -100,7 +100,10 @@ class OTPRecord(models.Model):
     resend_count = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
-        indexes = [models.Index(fields=['identifier', 'purpose', 'is_verified'], name='otp_lookup_idx')]
+        indexes = [
+            models.Index(fields=['identifier', 'purpose', 'is_used', '-created_at'], name='otp_active_lookup_idx'),
+            models.Index(fields=['identifier', 'purpose', '-created_at'], name='otp_cooldown_idx'),
+        ]
 
     @staticmethod
     def hash_otp(otp):
@@ -886,3 +889,5 @@ class ApprovalRequest(models.Model):
 
     def __str__(self):
         return f"{self.get_request_type_display()} - {self.entity_name} ({self.status})"
+
+

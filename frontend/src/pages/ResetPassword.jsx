@@ -1,5 +1,5 @@
 import { useState, useId } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { LockKeyhole, Eye, EyeOff, ShieldCheck, CheckCircle2, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import http from '../api'
@@ -34,7 +34,6 @@ export default function ResetPassword() {
   const [success, setSuccess] = useState(false)
   const [errors, setErrors] = useState({})
 
-  const navigate = useNavigate()
   const passwordErrorId = useId()
   const strength = calculateStrength(password)
 

@@ -9,6 +9,7 @@ from django.core import signing
 from django.http import HttpResponse, Http404
 from django.db import IntegrityError, transaction
 import secrets
+import hmac
 from django.conf import settings
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
@@ -79,19 +80,19 @@ def _report_value(value):
 
 def _send_onboarding_welcome_email(user):
     try:
-        from api.emails import send_onboarding_welcome_email
-        send_onboarding_welcome_email(user)
+        from api.emails import async_send_onboarding_welcome_email
+        async_send_onboarding_welcome_email(user)
     except Exception as e:
         import logging
         logging.getLogger(__name__).error(
-            f"Failed to send onboarding welcome email to {user.email}: {e}"
+            f"Failed to queue onboarding welcome email to {getattr(user, 'email', user)}: {e}"
         )
 
 
 def _send_registration_notification_email(user, request, business=None, shop_registered=False):
     try:
-        from api.emails import send_registration_notification_email
-        send_registration_notification_email(
+        from api.emails import async_send_registration_notification_email
+        async_send_registration_notification_email(
             user,
             business=business,
             request=request,
@@ -100,7 +101,7 @@ def _send_registration_notification_email(user, request, business=None, shop_reg
     except Exception as e:
         import logging
         logging.getLogger(__name__).error(
-            f"Failed to send registration notification for {user.email}: {e}"
+            f"Failed to queue registration notification for {getattr(user, 'email', user)}: {e}"
         )
 
 
@@ -583,21 +584,30 @@ class RegisterView(APIView):
         require_verification = getattr(settings, 'REQUIRE_OTP_VERIFICATION', False) or getattr(settings, 'REQUIRE_EMAIL_VERIFICATION', False)
 
         if require_verification:
-            _send_registration_notification_email(user, request)
             otp = f"{secrets.randbelow(900000) + 100000}"
-            expires_at = timezone.now() + timedelta(minutes=10)
+            now = timezone.now()
+            expires_at = now + timedelta(minutes=10)
+
+            # Invalidate any old unused signup OTPs for this email to prevent race conditions
+            OTPRecord.objects.filter(
+                identifier=user.email.lower(),
+                purpose='signup',
+                is_used=False
+            ).update(is_used=True)
+
             OTPRecord.objects.create(
-                identifier=user.email,
+                identifier=user.email.lower(),
                 purpose='signup',
                 otp_hash=OTPRecord.hash_otp(otp),
-                expires_at=expires_at
+                expires_at=expires_at,
+                last_resend_at=now,
+                resend_count=0
             )
-            try:
-                from api.emails import send_otp_verification_email
-                send_otp_verification_email(user, otp)
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).error(f"Failed to send verification email to {user.email}: {e}")
+
+            # Asynchronously send registration alert to admin and OTP code to user
+            from api.emails import async_send_otp_verification_email
+            _send_registration_notification_email(user, request)
+            async_send_otp_verification_email(user, otp, purpose='signup')
 
             return Response({
                 'require_verification': True,
@@ -632,62 +642,70 @@ class VerifyOTPView(APIView):
         if purpose not in ('signup', 'login', 'reset'):
             return Response({'error': 'Verification purpose is invalid.'}, status=400)
 
-        record = OTPRecord.objects.filter(
-            identifier__iexact=identifier,
-            purpose=purpose,
-            is_used=False
-        ).order_by('-created_at').first()
+        with transaction.atomic():
+            record = OTPRecord.objects.select_for_update().filter(
+                identifier=identifier,
+                purpose=purpose,
+                is_used=False
+            ).order_by('-created_at').first()
 
-        if not record or record.expires_at < timezone.now():
-            return Response({'error': 'Verification code has expired or is invalid. Please request a new one.'}, status=400)
-
-        if record.attempts >= 5:
-            return Response({'error': 'Too many failed attempts. Please request a new verification code.'}, status=400)
-
-        if record.otp_hash != OTPRecord.hash_otp(otp):
-            record.attempts += 1
-            record.save(update_fields=['attempts'])
-            remaining = max(0, 5 - record.attempts)
-            return Response({'error': f'Invalid verification code. {remaining} attempt(s) remaining.'}, status=400)
-
-        record.is_verified = True
-        record.is_used = True
-        record.save(update_fields=['is_verified', 'is_used'])
-
-        user = User.objects.filter(Q(email__iexact=identifier) | Q(phone=identifier)).first()
-        if purpose == 'reset':
-            if not user or not user.is_active:
+            if not record or record.expires_at < timezone.now():
                 return Response({'error': 'Verification code has expired or is invalid. Please request a new one.'}, status=400)
-            token = signing.dumps(
-                {'user_id': user.pk, 'password': user.password},
-                salt='password-reset-otp',
-            )
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+            if record.attempts >= 5:
+                return Response({'error': 'Too many failed attempts. Please request a new verification code.'}, status=400)
+
+            if not hmac.compare_digest(record.otp_hash, OTPRecord.hash_otp(otp)):
+                record.attempts += 1
+                record.save(update_fields=['attempts'])
+                remaining = max(0, 5 - record.attempts)
+                return Response({'error': f'Invalid verification code. {remaining} attempt(s) remaining.'}, status=400)
+
+            record.is_verified = True
+            record.is_used = True
+            record.save(update_fields=['is_verified', 'is_used'])
+
+            # Invalidate any other leftover unverified records for this identifier & purpose
+            OTPRecord.objects.filter(
+                identifier=identifier,
+                purpose=purpose,
+                is_used=False
+            ).update(is_used=True)
+
+            user = User.objects.filter(Q(email__iexact=identifier) | Q(phone=identifier)).first()
+            if purpose == 'reset':
+                if not user or not user.is_active:
+                    return Response({'error': 'Verification code has expired or is invalid. Please request a new one.'}, status=400)
+                token = signing.dumps(
+                    {'user_id': user.pk, 'password': user.password},
+                    salt='password-reset-otp',
+                )
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                return Response({
+                    'status': 'verified',
+                    'message': 'Email verified. You can now set a new password.',
+                    'uid': uid,
+                    'token': token,
+                })
+
+            if user:
+                user.is_verified = True
+                user.save(update_fields=['is_verified'])
+                if purpose == 'signup':
+                    _send_onboarding_welcome_email(user)
+                refresh = RefreshToken.for_user(user)
+                return Response({
+                    'status': 'verified',
+                    'message': 'Verification successful.',
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh),
+                    'user': UserSerializer(user).data
+                })
+
             return Response({
                 'status': 'verified',
-                'message': 'Email verified. You can now set a new password.',
-                'uid': uid,
-                'token': token,
+                'message': 'Code verified successfully.'
             })
-
-        if user:
-            user.is_verified = True
-            user.save(update_fields=['is_verified'])
-            if purpose == 'signup':
-                _send_onboarding_welcome_email(user)
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'status': 'verified',
-                'message': 'Verification successful.',
-                'access': str(refresh.access_token),
-                'refresh': str(refresh),
-                'user': UserSerializer(user).data
-            })
-
-        return Response({
-            'status': 'verified',
-            'message': 'Code verified successfully.'
-        })
 
 
 class ResendVerificationView(APIView):
@@ -706,35 +724,44 @@ class ResendVerificationView(APIView):
         if purpose == 'reset' and not User.objects.filter(email__iexact=identifier, is_active=True).exists():
             return Response({'message': 'If an account exists with that email, a new verification code has been sent.'})
 
+        now = timezone.now()
         recent = OTPRecord.objects.filter(
-            identifier__iexact=identifier,
+            identifier=identifier,
             purpose=purpose
         ).order_by('-created_at').first()
 
-        if recent and recent.last_resend_at:
-            elapsed = (timezone.now() - recent.last_resend_at).total_seconds()
+        last_sent_at = (recent.last_resend_at or recent.created_at) if recent else None
+        if last_sent_at:
+            elapsed = (now - last_sent_at).total_seconds()
             if elapsed < 60:
-                wait_sec = int(60 - elapsed)
-                return Response({'error': f'Please wait {wait_sec} seconds before requesting a new code.'}, status=429)
+                wait_sec = max(1, int(60 - elapsed))
+                return Response({
+                    'error': f'Please wait {wait_sec} seconds before requesting a new code.',
+                    'wait_seconds': wait_sec,
+                }, status=429)
 
         otp = f"{secrets.randbelow(900000) + 100000}"
-        expires_at = timezone.now() + timedelta(minutes=10)
+        expires_at = now + timedelta(minutes=10)
 
-        OTPRecord.objects.create(
-            identifier=identifier,
-            purpose=purpose,
-            otp_hash=OTPRecord.hash_otp(otp),
-            expires_at=expires_at,
-            last_resend_at=timezone.now(),
-            resend_count=(recent.resend_count + 1) if recent else 1
-        )
+        with transaction.atomic():
+            # Invalidate previous unused OTPs
+            OTPRecord.objects.filter(
+                identifier=identifier,
+                purpose=purpose,
+                is_used=False
+            ).update(is_used=True)
 
-        try:
-            from api.emails import send_otp_verification_email
-            send_otp_verification_email(identifier, otp, purpose=purpose)
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(f"Failed to resend verification email to {identifier}: {e}")
+            OTPRecord.objects.create(
+                identifier=identifier,
+                purpose=purpose,
+                otp_hash=OTPRecord.hash_otp(otp),
+                expires_at=expires_at,
+                last_resend_at=now,
+                resend_count=(recent.resend_count + 1) if recent else 1
+            )
+
+            from api.emails import async_send_otp_verification_email
+            async_send_otp_verification_email(identifier, otp, purpose=purpose)
 
         return Response({'message': 'A new verification code has been sent.'})
 
@@ -980,24 +1007,37 @@ class PasswordResetRequestView(APIView):
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data['email']
+        email = serializer.validated_data['email'].strip().lower()
 
         user = User.objects.filter(email__iexact=email, is_active=True).first()
         if user:
-            otp = f"{secrets.randbelow(900000) + 100000}"
-            OTPRecord.objects.create(
-                identifier=user.email,
-                purpose='reset',
-                otp_hash=OTPRecord.hash_otp(otp),
-                expires_at=timezone.now() + timedelta(minutes=10),
-            )
+            now = timezone.now()
+            recent = OTPRecord.objects.filter(
+                identifier=user.email.lower(),
+                purpose='reset'
+            ).order_by('-created_at').first()
 
-            try:
-                from api.emails import send_otp_verification_email
-                send_otp_verification_email(user, otp, purpose='reset')
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).error(f"Failed to send password reset code to {user.email}: {e}")
+            last_sent = (recent.last_resend_at or recent.created_at) if recent else None
+            # Enforce 60-second cooldown on reset requests
+            if not last_sent or (now - last_sent).total_seconds() >= 60:
+                otp = f"{secrets.randbelow(900000) + 100000}"
+                with transaction.atomic():
+                    OTPRecord.objects.filter(
+                        identifier=user.email.lower(),
+                        purpose='reset',
+                        is_used=False
+                    ).update(is_used=True)
+
+                    OTPRecord.objects.create(
+                        identifier=user.email.lower(),
+                        purpose='reset',
+                        otp_hash=OTPRecord.hash_otp(otp),
+                        expires_at=now + timedelta(minutes=10),
+                        last_resend_at=now
+                    )
+
+                    from api.emails import async_send_otp_verification_email
+                    async_send_otp_verification_email(user, otp, purpose='reset')
 
         return Response({
             'detail': 'If an account exists with that email, a password reset code has been sent.'

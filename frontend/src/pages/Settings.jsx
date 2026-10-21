@@ -111,6 +111,14 @@ const BARCODE_LABEL_SIZES = [
   { id: '80mm_roll', label: '80 mm Thermal Multi-bar', desc: 'POS continuous slip', type: 'label' },
 ]
 
+const BARCODE_LABEL_DIMENSIONS = {
+  '50x25': { width: 50, height: 25 },
+  '38x25': { width: 38, height: 25 },
+  a4_3x5: { width: 64, height: 54 },
+  a4_4x8: { width: 48, height: 34 },
+  '80mm_roll': { width: 80, height: 50 },
+}
+
 const INVOICE_THEME_COLORS = [
   { name: 'Black', value: '#111827' },
   { name: 'Green', value: '#16803c' },
@@ -569,6 +577,8 @@ export default function Settings() {
       place_of_supply: settings.place_of_supply || settings.shop_state || 'Tamil Nadu (33)',
       notes: settings.invoice_notes || 'Thank you for shopping with us! Visit again.',
       terms: settings.invoice_terms || '1. Goods once sold will be exchanged within 7 days.\n2. Please retain original invoice for claims.',
+      short_url: 'https://demo.billing/b/INV-1001',
+      public_token: 'sample-token-1001',
       items: [
         {
           product_name: 'India Gate Basmati Rice 5kg',
@@ -838,17 +848,15 @@ export default function Settings() {
   }
 
   const invoiceTemplates = settings.template_settings?.templates || []
+  const barcodeLabelSize = settings.barcode_label_size || '50x25'
+  const barcodeLabelDimensions = BARCODE_LABEL_DIMENSIONS[barcodeLabelSize] || BARCODE_LABEL_DIMENSIONS['50x25']
   const selectedTemplateId = settings.active_templates?.default
     || settings.template_settings?.active?.default
     || settings.invoice_template
     || 'gst_a4'
   const selectedInvoiceTemplate = invoiceTemplates.find(template => template.id === selectedTemplateId)
     || invoiceTemplates[0]
-  const previewTemplateId = settings.invoice_layout === 'compact'
-    ? 'half_a4'
-    : settings.invoice_layout === 'thermal'
-      ? 'thermal_80'
-      : selectedTemplateId
+  const previewTemplateId = selectedTemplateId
   const previewInvoiceTemplate = invoiceTemplates.find(template => template.id === previewTemplateId)
     || selectedInvoiceTemplate
   const getTemplatePreviewConfig = template => {
@@ -858,17 +866,31 @@ export default function Settings() {
       ...config,
       business_info: {
         ...(config.business_info || {}),
-        header_layout: settings.invoice_header_layout || config.business_info?.header_layout,
+        header_layout: template?.id === 'stylish' && settings.invoice_header_layout === 'logo_left'
+          ? (config.business_info?.header_layout || 'corporate_bar')
+          : settings.invoice_header_layout || config.business_info?.header_layout,
       },
       layout: {
         ...(config.layout || {}),
-        font_family: settings.invoice_font || config.layout?.font_family,
+        font_family: settings.invoice_font && settings.invoice_font !== 'default' ? settings.invoice_font : config.layout?.font_family,
+        accent_color: settings.invoice_theme_color || config.layout?.accent_color,
+        secondary_color: settings.invoice_theme_secondary || config.layout?.secondary_color,
+        border_style: settings.invoice_border_style && settings.invoice_border_style !== 'solid' ? settings.invoice_border_style : config.layout?.border_style,
+        table_style: settings.invoice_table_style && settings.invoice_table_style !== 'clean' ? settings.invoice_table_style : config.layout?.table_style,
       },
+      invoice_title: settings.invoice_title || config.invoice_title,
+      invoice_footer: settings.invoice_footer || config.invoice_footer,
+      invoice_terms: settings.invoice_terms || config.invoice_terms,
     }
   }
+  const previewTemplateConfig = useMemo(
+    () => getTemplatePreviewConfig(previewInvoiceTemplate),
+    [previewInvoiceTemplate, settings],
+  )
 
-  const previewDocumentWidth = previewTemplateId === 'thermal_58' ? 220 : previewTemplateId.startsWith('thermal') ? 302 : previewTemplateId === 'half_a4' ? 560 : 794
-  const previewDocumentHeight = previewTemplateId.startsWith('thermal') ? 620 : previewTemplateId === 'half_a4' ? 792 : 1123
+  const is58Settings = settings.thermal_paper_width === '58' || settings.thermal_paper_width === '2' || previewTemplateId === 'thermal_58'
+  const previewDocumentWidth = is58Settings ? 216 : previewTemplateId.startsWith('thermal') ? 300 : previewTemplateId === 'half_a4' ? 560 : 794
+  const previewDocumentHeight = previewTemplateId.startsWith('thermal') ? 640 : previewTemplateId === 'half_a4' ? 792 : 1123
   const effectivePreviewZoom = Math.min(1.4, previewZoom * previewFitScale)
 
   useEffect(() => {
@@ -876,10 +898,8 @@ export default function Settings() {
     if (!container) return undefined
     const updateFit = () => {
       const availableWidth = Math.max(0, container.clientWidth - 32)
-      const availableHeight = Math.max(0, container.clientHeight - 32)
       const fitByWidth = availableWidth / previewDocumentWidth
-      const fitByHeight = availableHeight / previewDocumentHeight
-      setPreviewFitScale(Math.min(1, fitByWidth, fitByHeight) || 1)
+      setPreviewFitScale(Math.min(1, fitByWidth) || 1)
     }
     updateFit()
     const observer = new ResizeObserver(updateFit)
@@ -962,7 +982,7 @@ export default function Settings() {
                       <button
                         type="button"
                         onClick={() => setPreviewZoom(z => Math.max(0.4, Math.round((z - 0.1) * 10) / 10))}
-                        className="p-0.5 text-slate-600 hover:text-slate-900 rounded hover:bg-slate-100"
+                        className="min-h-10 min-w-10 rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                         title="Zoom Out"
                       >
                         <ZoomOut size={13} />
@@ -973,7 +993,7 @@ export default function Settings() {
                       <button
                         type="button"
                         onClick={() => setPreviewZoom(z => Math.min(1.4, Math.round((z + 0.1) * 10) / 10))}
-                        className="p-0.5 text-slate-600 hover:text-slate-900 rounded hover:bg-slate-100"
+                        className="min-h-10 min-w-10 rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                         title="Zoom In"
                       >
                         <ZoomIn size={13} />
@@ -982,7 +1002,7 @@ export default function Settings() {
                         <button
                           type="button"
                           onClick={() => setPreviewZoom(1)}
-                          className="p-0.5 text-slate-400 hover:text-slate-700 rounded hover:bg-slate-100"
+                          className="min-h-10 min-w-10 rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                           title="Reset Zoom"
                         >
                           <RotateCcw size={11} />
@@ -991,13 +1011,9 @@ export default function Settings() {
                     </div>
 
                     {/* Test Print Button */}
-                    <button
-                      type="button"
-                      onClick={() => printInvoiceDirect(previewTemplateId)}
-                      className="h-8 px-3 text-xs font-semibold rounded-lg bg-teal-700 hover:bg-teal-800 text-white inline-flex items-center gap-1.5 shadow-2xs transition-colors"
-                    >
+                    <button type="button" onClick={() => printInvoiceDirect(previewTemplateId)} className="min-h-10 px-3 text-xs font-semibold rounded-lg bg-teal-700 hover:bg-teal-800 text-white inline-flex items-center gap-1.5 shadow-2xs transition-colors">
                       <Printer size={13} />
-                      <span>Test Print</span>
+                      <span>Print Sample</span>
                     </button>
                   </div>
                 </div>
@@ -1006,7 +1022,7 @@ export default function Settings() {
                 <div ref={previewAreaRef} className="h-[78vh] min-h-[420px] max-h-[850px] p-3 sm:p-5 bg-slate-100/90 overflow-auto flex justify-center items-start">
                   <div className="settings-print-invoice-target transition-transform" style={{ width: previewDocumentWidth * effectivePreviewZoom, height: previewDocumentHeight * effectivePreviewZoom }}>
                     <div style={{ width: previewDocumentWidth, transform: `scale(${effectivePreviewZoom})`, transformOrigin: 'top left' }}>
-                      <InvoiceDocument invoice={sampleInvoice} settings={settings} templateConfig={getTemplatePreviewConfig(previewInvoiceTemplate)} mode={previewTemplateId} showModePicker={false} />
+                      <InvoiceDocument invoice={sampleInvoice} settings={settings} templateConfig={previewTemplateConfig} mode={previewTemplateId} showModePicker={false} />
                     </div>
                   </div>
                 </div>
@@ -1021,44 +1037,90 @@ export default function Settings() {
                       <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900">Invoice Templates</h2>
                       <p className="mt-1 text-[11px] text-slate-500">Choose a visual invoice style.</p>
                     </div>
-                    <button type="button" onClick={() => setShowAllTemplates(true)} className="rounded-full bg-indigo-50 px-2.5 py-1 text-[10px] font-semibold text-indigo-700 hover:bg-indigo-100">
+                    <button type="button" onClick={() => setShowAllTemplates(true)} className="min-h-10 rounded-lg bg-indigo-50 px-3 py-2 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100">
                       See all {invoiceTemplates.length} templates
                     </button>
                   </div>
 
-                  <div className="overflow-x-auto pb-1">
-                    <div className="grid min-w-[430px] grid-cols-4 gap-2">
+                  <div className="pb-1">
+                    <div className="grid w-full grid-cols-2 lg:grid-cols-4 gap-2">
                     {visibleInvoiceTemplates.map(template => {
                       const isDefault = selectedTemplateId === template.id
+                      const isThermal = template.format === 'thermal'
+                      const isThermal58 = template.id === 'thermal_58'
                       return (
-                        <article key={template.id} className={`relative min-w-0 overflow-hidden rounded-lg border p-1.5 transition-all ${isDefault ? 'border-indigo-500 bg-indigo-50/50 ring-2 ring-indigo-200' : 'border-slate-200 hover:border-slate-300'}`}>
-                          {isDefault && <span className="absolute right-1 top-1 z-10 inline-flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-white shadow"><Check size={11} strokeWidth={3} /></span>}
-                          <button type="button" onClick={() => handleSelectInvoiceTemplate(template)} disabled={Boolean(savingTemplateId) || isDefault} className="block w-full overflow-hidden rounded-lg border border-slate-100 bg-slate-50 p-1 text-left" aria-label={`Preview and select ${template.name}`}>
-                            <div className="mx-auto h-[66px] overflow-hidden rounded bg-white shadow-sm">
-                              <div style={{ width: template.format === 'thermal' ? 302 : 560, transform: `scale(${template.format === 'thermal' ? 0.25 : 0.17})`, transformOrigin: 'top left', pointerEvents: 'none' }}>
-                                <InvoiceDocument invoice={sampleInvoice} settings={settings} templateConfig={getTemplatePreviewConfig(template)} mode={template.id} showModePicker={false} />
+                        <article
+                          key={template.id}
+                          className={`relative min-w-0 overflow-hidden rounded-lg border p-2 transition-colors ${
+                            isDefault
+                              ? 'border-indigo-500 bg-indigo-50/30 ring-1 ring-indigo-300'
+                              : 'border-slate-200 bg-white hover:border-indigo-300'
+                          }`}
+                        >
+                          {isDefault && (
+                            <span className="absolute right-1 top-1 z-10 inline-flex items-center rounded-full bg-indigo-600 px-1.5 py-0.5 text-[8px] font-bold text-white">
+                              <Check size={11} strokeWidth={3} />
+                            </span>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => handleSelectInvoiceTemplate(template)}
+                            disabled={Boolean(savingTemplateId) || isDefault}
+                            className="block w-full overflow-hidden rounded-md bg-slate-100 p-1 text-left"
+                            aria-label={`Preview and select ${template.name}`}
+                          >
+                            <div className="settings-template-thumb-paper mx-auto flex h-[88px] w-full items-start justify-center overflow-hidden rounded bg-white">
+                              <div
+                                style={{
+                                  width: isThermal ? (isThermal58 ? 216 : 300) : template.format === 'half_a4' ? 560 : 794,
+                                  transform: `scale(${isThermal ? 0.25 : template.format === 'half_a4' ? 0.15 : 0.105})`,
+                                  transformOrigin: 'top center',
+                                  pointerEvents: 'none',
+                                }}
+                              >
+                                <InvoiceDocument
+                                  invoice={sampleInvoice}
+                                  settings={settings}
+                                  templateConfig={getTemplatePreviewConfig(template)}
+                                  mode={template.id}
+                                  showModePicker={false}
+                                />
                               </div>
                             </div>
                           </button>
-                          <div className="flex min-h-7 items-center justify-between gap-1 px-0.5 pt-1">
-                            <h3 className="min-w-0 truncate text-[9px] font-bold text-slate-900" title={template.name}>{template.name}</h3>
-                            {isDefault && <span className="shrink-0 text-[7px] font-bold text-indigo-700">Selected</span>}
+
+                          <div className="flex min-h-8 items-center justify-between gap-1 pt-1.5">
+                            <div className="min-w-0">
+                              <h3 className="truncate text-[10px] font-bold leading-tight text-slate-900" title={template.name}>
+                                {template.name}
+                              </h3>
+                              <span className="text-[9px] text-slate-500 capitalize">
+                                {isThermal ? (isThermal58 ? 'Thermal 58mm' : 'Thermal 80mm') : template.format === 'half_a4' ? 'Half-A4 (A5)' : 'A4 Vertical'}
+                              </span>
+                            </div>
                           </div>
+
                           <div className="mt-1 flex items-center gap-1">
                             <button
                               type="button"
-                              onClick={() => setCustomizingTemplate(template)}
-                              className="flex-1 rounded bg-slate-100 px-1 py-0.5 text-[8px] font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700"
+                              onClick={() => handleSelectInvoiceTemplate(template)}
+                              disabled={Boolean(savingTemplateId) || isDefault}
+                              className={`min-h-8 flex-1 rounded-md text-[10px] font-semibold transition ${
+                                isDefault
+                                  ? 'bg-indigo-600 text-white cursor-default'
+                                  : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                              }`}
                             >
-                              Customize
+                              {isDefault ? 'Selected' : 'Use Template'}
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleResetTemplate(template)}
-                              title="Reset to default"
-                              className="rounded p-0.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                              onClick={() => setCustomizingTemplate(template)}
+                              className="min-h-8 rounded-md bg-slate-100 px-2 text-[10px] font-semibold text-slate-700 hover:bg-slate-200 transition"
+                              title="Customize template details"
                             >
-                              <RotateCcw size={10} />
+                              Customize
                             </button>
                           </div>
                         </article>
@@ -1078,7 +1140,7 @@ export default function Settings() {
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900">Select Color</h2>
-                      <p className="mt-1 text-[11px] text-slate-500">See your accent color in the live invoice preview.</p>
+                      <p className="mt-1 text-[11px] leading-relaxed text-slate-500">The selected color appears in the live bill and printed invoice. Save Changes to apply it to backend invoices.</p>
                     </div>
                     <span className="h-7 w-7 rounded-full border border-slate-200 shadow-inner" style={{ backgroundColor: settings.invoice_theme_color || '#1e3a5f' }} aria-label="Current invoice accent color" />
                   </div>
@@ -1086,7 +1148,7 @@ export default function Settings() {
                     {INVOICE_THEME_COLORS.map(color => {
                       const selected = (settings.invoice_theme_color || '#1e3a5f').toLowerCase() === color.value
                       return (
-                        <button key={color.value} type="button" onClick={() => setField('invoice_theme_color', color.value)} aria-label={`${color.name} invoice color`} title={color.name} className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition ${selected ? 'border-slate-900 ring-2 ring-slate-200' : 'border-white shadow ring-1 ring-slate-200'}`} style={{ backgroundColor: color.value }}>
+                        <button key={color.value} type="button" onClick={() => setField('invoice_theme_color', color.value)} aria-label={`${color.name} invoice color`} title={color.name} className={`flex h-11 w-11 items-center justify-center rounded-full border-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${selected ? 'border-slate-900 ring-2 ring-slate-200' : 'border-white shadow ring-1 ring-slate-200'}`} style={{ backgroundColor: color.value }}>
                           {selected && <Check size={15} className="text-white drop-shadow" />}
                         </button>
                       )
@@ -1481,7 +1543,7 @@ export default function Settings() {
                       <button
                         type="button"
                         onClick={printThermalDirect}
-                        className="h-8 px-3 text-xs font-semibold rounded-lg bg-teal-700 hover:bg-teal-800 text-white inline-flex items-center gap-1.5 shadow-2xs transition-colors"
+                        className="min-h-11 px-3 text-xs font-semibold rounded-lg bg-teal-700 hover:bg-teal-800 text-white inline-flex items-center gap-1.5 shadow-2xs transition-colors"
                       >
                         <Printer size={13} />
                         <span>Test Print Receipt</span>
@@ -1490,7 +1552,7 @@ export default function Settings() {
                       <button
                         type="button"
                         onClick={printBarcodeLabelDirect}
-                        className="h-8 px-3 text-xs font-semibold rounded-lg bg-teal-700 hover:bg-teal-800 text-white inline-flex items-center gap-1.5 shadow-2xs transition-colors"
+                        className="min-h-11 px-3 text-xs font-semibold rounded-lg bg-teal-700 hover:bg-teal-800 text-white inline-flex items-center gap-1.5 shadow-2xs transition-colors"
                       >
                         <Printer size={13} />
                         <span>Test Print Label</span>
@@ -1500,10 +1562,17 @@ export default function Settings() {
                 </div>
 
                 {/* Live Preview Display Stage */}
-                <div className="p-6 bg-slate-100/90 overflow-x-auto flex justify-center items-start min-h-[520px]">
+                <div className="settings-print-preview-stage p-6 bg-slate-100/90 overflow-x-auto flex justify-center items-start min-h-[520px]">
                   {printSubTab === 'thermal' ? (
                     /* Thermal Continuous Receipt Simulator */
-                    <div className="settings-print-invoice-target bg-white text-black shadow-md rounded-xs overflow-visible border border-slate-300 print:border-none print:shadow-none print:m-0">
+                    <div
+                      className="thermal-live-preview-paper settings-print-preview-paper settings-print-invoice-target bg-white text-black shadow-md rounded-md overflow-hidden print:border-none print:shadow-none print:m-0"
+                      style={{
+                        width: settings.thermal_paper_width === '58' || settings.thermal_paper_width === '2' ? '216px' : '300px',
+                        maxWidth: '100%',
+                        margin: '0 auto',
+                      }}
+                    >
                       <ThermalReceipt
                         invoice={sampleInvoice}
                         settings={settings}
@@ -1516,7 +1585,7 @@ export default function Settings() {
                     <div className="flex flex-col items-center gap-4 w-full max-w-sm">
                       <div
                         id="barcode-preview-canvas"
-                        className={`bg-white rounded-xl border border-slate-300 p-4 shadow-lg w-full transition-all ${
+                        className={`barcode-live-preview-paper settings-print-preview-paper bg-white rounded-xl border border-slate-300 p-4 shadow-lg w-full transition-all ${
                           (settings.barcode_align || 'center') === 'left' ? 'text-left' : 'text-center'
                         }`}
                         style={{
@@ -1526,7 +1595,7 @@ export default function Settings() {
                       >
                         {/* Business Name */}
                         {isTrue(settings.barcode_show_business_name, true) && (
-                          <div className="text-[11px] font-bold text-slate-900 uppercase tracking-wider mb-1 truncate">
+                          <div className="text-[11px] font-bold text-slate-900 uppercase tracking-wider mb-1 whitespace-normal break-words">
                             {settings.shop_name || 'MY RETAIL STORE'}
                           </div>
                         )}
@@ -1573,11 +1642,15 @@ export default function Settings() {
                         </div>
                       </div>
 
-                      <div className="text-center text-xs text-slate-500">
-                        Live responsive label sticker formatted for{' '}
-                        <strong className="text-slate-700">
-                          {BARCODE_LABEL_SIZES.find(s => s.id === (settings.barcode_label_size || '50x25'))?.label}
-                        </strong>
+                      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center text-xs text-slate-500">
+                        <span>
+                          Label size: <strong className="text-slate-700">{barcodeLabelDimensions.width} × {barcodeLabelDimensions.height} mm</strong>
+                        </span>
+                        <span>
+                          Barcode: <strong className="text-slate-700">{Number(settings.barcode_height) || 36}px high</strong>
+                          {' · '}
+                          <strong className="text-slate-700">{Number(settings.barcode_width) || 1.6} bar width</strong>
+                        </span>
                       </div>
                     </div>
                   )}
@@ -1627,7 +1700,19 @@ export default function Settings() {
                       <div className="grid grid-cols-2 gap-2.5">
                         <button
                           type="button"
-                          onClick={() => setField('thermal_paper_width', '58')}
+                          onClick={() => {
+                            setField('thermal_paper_width', '58')
+                            setField('printer_paper_width', '58')
+                            setSettings(prev => ({
+                              ...prev,
+                              thermal_paper_width: '58',
+                              printer_paper_width: '58',
+                              active_templates: {
+                                ...(prev.active_templates || {}),
+                                thermal: 'thermal_58',
+                              },
+                            }))
+                          }}
                           className={`p-3 rounded-xl border text-left transition-all ${
                             settings.thermal_paper_width === '58' || settings.thermal_paper_width === '2'
                               ? 'border-indigo-600 bg-indigo-50/40 ring-2 ring-indigo-600'
@@ -1645,7 +1730,19 @@ export default function Settings() {
 
                         <button
                           type="button"
-                          onClick={() => setField('thermal_paper_width', '80')}
+                          onClick={() => {
+                            setField('thermal_paper_width', '80')
+                            setField('printer_paper_width', '80')
+                            setSettings(prev => ({
+                              ...prev,
+                              thermal_paper_width: '80',
+                              printer_paper_width: '80',
+                              active_templates: {
+                                ...(prev.active_templates || {}),
+                                thermal: 'thermal_80',
+                              },
+                            }))
+                          }}
                           className={`p-3 rounded-xl border text-left transition-all ${
                             settings.thermal_paper_width !== '58' && settings.thermal_paper_width !== '2'
                               ? 'border-indigo-600 bg-indigo-50/40 ring-2 ring-indigo-600'
@@ -3144,13 +3241,14 @@ export default function Settings() {
               <button type="button" onClick={() => setShowAllTemplates(false)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800" aria-label="Close all templates"> <X size={18} /></button>
             </div>
             <div className="overflow-y-auto p-4 sm:p-6">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {invoiceTemplates.map(template => {
                   const selected = selectedTemplateId === template.id
                   return (
-                    <button key={template.id} type="button" onClick={() => { handleSelectInvoiceTemplate(template); setShowAllTemplates(false) }} className={`overflow-hidden rounded-xl border p-3 text-left transition ${selected ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200' : 'border-slate-200 hover:border-indigo-300 hover:shadow-md'}`}>
-                      <div className="h-[210px] overflow-hidden rounded-lg border border-slate-100 bg-slate-50 p-2">
-                        <div className="mx-auto" style={{ width: template.format === 'thermal' ? 302 : 560, transform: `scale(${template.format === 'thermal' ? 0.62 : 0.34})`, transformOrigin: 'top center', pointerEvents: 'none' }}>
+                    <article key={template.id} className={`overflow-hidden rounded-xl border p-3 text-left transition ${selected ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200' : 'border-slate-200 hover:border-indigo-300 hover:shadow-md'}`}>
+                      <button type="button" onClick={() => { handleSelectInvoiceTemplate(template); setShowAllTemplates(false) }} aria-label={`Select ${template.name}`} className="block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+                      <div className="flex h-[180px] justify-center overflow-hidden rounded-lg border border-slate-100 bg-slate-50 p-2">
+                        <div className="mx-auto" style={{ width: template.format === 'thermal' ? 302 : 560, transform: `scale(${template.format === 'thermal' ? 0.24 : 0.15})`, transformOrigin: 'top center', pointerEvents: 'none' }}>
                           <InvoiceDocument invoice={sampleInvoice} settings={settings} templateConfig={getTemplatePreviewConfig(template)} mode={template.id} showModePicker={false} />
                         </div>
                       </div>
@@ -3162,32 +3260,16 @@ export default function Settings() {
                         {selected && <span className="inline-flex items-center gap-1 rounded-full bg-indigo-600 px-2 py-1 text-[10px] font-bold text-white"><Check size={12} /> Selected</span>}
                       </div>
                       <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-600">{template.desc}</p>
-                      <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          onClick={e => {
-                            e.stopPropagation()
-                            setShowAllTemplates(false)
-                            setCustomizingTemplate(template)
-                          }}
-                          className="flex items-center gap-1 rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 cursor-pointer"
-                        >
+                      </button>
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2">
+                        <button type="button" onClick={() => { handleSelectInvoiceTemplate(template); setShowAllTemplates(false) }} disabled={selected || Boolean(savingTemplateId)} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-default disabled:bg-indigo-100 disabled:text-indigo-700">
+                          <Check size={13} />{selected ? 'Selected' : 'Use this template'}
+                        </button>
+                        <button type="button" onClick={() => { setShowAllTemplates(false); setCustomizingTemplate(template) }} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">
                           <Sliders size={13} /> Customize
-                        </span>
-                        <span
-                          role="button"
-                          tabIndex={0}
-                          onClick={e => {
-                            e.stopPropagation()
-                            handleResetTemplate(template)
-                          }}
-                          className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-slate-500 hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
-                        >
-                          <RotateCcw size={12} /> Reset
-                        </span>
+                        </button>
                       </div>
-                    </button>
+                    </article>
                   )
                 })}
               </div>
@@ -3220,9 +3302,9 @@ export default function Settings() {
             </div>
             <div className="mx-5 mb-4 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 p-3">
               <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-500">Live theme preview</p>
-              <div className="h-[190px] overflow-hidden rounded bg-white p-2">
-                <div className="mx-auto w-[560px] origin-top scale-[0.32]" style={{ pointerEvents: 'none' }}>
-                  <InvoiceDocument invoice={sampleInvoice} settings={settings} templateConfig={getTemplatePreviewConfig(previewInvoiceTemplate)} mode={previewTemplateId} showModePicker={false} />
+              <div className="h-[50vh] min-h-[280px] overflow-hidden rounded bg-white">
+                <div className="mx-auto origin-top scale-[0.64]" style={{ width: previewDocumentWidth }}>
+                  <InvoiceDocument invoice={sampleInvoice} settings={settings} templateConfig={previewTemplateConfig} mode={previewTemplateId} showModePicker={false} />
                 </div>
               </div>
             </div>

@@ -83,6 +83,7 @@ export default function Register() {
 
   const submit = async event => {
     event.preventDefault()
+    if (loading) return
 
     const nextErrors = {}
     if (!form.fullName.trim()) nextErrors.fullName = 'Full name is required'

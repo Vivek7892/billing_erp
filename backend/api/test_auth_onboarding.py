@@ -377,8 +377,9 @@ class PasswordResetTests(TestCase):
         res_req = self.client.post('/api/auth/password-reset/', {'email': 'reset@company.com'})
         self.assertEqual(res_req.status_code, 200)
 
-        # Generate token directly as the view does
-        token = default_token_generator.make_token(self.user)
+        # Generate token using signing as VerifyOTPView does
+        from django.core import signing
+        token = signing.dumps({'user_id': self.user.pk, 'password': self.user.password}, salt='password-reset-otp')
         uid = urlsafe_base64_encode(force_bytes(self.user.pk))
 
         # Confirm reset with valid token

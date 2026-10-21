@@ -67,15 +67,13 @@ function getSystemTheme() {
   } catch {
     return THEMES.LIGHT
   }
-  return THEMES.DARK
 }
 
 /**
  * Determine initial theme
  */
 function getInitialTheme() {
-  return getSavedTheme() || getSystemTheme()
-  return getSavedTheme() || THEMES.DARK
+  return getSavedTheme() || getSystemTheme() || THEMES.DARK
 }
 
 /**

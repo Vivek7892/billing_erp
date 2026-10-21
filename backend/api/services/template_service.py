@@ -453,7 +453,9 @@ def save_template_config(business: Business, template_id: str, new_config: Dict[
     pg = clean_config.get('page') or new_config.get('page') or {}
     if 'page_size' in pg: clean_config['page_size'] = str(pg['page_size'])
     if 'orientation' in pg: clean_config['page_orientation'] = str(pg['orientation'])
-    if 'thermal_roll_width' in pg: clean_config['paper_width'] = '58' if '58' in str(pg['thermal_roll_width']) else '80'
+    if 'thermal_roll_width' in pg:
+        clean_config['paper_width'] = '58' if '58' in str(pg['thermal_roll_width']) else '80'
+        clean_config['thermal_paper_width'] = clean_config['paper_width']
 
     # 3. Also allow any flat keys passed directly
     for k, v in new_config.items():
@@ -933,12 +935,14 @@ def resolve_invoice_template_settings(
                 merged[gen_k] = base_settings[therm_k]
 
     # 5. Layer template-specific saved configuration (Highest Precedence)
+    tpl_saved = None
     if business:
         tpl_record = InvoiceTemplateSetting.objects.filter(
             business=business, template_id=effective_tpl
         ).first()
         if tpl_record and tpl_record.config:
             tpl_saved = tpl_record.config
+    if tpl_saved:
             # Apply flat overrides
             for k, v in tpl_saved.items():
                 if k not in ('business_info', 'fields', 'layout', 'tax', 'payment', 'page'):
@@ -1005,7 +1009,32 @@ def resolve_invoice_template_settings(
             pg = tpl_saved.get('page') or {}
             if 'page_size' in pg: merged['page_size'] = str(pg['page_size'])
             if 'orientation' in pg: merged['page_orientation'] = str(pg['orientation'])
-            if 'thermal_roll_width' in pg: merged['paper_width'] = '58' if '58' in str(pg['thermal_roll_width']) else '80'
+            if 'thermal_roll_width' in pg:
+                merged['paper_width'] = '58' if '58' in str(pg['thermal_roll_width']) else '80'
+                merged['thermal_paper_width'] = merged['paper_width']
+
+    # The global theme controls are an explicit app-wide override. Preserve
+    # per-template typography and layout, but let chosen global colors/styles
+    # reach invoice generation after template-specific defaults are merged.
+    if to_bool(base_settings.get('custom_theme_enabled', False), False):
+        for key in ('invoice_theme_color', 'invoice_theme_secondary'):
+            if key in base_settings:
+                merged[key] = base_settings[key]
+        global_style_defaults = {
+            'invoice_font': 'default',
+            'invoice_header_layout': 'logo_left',
+            'invoice_border_style': 'solid',
+            'invoice_table_style': 'clean',
+        }
+        for key, default_value in global_style_defaults.items():
+            value = base_settings.get(key)
+            if value and str(value).lower() != default_value:
+                merged[key] = value
+
+    # Stylish is defined by its corporate accent bar. The account-wide legacy
+    # default (logo_left) must not flatten this template during invoice output.
+    if effective_tpl == 'stylish' and str(base_settings.get('invoice_header_layout', 'logo_left')).lower() == 'logo_left':
+        merged['invoice_header_layout'] = 'corporate_bar'
 
     merged['invoice_template'] = effective_tpl
     merged['template_id'] = effective_tpl
