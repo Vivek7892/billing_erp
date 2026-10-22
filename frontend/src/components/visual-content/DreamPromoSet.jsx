@@ -1,5 +1,13 @@
 import { useState, useEffect } from 'react'
-import { ChevronRight, Play, Clock, X, Layers, Workflow, Monitor } from 'lucide-react'
+import {
+  IconChevronRight,
+  IconPlayerPlay,
+  IconClock,
+  IconX,
+  IconLayersLinked,
+  IconRoute,
+  IconDeviceDesktop,
+} from '@tabler/icons-react'
 import VideoPlayerModal from './VideoPlayerModal'
 import {
   CompleteBusinessFlowVisual,
@@ -43,7 +51,7 @@ export function EcosystemVisualModal({ isOpen, onClose }) {
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850">
           <div className="flex items-center gap-2.5">
             <span className="p-1.5 rounded-lg bg-[#0057B8]/10 text-[#0057B8] dark:text-sky-400">
-              <Workflow size={18} />
+              <IconRoute size={18} />
             </span>
             <div>
               <h3 id="ecosystem-modal-title" className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
@@ -60,7 +68,7 @@ export function EcosystemVisualModal({ isOpen, onClose }) {
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
             aria-label="Close modal"
           >
-            <X size={18} />
+            <IconX size={18} />
           </button>
         </div>
 
@@ -75,7 +83,7 @@ export function EcosystemVisualModal({ isOpen, onClose }) {
                 : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
-            <Workflow size={14} />
+            <IconRoute size={14} />
             <span>Connected Business Flow</span>
           </button>
           <button
@@ -87,7 +95,7 @@ export function EcosystemVisualModal({ isOpen, onClose }) {
                 : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
-            <Layers size={14} />
+            <IconLayersLinked size={14} />
             <span>Enterprise Ecosystem</span>
           </button>
           <button
@@ -99,7 +107,7 @@ export function EcosystemVisualModal({ isOpen, onClose }) {
                 : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
-            <Monitor size={14} />
+            <IconDeviceDesktop size={14} />
             <span>Dashboard Platform Hero</span>
           </button>
         </div>
@@ -168,7 +176,7 @@ export function DashboardVideoGuides({ className = '' }) {
             </p>
           </div>
           <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-medium text-[var(--muted)]">
-            <Play size={11} className="text-[#0057B8] dark:text-sky-400" />
+            <IconPlayerPlay size={11} className="text-[#0057B8] dark:text-sky-400" />
             3 short tutorials
           </span>
         </div>
@@ -201,7 +209,7 @@ export function DashboardVideoGuides({ className = '' }) {
                 />
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-950/70 text-white flex items-center justify-center shadow-xs backdrop-blur-xs group-hover:bg-[#0057B8] group-hover:scale-110 transition-all">
-                    <Play size={12} className="fill-white translate-x-0.5" />
+                    <IconPlayerPlay size={12} className="fill-white translate-x-0.5" />
                   </div>
                 </div>
               </div>
@@ -213,7 +221,7 @@ export function DashboardVideoGuides({ className = '' }) {
                     {item.title}
                   </h3>
                   <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono font-medium rounded bg-[var(--surface-elevated)] border border-[var(--line)] text-[var(--muted)] shrink-0">
-                    <Clock size={10} /> {item.duration}
+                    <IconClock size={10} /> {item.duration}
                   </span>
                 </div>
                 <p className="mt-0.5 text-[11px] text-[var(--muted)] line-clamp-1">
@@ -228,7 +236,7 @@ export function DashboardVideoGuides({ className = '' }) {
 
               {/* Right Action Arrow */}
               <div className="shrink-0 text-[var(--muted)] group-hover:text-[#0057B8] dark:group-hover:text-sky-400 group-hover:translate-x-0.5 transition-all p-1">
-                <ChevronRight size={16} />
+                <IconChevronRight size={16} />
               </div>
             </div>
           ))}

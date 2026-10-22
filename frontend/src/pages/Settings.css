@@ -153,6 +153,23 @@
   border-color: #cbd5e1 !important;
 }
 
+.dark .settings-page .thermal-live-preview-paper,
+.dark .settings-page .thermal-live-preview-paper .thermal-receipt {
+  background-color: #fff !important;
+  color: #000 !important;
+  color-scheme: light !important;
+}
+
+.dark .settings-page .thermal-live-preview-paper .thermal-receipt,
+.dark .settings-page .thermal-live-preview-paper .thermal-receipt * {
+  color: #000 !important;
+  color-scheme: light !important;
+}
+
+.dark .settings-page .thermal-live-preview-paper .thermal-receipt [class~="bg-white"] {
+  background-color: #fff !important;
+}
+
 .dark .settings-page .thermal-live-preview-paper.settings-print-invoice-target .invoice-document-root .thermal-receipt {
   background: #fff !important;
   color: #000 !important;
@@ -219,4 +236,22 @@
   body.settings-invoice-print .settings-print-invoice-target .overflow-x-auto {
     overflow: visible !important;
   }
+}
+
+.thermal-live-preview-paper {
+  background: #ffffff !important;
+  color: #000000 !important;
+  color-scheme: light !important;
+}
+
+.thermal-live-preview-paper *,
+.thermal-live-preview-paper *::before,
+.thermal-live-preview-paper *::after {
+  color-scheme: light !important;
+}
+
+.thermal-live-preview-paper [class*="dark\\:"],
+.thermal-live-preview-paper [class*="dark\\:bg-"],
+.thermal-live-preview-paper [class*="dark\\:text-"] {
+  /* Keep the actual receipt preview light */
 }

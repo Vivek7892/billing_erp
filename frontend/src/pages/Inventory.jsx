@@ -2,7 +2,17 @@ import { useState, useEffect, useRef } from 'react'
 import inventoryService from '../features/inventory/api/inventoryService'
 import { Badge, Card, PageHeader, Modal, Spinner, EmptyState, TableSkeleton } from '../components/UI'
 import toast from 'react-hot-toast'
-import { Search, X, ArrowUpCircle, ArrowDownCircle, Settings, Layers, Upload, Download, RefreshCw } from 'lucide-react'
+import {
+  IconSearch,
+  IconX,
+  IconCircleArrowUp,
+  IconCircleArrowDown,
+  IconSettings,
+  IconLayersLinked,
+  IconUpload,
+  IconDownload,
+  IconRefresh,
+} from '@tabler/icons-react'
 
 
 function MobileStockCard({ product }) {
@@ -73,7 +83,7 @@ function MobileTransactionCard({ transaction }) {
               ? 'bg-transparent text-[#0F766E] dark:text-teal-400 border-[var(--line)]'
               : 'bg-transparent text-[#1E3A5F] dark:text-slate-300 border-[var(--line)]'
         }`}>
-          {isSale ? <ArrowDownCircle size={11} /> : <ArrowUpCircle size={11} />}
+          {isSale ? <IconCircleArrowDown size={11} /> : <IconCircleArrowUp size={11} />}
           {transaction.transaction_type.replace('_', ' ')}
         </span>
       </div>
@@ -198,21 +208,21 @@ export default function Inventory() {
               onClick={() => setImportModal(true)}
               className="btn-secondary flex items-center justify-center gap-2 text-xs sm:text-sm"
             >
-              <Upload size={16} />
+              <IconUpload size={16} />
               <span>Import File</span>
             </button>
             <button
               onClick={() => setBulkModal(true)}
               className="btn-secondary flex items-center justify-center gap-2 text-xs sm:text-sm"
             >
-              <Layers size={16} />
+              <IconLayersLinked size={16} />
               <span>Bulk Stock</span>
             </button>
             <button
               onClick={() => setAdjustModal(true)}
               className="btn-primary col-span-2 flex items-center justify-center gap-2 text-xs sm:col-span-1 sm:text-sm"
             >
-              <Settings size={16} />
+              <IconSettings size={16} />
               <span>Adjust Stock</span>
             </button>
           </div>
@@ -241,7 +251,7 @@ export default function Inventory() {
             <div className="flex items-center gap-2">
               <div className="group relative flex min-w-0 flex-1 items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-                  <Search size={14} strokeWidth={2.2} />
+                  <IconSearch size={14} strokeWidth={2.2} />
                 </div>
                 <input
                   className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
@@ -257,7 +267,7 @@ export default function Inventory() {
                     title="Clear search"
                     aria-label="Clear search"
                   >
-                    <X size={13} strokeWidth={2.5} />
+                    <IconX size={13} strokeWidth={2.5} />
                   </button>
                 ) : (
                   <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
@@ -321,7 +331,7 @@ export default function Inventory() {
                             t.transaction_type === 'sale' ? 'bg-transparent text-[#B91C1C] dark:text-red-400 border-[var(--line)]' :
                             t.transaction_type === 'purchase' ? 'bg-transparent text-[#0F766E] dark:text-teal-400 border-[var(--line)]' :
                             'bg-transparent text-[#1E3A5F] dark:text-slate-300 border-[var(--line)]'}`}>
-                            {t.transaction_type === 'sale' ? <ArrowDownCircle size={11} /> : <ArrowUpCircle size={11} />}
+                            {t.transaction_type === 'sale' ? <IconCircleArrowDown size={11} /> : <IconCircleArrowUp size={11} />}
                             {t.transaction_type.replace('_', ' ')}
                           </span>
                         </td>
@@ -426,7 +436,7 @@ export default function Inventory() {
             <p><b>To add or remove stock:</b> use columns <code>SKU, Quantity</code>; negative quantities remove stock.</p>
             <p><b>To set an exact balance:</b> use <code>SKU, Current Stock</code>.</p>
           </div>
-          <button type="button" onClick={downloadImportTemplate} className="text-xs font-semibold text-[#1E3A5F] dark:text-slate-300 inline-flex items-center gap-1 hover:underline"><Download size={15} /> Download CSV template</button>
+          <button type="button" onClick={downloadImportTemplate} className="text-xs font-semibold text-[#1E3A5F] dark:text-slate-300 inline-flex items-center gap-1 hover:underline"><IconDownload size={15} /> Download CSV template</button>
           <input type="file" accept=".csv,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={e => setImportFile(e.target.files?.[0] || null)} className="block w-full text-sm" disabled={importing} />
           {importFile && <p className="text-xs text-[var(--muted)]">Selected: {importFile.name}</p>}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2"><button onClick={importStock} disabled={importing} className="btn-primary w-full">{importing ? 'Importing...' : 'Import Stock'}</button><button onClick={() => setImportModal(false)} disabled={importing} className="btn-secondary w-full">Cancel</button></div>

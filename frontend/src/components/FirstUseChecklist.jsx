@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, Circle, ArrowRight, X, Sparkles, Package, ShoppingCart, Printer, BarChart2 } from 'lucide-react'
+import {
+  IconCircleCheck,
+  IconCircle,
+  IconArrowRight,
+  IconX,
+  IconSparkles,
+  IconPackage,
+  IconShoppingCart,
+  IconPrinter,
+  IconChartBar,
+} from '@tabler/icons-react'
 import http from '../api'
 
 export default function FirstUseChecklist({ className = '' }) {
@@ -46,35 +56,35 @@ export default function FirstUseChecklist({ className = '' }) {
       label: 'Business profile completed',
       done: Boolean(status.checklist?.profile_completed),
       link: '/onboarding',
-      icon: CheckCircle2,
+      icon: IconCircleCheck,
     },
     {
       id: 'product',
       label: 'Add your first product',
       done: Boolean(status.checklist?.product_added),
       link: '/inventory/products',
-      icon: Package,
+      icon: IconPackage,
     },
     {
       id: 'invoice',
       label: 'Create your first invoice',
       done: Boolean(status.checklist?.invoice_created),
       link: '/billing/new',
-      icon: ShoppingCart,
+      icon: IconShoppingCart,
     },
     {
       id: 'receipt',
       label: 'Configure receipt or printer',
       done: Boolean(status.checklist?.receipt_configured),
       link: '/settings',
-      icon: Printer,
+      icon: IconPrinter,
     },
     {
       id: 'reports',
       label: 'Explore reports & analytics',
       done: Boolean(status.checklist?.reports_viewed),
       link: '/reports',
-      icon: BarChart2,
+      icon: IconChartBar,
     },
   ]
 
@@ -92,7 +102,7 @@ export default function FirstUseChecklist({ className = '' }) {
       <div className="flex items-center justify-between pb-3 border-b border-[var(--line-subtle)]">
         <div className="flex items-center gap-2">
           <span className="p-1.5 rounded-lg bg-[#0057B8]/10 text-[#0057B8] dark:text-sky-400">
-            <Sparkles size={16} />
+            <IconSparkles size={16} />
           </span>
           <div>
             <h2 className="text-sm font-bold text-[var(--ink)]">
@@ -111,7 +121,7 @@ export default function FirstUseChecklist({ className = '' }) {
           title="Dismiss checklist"
           aria-label="Dismiss checklist"
         >
-          <X size={16} />
+          <IconX size={16} />
         </button>
       </div>
 
@@ -139,15 +149,15 @@ export default function FirstUseChecklist({ className = '' }) {
               }`}
             >
               {item.done ? (
-                <CheckCircle2 size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <IconCircleCheck size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
               ) : (
-                <Circle size={16} className="text-slate-400 group-hover:text-[#0057B8] shrink-0" />
+                <IconCircle size={16} className="text-slate-400 group-hover:text-[#0057B8] shrink-0" />
               )}
               <span className={`font-medium truncate ${item.done ? 'line-through opacity-80' : ''}`}>
                 {item.label}
               </span>
               {!item.done && (
-                <ArrowRight size={12} className="ml-auto opacity-0 group-hover:opacity-100 text-[#0057B8] transition-opacity shrink-0" />
+                <IconArrowRight size={12} className="ml-auto opacity-0 group-hover:opacity-100 text-[#0057B8] transition-opacity shrink-0" />
               )}
             </div>
           )

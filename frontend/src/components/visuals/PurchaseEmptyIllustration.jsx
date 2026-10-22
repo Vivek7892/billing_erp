@@ -1,4 +1,7 @@
-import { Truck, Plus } from 'lucide-react'
+import {
+  IconTruck,
+  IconPlus,
+} from '@tabler/icons-react'
 import DreamVisualContainer from './DreamVisualContainer'
 
 export default function PurchaseEmptyIllustration({ className = '', onNewPurchase, uploadedSrc }) {
@@ -14,7 +17,7 @@ export default function PurchaseEmptyIllustration({ className = '', onNewPurchas
         {/* Vector Purchase Artwork */}
         <div className="relative mb-3 flex items-center justify-center">
           <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border-2 border-amber-500 text-amber-600 flex items-center justify-center shadow-md">
-            <Truck size={28} />
+            <IconTruck size={28} />
           </div>
           <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#FFE500] text-[#003F8F] flex items-center justify-center shadow font-bold text-xs">
             +
@@ -34,7 +37,7 @@ export default function PurchaseEmptyIllustration({ className = '', onNewPurchas
             onClick={onNewPurchase}
             className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0057B8] text-white text-xs font-bold hover:bg-[#003F8F] transition-colors shadow-sm"
           >
-            <Plus size={14} />
+            <IconPlus size={14} />
             <span>Create Purchase Order</span>
           </button>
         )}

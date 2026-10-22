@@ -9,24 +9,24 @@ import BarcodePrintModal from '../components/BarcodePrintModal'
 import { InformationalBanner } from '../components/visual-content'
 import { InventoryWorkflowVisual } from '../components/visuals'
 import {
-  Boxes,
-  RefreshCw,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  SlidersHorizontal,
-  PackageSearch,
-  ChevronDown,
-  X,
-  Download,
-  Barcode,
-  History,
-  TrendingDown,
-  TrendingUp,
-  Tag,
-  ArrowUpDown,
-  Filter,
-} from 'lucide-react'
+  IconPackages,
+  IconRefresh,
+  IconAlertTriangle,
+  IconCircleCheck,
+  IconCircleX,
+  IconAdjustmentsHorizontal,
+  IconPackage,
+  IconChevronDown,
+  IconX,
+  IconDownload,
+  IconBarcode,
+  IconHistory,
+  IconTrendingDown,
+  IconTrendingUp,
+  IconTag,
+  IconArrowsSort,
+  IconFilter,
+} from '@tabler/icons-react'
 
 const getStatus = product => {
   const current = Number(product.current_stock || 0)
@@ -40,7 +40,7 @@ const getStatus = product => {
 const STATUS_META = {
   in_stock: {
     label: 'In Stock',
-    icon: CheckCircle,
+    icon: IconCircleCheck,
     text: 'text-emerald-700 dark:text-emerald-300 font-semibold',
     soft: 'bg-emerald-100 dark:bg-emerald-950/60',
     border: 'border-emerald-300 dark:border-emerald-700',
@@ -48,7 +48,7 @@ const STATUS_META = {
   },
   low_stock: {
     label: 'Low Stock',
-    icon: AlertTriangle,
+    icon: IconAlertTriangle,
     text: 'text-amber-700 dark:text-amber-300 font-bold',
     soft: 'bg-amber-100 dark:bg-amber-950/60',
     border: 'border-amber-300 dark:border-amber-700',
@@ -56,7 +56,7 @@ const STATUS_META = {
   },
   out_of_stock: {
     label: 'Out of Stock',
-    icon: XCircle,
+    icon: IconCircleX,
     text: 'text-rose-700 dark:text-rose-300 font-bold',
     soft: 'bg-rose-100 dark:bg-rose-950/60',
     border: 'border-rose-300 dark:border-rose-700',
@@ -429,7 +429,7 @@ export default function Stock() {
             className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
             title="View Real-Time Inventory Lifecycle"
           >
-            <Boxes size={13} className="text-[#0057B8] dark:text-sky-400" />
+            <IconPackages size={13} className="text-[#0057B8] dark:text-sky-400" />
             <span>Workflow</span>
           </button>
 
@@ -440,7 +440,7 @@ export default function Stock() {
             className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 disabled:opacity-50"
             title="Download Stock CSV"
           >
-            <Download size={13} />
+            <IconDownload size={13} />
             <span>Export CSV</span>
           </button>
 
@@ -451,7 +451,7 @@ export default function Stock() {
             className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
             title="Refresh inventory"
           >
-            <RefreshCw size={13} className={loading ? 'animate-spin text-[#1E3A5F]' : ''} />
+            <IconRefresh size={13} className={loading ? 'animate-spin text-[#1E3A5F]' : ''} />
             <span>Refresh</span>
           </button>
         </div>
@@ -476,7 +476,7 @@ export default function Stock() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Total Items
               </span>
-              <Boxes size={13} className="text-[#1E3A5F] dark:text-slate-300 shrink-0" />
+              <IconPackages size={13} className="text-[#1E3A5F] dark:text-slate-300 shrink-0" />
             </div>
             <div className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
               {metrics.totalItems}
@@ -499,7 +499,7 @@ export default function Stock() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-400">
                 In Stock
               </span>
-              <CheckCircle size={13} className="text-teal-600 dark:text-teal-400 shrink-0" />
+              <IconCircleCheck size={13} className="text-teal-600 dark:text-teal-400 shrink-0" />
             </div>
             <div className="mt-0.5 font-mono text-base sm:text-lg font-bold text-teal-600 dark:text-teal-400 tabular-nums truncate">
               {metrics.inStock}
@@ -522,7 +522,7 @@ export default function Stock() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
                 Low Stock
               </span>
-              <AlertTriangle size={13} className="text-amber-600 dark:text-amber-400 shrink-0" />
+              <IconAlertTriangle size={13} className="text-amber-600 dark:text-amber-400 shrink-0" />
             </div>
             <div className="mt-0.5 font-mono text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400 tabular-nums truncate">
               {metrics.lowStock}
@@ -545,7 +545,7 @@ export default function Stock() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400">
                 Out of Stock
               </span>
-              <XCircle size={13} className="text-rose-600 dark:text-rose-400 shrink-0" />
+              <IconCircleX size={13} className="text-rose-600 dark:text-rose-400 shrink-0" />
             </div>
             <div className="mt-0.5 font-mono text-base sm:text-lg font-bold text-rose-600 dark:text-rose-400 tabular-nums truncate">
               {metrics.outStock}
@@ -561,7 +561,7 @@ export default function Stock() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                 Stock Valuation
               </span>
-              <Tag size={13} className="text-[#1E3A5F] dark:text-slate-300 shrink-0" />
+              <IconTag size={13} className="text-[#1E3A5F] dark:text-slate-300 shrink-0" />
             </div>
             <div className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[#1E3A5F] dark:text-slate-200 tabular-nums truncate">
               {fmtCurrency(metrics.totalStockValue)}
@@ -644,7 +644,7 @@ export default function Stock() {
         {/* Row 2: Search input + Clear button */}
         <div className="flex items-center gap-2">
           <div className="group relative flex min-w-0 flex-1 items-center h-[34px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 transition hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-1 focus-within:ring-[#1E3A5F]/20">
-            <PackageSearch size={14} className="shrink-0 text-[var(--muted)] group-focus-within:text-[#1E3A5F] dark:group-focus-within:text-sky-300 mr-2" />
+            <IconPackage size={14} className="shrink-0 text-[var(--muted)] group-focus-within:text-[#1E3A5F] dark:group-focus-within:text-sky-300 mr-2" />
             <input
               className="w-full bg-transparent text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
               placeholder="Search product name, SKU, barcode, supplier... (Ctrl+K)"
@@ -659,7 +659,7 @@ export default function Stock() {
                 aria-label="Clear search"
                 title="Clear search"
               >
-                <X size={13} />
+                <IconX size={13} />
               </button>
             ) : (
               <kbd className="hidden sm:inline-flex shrink-0 items-center rounded border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)]">
@@ -675,7 +675,7 @@ export default function Stock() {
               className="inline-flex h-[34px] items-center justify-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300 shrink-0"
               title="Reset all filters"
             >
-              <X size={13} />
+              <IconX size={13} />
               <span>Reset</span>
             </button>
           )}
@@ -780,7 +780,7 @@ export default function Stock() {
                         className="min-h-[38px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] flex items-center justify-center gap-1.5 shadow-2xs transition active:scale-95"
                         title="Print Barcode Labels"
                       >
-                        <Barcode size={14} />
+                        <IconBarcode size={14} />
                         <span>Barcode</span>
                       </button>
 
@@ -790,7 +790,7 @@ export default function Stock() {
                         className="min-h-[38px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] flex items-center justify-center gap-1.5 shadow-2xs transition active:scale-95"
                         title="Movement History"
                       >
-                        <History size={14} />
+                        <IconHistory size={14} />
                         <span>History</span>
                       </button>
 
@@ -800,7 +800,7 @@ export default function Stock() {
                         className="col-span-2 sm:col-span-1 min-h-[38px] rounded-lg bg-[#1E3A5F] text-white px-3.5 py-1.5 text-xs font-semibold hover:bg-[#162F4D] flex items-center justify-center gap-1.5 shadow-2xs transition active:scale-95"
                         title="Adjust"
                       >
-                        <SlidersHorizontal size={14} />
+                        <IconAdjustmentsHorizontal size={14} />
                         <span>Adjust</span>
                       </button>
                     </div>
@@ -830,7 +830,7 @@ export default function Stock() {
                     >
                       <div className="flex items-center gap-1">
                         <span>Product</span>
-                        <ArrowUpDown size={11} />
+                        <IconArrowsSort size={11} />
                       </div>
                     </th>
                     <th className="px-3 py-2.5 text-left">Category &amp; Supplier</th>
@@ -840,7 +840,7 @@ export default function Stock() {
                     >
                       <div className="flex items-center justify-end gap-1">
                         <span>Current Stock</span>
-                        <ArrowUpDown size={11} />
+                        <IconArrowsSort size={11} />
                       </div>
                     </th>
                     <th className="px-3 py-2.5 text-right">Min Stock</th>
@@ -850,7 +850,7 @@ export default function Stock() {
                     >
                       <div className="flex items-center justify-end gap-1">
                         <span>Unit Cost</span>
-                        <ArrowUpDown size={11} />
+                        <IconArrowsSort size={11} />
                       </div>
                     </th>
                     <th
@@ -859,7 +859,7 @@ export default function Stock() {
                     >
                       <div className="flex items-center justify-end gap-1">
                         <span>Total Value</span>
-                        <ArrowUpDown size={11} />
+                        <IconArrowsSort size={11} />
                       </div>
                     </th>
                     <th className="px-2 py-2.5 text-center">Status</th>
@@ -949,7 +949,7 @@ export default function Stock() {
                               title="Print Barcode Labels"
                               aria-label="Barcode"
                             >
-                              <Barcode size={14} />
+                              <IconBarcode size={14} />
                             </button>
 
                             <button
@@ -959,7 +959,7 @@ export default function Stock() {
                               title="View Movement History"
                               aria-label="History"
                             >
-                              <History size={14} />
+                              <IconHistory size={14} />
                             </button>
 
                             <button
@@ -968,7 +968,7 @@ export default function Stock() {
                               className="inline-flex items-center gap-1 px-2 py-1 rounded  text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-colors whitespace-nowrap"
                               title="Adjust Stock"
                             >
-                              <SlidersHorizontal size={14} strokeWidth={2} />
+                              <IconAdjustmentsHorizontal size={14} strokeWidth={2} />
                               
                             </button>
                           </div>
@@ -1204,7 +1204,7 @@ export default function Stock() {
               >
                 {adjusting ? (
                   <>
-                    <RefreshCw size={14} className="animate-spin" /> Saving...
+                    <IconRefresh size={14} className="animate-spin" /> Saving...
                   </>
                 ) : (
                   'Confirm Stock'

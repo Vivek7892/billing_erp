@@ -1,22 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  AlertTriangle,
-  ArrowDown,
-  ArrowUp,
-  ArrowUpRight,
-  BarChart3,
-  CalendarDays,
-  CheckCircle2,
-  Clock3,
-  CreditCard,
-  Eye,
-  FileText,
-  Package,
-  Plus,
-  RefreshCw,
-  Workflow,
-} from 'lucide-react'
+  IconAlertTriangle,
+  IconArrowDown,
+  IconArrowUp,
+  IconArrowUpRight,
+  IconChartBar,
+  IconCalendarEvent,
+  IconCircleCheck,
+  IconClockHour3,
+  IconCreditCard,
+  IconEye,
+  IconFileText,
+  IconPackage,
+  IconPlus,
+  IconRefresh,
+  IconRoute,
+} from '@tabler/icons-react'
 import {
   Area,
   AreaChart,
@@ -257,7 +257,7 @@ export default function Dashboard() {
 
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
               <span className="inline-flex items-center gap-1 font-medium">
-                <CalendarDays size={13} className="text-[var(--muted)] shrink-0" />
+                <IconCalendarEvent size={13} className="text-[var(--muted)] shrink-0" />
                 {currentTime.toLocaleDateString('en-IN', {
                   timeZone: 'Asia/Kolkata',
                   weekday: 'short',
@@ -268,7 +268,7 @@ export default function Dashboard() {
               </span>
               <span className="text-[var(--line-strong)]">·</span>
               <span className="inline-flex items-center gap-1 font-mono font-semibold text-[var(--ink)]">
-                <Clock3 size={13} className="text-[#1E3A5F] dark:text-sky-400 shrink-0" />
+                <IconClockHour3 size={13} className="text-[#1E3A5F] dark:text-sky-400 shrink-0" />
                 {currentTime.toLocaleTimeString('en-IN', {
                   timeZone: 'Asia/Kolkata',
                   hour: '2-digit',
@@ -288,7 +288,7 @@ export default function Dashboard() {
               onClick={() => navigate('/billing/new')}
               className="btn-primary col-span-2 inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold text-white shadow-2xs transition sm:col-span-1"
             >
-              <Plus size={15} strokeWidth={2.5} />
+              <IconPlus size={15} strokeWidth={2.5} />
               <span>New Bill</span>
             </button>
             <button
@@ -296,7 +296,7 @@ export default function Dashboard() {
               onClick={() => navigate('/reports')}
               className="btn-secondary inline-flex min-h-[40px] min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold shadow-2xs transition sm:px-3.5"
             >
-              <FileText size={14} />
+              <IconFileText size={14} />
               <span>Reports</span>
             </button>
              <button
@@ -305,7 +305,7 @@ export default function Dashboard() {
               disabled={refreshing}
               className="btn-secondary inline-flex min-h-[40px] min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold shadow-2xs transition sm:px-3.5"
             >
-              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+              <IconRefresh size={14} className={refreshing ? 'animate-spin' : ''} />
               <span>Refresh</span>
             </button>
           </div>
@@ -327,7 +327,7 @@ export default function Dashboard() {
       {error && (
         <div className="flex items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-xs text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-400">
           <span className="flex items-center gap-2">
-            <AlertTriangle size={15} className="shrink-0" />
+            <IconAlertTriangle size={15} className="shrink-0" />
             {error}
           </span>
           <button onClick={loadDashboard} className="font-bold underline">
@@ -343,7 +343,7 @@ export default function Dashboard() {
           <button type="button" onClick={() => navigate('/sales/invoices')} className="min-w-0 bg-[var(--surface)] px-3 py-3 text-left transition hover:bg-[var(--surface-hover)] sm:px-4">
             <span className="text-xs font-semibold text-[var(--muted)]">Sales</span>
             <p className="mt-1 truncate font-mono text-xl font-extrabold tabular-nums text-[var(--ink)] sm:text-2xl">{fmtCurrency(data.today_sales)}</p>
-            <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-medium text-[var(--muted)]"><span>{data.today_bills || 0} bills</span><span className="px-0.5">·</span><span className={`inline-flex items-center gap-0.5 ${Number(data.yesterday_sales) ? (salesTrend > 0 ? 'text-emerald-700 dark:text-emerald-400' : salesTrend < 0 ? 'text-red-600 dark:text-red-400' : 'text-[var(--muted)]') : ''}`}>{Number(data.yesterday_sales) && (salesTrend > 0 ? <ArrowUp size={14} aria-label="Up" /> : salesTrend < 0 ? <ArrowDown size={14} aria-label="Down" /> : null)}{salesTrendLabel}</span></p>
+            <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-medium text-[var(--muted)]"><span>{data.today_bills || 0} bills</span><span className="px-0.5">·</span><span className={`inline-flex items-center gap-0.5 ${Number(data.yesterday_sales) ? (salesTrend > 0 ? 'text-emerald-700 dark:text-emerald-400' : salesTrend < 0 ? 'text-red-600 dark:text-red-400' : 'text-[var(--muted)]') : ''}`}>{Number(data.yesterday_sales) && (salesTrend > 0 ? <IconArrowUp size={14} aria-label="Up" /> : salesTrend < 0 ? <IconArrowDown size={14} aria-label="Down" /> : null)}{salesTrendLabel}</span></p>
           </button>
           <button type="button" onClick={() => navigate('/sales/payments')} className="min-w-0 bg-[var(--surface)] px-3 py-3 text-left transition hover:bg-[var(--surface-hover)] sm:px-4">
             <span className="text-xs font-semibold text-[var(--muted)]">Collections</span>
@@ -353,7 +353,7 @@ export default function Dashboard() {
           <button type="button" onClick={() => navigate('/reports')} className="min-w-0 bg-[var(--surface)] px-3 py-3 text-left transition hover:bg-[var(--surface-hover)] sm:px-4">
             <span className="text-xs font-semibold text-[var(--muted)]">Profit</span>
             <p className={`mt-1 truncate font-mono text-xl font-extrabold tabular-nums sm:text-2xl ${Number(data.today_profit) >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{fmtCurrency(data.today_profit)}</p>
-            <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-medium text-[var(--muted)]"><span>Margin {Number(data.profit_margin || 0).toFixed(1)}%</span>{hasProfitBaseline && <span className={`inline-flex items-center gap-0.5 ${profitDifference >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{profitDifference > 0 ? <ArrowUp size={14} /> : profitDifference < 0 ? <ArrowDown size={14} /> : null}{profitTrendLabel}</span>}</p>
+            <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-medium text-[var(--muted)]"><span>Margin {Number(data.profit_margin || 0).toFixed(1)}%</span>{hasProfitBaseline && <span className={`inline-flex items-center gap-0.5 ${profitDifference >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{profitDifference > 0 ? <IconArrowUp size={14} /> : profitDifference < 0 ? <IconArrowDown size={14} /> : null}{profitTrendLabel}</span>}</p>
           </button>
           <div className="min-w-0 bg-[var(--surface)] px-3 py-3 sm:px-4">
             <span className="text-xs font-semibold text-[var(--muted)]">Receivables & stock</span>
@@ -416,7 +416,7 @@ export default function Dashboard() {
             onClick={() => navigate('/billing/new')}
             className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg bg-[#1E3A5F] px-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-[#162b47] active:scale-95 dark:bg-sky-600 dark:hover:bg-sky-500 sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
           >
-            <Plus size={13} strokeWidth={2.5} />
+            <IconPlus size={13} strokeWidth={2.5} />
             <span>New Bill</span>
           </button>
 
@@ -425,7 +425,7 @@ export default function Dashboard() {
             onClick={() => navigate('/billing/drafts')}
             className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95 sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
           >
-            <Clock3 size={13} className="text-amber-600 dark:text-amber-400" />
+            <IconClockHour3 size={13} className="text-amber-600 dark:text-amber-400" />
             <span>Parked Bills</span>
           </button>
 
@@ -434,7 +434,7 @@ export default function Dashboard() {
             onClick={() => navigate('/sales/payments')}
             className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95 sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
           >
-            <CreditCard size={13} className="text-emerald-600 dark:text-emerald-400" />
+            <IconCreditCard size={13} className="text-emerald-600 dark:text-emerald-400" />
             <span>Payments</span>
           </button>
 
@@ -443,7 +443,7 @@ export default function Dashboard() {
             onClick={() => navigate('/sales/invoices')}
             className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95 sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
           >
-            <FileText size={13} className="text-slate-600 dark:text-slate-400" />
+            <IconFileText size={13} className="text-slate-600 dark:text-slate-400" />
             <span>All Bills</span>
           </button>
 
@@ -452,7 +452,7 @@ export default function Dashboard() {
             onClick={() => navigate('/inventory/stock')}
             className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95 sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
           >
-            <Package size={13} className="text-purple-600 dark:text-purple-400" />
+            <IconPackage size={13} className="text-purple-600 dark:text-purple-400" />
             <span>Stock</span>
           </button>
 
@@ -461,7 +461,7 @@ export default function Dashboard() {
             onClick={() => navigate('/purchases')}
             className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95 sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
           >
-            <BarChart3 size={13} className="text-teal-600 dark:text-teal-400" />
+            <IconChartBar size={13} className="text-teal-600 dark:text-teal-400" />
             <span>Purchases</span>
           </button>
           <button
@@ -469,7 +469,7 @@ export default function Dashboard() {
             onClick={() => navigate('/reports')}
             className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 text-xs font-medium text-[var(--ink)] transition hover:bg-[var(--surface-hover)] sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
           >
-            <FileText size={13} />
+            <IconFileText size={13} />
             <span>Reports</span>
           </button>
 
@@ -479,7 +479,7 @@ export default function Dashboard() {
             className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95 sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
             title="View Connected Enterprise Ecosystem Architecture"
           >
-            <Workflow size={13} className="text-[#0057B8] dark:text-sky-400" />
+            <IconRoute size={13} className="text-[#0057B8] dark:text-sky-400" />
             <span>Ecosystem</span>
           </button>
         </div>
@@ -554,7 +554,7 @@ export default function Dashboard() {
               </ResponsiveContainer>
             ) : (
               <EmptyState
-                icon={BarChart3}
+                icon={IconChartBar}
                 text="Sales data will appear here once invoices are created."
               />
             )}
@@ -605,7 +605,7 @@ export default function Dashboard() {
             className="text-xs font-semibold text-[var(--primary)] hover:underline flex items-center gap-1"
           >
             <span>All Invoices</span>
-            <ArrowUpRight size={13} />
+            <IconArrowUpRight size={13} />
           </button>
         </div>
 
@@ -646,7 +646,7 @@ export default function Dashboard() {
                       }}
                       className="mt-1 inline-flex min-h-[32px] items-center gap-1 rounded border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ink-secondary)]"
                     >
-                      <Eye size={11} />
+                      <IconEye size={11} />
                       <span>View</span>
                     </button>
                   </div>
@@ -701,7 +701,7 @@ export default function Dashboard() {
                           className="btn-secondary btn-sm flex items-center gap-1 text-xs inline-flex"
                           title="View Invoice"
                         >
-                          <Eye size={12} />
+                          <IconEye size={12} />
                           <span>View</span>
                         </button>
                       </td>
@@ -713,7 +713,7 @@ export default function Dashboard() {
           </>
         ) : (
           <EmptyState
-            icon={FileText}
+            icon={IconFileText}
             text="No invoices have been generated yet."
           />
         )}
@@ -739,7 +739,7 @@ export default function Dashboard() {
               className="text-xs font-semibold text-[var(--primary)] hover:underline flex items-center gap-1"
             >
               <span>Sales Report</span>
-              <ArrowUpRight size={13} />
+              <IconArrowUpRight size={13} />
             </button>
           </div>
 
@@ -792,7 +792,7 @@ export default function Dashboard() {
             </>
           ) : (
             <EmptyState
-              icon={Package}
+              icon={IconPackage}
               text="No product sales recorded yet."
             />
           )}
@@ -814,7 +814,7 @@ export default function Dashboard() {
               className="text-xs font-semibold text-[var(--primary)] hover:underline flex items-center gap-1"
             >
               <span>Manage Stock</span>
-              <ArrowUpRight size={13} />
+              <IconArrowUpRight size={13} />
             </button>
           </div>
 
@@ -891,7 +891,7 @@ export default function Dashboard() {
             </>
           ) : (
             <EmptyState
-              icon={CheckCircle2}
+              icon={IconCircleCheck}
               text="All inventory items are sufficiently stocked."
             />
           )}

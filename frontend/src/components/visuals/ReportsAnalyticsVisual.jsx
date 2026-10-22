@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react'
-import { TrendingUp, BarChart3, PieChart, ArrowUpRight } from 'lucide-react'
+import {
+  IconTrendingUp,
+  IconChartBar,
+  IconChartPie,
+  IconArrowUpRight,
+} from '@tabler/icons-react'
 import DreamVisualContainer from './DreamVisualContainer'
 
 const REPORT_STAGES = [
@@ -37,11 +42,11 @@ export default function ReportsAnalyticsVisual({ className = '', uploadedSrc }) 
         <div className="w-full p-4 rounded-xl bg-[#F5F6F8] dark:bg-slate-800/80 border border-gray-200/80 dark:border-slate-700/80 mb-3 text-left">
           <div className="flex items-center justify-between text-xs mb-3">
             <span className="font-bold text-[#111111] dark:text-white flex items-center gap-1.5">
-              <BarChart3 size={15} className="text-[#0057B8]" />
+              <IconChartBar size={15} className="text-[#0057B8]" />
               Executive Sales &amp; Margin Velocity
             </span>
             <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-0.5">
-              <TrendingUp size={13} /> {cur.growth}
+              <IconTrendingUp size={13} /> {cur.growth}
             </span>
           </div>
 

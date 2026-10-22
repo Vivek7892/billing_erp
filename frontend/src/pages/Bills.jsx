@@ -14,42 +14,42 @@ import { InvoiceEmptyIllustration } from '../components/visuals'
 
 import { QRCodeSVG } from 'qrcode.react'
 import {
-  Eye,
-  Printer,
-  Download,
-  XCircle,
-  RotateCcw,
-  Search,
-  X,
-  MessageCircle,
-  Mail,
-  Share2,
-  Phone,
-  Plus,
-  Receipt,
-  IndianRupee,
-  ShoppingBag,
-  ShoppingCart,
-  CreditCard,
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  MoreHorizontal,
-  RefreshCw,
-  Clock3,
-  UserRound,
-  CircleDollarSign,
-  CheckCircle2,
-  AlertCircle,
-  Ban,
-  RotateCcw as RefundIcon,
-  SlidersHorizontal,
-  FileText,
-  ExternalLink,
-  Copy,
-  QrCode,
-  Check,
-} from 'lucide-react'
+  IconEye,
+  IconPrinter,
+  IconDownload,
+  IconCircleX,
+  IconRotate2,
+  IconSearch,
+  IconX,
+  IconMessageCircle,
+  IconMail,
+  IconShare,
+  IconPhone,
+  IconPlus,
+  IconReceipt,
+  IconCurrencyRupee,
+  IconShoppingBag,
+  IconShoppingCart,
+  IconCreditCard,
+  IconCalendarEvent,
+  IconChevronLeft,
+  IconChevronRight,
+  IconDots,
+  IconRefresh,
+  IconClockHour3,
+  IconUserCircle,
+  IconCoin,
+  IconCircleCheck,
+  IconAlertCircle,
+  IconBan,
+  IconRotate2 as RefundIcon,
+  IconAdjustmentsHorizontal,
+  IconFileText,
+  IconExternalLink,
+  IconCopy,
+  IconQrcode,
+  IconCheck,
+} from '@tabler/icons-react'
 
 /* =========================================================
    ERP BILLING UI — CLEAN BUSINESS / POS STYLE
@@ -183,7 +183,7 @@ function ShareMenu({ bill, shopName, onClose }) {
   const actions = [
     {
       label: 'WhatsApp',
-      icon: <MessageCircle size={16} className="text-[#25D366]" />,
+      icon: <IconMessageCircle size={16} className="text-[#25D366]" />,
       hover: 'hover:bg-emerald-50 dark:hover:bg-emerald-950/40',
       action: async () => {
         const cleanPhone = phone.replace(/\D/g, '')
@@ -210,7 +210,7 @@ function ShareMenu({ bill, shopName, onClose }) {
     },
     {
       label: 'SMS',
-      icon: <Phone size={16} className="text-[#1E3A5F]" />,
+      icon: <IconPhone size={16} className="text-[#1E3A5F]" />,
       hover: 'hover:bg-[var(--surface-hover)]',
       action: async () => {
         if (!phone) {
@@ -228,7 +228,7 @@ function ShareMenu({ bill, shopName, onClose }) {
     },
     {
       label: 'Email',
-      icon: <Mail size={16} className="text-[#475569]" />,
+      icon: <IconMail size={16} className="text-[#475569]" />,
       hover: 'hover:bg-[var(--surface-hover)]',
       action: async () => {
         try {
@@ -244,7 +244,7 @@ function ShareMenu({ bill, shopName, onClose }) {
     },
     {
       label: 'Share Bill',
-      icon: <FileText size={16} className="text-rose-600 dark:text-rose-400" />,
+      icon: <IconFileText size={16} className="text-rose-600 dark:text-rose-400" />,
       hover: 'hover:bg-rose-50 dark:hover:bg-rose-950/40',
       action: async () => {
         try {
@@ -273,7 +273,7 @@ function ShareMenu({ bill, shopName, onClose }) {
     },
     {
       label: 'Copy Bill Link',
-      icon: <Share2 size={16} className="text-[var(--muted)]" />,
+      icon: <IconShare size={16} className="text-[var(--muted)]" />,
       hover: 'hover:bg-[var(--surface-elevated)]',
       action: async () => {
         try {
@@ -368,32 +368,32 @@ function StatusPill({ bill }) {
   const config = {
     paid: {
       label: 'Paid',
-      icon: CheckCircle2,
+      icon: IconCircleCheck,
       className: 'bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm dark:bg-emerald-900/70 dark:text-emerald-200 dark:border-emerald-600',
     },
     completed: {
       label: 'Paid',
-      icon: CheckCircle2,
+      icon: IconCircleCheck,
       className: 'bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-sm dark:bg-emerald-900/70 dark:text-emerald-200 dark:border-emerald-600',
     },
     credit: {
       label: 'Credit',
-      icon: AlertCircle,
+      icon: IconAlertCircle,
       className: 'bg-amber-100 text-amber-900 border border-amber-300 shadow-sm dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-700',
     },
     partial: {
       label: 'Partial',
-      icon: AlertCircle,
+      icon: IconAlertCircle,
       className: 'bg-amber-50 text-[#B45309] border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40',
     },
     pending: {
       label: 'Pending',
-      icon: Clock3,
+      icon: IconClockHour3,
       className: 'bg-sky-50 text-sky-800 border border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/40',
     },
     cancelled: {
       label: 'Cancelled',
-      icon: Ban,
+      icon: IconBan,
       className: 'bg-rose-100 text-rose-800 border border-rose-300 shadow-sm dark:bg-rose-900/70 dark:text-rose-200 dark:border-rose-600',
     },
     refunded: {
@@ -405,7 +405,7 @@ function StatusPill({ bill }) {
 
   const item = config[status] || {
     label: status || 'Unknown',
-    icon: AlertCircle,
+    icon: IconAlertCircle,
     className: 'bg-[var(--surface-elevated)] text-[var(--muted)] border border-[var(--line)]',
   }
 
@@ -427,20 +427,20 @@ function StatusPill({ bill }) {
 
 function PaymentBadge({ method }) {
   const m = (method || '').toLowerCase()
-  let icon = <IndianRupee size={12} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+  let icon = <IconCurrencyRupee size={12} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
   let label = 'Cash'
 
   if (m === 'upi') {
-    icon = <QrCode size={12} className="text-blue-600 dark:text-blue-400 shrink-0" />
+    icon = <IconQrcode size={12} className="text-blue-600 dark:text-blue-400 shrink-0" />
     label = 'UPI'
   } else if (m === 'card') {
-    icon = <CreditCard size={12} className="text-purple-600 dark:text-purple-400 shrink-0" />
+    icon = <IconCreditCard size={12} className="text-purple-600 dark:text-purple-400 shrink-0" />
     label = 'Card'
   } else if (m === 'online' || m === 'razorpay') {
-    icon = <ExternalLink size={12} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+    icon = <IconExternalLink size={12} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
     label = 'Online'
   } else if (m === 'credit') {
-    icon = <AlertCircle size={12} className="text-amber-600 dark:text-amber-400 shrink-0" />
+    icon = <IconAlertCircle size={12} className="text-amber-600 dark:text-amber-400 shrink-0" />
     label = 'Credit'
   } else if (!m) {
     label = '—'
@@ -511,7 +511,7 @@ function InvoiceActions({
           className="btn-success btn-sm compact-table-action inline-flex shrink-0 items-center gap-1"
           title={`Collect payment (${fmt(bill.balance_due)} due)`}
         >
-          <IndianRupee size={11} />
+          <IconCurrencyRupee size={11} />
           <span>Collect</span>
         </button>
       )}
@@ -523,7 +523,7 @@ function InvoiceActions({
         title="View invoice details"
         aria-label="View invoice"
       >
-        <Eye size={15} />
+        <IconEye size={15} />
       </button>
 
       <button
@@ -533,7 +533,7 @@ function InvoiceActions({
         title={`Print bill (${isHalfA4 ? 'Half-A4' : 'A4'})`}
         aria-label="Print invoice"
       >
-        <Printer size={15} />
+        <IconPrinter size={15} />
       </button>
 
       <div className="relative" ref={menuRef}>
@@ -549,7 +549,7 @@ function InvoiceActions({
           title="More actions"
           aria-label="More actions"
         >
-          <MoreHorizontal size={15} />
+          <IconDots size={15} />
         </button>
 
         {menuOpen && (
@@ -568,7 +568,7 @@ function InvoiceActions({
                 }}
                 className="flex min-h-9 w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
               >
-                <IndianRupee size={13} />
+                <IconCurrencyRupee size={13} />
                 <span>Collect Payment</span>
               </button>
             )}
@@ -581,7 +581,7 @@ function InvoiceActions({
               }}
               className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
             >
-              <Printer size={13} className="text-slate-500" />
+              <IconPrinter size={13} className="text-slate-500" />
               <span>Thermal Receipt ({isThermal58 ? '58mm' : '80mm'})</span>
             </button>
 
@@ -611,7 +611,7 @@ function InvoiceActions({
               }}
               className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
             >
-              <MessageCircle size={13} />
+              <IconMessageCircle size={13} />
               <span>Send WhatsApp</span>
             </button>
 
@@ -628,7 +628,7 @@ function InvoiceActions({
               }}
               className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
             >
-              <ExternalLink size={13} className="text-blue-600 dark:text-blue-400" />
+              <IconExternalLink size={13} className="text-blue-600 dark:text-blue-400" />
               <span>View Digital Bill</span>
             </button>
 
@@ -646,7 +646,7 @@ function InvoiceActions({
               }}
               className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
             >
-              <Copy size={13} className="text-violet-600 dark:text-violet-400" />
+              <IconCopy size={13} className="text-violet-600 dark:text-violet-400" />
               <span>Copy Bill Link</span>
             </button>
 
@@ -662,7 +662,7 @@ function InvoiceActions({
                   }}
                   className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50"
                 >
-                  <Ban size={13} />
+                  <IconBan size={13} />
                   <span>Cancel invoice</span>
                 </button>
 
@@ -674,7 +674,7 @@ function InvoiceActions({
                   }}
                   className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/50"
                 >
-                  <RotateCcw size={13} />
+                  <IconRotate2 size={13} />
                   <span>Refund invoice</span>
                 </button>
               </>
@@ -764,7 +764,7 @@ function InvoiceModal({
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[#1E3A5F] border border-[#D7DEE7] dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
-                <Receipt size={19} />
+                <IconReceipt size={19} />
               </div>
 
               <div className="min-w-0">
@@ -785,7 +785,7 @@ function InvoiceModal({
               className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-elevated)] transition"
               aria-label="Close modal"
             >
-              <X size={18} />
+              <IconX size={18} />
             </button>
           </div>
 
@@ -800,7 +800,7 @@ function InvoiceModal({
                 className="inline-flex min-h-9 flex-1 sm:flex-initial items-center justify-center gap-1.5 rounded-xl border border-transparent bg-[#25D366] hover:bg-[#1EBE5D] px-4 py-1.5 text-xs font-bold text-white transition hover:shadow-xs active:scale-95 shadow-2xs disabled:opacity-50"
                 title="Send invoice via WhatsApp"
               >
-                <MessageCircle size={15} />
+                <IconMessageCircle size={15} />
                 <span>{sendingWhatsApp ? 'Sending…' : 'Send WhatsApp'}</span>
               </button>
 
@@ -811,7 +811,7 @@ function InvoiceModal({
                   className="btn-success inline-flex min-h-9 flex-1 sm:flex-initial items-center justify-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition active:scale-95 shadow-xs"
                   title={`Collect outstanding balance (${fmt(selected.balance_due)})`}
                 >
-                  <IndianRupee size={14} />
+                  <IconCurrencyRupee size={14} />
                   <span>Collect Due ({fmt(selected.balance_due)})</span>
                 </button>
               )}
@@ -826,7 +826,7 @@ function InvoiceModal({
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
                 title={`Print Sheet Bill (${isHalfA4 ? 'Half-A4' : 'A4'})`}
               >
-                <Printer size={13} />
+                <IconPrinter size={13} />
                 <span>{isHalfA4 ? 'Half-A4' : 'A4 Bill'}</span>
               </button>
 
@@ -837,7 +837,7 @@ function InvoiceModal({
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
                 title={`Print Thermal Receipt (${isThermal58 ? '58mm' : '80mm'})`}
               >
-                <Printer size={13} />
+                <IconPrinter size={13} />
                 <span>Thermal ({isThermal58 ? '58mm' : '80mm'})</span>
               </button>
 
@@ -848,7 +848,7 @@ function InvoiceModal({
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
                 title="Download PDF in current preview layout"
               >
-                <Download size={13} />
+                <IconDownload size={13} />
                 <span className="hidden xs:inline">PDF</span>
               </button>
 
@@ -867,7 +867,7 @@ function InvoiceModal({
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
                 title="Customize invoice template style, fields, and printing layout"
               >
-                <SlidersHorizontal size={13} className="text-[#0057B8] dark:text-sky-400" />
+                <IconAdjustmentsHorizontal size={13} className="text-[#0057B8] dark:text-sky-400" />
                 <span className="hidden sm:inline">Customize Template</span>
               </button>
 
@@ -885,7 +885,7 @@ function InvoiceModal({
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
                 title="View mobile-friendly digital bill"
               >
-                <ExternalLink size={13} />
+                <IconExternalLink size={13} />
                 <span className="hidden sm:inline">View Bill</span>
               </button>
 
@@ -904,7 +904,7 @@ function InvoiceModal({
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
                 title="Copy digital bill link"
               >
-                <Copy size={13} />
+                <IconCopy size={13} />
                 <span className="hidden sm:inline">Copy</span>
               </button>
 
@@ -919,7 +919,7 @@ function InvoiceModal({
                   className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
                   title="Share invoice"
                 >
-                  <Share2 size={13} />
+                  <IconShare size={13} />
                   <span>Share</span>
                 </button>
 
@@ -1025,7 +1025,7 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
 
           {bill.customer_phone && (
             <p className="mt-1 flex items-center gap-1 text-[11px] text-[var(--muted-light)]">
-              <Phone size={10} />
+              <IconPhone size={10} />
               {bill.customer_phone}
             </p>
           )}
@@ -1105,7 +1105,7 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
             className="btn-success flex min-h-[42px] w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold"
             title={`Collect payment (${fmt(balance)})`}
           >
-            <IndianRupee size={13} />
+            <IconCurrencyRupee size={13} />
             <span>Collect Due ({fmt(balance)})</span>
           </button>
         )}
@@ -1117,7 +1117,7 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
             className="inline-flex min-h-[38px] items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-xs font-semibold text-[var(--ink)] shadow-xs transition hover:bg-[var(--surface-elevated)] active:scale-95"
             title="View invoice"
           >
-            <Eye size={13} />
+            <IconEye size={13} />
             <span>View</span>
           </button>
 
@@ -1127,7 +1127,7 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
             className="inline-flex min-h-[38px] items-center justify-center gap-1 rounded-lg bg-[#1E3A5F] text-xs font-semibold text-white shadow-xs transition hover:bg-[#162a45] active:scale-95"
             title={`Print bill (${isHalfA4 ? 'Half-A4' : 'A4'})`}
           >
-            <Printer size={13} />
+            <IconPrinter size={13} />
             <span>Print</span>
           </button>
 
@@ -1140,7 +1140,7 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
               }}
               className="inline-flex min-h-[38px] w-full items-center justify-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 text-xs font-semibold text-emerald-800 shadow-xs transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200 active:scale-95"
             >
-              <Share2 size={13} />
+              <IconShare size={13} />
               <span>Share</span>
             </button>
             {shareOpen && (
@@ -1162,7 +1162,7 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
               className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-xs font-semibold text-[var(--muted)] shadow-xs transition hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
               title="More actions"
             >
-              <MoreHorizontal size={16} />
+              <IconDots size={16} />
             </button>
             {moreOpen && (
               <div className="absolute right-0 bottom-11 z-50 w-48 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl">
@@ -1175,7 +1175,7 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
                     }}
                     className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
                   >
-                    <IndianRupee size={13} /> Collect Payment
+                    <IconCurrencyRupee size={13} /> Collect Payment
                   </button>
                 )}
                 <button
@@ -1186,7 +1186,7 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
                   }}
                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
                 >
-                  <Printer size={13} /> Thermal ({isThermal58 ? '58mm' : '80mm'})
+                  <IconPrinter size={13} /> Thermal ({isThermal58 ? '58mm' : '80mm'})
                 </button>
               {(bill.status === 'completed' || bill.status === 'paid') && (
                 <>
@@ -1198,7 +1198,7 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
                     }}
                     className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
                   >
-                    <Ban size={13} /> Cancel Invoice
+                    <IconBan size={13} /> Cancel Invoice
                   </button>
                   <button
                     type="button"
@@ -1299,9 +1299,9 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
 
   // Payment methods — ONLY Cash, UPI, and Card. Online/Bank is removed!
   const METHODS = [
-    { id: 'cash', label: 'Cash', icon: IndianRupee },
-    { id: 'upi', label: 'UPI / QR', icon: QrCode },
-    { id: 'card', label: 'Card / POS', icon: CreditCard },
+    { id: 'cash', label: 'Cash', icon: IconCurrencyRupee },
+    { id: 'upi', label: 'UPI / QR', icon: IconQrcode },
+    { id: 'card', label: 'Card / POS', icon: IconCreditCard },
   ]
 
   const upiId = shopSettings?.shop_upi_id || ''
@@ -1337,7 +1337,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
         <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3 sm:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1E3A5F] text-white shadow-sm">
-              <CircleDollarSign size={18} />
+              <IconCoin size={18} />
             </div>
             <div className="min-w-0">
               <h2 id="collect-payment-title" className="text-base font-bold text-[var(--ink)]">
@@ -1353,7 +1353,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--line-strong)] transition sm:h-9 sm:w-9"
             aria-label="Close"
           >
-            <X size={16} />
+            <IconX size={16} />
           </button>
         </div>
 
@@ -1416,7 +1416,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
 
             <div className="relative">
               <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[var(--muted)]">
-                <IndianRupee size={16} />
+                <IconCurrencyRupee size={16} />
               </div>
               <input
                 type="number"
@@ -1433,7 +1433,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
             </div>
             {error && (
               <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-xs font-medium text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300" role="alert">
-                <AlertCircle size={13} />
+                <IconAlertCircle size={13} />
                 {error}
               </p>
             )}
@@ -1481,7 +1481,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
 
               <div className="min-w-0 text-center sm:text-left">
                 <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#1E3A5F] dark:text-sky-400 sm:justify-start">
-                  <QrCode size={16} />
+                  <IconQrcode size={16} />
                   <span>Scan QR with Any UPI App</span>
                 </div>
                 <p className="mt-2 font-mono text-xl font-bold text-[var(--ink)]">
@@ -1495,7 +1495,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                     className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#1E3A5F] dark:text-sky-400 hover:underline"
                     title="Copy UPI ID"
                   >
-                    {copiedUpi ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                    {copiedUpi ? <IconCheck size={12} className="text-emerald-500" /> : <IconCopy size={12} />}
                     <span>{copiedUpi ? 'Copied' : 'Copy'}</span>
                   </button>
                 </div>
@@ -1506,7 +1506,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
             </div>
           ) : method === 'card' ? (
             <div className="flex items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3.5">
-              <CreditCard size={18} className="mt-0.5 shrink-0 text-[#1E3A5F] dark:text-sky-400" />
+              <IconCreditCard size={18} className="mt-0.5 shrink-0 text-[#1E3A5F] dark:text-sky-400" />
               <div>
               <p className="text-xs font-semibold text-[var(--ink)]">
                 Card / POS Terminal Collection
@@ -1518,7 +1518,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
             </div>
           ) : (
             <div className="flex items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3.5">
-              <IndianRupee size={18} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <IconCurrencyRupee size={18} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <div>
               <p className="text-xs font-semibold text-[var(--ink)]">
                 Cash Collection
@@ -1585,7 +1585,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                 </>
               ) : (
                 <>
-                  <IndianRupee size={14} />
+                  <IconCurrencyRupee size={14} />
                   <span>Record payment · {fmt(parseFloat(amount) || 0)}</span>
                 </>
               )}
@@ -2022,7 +2022,7 @@ export default function Bills() {
               className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
               title="Payment Sheet & Collection"
             >
-              <CreditCard size={13} />
+              <IconCreditCard size={13} />
               <span>Payments</span>
             </button>
 
@@ -2032,7 +2032,7 @@ export default function Bills() {
               className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
               title="Parked Bills"
             >
-              <Clock3 size={13} />
+              <IconClockHour3 size={13} />
               <span>Parked</span>
               {draftCount > 0 && (
                 <span className="rounded-full bg-[#1E3A5F] px-1.5 py-0.2 text-[10px] font-bold text-white">
@@ -2048,7 +2048,7 @@ export default function Bills() {
               className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 disabled:opacity-50"
               title="Export visible invoices to CSV"
             >
-              <Download size={13} />
+              <IconDownload size={13} />
               <span>Export CSV</span>
             </button>
 
@@ -2059,7 +2059,7 @@ export default function Bills() {
               className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
               title="Refresh invoices table"
             >
-              <RefreshCw size={13} className={loading ? 'animate-spin text-[#1E3A5F]' : ''} />
+              <IconRefresh size={13} className={loading ? 'animate-spin text-[#1E3A5F]' : ''} />
               <span>Refresh</span>
             </button>
 
@@ -2068,7 +2068,7 @@ export default function Bills() {
               onClick={() => navigate('/billing/new')}
               className="btn-primary h-8 sm:h-8.5 px-3.5 text-xs font-semibold text-white inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 shadow-xs"
             >
-              <Plus size={14} />
+              <IconPlus size={14} />
               <span>New Bill</span>
             </button>
           </div>
@@ -2214,7 +2214,7 @@ export default function Bills() {
           {dateFilter === 'custom' && (
             <div className="flex flex-col gap-2 rounded-md border border-[var(--line)] bg-[var(--surface-subtle)] p-2 text-xs sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
               <div className="flex items-center gap-1.5 font-medium text-[var(--ink-secondary)]">
-                <CalendarDays size={14} className="text-[#1E3A5F] dark:text-sky-400" />
+                <IconCalendarEvent size={14} className="text-[#1E3A5F] dark:text-sky-400" />
                 <span>Custom Date Range:</span>
               </div>
               <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] items-center gap-1.5 sm:flex">
@@ -2252,7 +2252,7 @@ export default function Bills() {
                     className="h-8 rounded p-1 text-[var(--muted)] hover:text-rose-600 transition"
                     title="Clear custom dates"
                   >
-                    <X size={14} />
+                    <IconX size={14} />
                   </button>
                 )}
               </div>
@@ -2263,7 +2263,7 @@ export default function Bills() {
           <div className="flex w-full items-center gap-2">
             {/* Search */}
             <div className="group relative flex min-w-0 flex-1 items-center h-[34px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 transition hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-1 focus-within:ring-[#1E3A5F]/20">
-              <Search size={14} className="shrink-0 text-[var(--muted)] group-focus-within:text-[#1E3A5F] dark:group-focus-within:text-sky-300 mr-2" />
+              <IconSearch size={14} className="shrink-0 text-[var(--muted)] group-focus-within:text-[#1E3A5F] dark:group-focus-within:text-sky-300 mr-2" />
               <input
                 ref={searchInputRef}
                 className="w-full bg-transparent text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
@@ -2285,7 +2285,7 @@ export default function Bills() {
                   aria-label="Clear search"
                   title="Clear search"
                 >
-                  <X size={13} />
+                  <IconX size={13} />
                 </button>
               ) : (
                 <kbd className="hidden sm:inline-flex shrink-0 items-center rounded border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)]">
@@ -2306,7 +2306,7 @@ export default function Bills() {
               title="Toggle advanced filters"
               aria-label="Toggle advanced filters"
             >
-              <SlidersHorizontal size={13} />
+              <IconAdjustmentsHorizontal size={13} />
               <span>Filters</span>
               {(paymentMethodFilter || minAmount || maxAmount) && (
                 <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#1E3A5F] px-1 text-[9px] text-white">
@@ -2323,7 +2323,7 @@ export default function Bills() {
                 className="inline-flex h-[34px] items-center justify-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300 shrink-0"
                 title="Reset all search and filter conditions"
               >
-                <X size={13} />
+                <IconX size={13} />
                 <span className="hidden sm:inline">Reset</span>
               </button>
             )}
@@ -2403,7 +2403,7 @@ export default function Bills() {
                 onClick={exportSelectedCsv}
                 className="inline-flex h-7 items-center gap-1.5 rounded border border-[#1E3A5F] bg-[#1E3A5F] hover:bg-[#162a45] px-2.5 text-xs font-semibold text-white shadow-2xs transition active:scale-95"
               >
-                <Download size={12} />
+                <IconDownload size={12} />
                 <span>Export Selected</span>
               </button>
               <button
@@ -2411,7 +2411,7 @@ export default function Bills() {
                 onClick={() => setSelectedIds(new Set())}
                 className="inline-flex h-7 items-center gap-1 rounded border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] px-2 text-xs font-medium text-[var(--ink-secondary)] transition"
               >
-                <X size={12} />
+                <IconX size={12} />
                 <span>Clear</span>
               </button>
             </div>
@@ -2597,7 +2597,7 @@ export default function Bills() {
                                 className="flex items-center gap-1 text-[11px] text-[var(--muted)] font-mono truncate mt-0.5"
                                 title={bill.customer_phone}
                               >
-                                <Phone size={10} className="shrink-0" />
+                                <IconPhone size={10} className="shrink-0" />
                                 <span className="truncate">{bill.customer_phone}</span>
                               </div>
                             ) : (
@@ -2623,7 +2623,7 @@ export default function Bills() {
                               className="inline-flex items-center justify-center gap-1 rounded bg-[var(--surface-subtle)] border border-[var(--line)] px-2 py-0.5 text-[11px] font-semibold text-[var(--ink-secondary)]"
                               title={`${bill.items?.length || 0} item${(bill.items?.length || 0) === 1 ? '' : 's'} in invoice`}
                             >
-                              <ShoppingBag size={11} className="text-[var(--muted)]" />
+                              <IconShoppingBag size={11} className="text-[var(--muted)]" />
                               <span>{bill.items?.length || 0}</span>
                             </span>
                           </td>
@@ -2755,7 +2755,7 @@ export default function Bills() {
                   aria-label="Previous Page"
                   title="Previous Page"
                 >
-                  <ChevronLeft size={14} />
+                  <IconChevronLeft size={14} />
                   <span className="hidden sm:inline ml-0.5">Prev</span>
                 </button>
 
@@ -2797,7 +2797,7 @@ export default function Bills() {
                   title="Next Page"
                 >
                   <span className="hidden sm:inline mr-0.5">Next</span>
-                  <ChevronRight size={14} />
+                  <IconChevronRight size={14} />
                 </button>
               </div>
             </div>
@@ -2813,7 +2813,7 @@ export default function Bills() {
           <span>{shopName}</span>
 
           <span className="flex items-center gap-1">
-            <CalendarDays size={11} />
+            <IconCalendarEvent size={11} />
             Billing workspace
           </span>
         </div>

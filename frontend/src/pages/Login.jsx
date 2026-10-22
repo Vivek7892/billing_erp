@@ -1,6 +1,11 @@
 import { useId, useState, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Eye, EyeOff, LockKeyhole, ShieldCheck } from 'lucide-react'
+import {
+  IconEye,
+  IconEyeOff,
+  IconLock,
+  IconShieldCheck,
+} from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../AuthContext'
 import { getRememberMePreference } from '../services/tokenStorage'
@@ -107,7 +112,7 @@ export default function Login() {
           <div className="login-content">
             <div className="login-heading">
               <span className="login-heading-icon" aria-hidden="true">
-                <LockKeyhole size={18} />
+                <IconLock size={18} />
               </span>
               <h1 id="login-title">Welcome back</h1>
               <p>Sign in to manage your store, billing and inventory.</p>
@@ -156,7 +161,7 @@ export default function Login() {
                     disabled={loading}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
                   </button>
                 </div>
                 {errors.password && <p className="login-field-error" id={passwordErrorId}>{errors.password}</p>}
@@ -193,7 +198,7 @@ export default function Login() {
             </form>
 
             <div className="login-security-note">
-              <ShieldCheck size={15} aria-hidden="true" />
+              <IconShieldCheck size={15} aria-hidden="true" />
               <span>Secure access to your business workspace</span>
             </div>
 

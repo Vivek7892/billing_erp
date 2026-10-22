@@ -2,27 +2,27 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import api from '../api'
 import {
-  RefreshCw,
-  AlertCircle,
-  CheckCircle2,
-  XCircle,
-  Clock3,
-  CreditCard,
-  Wallet,
-  Smartphone,
-  Building2,
-  Copy,
-  Check,
-  X,
-  Download,
-  ReceiptText,
-  User,
-  CalendarDays,
-  Hash,
-  ShieldCheck,
-  ArrowUpRight,
-  Banknote,
-} from 'lucide-react'
+  IconRefresh,
+  IconAlertCircle,
+  IconCircleCheck,
+  IconCircleX,
+  IconClockHour3,
+  IconCreditCard,
+  IconWallet,
+  IconDeviceMobile,
+  IconBuildingStore,
+  IconCopy,
+  IconCheck,
+  IconX,
+  IconDownload,
+  IconReceiptTax,
+  IconUser,
+  IconCalendarEvent,
+  IconHash,
+  IconShieldCheck,
+  IconArrowUpRight,
+  IconCash,
+} from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 import { SearchBar } from '../components/UI'
 
@@ -53,14 +53,14 @@ const STATUS_DOT_COLORS = {
 }
 
 const STATUS_ICONS = {
-  success: CheckCircle2,
-  captured: CheckCircle2,
-  failed: XCircle,
-  pending: Clock3,
-  initiated: Clock3,
-  created: Clock3,
-  expired: Clock3,
-  refunded: ArrowUpRight,
+  success: IconCircleCheck,
+  captured: IconCircleCheck,
+  failed: IconCircleX,
+  pending: IconClockHour3,
+  initiated: IconClockHour3,
+  created: IconClockHour3,
+  expired: IconClockHour3,
+  refunded: IconArrowUpRight,
 }
 
 const PAYMENT_METHODS = [
@@ -317,15 +317,15 @@ function MethodBadge({ method }) {
 
   const icon =
     normalized === 'upi' ? (
-      <Smartphone size={14} />
+      <IconDeviceMobile size={14} />
     ) : normalized === 'card' ? (
-      <CreditCard size={14} />
+      <IconCreditCard size={14} />
     ) : normalized === 'wallet' ? (
-      <Wallet size={14} />
+      <IconWallet size={14} />
     ) : normalized === 'netbanking' ? (
-      <Building2 size={14} />
+      <IconBuildingStore size={14} />
     ) : (
-      <Banknote size={14} />
+      <IconCash size={14} />
     )
 
   return (
@@ -362,9 +362,9 @@ function CopyButton({ value, label = 'Copy' }) {
       aria-label={`Copy ${label}`}
     >
       {copied ? (
-        <Check size={14} className="text-emerald-600" />
+        <IconCheck size={14} className="text-emerald-600" />
       ) : (
-        <Copy size={14} />
+        <IconCopy size={14} />
       )}
     </button>
   )
@@ -665,10 +665,10 @@ export default function TransactionLedger() {
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={exportCSV} disabled={loading || !visibleRows.length} className="btn-secondary inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold">
-              <Download size={14} /> Export CSV
+              <IconDownload size={14} /> Export CSV
             </button>
             <button type="button" onClick={load} disabled={loading} className="btn-primary inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold">
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+              <IconRefresh size={14} className={loading ? 'animate-spin' : ''} /> Refresh
             </button>
           </div>
         </header>
@@ -712,7 +712,7 @@ export default function TransactionLedger() {
           </select>
           <input aria-label="Filter by transaction date" type="date" className="h-10 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs" value={dateFilter} onChange={e => setDateFilter(e.target.value)} />
           <button type="button" onClick={() => setReviewOnly(value => !value)} aria-pressed={reviewOnly} className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-md border px-2.5 text-xs font-medium ${reviewOnly ? 'border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200' : 'border-[var(--line)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)]'}`}>
-            <AlertCircle size={14} /> Needs review <span>{summary.unlinked}</span>
+            <IconAlertCircle size={14} /> Needs review <span>{summary.unlinked}</span>
           </button>
           {(search || statusFilter || methodFilter || dateFilter || reviewOnly) && <button type="button" onClick={() => { setSearch(''); setStatus(''); setMethod(''); setDateFilter(''); setReviewOnly(false) }} className="h-10 px-2 text-xs font-medium text-[var(--muted)] hover:text-[var(--ink)]">Clear filters</button>}
         </section>
@@ -723,7 +723,7 @@ export default function TransactionLedger() {
             <span className="text-xs text-[var(--muted)]">{visibleRows.length} records</span>
           </div>
 
-          {loading ? <div className="flex min-h-52 flex-col items-center justify-center gap-2 text-sm text-[var(--muted)]"><RefreshCw size={18} className="animate-spin" /><span>Loading transactions…</span></div> : loadError ? <div className="flex min-h-52 flex-col items-center justify-center gap-3 px-4 text-center"><p className="text-sm text-[var(--ink-secondary)]">{loadError}</p><button type="button" onClick={load} className="btn-secondary inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-xs font-semibold"><RefreshCw size={14} /> Retry</button></div> : visibleRows.length === 0 ? <div className="flex min-h-52 flex-col items-center justify-center px-4 text-center"><p className="text-sm font-semibold">No transactions found</p><p className="mt-1 text-xs text-[var(--muted)]">Try changing your search or filter criteria.</p></div> : <>
+          {loading ? <div className="flex min-h-52 flex-col items-center justify-center gap-2 text-sm text-[var(--muted)]"><IconRefresh size={18} className="animate-spin" /><span>Loading transactions…</span></div> : loadError ? <div className="flex min-h-52 flex-col items-center justify-center gap-3 px-4 text-center"><p className="text-sm text-[var(--ink-secondary)]">{loadError}</p><button type="button" onClick={load} className="btn-secondary inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-xs font-semibold"><IconRefresh size={14} /> Retry</button></div> : visibleRows.length === 0 ? <div className="flex min-h-52 flex-col items-center justify-center px-4 text-center"><p className="text-sm font-semibold">No transactions found</p><p className="mt-1 text-xs text-[var(--muted)]">Try changing your search or filter criteria.</p></div> : <>
             <div className="hidden overflow-x-auto md:block">
               <table className="erp-table w-full min-w-[1100px] text-left text-xs">
                 <thead><tr>
@@ -793,7 +793,7 @@ function TransactionDrawer({ row, onClose }) {
         <div className="flex items-start justify-between gap-3 border-b border-[var(--line)] px-5 py-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <ReceiptText
+              <IconReceiptTax
                 size={18}
                 className="text-[var(--primary)]"
               />
@@ -814,7 +814,7 @@ function TransactionDrawer({ row, onClose }) {
             className="rounded-lg p-2 text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]"
             aria-label="Close"
           >
-            <X size={19} />
+            <IconX size={19} />
           </button>
         </div>
 
@@ -843,7 +843,7 @@ function TransactionDrawer({ row, onClose }) {
 
           {/* IDENTIFIERS */}
           <section className="space-y-4">
-            <SectionTitle icon={Hash}>
+            <SectionTitle icon={IconHash}>
               Razorpay Identifiers
             </SectionTitle>
 
@@ -889,7 +889,7 @@ function TransactionDrawer({ row, onClose }) {
 
           {/* PAYMENT INFORMATION */}
           <section className="space-y-4">
-            <SectionTitle icon={CreditCard}>
+            <SectionTitle icon={IconCreditCard}>
               Payment Information
             </SectionTitle>
 
@@ -965,7 +965,7 @@ function TransactionDrawer({ row, onClose }) {
 
           {/* CUSTOMER */}
           <section className="space-y-4">
-            <SectionTitle icon={User}>
+            <SectionTitle icon={IconUser}>
               Customer Information
             </SectionTitle>
 
@@ -998,7 +998,7 @@ function TransactionDrawer({ row, onClose }) {
 
           {/* TIMESTAMPS */}
           <section className="space-y-4">
-            <SectionTitle icon={CalendarDays}>
+            <SectionTitle icon={IconCalendarEvent}>
               Transaction Timeline
             </SectionTitle>
 
@@ -1028,7 +1028,7 @@ function TransactionDrawer({ row, onClose }) {
           {/* FAILURE DETAILS */}
           {(status === 'failed' || failureReason) && (
             <section className="space-y-4">
-              <SectionTitle icon={XCircle}>
+              <SectionTitle icon={IconCircleX}>
                 Failure Information
               </SectionTitle>
 
@@ -1078,7 +1078,7 @@ function TransactionDrawer({ row, onClose }) {
           {/* NOTES */}
           {(row.notes || row.description || row.comment) && (
             <section className="space-y-4">
-              <SectionTitle icon={ReceiptText}>
+              <SectionTitle icon={IconReceiptTax}>
                 Notes & Description
               </SectionTitle>
 
@@ -1107,10 +1107,10 @@ function TransactionDrawer({ row, onClose }) {
           )}
 
           <section className="space-y-4">
-            <SectionTitle icon={ShieldCheck}>Transaction Review</SectionTitle>
+            <SectionTitle icon={IconShieldCheck}>Transaction Review</SectionTitle>
             <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4">
               <div className="flex items-start gap-3">
-                {invoice ? <CheckCircle2 size={18} className="mt-0.5 text-emerald-600" /> : <AlertCircle size={18} className="mt-0.5 text-amber-600" />}
+                {invoice ? <IconCircleCheck size={18} className="mt-0.5 text-emerald-600" /> : <IconAlertCircle size={18} className="mt-0.5 text-amber-600" />}
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-[var(--ink)]">{invoice ? 'Invoice linked' : 'Invoice link needs review'}</p>
                   <p className="mt-1 text-xs leading-relaxed text-[var(--muted)]">{invoice ? `This gateway payment is associated with invoice ${invoice}.` : 'No invoice number was returned for this payment. Check the payment ID against your sales records.'}</p>
@@ -1135,7 +1135,7 @@ function TransactionDrawer({ row, onClose }) {
             onClick={onClose}
             className="btn-secondary w-full min-h-11 rounded-xl text-sm font-semibold inline-flex items-center justify-center gap-2"
           >
-            <X size={16} />
+            <IconX size={16} />
             Close Details
           </button>
         </div>

@@ -1,41 +1,41 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  FileText,
-  Shield,
-  CreditCard,
-  Building2,
-  Lock,
-  RefreshCw,
-  Printer,
-  ArrowLeft,
-  CheckCircle2,
-  ExternalLink,
-  ChevronRight,
-  Scale,
-  Receipt,
-  Mail,
-  MapPin,
-  Clock,
-  Laptop,
-} from 'lucide-react'
+  IconFileText,
+  IconShield,
+  IconCreditCard,
+  IconBuildingStore,
+  IconLock,
+  IconRefresh,
+  IconPrinter,
+  IconArrowLeft,
+  IconCircleCheck,
+  IconExternalLink,
+  IconChevronRight,
+  IconScale,
+  IconReceipt,
+  IconMail,
+  IconMapPin,
+  IconClock,
+  IconDeviceLaptop,
+} from '@tabler/icons-react'
 
 export default function TermsAndConditions() {
   const navigate = useNavigate()
   const [activeSection, setActiveSection] = useState('acceptance')
 
   const sections = [
-    { id: 'acceptance', title: '1. Acceptance of Terms', icon: CheckCircle2 },
-    { id: 'license', title: '2. Software License & Permitted Use', icon: Laptop },
-    { id: 'accounts', title: '3. User Accounts & Security', icon: Lock },
-    { id: 'billing', title: '4. Billing, Invoicing & GST Compliance', icon: Receipt },
-    { id: 'payments', title: '5. Payments & Dynamic UPI QR', icon: CreditCard },
-    { id: 'data', title: '6. Data Storage & Privacy', icon: Shield },
-    { id: 'refunds', title: '7. Subscriptions, Fees & Refunds', icon: RefreshCw },
-    { id: 'liability', title: '8. Warranties & Limitation of Liability', icon: Scale },
-    { id: 'termination', title: '9. Termination & Account Suspension', icon: FileText },
-    { id: 'governing-law', title: '10. Governing Law & Jurisdiction', icon: Building2 },
-    { id: 'contact', title: '11. Support & Contact Information', icon: Mail },
+    { id: 'acceptance', title: '1. Acceptance of Terms', icon: IconCircleCheck },
+    { id: 'license', title: '2. Software License & Permitted Use', icon: IconDeviceLaptop },
+    { id: 'accounts', title: '3. User Accounts & Security', icon: IconLock },
+    { id: 'billing', title: '4. Billing, Invoicing & GST Compliance', icon: IconReceipt },
+    { id: 'payments', title: '5. Payments & Dynamic UPI QR', icon: IconCreditCard },
+    { id: 'data', title: '6. Data Storage & Privacy', icon: IconShield },
+    { id: 'refunds', title: '7. Subscriptions, Fees & Refunds', icon: IconRefresh },
+    { id: 'liability', title: '8. Warranties & Limitation of Liability', icon: IconScale },
+    { id: 'termination', title: '9. Termination & Account Suspension', icon: IconFileText },
+    { id: 'governing-law', title: '10. Governing Law & Jurisdiction', icon: IconBuildingStore },
+    { id: 'contact', title: '11. Support & Contact Information', icon: IconMail },
   ]
 
   const scrollTo = (id) => {
@@ -70,7 +70,7 @@ export default function TermsAndConditions() {
               onClick={() => window.print()}
               className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-3 text-xs font-semibold text-[var(--ink)] transition-colors hover:bg-[var(--line)]/30"
             >
-              <Printer size={14} />
+              <IconPrinter size={14} />
               <span className="hidden sm:inline">Print Document</span>
             </button>
             <Link
@@ -88,7 +88,7 @@ export default function TermsAndConditions() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
             <div className=" mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--muted)] rounded-full" >
-              <Scale size={13} />
+              <IconScale size={13} />
               <span>Legal Agreement & Terms of Service</span>
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight text-[var(--ink)] sm:text-4xl">
@@ -100,7 +100,7 @@ export default function TermsAndConditions() {
 
             <div className="mt-6 flex flex-wrap items-center gap-4 text-xs font-medium text-[var(--muted)]">
               <div className="flex items-center gap-1.5">
-                <Clock size={14} className="text-teal-600" />
+                <IconClock size={14} className="text-teal-600" />
                 <span>Effective Date: <strong>October 11, 2026</strong></span>
               </div>
               <span className="text-[var(--line)]">|</span>
@@ -109,7 +109,7 @@ export default function TermsAndConditions() {
               </div>
               <span className="text-[var(--line)]">|</span>
               <div className="flex items-center gap-1.5">
-                <Building2 size={14} className="text-blue-600" />
+                <IconBuildingStore size={14} className="text-blue-600" />
                 <span>Operator: <strong>Dreamwithtech</strong></span>
               </div>
             </div>
@@ -150,7 +150,7 @@ export default function TermsAndConditions() {
 
               <div className="mt-6 rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-elevated)] p-3 text-xs">
                 <div className="flex items-center gap-1.5 font-bold text-[var(--ink)]">
-                  <Mail size={13} className="text-[#1E3A5F] dark:text-blue-400" />
+                  <IconMail size={13} className="text-[#1E3A5F] dark:text-blue-400" />
                   <span>Questions?</span>
                 </div>
                 <p className="mt-1 text-[11px] text-[var(--muted)]">
@@ -169,7 +169,7 @@ export default function TermsAndConditions() {
             <article id="acceptance" className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6 shadow-xs">
               <div className="flex items-center gap-2.5 border-b border-[var(--line)] pb-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg  dark:text-green-300 width-[32px] height-[32px]">
-                  <CheckCircle2 size={18} />
+                  <IconCircleCheck size={18} />
                 </div>
                 <h2 className="text-lg font-bold text-[var(--ink)]">1. Acceptance of Terms</h2>
               </div>
@@ -187,7 +187,7 @@ export default function TermsAndConditions() {
             <article id="license" className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6 shadow-xs">
               <div className="flex items-center gap-2.5 border-b border-[var(--line)] pb-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg  dark:text-green-300 width-[32px] height-[32px]">
-                  <Laptop size={18} />
+                  <IconDeviceLaptop size={18} />
                 </div>
                 <h2 className="text-lg font-bold text-[var(--ink)]">2. Software License &amp; Permitted Use</h2>
               </div>
@@ -209,7 +209,7 @@ export default function TermsAndConditions() {
             <article id="accounts" className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6 shadow-xs">
               <div className="flex items-center gap-2.5 border-b border-[var(--line)] pb-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg  dark:text-green-300 width-[32px] height-[32px]">
-                  <Lock size={18} />
+                  <IconLock size={18} />
                 </div>
                 <h2 className="text-lg font-bold text-[var(--ink)]">3. User Accounts &amp; Security</h2>
               </div>
@@ -227,7 +227,7 @@ export default function TermsAndConditions() {
             <article id="billing" className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6 shadow-xs">
               <div className="flex items-center gap-2.5 border-b border-[var(--line)] pb-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg  dark:text-green-300 width-[32px] height-[32px]">
-                  <Receipt size={18} />
+                  <IconReceipt size={18} />
                 </div>
                 <h2 className="text-lg font-bold text-[var(--ink)]">4. Billing, Invoicing &amp; GST Compliance</h2>
               </div>
@@ -245,7 +245,7 @@ export default function TermsAndConditions() {
             <article id="payments" className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6 shadow-xs">
               <div className="flex items-center gap-2.5 border-b border-[var(--line)] pb-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg  dark:text-green-300 width-[32px] height-[32px]">
-                  <CreditCard size={18} />
+                  <IconCreditCard size={18} />
                 </div>
                 <h2 className="text-lg font-bold text-[var(--ink)]">5. Payments &amp; Dynamic UPI QR Integration</h2>
               </div>
@@ -263,7 +263,7 @@ export default function TermsAndConditions() {
             <article id="data" className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6 shadow-xs">
               <div className="flex items-center gap-2.5 border-b border-[var(--line)] pb-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg  dark:text-green-300 width-[32px] height-[32px]">
-                  <Shield size={18} />
+                  <IconShield size={18} />
                 </div>
                 <h2 className="text-lg font-bold text-[var(--ink)]">6. Data Storage, Backups &amp; Privacy</h2>
               </div>
@@ -281,7 +281,7 @@ export default function TermsAndConditions() {
             <article id="refunds" className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6 shadow-xs">
               <div className="flex items-center gap-2.5 border-b border-[var(--line)] pb-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg  dark:text-green-300 width-[32px] height-[32px]">
-                  <RefreshCw size={18} />
+                  <IconRefresh size={18} />
                 </div>
                 <h2 className="text-lg font-bold text-[var(--ink)]">7. Subscriptions, Fees &amp; Refund Policy</h2>
               </div>
@@ -299,7 +299,7 @@ export default function TermsAndConditions() {
             <article id="liability" className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6 shadow-xs">
               <div className="flex items-center gap-2.5 border-b border-[var(--line)] pb-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg  dark:text-green-300 width-[32px] height-[32px]">
-                  <Scale size={18} />
+                  <IconScale size={18} />
                 </div>
                 <h2 className="text-lg font-bold text-[var(--ink)]">8. Warranties &amp; Limitation of Liability</h2>
               </div>
@@ -317,7 +317,7 @@ export default function TermsAndConditions() {
             <article id="termination" className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6 shadow-xs">
               <div className="flex items-center gap-2.5 border-b border-[var(--line)] pb-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg  dark:text-green-300 width-[32px] height-[32px]">
-                  <FileText size={18} />
+                  <IconFileText size={18} />
                 </div>
                 <h2 className="text-lg font-bold text-[var(--ink)]">9. Termination &amp; Account Suspension</h2>
               </div>
@@ -335,7 +335,7 @@ export default function TermsAndConditions() {
             <article id="governing-law" className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6 shadow-xs">
               <div className="flex items-center gap-2.5 border-b border-[var(--line)] pb-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg  dark:text-green-300 width-[32px] height-[32px]">
-                  <Building2 size={18} />
+                  <IconBuildingStore size={18} />
                 </div>
                 <h2 className="text-lg font-bold text-[var(--ink)]">10. Governing Law &amp; Jurisdiction</h2>
               </div>
@@ -353,7 +353,7 @@ export default function TermsAndConditions() {
             <article id="contact" className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6 shadow-xs">
               <div className="flex items-center gap-2.5 border-b border-[var(--line)] pb-3">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg  dark:text-green-300 width-[32px] height-[32px]">
-                  <Mail size={18} />
+                  <IconMail size={18} />
                 </div>
                 <h2 className="text-lg font-bold text-[var(--ink)]">11. Support &amp; Contact Information</h2>
               </div>

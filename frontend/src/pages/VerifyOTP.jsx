@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { KeyRound, ShieldCheck, ArrowRight, RotateCw } from 'lucide-react'
+import {
+  IconKey,
+  IconShieldCheck,
+  IconArrowRight,
+  IconRotateClockwise,
+} from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 import http from '../api'
 import { saveAuthSession } from '../services/tokenStorage'
@@ -116,7 +121,7 @@ export default function VerifyOTP() {
           <div className="login-content">
             <div className="login-heading">
               <span className="login-heading-icon" aria-hidden="true">
-                <KeyRound size={18} />
+                <IconKey size={18} />
               </span>
               <h1 id="verify-title">{purposeParam === 'reset' ? 'Verify your email' : 'Verify your account'}</h1>
               <p>

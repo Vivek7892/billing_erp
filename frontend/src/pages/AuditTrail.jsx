@@ -3,32 +3,32 @@ import api from '../api'
 import { PageHeader, Spinner, Modal, Pagination } from '../components/UI'
 import toast from 'react-hot-toast'
 import {
-  ShieldCheck,
-  Search,
-  X,
-  Filter,
-  Calendar,
-  RotateCcw,
-  ArrowRight,
-  Eye,
-  Download,
-  Laptop,
-  CheckCircle2,
-  XCircle,
-  FileText,
-  User,
-  Tag,
-  Layers,
-  Copy,
-  Check,
-  AlertTriangle,
-  ChevronDown,
-  ChevronUp,
-  CreditCard,
-  Settings,
-  Activity,
-  Sparkles,
-} from 'lucide-react'
+  IconShieldCheck,
+  IconSearch,
+  IconX,
+  IconFilter,
+  IconCalendar,
+  IconRotate2,
+  IconArrowRight,
+  IconEye,
+  IconDownload,
+  IconDeviceLaptop,
+  IconCircleCheck,
+  IconCircleX,
+  IconFileText,
+  IconUser,
+  IconTag,
+  IconLayersLinked,
+  IconCopy,
+  IconCheck,
+  IconAlertTriangle,
+  IconChevronDown,
+  IconChevronUp,
+  IconCreditCard,
+  IconSettings,
+  IconActivity,
+  IconSparkles,
+} from '@tabler/icons-react'
 
 // ============================================================
 // FORMATTERS & FIELD DICTIONARIES
@@ -527,7 +527,7 @@ export default function AuditTrail() {
     if (isFail) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800">
-          <XCircle size={12} className="shrink-0 text-rose-600 dark:text-rose-400" />
+          <IconCircleX size={12} className="shrink-0 text-rose-600 dark:text-rose-400" />
           <span className="truncate">{action}</span>
         </span>
       )
@@ -536,7 +536,7 @@ export default function AuditTrail() {
     if (action.includes('PRICE')) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800">
-          <Tag size={12} className="shrink-0 text-amber-600 dark:text-amber-400" />
+          <IconTag size={12} className="shrink-0 text-amber-600 dark:text-amber-400" />
           <span className="truncate">{action}</span>
         </span>
       )
@@ -545,7 +545,7 @@ export default function AuditTrail() {
     if (action.includes('STOCK')) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-teal-50 text-teal-800 border border-teal-200 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-800">
-          <Layers size={12} className="shrink-0 text-teal-600 dark:text-teal-400" />
+          <IconLayersLinked size={12} className="shrink-0 text-teal-600 dark:text-teal-400" />
           <span className="truncate">{action}</span>
         </span>
       )
@@ -554,7 +554,7 @@ export default function AuditTrail() {
     if (action.includes('INVOICE') || action.includes('BILL')) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-50 text-sky-800 border border-sky-200 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800">
-          <FileText size={12} className="shrink-0 text-sky-600 dark:text-sky-400" />
+          <IconFileText size={12} className="shrink-0 text-sky-600 dark:text-sky-400" />
           <span className="truncate">{action}</span>
         </span>
       )
@@ -563,7 +563,7 @@ export default function AuditTrail() {
     if (action.includes('PAYMENT') || action.includes('REFUND')) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800">
-          <CreditCard size={12} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <IconCreditCard size={12} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
           <span className="truncate">{action}</span>
         </span>
       )
@@ -572,7 +572,7 @@ export default function AuditTrail() {
     if (action.includes('USER') || action.includes('AUTH') || action.includes('LOGIN')) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-800 border border-indigo-200 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800">
-          <User size={12} className="shrink-0 text-indigo-600 dark:text-indigo-400" />
+          <IconUser size={12} className="shrink-0 text-indigo-600 dark:text-indigo-400" />
           <span className="truncate">{action}</span>
         </span>
       )
@@ -581,7 +581,7 @@ export default function AuditTrail() {
     if (action.includes('SETTING')) {
       return (
         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-800 border border-slate-300 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
-          <Settings size={12} className="shrink-0 text-slate-600 dark:text-slate-400" />
+          <IconSettings size={12} className="shrink-0 text-slate-600 dark:text-slate-400" />
           <span className="truncate">{action}</span>
         </span>
       )
@@ -589,7 +589,7 @@ export default function AuditTrail() {
 
     return (
       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800">
-        <CheckCircle2 size={12} className="shrink-0 text-blue-600 dark:text-blue-400" />
+        <IconCircleCheck size={12} className="shrink-0 text-blue-600 dark:text-blue-400" />
         <span className="truncate">{action}</span>
       </span>
     )
@@ -606,7 +606,7 @@ export default function AuditTrail() {
       return (
         <span className="inline-flex items-center gap-1 font-mono text-[11px]">
           <span className="text-rose-600 line-through dark:text-rose-400">{formatCurrency(p)}</span>
-          <ArrowRight size={10} className="text-[var(--muted)]" />
+          <IconArrowRight size={10} className="text-[var(--muted)]" />
           <span className="font-bold text-teal-700 dark:text-teal-400">{formatCurrency(n)}</span>
         </span>
       )
@@ -618,7 +618,7 @@ export default function AuditTrail() {
       return (
         <span className="inline-flex items-center gap-1 font-mono text-[11px]">
           <span className="text-[var(--muted)]">{p}</span>
-          <ArrowRight size={10} className="text-[var(--muted)]" />
+          <IconArrowRight size={10} className="text-[var(--muted)]" />
           <span className="font-bold text-teal-700 dark:text-teal-400">{n}</span>
         </span>
       )
@@ -628,7 +628,7 @@ export default function AuditTrail() {
       return (
         <span className="inline-flex items-center gap-1 font-mono text-[11px]">
           <span className="text-[var(--muted)] uppercase">{prevObj.role || 'prev'}</span>
-          <ArrowRight size={10} className="text-[var(--muted)]" />
+          <IconArrowRight size={10} className="text-[var(--muted)]" />
           <span className="font-bold text-indigo-700 dark:text-indigo-400 uppercase">{newObj.role || 'new'}</span>
         </span>
       )
@@ -675,7 +675,7 @@ export default function AuditTrail() {
               className="min-h-[38px] flex items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-elevated)] disabled:opacity-60 transition shadow-xs"
               title="Refresh audit trail"
             >
-              <RotateCcw size={14} className={loading ? 'animate-spin' : ''} />
+              <IconRotate2 size={14} className={loading ? 'animate-spin' : ''} />
               <span>Refresh</span>
             </button>
 
@@ -686,7 +686,7 @@ export default function AuditTrail() {
               className="min-h-[38px] flex items-center justify-center gap-1.5 rounded-lg bg-[#1E3A5F] px-3.5 text-xs font-semibold text-white hover:bg-[#162F4D] disabled:opacity-50 transition shadow-xs"
               title="Export filtered audit logs to CSV"
             >
-              <Download size={14} className={exporting ? 'animate-bounce' : ''} />
+              <IconDownload size={14} className={exporting ? 'animate-bounce' : ''} />
               <span>{exporting ? 'Exporting...' : 'Export CSV'}</span>
             </button>
           </div>
@@ -696,16 +696,16 @@ export default function AuditTrail() {
       {/* Audit health summary */}
       <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-3 shadow-xs" aria-label="Audit health">
         <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-[var(--muted)]">
-          <ShieldCheck size={14} className="text-[var(--ink-secondary)]" /> Audit health
+          <IconShieldCheck size={14} className="text-[var(--ink-secondary)]" /> Audit health
           {metrics.failCount === 0 && <span className="normal-case tracking-normal font-medium text-emerald-700 dark:text-emerald-400">· No failures detected</span>}
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
           {[
-            { label: 'Failed events', value: metrics.failCount, icon: XCircle, tone: metrics.failCount ? 'text-rose-700 dark:text-rose-300' : 'text-[var(--ink)]', hint: metrics.failCount ? 'Review required' : 'No failures' },
-            { label: 'High-impact', value: metrics.highImpactCount, icon: AlertTriangle, tone: 'text-amber-700 dark:text-amber-300', hint: 'Recorded changes' },
-            { label: 'Matching events', value: metrics.totalMatching, icon: FileText, tone: 'text-[var(--ink)]', hint: `of ${metrics.totalOverall.toLocaleString()} total` },
-            { label: 'Success rate', value: `${metrics.successRate}%`, icon: CheckCircle2, tone: 'text-emerald-700 dark:text-emerald-300', hint: `${metrics.successCount.toLocaleString()} successful` },
-            { label: 'Unique actors', value: metrics.operatorsCount, icon: User, tone: 'text-[var(--ink)]', hint: 'Operators recorded' },
+            { label: 'Failed events', value: metrics.failCount, icon: IconCircleX, tone: metrics.failCount ? 'text-rose-700 dark:text-rose-300' : 'text-[var(--ink)]', hint: metrics.failCount ? 'Review required' : 'No failures' },
+            { label: 'High-impact', value: metrics.highImpactCount, icon: IconAlertTriangle, tone: 'text-amber-700 dark:text-amber-300', hint: 'Recorded changes' },
+            { label: 'Matching events', value: metrics.totalMatching, icon: IconFileText, tone: 'text-[var(--ink)]', hint: `of ${metrics.totalOverall.toLocaleString()} total` },
+            { label: 'Success rate', value: `${metrics.successRate}%`, icon: IconCircleCheck, tone: 'text-emerald-700 dark:text-emerald-300', hint: `${metrics.successCount.toLocaleString()} successful` },
+            { label: 'Unique actors', value: metrics.operatorsCount, icon: IconUser, tone: 'text-[var(--ink)]', hint: 'Operators recorded' },
           ].map(item => {
             const Icon = item.icon
             const Tag = item.label === 'High-impact' || item.label === 'Failed events' ? 'button' : 'div'
@@ -739,7 +739,7 @@ export default function AuditTrail() {
                 : 'bg-[var(--surface-elevated)] text-[var(--ink-secondary)] border-[var(--line)] hover:border-rose-300 hover:text-rose-700'
             }`}
           >
-            <XCircle size={12} className={resultFilter === 'failure' ? 'text-rose-600' : 'text-slate-400'} />
+            <IconCircleX size={12} className={resultFilter === 'failure' ? 'text-rose-600' : 'text-slate-400'} />
             <span>Failed</span>
             {metrics.failCount > 0 && (
               <span className="ml-1 rounded-full bg-rose-600 text-white text-[10px] px-1.5 py-0.2">
@@ -757,7 +757,7 @@ export default function AuditTrail() {
                 : 'bg-[var(--surface-elevated)] text-[var(--ink-secondary)] border-[var(--line)] hover:border-amber-300 hover:text-amber-700'
             }`}
           >
-            <AlertTriangle size={12} className={highImpactOnly ? 'text-amber-600' : 'text-slate-400'} />
+            <IconAlertTriangle size={12} className={highImpactOnly ? 'text-amber-600' : 'text-slate-400'} />
             <span>High Impact</span>
             {metrics.highImpactCount > 0 && (
               <span className="ml-1 rounded-full bg-amber-600 text-white text-[10px] px-1.5 py-0.2">
@@ -777,7 +777,7 @@ export default function AuditTrail() {
                 : 'bg-[var(--surface-elevated)] text-[var(--ink-secondary)] border-[var(--line)] hover:border-teal-300 hover:text-teal-700'
             }`}
           >
-            <Tag size={12} className={actionFilter === 'PRICE_CHANGED' ? 'text-teal-600' : 'text-slate-400'} />
+            <IconTag size={12} className={actionFilter === 'PRICE_CHANGED' ? 'text-teal-600' : 'text-slate-400'} />
             <span>Price Changes</span>
           </button>
 
@@ -792,7 +792,7 @@ export default function AuditTrail() {
                 : 'bg-[var(--surface-elevated)] text-[var(--ink-secondary)] border-[var(--line)] hover:border-indigo-300 hover:text-indigo-700'
             }`}
           >
-            <User size={12} className={moduleFilter === 'user' ? 'text-indigo-600' : 'text-slate-400'} />
+            <IconUser size={12} className={moduleFilter === 'user' ? 'text-indigo-600' : 'text-slate-400'} />
             <span>Security & Users</span>
           </button>
         </div>
@@ -802,9 +802,9 @@ export default function AuditTrail() {
           onClick={() => setShowDistribution(!showDistribution)}
           className="inline-flex items-center gap-1 text-xs font-semibold text-[#1E3A5F] hover:text-[#162F4D] dark:text-sky-300"
         >
-          <Activity size={13} />
+          <IconActivity size={13} />
           <span>{showDistribution ? 'Hide Activity Distribution' : 'Activity Distribution'}</span>
-          {showDistribution ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          {showDistribution ? <IconChevronUp size={13} /> : <IconChevronDown size={13} />}
         </button>
       </div>
 
@@ -813,7 +813,7 @@ export default function AuditTrail() {
         <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 shadow-xs space-y-3 transition">
           <div className="flex items-center justify-between border-b border-[var(--line-subtle)] pb-2">
             <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)] flex items-center gap-1.5">
-              <Activity size={14} className="text-[#1E3A5F] dark:text-sky-400" />
+              <IconActivity size={14} className="text-[#1E3A5F] dark:text-sky-400" />
               Event Volume Distribution Breakdown
             </h4>
             <span className="text-[11px] text-[var(--muted)]">Based on currently matching audit logs</span>
@@ -898,7 +898,7 @@ export default function AuditTrail() {
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
           {/* Quick Search */}
           <div className="group relative flex items-center min-h-[40px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 transition focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15">
-            <Search size={14} className="text-[var(--muted)] shrink-0 group-focus-within:text-[#1E3A5F]" />
+            <IconSearch size={14} className="text-[var(--muted)] shrink-0 group-focus-within:text-[#1E3A5F]" />
             <input
               ref={searchInputRef}
               type="text"
@@ -914,14 +914,14 @@ export default function AuditTrail() {
                 className="text-[var(--muted)] hover:text-[var(--ink)] p-1 rounded"
                 title="Clear search"
               >
-                <X size={13} />
+                <IconX size={13} />
               </button>
             ) : null}
           </div>
 
           {/* Module Filter */}
           <div className="flex items-center gap-1.5">
-            <Filter size={14} className="text-[var(--muted)] shrink-0" />
+            <IconFilter size={14} className="text-[var(--muted)] shrink-0" />
             <select
               className="input w-full h-[40px] text-xs font-medium"
               value={moduleFilter}
@@ -946,7 +946,7 @@ export default function AuditTrail() {
 
           {/* Action Filter */}
           <div className="flex items-center gap-1.5">
-            <Tag size={14} className="text-[var(--muted)] shrink-0" />
+            <IconTag size={14} className="text-[var(--muted)] shrink-0" />
             <select
               className="input w-full h-[40px] text-xs font-medium"
               value={actionFilter}
@@ -999,7 +999,7 @@ export default function AuditTrail() {
 
           {/* Outcome Filter */}
           <div className="flex items-center gap-1.5">
-            <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <IconCircleCheck size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
             <select
               className="input w-full h-[40px] text-xs font-medium"
               value={resultFilter}
@@ -1015,14 +1015,14 @@ export default function AuditTrail() {
 
         <details open={showAdvancedFilters} onToggle={e => setShowAdvancedFilters(e.currentTarget.open)} className="rounded-md border border-[var(--line-subtle)] px-3">
         <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-2 text-xs font-semibold text-[var(--ink-secondary)]">
-          <span className="inline-flex items-center gap-2"><Filter size={13} /> More filters</span>
+          <span className="inline-flex items-center gap-2"><IconFilter size={13} /> More filters</span>
           <span className="text-[10px] text-[var(--muted)]">Operator, entity and date range</span>
         </summary>
         {/* Row 2: Operator, Target Entity, Date From, Date To */}
         <div className="grid grid-cols-1 gap-2.5 pb-3 sm:grid-cols-2 lg:grid-cols-4">
           {/* Operator Filter */}
           <div className="flex items-center gap-1.5">
-            <User size={14} className="text-[var(--muted)] shrink-0" />
+            <IconUser size={14} className="text-[var(--muted)] shrink-0" />
             <select
               className="input w-full h-[40px] text-xs font-medium"
               value={operatorFilter}
@@ -1040,7 +1040,7 @@ export default function AuditTrail() {
 
           {/* Target Entity Filter */}
           <div className="flex items-center gap-1.5">
-            <Layers size={14} className="text-[var(--muted)] shrink-0" />
+            <IconLayersLinked size={14} className="text-[var(--muted)] shrink-0" />
             <select
               className="input w-full h-[40px] text-xs font-medium"
               value={entityFilter}
@@ -1058,7 +1058,7 @@ export default function AuditTrail() {
 
           {/* Date From */}
           <div className="flex items-center gap-1.5">
-            <Calendar size={14} className="text-[var(--muted)] shrink-0" />
+            <IconCalendar size={14} className="text-[var(--muted)] shrink-0" />
             <div className="relative w-full">
               <input
                 type="date"
@@ -1078,7 +1078,7 @@ export default function AuditTrail() {
 
           {/* Date To */}
           <div className="flex items-center gap-1.5">
-            <Calendar size={14} className="text-[var(--muted)] shrink-0" />
+            <IconCalendar size={14} className="text-[var(--muted)] shrink-0" />
             <div className="relative w-full">
               <input
                 type="date"
@@ -1131,7 +1131,7 @@ export default function AuditTrail() {
             {activeFiltersCount > 0 ? (
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-[#1E3A5F] border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800">
-                  <Sparkles size={11} />
+                  <IconSparkles size={11} />
                   {activeFiltersCount} active {activeFiltersCount === 1 ? 'filter' : 'filters'}
                 </span>
                 <button
@@ -1139,7 +1139,7 @@ export default function AuditTrail() {
                   onClick={resetFilters}
                   className="inline-flex items-center gap-1 rounded-md border border-rose-300 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-300 transition"
                 >
-                  <RotateCcw size={11} /> Clear All
+                  <IconRotate2 size={11} /> Clear All
                 </button>
               </div>
             ) : (
@@ -1158,7 +1158,7 @@ export default function AuditTrail() {
           </div>
         ) : filteredLogs.length === 0 ? (
           <div className="py-16 text-center text-[var(--muted)] space-y-2">
-            <ShieldCheck size={32} className="mx-auto opacity-40 text-[#1E3A5F] dark:text-slate-400" />
+            <IconShieldCheck size={32} className="mx-auto opacity-40 text-[#1E3A5F] dark:text-slate-400" />
             <p className="text-sm font-bold text-[var(--ink)]">No audit events match your criteria</p>
             <p className="text-xs text-[var(--muted)] max-w-sm mx-auto">
               Try adjusting your search query, clearing event filters, or broadening the date range.
@@ -1168,7 +1168,7 @@ export default function AuditTrail() {
               onClick={resetFilters}
               className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--line-subtle)]"
             >
-              <RotateCcw size={12} /> Reset all filters
+              <IconRotate2 size={12} /> Reset all filters
             </button>
           </div>
         ) : (
@@ -1205,7 +1205,7 @@ export default function AuditTrail() {
                       }}
                       className="inline-flex min-h-[34px] items-center gap-1 rounded-lg bg-[#1E3A5F] px-2.5 text-xs font-semibold text-white shadow-xs hover:bg-[#162F4D]"
                     >
-                      <Eye size={12} /> View
+                      <IconEye size={12} /> View
                     </button>
                   </div>
 
@@ -1236,7 +1236,7 @@ export default function AuditTrail() {
 
                   <div className="flex items-center justify-between text-[11px] text-[var(--muted)] pt-1 border-t border-[var(--line-subtle)]">
                     <div className="flex items-center gap-1">
-                      <User size={12} className="text-[#1E3A5F] dark:text-slate-300" />
+                      <IconUser size={12} className="text-[#1E3A5F] dark:text-slate-300" />
                       <span className="font-semibold text-[var(--ink)]">{log.username || 'System'}</span>
                       {log.user_role && (
                         <span className="text-[9px] uppercase px-1 rounded bg-[var(--surface-elevated)] border border-[var(--line)]">
@@ -1304,7 +1304,7 @@ export default function AuditTrail() {
                       {/* 2. Operator (Left-aligned, user icon + name + role) */}
                       <td className="py-3 px-3 whitespace-nowrap text-left">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <User size={13} className="text-[#1E3A5F] dark:text-sky-300 shrink-0" />
+                          <IconUser size={13} className="text-[#1E3A5F] dark:text-sky-300 shrink-0" />
                           <div className="min-w-0">
                             <span className="font-bold text-[var(--ink)] truncate block">
                               {log.username || 'System'}
@@ -1338,12 +1338,12 @@ export default function AuditTrail() {
                       <td className="py-3 px-3 whitespace-nowrap text-center">
                         {log.result === 'failure' ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-200 dark:border-rose-700">
-                            <XCircle size={11} className="text-rose-600" />
+                            <IconCircleX size={11} className="text-rose-600" />
                             Failure
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-200 dark:border-emerald-700">
-                            <CheckCircle2 size={11} className="text-emerald-600" />
+                            <IconCircleCheck size={11} className="text-emerald-600" />
                             Success
                           </span>
                         )}
@@ -1357,7 +1357,7 @@ export default function AuditTrail() {
                       {/* 8. IP / Device (Center-aligned, laptop icon + IP) */}
                       <td className="py-3 px-3 whitespace-nowrap text-center text-[11px] font-mono text-[var(--muted)]">
                         <div className="inline-flex items-center gap-1">
-                          <Laptop size={11} className="text-[var(--muted)] shrink-0" />
+                          <IconDeviceLaptop size={11} className="text-[var(--muted)] shrink-0" />
                           <span>{log.ip_address || '—'}</span>
                         </div>
                       </td>
@@ -1372,7 +1372,7 @@ export default function AuditTrail() {
                           }}
                           className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-bold text-[#1E3A5F] hover:bg-slate-100 dark:text-sky-300 dark:hover:bg-slate-800 transition"
                         >
-                          <Eye size={12} />
+                          <IconEye size={12} />
                           <span>View</span>
                         </button>
                       </td>
@@ -1445,7 +1445,7 @@ export default function AuditTrail() {
                   className="p-1 rounded text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface)] transition"
                   title="Copy log ID"
                 >
-                  {copiedKey === 'Log ID' ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                  {copiedKey === 'Log ID' ? <IconCheck size={13} className="text-emerald-600" /> : <IconCopy size={13} />}
                 </button>
               </div>
             </div>
@@ -1456,7 +1456,7 @@ export default function AuditTrail() {
               <div className="p-3.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] flex items-center gap-1">
-                    <User size={12} className="text-[#1E3A5F] dark:text-sky-300" /> Operator Attribution
+                    <IconUser size={12} className="text-[#1E3A5F] dark:text-sky-300" /> Operator Attribution
                   </span>
                   {selectedLog.username && (
                     <button
@@ -1465,7 +1465,7 @@ export default function AuditTrail() {
                       className="text-[var(--muted)] hover:text-[var(--ink)]"
                       title="Copy username"
                     >
-                      {copiedKey === 'Username' ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                      {copiedKey === 'Username' ? <IconCheck size={11} className="text-emerald-600" /> : <IconCopy size={11} />}
                     </button>
                   )}
                 </div>
@@ -1484,7 +1484,7 @@ export default function AuditTrail() {
               <div className="p-3.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] flex items-center gap-1">
-                    <Layers size={12} className="text-[#0F766E] dark:text-teal-300" /> Target Entity
+                    <IconLayersLinked size={12} className="text-[#0F766E] dark:text-teal-300" /> Target Entity
                   </span>
                   {selectedLog.entity_id && (
                     <button
@@ -1493,7 +1493,7 @@ export default function AuditTrail() {
                       className="text-[var(--muted)] hover:text-[var(--ink)]"
                       title="Copy Entity ID"
                     >
-                      {copiedKey === 'Entity ID' ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                      {copiedKey === 'Entity ID' ? <IconCheck size={11} className="text-emerald-600" /> : <IconCopy size={11} />}
                     </button>
                   )}
                 </div>
@@ -1515,7 +1515,7 @@ export default function AuditTrail() {
             <div className="rounded-lg border border-[var(--line)] overflow-hidden">
               <div className="bg-[var(--surface-elevated)] px-3.5 py-2.5 border-b border-[var(--line)] flex items-center justify-between">
                 <h4 className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink)] flex items-center gap-1.5">
-                  <Activity size={13} className="text-teal-600" /> Recorded Business Field Changes
+                  <IconActivity size={13} className="text-teal-600" /> Recorded Business Field Changes
                 </h4>
                 <span className="text-[10px] text-[var(--muted)]">Zero raw JSON • Formatted Indian currency (₹)</span>
               </div>
@@ -1580,7 +1580,7 @@ export default function AuditTrail() {
             <div className="p-3.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] flex items-center gap-1">
-                  <Laptop size={12} className="text-[#1E3A5F] dark:text-sky-300" /> Network Client & Device Details
+                  <IconDeviceLaptop size={12} className="text-[#1E3A5F] dark:text-sky-300" /> Network Client & Device Details
                 </span>
                 {selectedLog.ip_address && (
                   <button
@@ -1589,9 +1589,9 @@ export default function AuditTrail() {
                     className="inline-flex items-center gap-1 text-[11px] text-[var(--muted)] hover:text-[var(--ink)]"
                   >
                     {copiedKey === 'IP Address' ? (
-                      <Check size={11} className="text-emerald-600" />
+                      <IconCheck size={11} className="text-emerald-600" />
                     ) : (
-                      <Copy size={11} />
+                      <IconCopy size={11} />
                     )}
                     <span>Copy IP</span>
                   </button>

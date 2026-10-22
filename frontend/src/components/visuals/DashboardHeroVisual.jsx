@@ -1,5 +1,10 @@
 import { Link } from 'react-router-dom'
-import { Plus, BarChart3, ShieldCheck, ArrowUpRight } from 'lucide-react'
+import {
+  IconPlus,
+  IconChartBar,
+  IconShieldCheck,
+  IconArrowUpRight,
+} from '@tabler/icons-react'
 import DreamVisualContainer from './DreamVisualContainer'
 import dashboardHero from '../../assets/dreamwithtech/dashboard-hero.webp'
 
@@ -30,7 +35,7 @@ export default function DashboardHeroVisual({ className = '', uploadedSrc }) {
               </span>
               <span className="text-white/40">·</span>
               <span className="text-[11px] font-medium text-white/80 flex items-center gap-1">
-                <ShieldCheck size={13} className="text-[#16A9D8]" /> GST Compliant &amp; Cloud Synced
+                <IconShieldCheck size={13} className="text-[#16A9D8]" /> GST Compliant &amp; Cloud Synced
               </span>
             </div>
             <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
@@ -42,16 +47,16 @@ export default function DashboardHeroVisual({ className = '', uploadedSrc }) {
               to="/new-bill"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#FFE500] text-[#003F8F] text-xs font-bold hover:bg-yellow-300 transition-colors shadow-sm"
             >
-              <Plus size={15} />
+              <IconPlus size={15} />
               <span>New Bill (Ctrl+N)</span>
             </Link>
             <Link
               to="/reports"
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white text-xs font-semibold backdrop-blur-sm border border-white/20 transition-colors"
             >
-              <BarChart3 size={14} />
+              <IconChartBar size={14} />
               <span>Analytics</span>
-              <ArrowUpRight size={13} className="text-[#16A9D8]" />
+              <IconArrowUpRight size={13} className="text-[#16A9D8]" />
             </Link>
           </div>
         </div>

@@ -10,6 +10,8 @@ from django.core.mail import EmailMultiAlternatives
 from django.db import connection, transaction
 from django.utils import timezone
 
+from api.email_backends import PermanentEmailError, TransientEmailError, mask_email
+
 
 logger = logging.getLogger(__name__)
 
@@ -24,29 +26,47 @@ def _run_email_task(func, *args, **kwargs):
     """Execute an email delivery task in a background worker thread with retries and connection cleanup."""
     max_retries = 3
     base_delay = 1.0
+    func_name = getattr(func, '__name__', str(func))
 
     try:
         for attempt in range(1, max_retries + 1):
             try:
                 func(*args, **kwargs)
-                logger.info("Background email task [%s] succeeded on attempt %d", getattr(func, '__name__', str(func)), attempt)
+                logger.info("Background email task [%s] succeeded on attempt %d", func_name, attempt)
                 return
-            except (smtplib.SMTPException, socket.error, OSError, TimeoutError) as exc:
+            except PermanentEmailError as exc:
+                logger.error(
+                    "Background email task [%s] encountered permanent configuration or authentication error: %s. Not retrying.",
+                    func_name, exc
+                )
+                return
+            except (TransientEmailError, smtplib.SMTPException, socket.error, OSError, TimeoutError) as exc:
+                errno = getattr(exc, 'errno', None)
+                if errno in (101, 111):
+                    logger.error(
+                        "Background email task [%s] encountered host network restriction [Errno %s]: %s. "
+                        "Direct outbound SMTP connections (ports 25, 465, 587) are blocked by the host platform environment (e.g. Render). "
+                        "To fix this on Render, configure an HTTPS transactional email provider (such as RESEND_API_KEY, BREVO_API_KEY, or SENDGRID_API_KEY). "
+                        "Not retrying.",
+                        func_name, errno, exc
+                    )
+                    return
+
                 logger.warning(
                     "Background email task [%s] attempt %d/%d encountered transient error: %s",
-                    getattr(func, '__name__', str(func)), attempt, max_retries, exc
+                    func_name, attempt, max_retries, exc
                 )
                 if attempt < max_retries:
                     time.sleep(base_delay * (2 ** (attempt - 1)))
                 else:
                     logger.error(
                         "Background email task [%s] exhausted all %d retries. Delivery failed: %s",
-                        getattr(func, '__name__', str(func)), max_retries, exc, exc_info=True
+                        func_name, max_retries, exc, exc_info=True
                     )
             except Exception as exc:
                 logger.error(
                     "Background email task [%s] failed with unexpected error: %s",
-                    getattr(func, '__name__', str(func)), exc, exc_info=True
+                    func_name, exc, exc_info=True
                 )
                 return
     finally:
@@ -73,11 +93,18 @@ def enqueue_email_task(func, *args, **kwargs):
 
 def get_from_email():
     """Return the configured sender with a professional display name."""
-    raw_from = (
-        getattr(settings, "DEFAULT_FROM_EMAIL", None)
-        or getattr(settings, "EMAIL_HOST_USER", None)
-        or "dreamwithtech.dev@gmail.com"
-    )
+    provider = getattr(settings, "EMAIL_PROVIDER", "auto").lower()
+
+    # Prioritize Resend-specific sender if set (e.g. onboarding@resend.dev during testing)
+    resend_from = getattr(settings, "RESEND_FROM_EMAIL", None)
+    if resend_from and (provider == "resend" or getattr(settings, "RESEND_API_KEY", None)):
+        raw_from = resend_from
+    else:
+        raw_from = (
+            getattr(settings, "DEFAULT_FROM_EMAIL", None)
+            or getattr(settings, "EMAIL_HOST_USER", None)
+            or "dreamwithtech.dev@gmail.com"
+        )
 
     if "<" in raw_from and ">" in raw_from:
         return raw_from
@@ -232,7 +259,10 @@ def _send_onboarding_welcome_worker(recipient, display_name):
         to=[recipient],
     )
     message.attach_alternative(html_content, "text/html")
-    return message.send(fail_silently=False)
+    sent = message.send(fail_silently=False)
+    if sent == 0:
+        raise TransientEmailError(f"Email delivery returned 0 for welcome recipient: {mask_email(recipient)}")
+    return sent
 
 
 def send_onboarding_welcome_email(user):
@@ -336,7 +366,10 @@ def _send_registration_notification_worker(
         to=[recipient],
     )
     message.attach_alternative(html_content, "text/html")
-    return message.send(fail_silently=False)
+    sent = message.send(fail_silently=False)
+    if sent == 0:
+        raise TransientEmailError(f"Email delivery returned 0 for registration notification recipient: {mask_email(recipient)}")
+    return sent
 
 
 def send_registration_notification_email(user, business=None, request=None, shop_registered=False):
@@ -469,7 +502,10 @@ def _send_password_reset_worker(recipient, display_name, reset_link):
         to=[recipient],
     )
     message.attach_alternative(html_content, "text/html")
-    return message.send(fail_silently=False)
+    sent = message.send(fail_silently=False)
+    if sent == 0:
+        raise TransientEmailError(f"Email delivery returned 0 for welcome recipient: {mask_email(recipient)}")
+    return sent
 
 
 def send_password_reset_email(user, reset_link):
@@ -544,7 +580,10 @@ def _send_otp_verification_worker(recipient, otp, display_name, purpose="signup"
         to=[recipient],
     )
     message.attach_alternative(html_content, "text/html")
-    return message.send(fail_silently=False)
+    sent = message.send(fail_silently=False)
+    if sent == 0:
+        raise TransientEmailError(f"Email delivery returned 0 for welcome recipient: {mask_email(recipient)}")
+    return sent
 
 
 def send_otp_verification_email(

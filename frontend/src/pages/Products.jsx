@@ -18,34 +18,34 @@ import {
 import toast from 'react-hot-toast'
 import BarcodePrintModal from '../components/BarcodePrintModal'
 import {
-  Plus,
-  Edit2,
-  Trash2,
-  Barcode,
-  Package,
-  RefreshCw,
-  SlidersHorizontal,
-  Minus,
-  X,
-  Printer,
-  ChevronDown,
-  AlertTriangle,
-  CheckCircle2,
-  XCircle,
-  Eye,
-  History,
-  Download,
-  Upload,
-  ArrowUpDown,
-  Boxes,
-  Tag,
-  Percent,
-  Power,
-  Copy,
-  Check,
-  FileSpreadsheet,
-  MoreVertical,
-} from 'lucide-react'
+  IconPlus,
+  IconEdit,
+  IconTrash,
+  IconBarcode,
+  IconPackage,
+  IconRefresh,
+  IconAdjustmentsHorizontal,
+  IconMinus,
+  IconX,
+  IconPrinter,
+  IconChevronDown,
+  IconAlertTriangle,
+  IconCircleCheck,
+  IconCircleX,
+  IconEye,
+  IconHistory,
+  IconDownload,
+  IconUpload,
+  IconArrowsSort,
+  IconPackages,
+  IconTag,
+  IconPercentage,
+  IconPower,
+  IconCopy,
+  IconCheck,
+  IconFileSpreadsheet,
+  IconDotsVertical,
+} from '@tabler/icons-react'
 
 const UNITS = [
   'pcs',
@@ -123,7 +123,7 @@ function getStockAlertState(product) {
       badgeClass: 'bg-rose-950/40 text-rose-300 border border-rose-800/40',
       dotClass: 'bg-rose-500',
       textClass: 'text-rose-400 font-bold',
-      icon: XCircle,
+      icon: IconCircleX,
     }
   }
 
@@ -134,7 +134,7 @@ function getStockAlertState(product) {
       badgeClass: 'bg-amber-950/40 text-amber-300 border border-amber-800/40',
       dotClass: 'bg-amber-500',
       textClass: 'text-amber-400 font-bold',
-      icon: AlertTriangle,
+      icon: IconAlertTriangle,
     }
   }
 
@@ -144,7 +144,7 @@ function getStockAlertState(product) {
     badgeClass: 'bg-emerald-100 text-emerald-700 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700',
     dotClass: 'bg-emerald-500',
     textClass: 'text-emerald-300 font-bold',
-    icon: CheckCircle2,
+    icon: IconCircleCheck,
   }
 }
 
@@ -186,7 +186,7 @@ function BarcodeQuantityControl({ value, onChange }) {
         className="flex h-11 w-11 shrink-0 items-center justify-center text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] disabled:cursor-not-allowed disabled:opacity-30"
         aria-label="Decrease quantity"
       >
-        <Minus size={16} />
+        <IconMinus size={16} />
       </button>
 
       <input
@@ -206,7 +206,7 @@ function BarcodeQuantityControl({ value, onChange }) {
         className="flex h-11 w-11 shrink-0 items-center justify-center text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] disabled:cursor-not-allowed disabled:opacity-30"
         aria-label="Increase quantity"
       >
-        <Plus size={16} />
+        <IconPlus size={16} />
       </button>
     </div>
   )
@@ -1098,7 +1098,7 @@ export default function Products() {
               className="btn-secondary btn-base flex w-full items-center justify-center gap-1.5 text-xs sm:w-auto"
               title="Export products to CSV"
             >
-              <Download size={15} />
+              <IconDownload size={15} />
               Export
             </button>
 
@@ -1113,7 +1113,7 @@ export default function Products() {
               className="btn-secondary btn-base min-h-[42px] flex items-center justify-center gap-2 text-xs font-semibold"
               title="Import products from CSV"
             >
-              <Upload size={15} />
+              <IconUpload size={15} />
               Import
             </button>
 
@@ -1123,7 +1123,7 @@ export default function Products() {
               className="btn-secondary btn-base min-h-[42px] flex items-center justify-center gap-2 text-xs font-semibold"
               title="Manage product categories and tags"
             >
-              <Tag size={15} />
+              <IconTag size={15} />
               Categories
             </button>
 
@@ -1132,7 +1132,7 @@ export default function Products() {
               onClick={openAdd}
               className="btn-primary btn-base min-h-[42px] col-span-2 sm:col-span-1 flex items-center justify-center gap-2 text-xs font-semibold"
             >
-              <Plus size={16} />
+              <IconPlus size={16} />
               Add Product
             </button>
           </div>
@@ -1156,7 +1156,7 @@ export default function Products() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate">
                 Total Products
               </span>
-              <Boxes size={13} className="text-[#1E3A5F] dark:text-slate-300 shrink-0" />
+              <IconPackages size={13} className="text-[#1E3A5F] dark:text-slate-300 shrink-0" />
             </div>
             <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
               {stats.total}
@@ -1176,7 +1176,7 @@ export default function Products() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate">
                 Active Items
               </span>
-              <CheckCircle2 size={13} className="text-teal-600 dark:text-teal-400 shrink-0" />
+              <IconCircleCheck size={13} className="text-teal-600 dark:text-teal-400 shrink-0" />
             </div>
             <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-teal-600 dark:text-teal-400 tabular-nums truncate">
               {stats.active}
@@ -1196,7 +1196,7 @@ export default function Products() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate">
                 Low Stock Alert
               </span>
-              <AlertTriangle size={13} className="text-amber-600 dark:text-amber-400 shrink-0" />
+              <IconAlertTriangle size={13} className="text-amber-600 dark:text-amber-400 shrink-0" />
             </div>
             <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400 tabular-nums truncate">
               {stats.low}
@@ -1216,7 +1216,7 @@ export default function Products() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate">
                 Out of Stock
               </span>
-              <XCircle size={13} className="text-rose-600 dark:text-rose-400 shrink-0" />
+              <IconCircleX size={13} className="text-rose-600 dark:text-rose-400 shrink-0" />
             </div>
             <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-rose-600 dark:text-rose-400 tabular-nums truncate">
               {stats.out}
@@ -1229,7 +1229,7 @@ export default function Products() {
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate">
                 Stock Valuation
               </span>
-              <Tag size={13} className="text-[#1E3A5F] dark:text-slate-300 shrink-0" />
+              <IconTag size={13} className="text-[#1E3A5F] dark:text-slate-300 shrink-0" />
             </div>
             <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[#1E3A5F] dark:text-slate-200 tabular-nums truncate">
               {formatCurrency(stats.stockValue)}
@@ -1324,7 +1324,7 @@ export default function Products() {
                 className="btn-secondary h-11 w-full px-3 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 flex items-center justify-center gap-1.5 font-medium"
                 title="Reset all filters"
               >
-                <X size={14} />
+                <IconX size={14} />
                 <span>Reset</span>
               </button>
             </div>
@@ -1333,7 +1333,7 @@ export default function Products() {
 
         {/* Quick Filter Pill Badges */}
         <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-[var(--line-subtle)] text-xs">
-          <SlidersHorizontal
+          <IconAdjustmentsHorizontal
             size={13}
             className="shrink-0 text-[var(--muted-light)] mr-1"
           />
@@ -1400,7 +1400,7 @@ export default function Products() {
           <TableSkeleton rows={10} cols={7} label="Loading products" />
         ) : visibleProducts.length === 0 ? (
           <EmptyState
-            icon={Package}
+            icon={IconPackage}
             title={isFilterActive ? 'No products match filters' : 'No products yet'}
             description={
               isFilterActive
@@ -1445,7 +1445,7 @@ export default function Products() {
                           className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-elevated)] transition shadow-xs"
                           title="View Details"
                         >
-                          <Eye size={15} />
+                          <IconEye size={15} />
                         </button>
                         <button
                           type="button"
@@ -1453,7 +1453,7 @@ export default function Products() {
                           className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-elevated)] transition shadow-xs"
                           title="Edit"
                         >
-                          <Edit2 size={15} />
+                          <IconEdit size={15} />
                         </button>
                       </div>
                     </div>
@@ -1524,7 +1524,7 @@ export default function Products() {
                           className="min-h-[36px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-elevated)] shadow-xs transition flex items-center gap-1"
                           title="Print barcode"
                         >
-                          <Barcode size={14} />
+                          <IconBarcode size={14} />
                           <span>Barcode</span>
                         </button>
                       </div>
@@ -1556,7 +1556,7 @@ export default function Products() {
                     >
                       <div className="flex items-center gap-1">
                         Product
-                        <ArrowUpDown size={12} />
+                        <IconArrowsSort size={12} />
                       </div>
                     </th>
                     <th
@@ -1565,7 +1565,7 @@ export default function Products() {
                     >
                       <div className="flex items-center gap-1">
                         SKU / Barcode
-                        <ArrowUpDown size={12} />
+                        <IconArrowsSort size={12} />
                       </div>
                     </th>
                     <th>Category</th>
@@ -1575,7 +1575,7 @@ export default function Products() {
                     >
                       <div className="flex items-center justify-end gap-1">
                         Purchase Price
-                        <ArrowUpDown size={12} />
+                        <IconArrowsSort size={12} />
                       </div>
                     </th>
                     <th
@@ -1584,7 +1584,7 @@ export default function Products() {
                     >
                       <div className="flex items-center justify-end gap-1">
                         Selling Price
-                        <ArrowUpDown size={12} />
+                        <IconArrowsSort size={12} />
                       </div>
                     </th>
                     <th
@@ -1593,7 +1593,7 @@ export default function Products() {
                     >
                       <div className="flex items-center justify-end gap-1">
                         Stock
-                        <ArrowUpDown size={12} />
+                        <IconArrowsSort size={12} />
                       </div>
                     </th>
                     <th className="text-center">GST</th>
@@ -1657,15 +1657,15 @@ export default function Products() {
                                   title="Copy SKU"
                                 >
                                   {copiedSku === product.sku ? (
-                                    <Check size={11} className="text-teal-600" />
+                                    <IconCheck size={11} className="text-teal-600" />
                                   ) : (
-                                    <Copy size={11} />
+                                    <IconCopy size={11} />
                                   )}
                                 </button>
                               )}
                             </div>
                             <span className={`mt-1 inline-flex max-w-full items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-[10px] ${product.barcode ? 'border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink-secondary)]' : 'border-dashed border-[var(--line)] text-[var(--muted)]'}`}>
-                              <Barcode size={11} className="shrink-0" />
+                              <IconBarcode size={11} className="shrink-0" />
                               <span className="truncate">{product.barcode || 'Barcode not assigned'}</span>
                             </span>
                           </div>
@@ -1762,7 +1762,7 @@ export default function Products() {
                               title="Edit Product"
                               aria-label="Edit"
                             >
-                              <Edit2 size={13} />
+                              <IconEdit size={13} />
                             </button>
 
                             <div className="relative">
@@ -1776,7 +1776,7 @@ export default function Products() {
                                 title="More Actions"
                                 aria-label="More actions"
                               >
-                                <MoreVertical size={13} />
+                                <IconDotsVertical size={13} />
                               </button>
 
                               {openActionMenuId === product.id && (
@@ -1794,7 +1794,7 @@ export default function Products() {
                                     }}
                                     className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
                                   >
-                                    <Eye size={13} className="text-[var(--muted)]" />
+                                    <IconEye size={13} className="text-[var(--muted)]" />
                                     <span>View Details</span>
                                   </button>
 
@@ -1806,7 +1806,7 @@ export default function Products() {
                                     }}
                                     className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
                                   >
-                                    <SlidersHorizontal size={13} className="text-[var(--muted)]" />
+                                    <IconAdjustmentsHorizontal size={13} className="text-[var(--muted)]" />
                                     <span>Adjust Stock</span>
                                   </button>
 
@@ -1818,7 +1818,7 @@ export default function Products() {
                                     }}
                                     className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
                                   >
-                                    <History size={13} className="text-[var(--muted)]" />
+                                    <IconHistory size={13} className="text-[var(--muted)]" />
                                     <span>Stock History</span>
                                   </button>
 
@@ -1830,7 +1830,7 @@ export default function Products() {
                                     }}
                                     className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
                                   >
-                                    <Barcode size={13} className="text-[var(--muted)]" />
+                                    <IconBarcode size={13} className="text-[var(--muted)]" />
                                     <span>Print Barcode</span>
                                   </button>
 
@@ -1844,7 +1844,7 @@ export default function Products() {
                                     }}
                                     className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40 transition"
                                   >
-                                    <Trash2 size={13} />
+                                    <IconTrash size={13} />
                                     <span>Delete Product</span>
                                   </button>
                                 </div>
@@ -1916,7 +1916,7 @@ export default function Products() {
             >
               {saving ? (
                 <>
-                  <RefreshCw size={14} className="animate-spin" /> <span>Saving…</span>
+                  <IconRefresh size={14} className="animate-spin" /> <span>Saving…</span>
                 </>
               ) : editId ? (
                 'Update Product'
@@ -2305,7 +2305,7 @@ export default function Products() {
                     }}
                     className="btn-secondary btn-base text-xs flex items-center gap-1.5"
                   >
-                    <SlidersHorizontal size={14} />
+                    <IconAdjustmentsHorizontal size={14} />
                     Adjust Stock
                   </button>
 
@@ -2316,7 +2316,7 @@ export default function Products() {
                     }}
                     className="btn-secondary btn-base text-xs flex items-center gap-1.5"
                   >
-                    <Barcode size={14} />
+                    <IconBarcode size={14} />
                     Barcode
                   </button>
 
@@ -2327,7 +2327,7 @@ export default function Products() {
                     }}
                     className="btn-primary btn-base text-xs flex items-center gap-1.5"
                   >
-                    <Edit2 size={14} />
+                    <IconEdit size={14} />
                     Edit
                   </button>
                 </div>
@@ -2678,7 +2678,7 @@ export default function Products() {
             >
               {adjusting ? (
                 <>
-                  <RefreshCw size={14} className="animate-spin" /> <span>Updating…</span>
+                  <IconRefresh size={14} className="animate-spin" /> <span>Updating…</span>
                 </>
               ) : (
                 'Confirm Adjustment'
@@ -2826,7 +2826,7 @@ export default function Products() {
             >
               {importing ? (
                 <>
-                  <RefreshCw size={14} className="animate-spin" /> <span>Importing…</span>
+                  <IconRefresh size={14} className="animate-spin" /> <span>Importing…</span>
                 </>
               ) : (
                 `Import ${importPreview.length} Products`
@@ -2851,7 +2851,7 @@ export default function Products() {
                 onClick={downloadSampleTemplate}
                 className="btn-secondary px-3 py-1.5 text-xs flex items-center gap-1.5 font-semibold text-[#1E3A5F]"
               >
-                <FileSpreadsheet size={14} />
+                <IconFileSpreadsheet size={14} />
                 Sample Template
               </button>
             </div>
@@ -2861,7 +2861,7 @@ export default function Products() {
             onClick={() => fileInputRef.current?.click()}
             className="flex flex-col items-center justify-center rounded-md border-2 border-dashed border-[var(--line)] bg-[var(--surface)] p-6 cursor-pointer hover:border-[#1E3A5F] transition"
           >
-            <Upload size={28} className="text-[#1E3A5F] mb-2" />
+            <IconUpload size={28} className="text-[#1E3A5F] mb-2" />
             <p className="text-sm font-semibold text-[var(--ink)]">
               {importFile ? importFile.name : 'Click to select CSV file'}
             </p>
@@ -2988,7 +2988,7 @@ export default function Products() {
                 disabled={savingCat || !newCatName.trim()}
                 className="btn-primary min-h-[44px] px-5 text-xs font-bold flex items-center gap-1.5 disabled:opacity-50"
               >
-                <Plus size={15} />
+                <IconPlus size={15} />
                 <span>{savingCat ? 'Adding…' : 'Add Category'}</span>
               </button>
             </div>

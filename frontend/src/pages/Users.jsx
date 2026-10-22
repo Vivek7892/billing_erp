@@ -3,7 +3,16 @@ import api from '../api'
 import { Card, PageHeader, Modal, ConfirmDialog, TableSkeleton, EmptyState, Badge } from '../components/UI'
 import { ROLES } from '../constants'
 import toast from 'react-hot-toast'
-import { Plus, Edit2, Trash2, Search, X, Filter, ShieldCheck, Users as UsersIcon } from 'lucide-react'
+import {
+  IconPlus,
+  IconEdit,
+  IconTrash,
+  IconSearch,
+  IconX,
+  IconFilter,
+  IconShieldCheck,
+  IconUsers as UsersIcon,
+} from '@tabler/icons-react'
 
 const ROLE_OPTIONS = [
   { value: ROLES.OWNER, label: 'Owner', description: 'Full business & system control' },
@@ -174,7 +183,7 @@ export default function Users() {
         subtitle="Manage system credentials and access roles (Accountant, Admin, Manager, Cashier, Owner)"
         action={
           <button onClick={openAdd} className="btn-primary flex min-h-[42px] w-full items-center justify-center gap-2 sm:w-auto">
-            <Plus size={16} /> Add User
+            <IconPlus size={16} /> Add User
           </button>
         }
       />
@@ -219,7 +228,7 @@ export default function Users() {
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="group relative flex items-center min-h-[42px] w-full sm:w-80 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-            <Search size={14} strokeWidth={2.2} />
+            <IconSearch size={14} strokeWidth={2.2} />
           </div>
           <input
             type="text"
@@ -236,7 +245,7 @@ export default function Users() {
               title="Clear search"
               aria-label="Clear search"
             >
-              <X size={13} strokeWidth={2.5} />
+              <IconX size={13} strokeWidth={2.5} />
             </button>
           ) : (
             <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
@@ -272,7 +281,7 @@ export default function Users() {
           />
         ) : filteredUsers.length === 0 ? (
           <EmptyState
-            icon={Search}
+            icon={IconSearch}
             title="No matching users"
             description="No users matched your search and role filters."
             action={{ label: 'Clear Filters', onClick: () => { setSearch(''); setRoleFilter('all'); setStatusFilter('all') } }}
@@ -323,14 +332,14 @@ export default function Users() {
                       <td className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button onClick={() => openEdit(u)} className="icon-btn" title="Edit User">
-                            <Edit2 size={14} />
+                            <IconEdit size={14} />
                           </button>
                           <button
                             onClick={() => setDeleteId(u.id)}
                             className="icon-btn text-rose-600 hover:text-rose-700"
                             title="Delete User"
                           >
-                            <Trash2 size={14} />
+                            <IconTrash size={14} />
                           </button>
                         </div>
                       </td>

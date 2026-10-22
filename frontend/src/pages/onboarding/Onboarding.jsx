@@ -1,19 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
-  Building2,
-  Receipt,
-  Package,
-  CheckCircle2,
-  ArrowRight,
-  ArrowLeft,
-  Store,
-  Printer,
-  Sparkles,
-  ShoppingBag,
-  Check,
-  Edit3,
-} from 'lucide-react'
+  IconBuildingStore,
+  IconReceipt,
+  IconPackage,
+  IconCircleCheck,
+  IconArrowRight,
+  IconArrowLeft,
+  IconPrinter,
+  IconSparkles,
+  IconShoppingBag,
+  IconCheck,
+  IconPencil,
+} from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 import http from '../../api'
 import { useAuth } from '../../AuthContext'
@@ -32,10 +31,10 @@ const BUSINESS_TYPES = [
 ]
 
 const STEPS = [
-  { id: 1, key: 'business', label: 'Business Profile', icon: Building2 },
-  { id: 2, key: 'preferences', label: 'Tax & Invoicing', icon: Receipt },
-  { id: 3, key: 'choices', label: 'Catalogue Setup', icon: Package },
-  { id: 4, key: 'review', label: 'Review & Launch', icon: CheckCircle2 },
+  { id: 1, key: 'business', label: 'Business Profile', icon: IconBuildingStore },
+  { id: 2, key: 'preferences', label: 'Tax & Invoicing', icon: IconReceipt },
+  { id: 3, key: 'choices', label: 'Catalogue Setup', icon: IconPackage },
+  { id: 4, key: 'review', label: 'Review & Launch', icon: IconCircleCheck },
 ]
 
 export default function Onboarding() {
@@ -334,7 +333,7 @@ export default function Onboarding() {
         <main className="onboarding-container">
           <div className="onboarding-card text-center flex flex-col items-center py-10 px-6 max-w-lg">
             <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center mb-4">
-              <CheckCircle2 size={36} />
+              <IconCircleCheck size={36} />
             </div>
 
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
@@ -366,7 +365,7 @@ export default function Onboarding() {
               className="onboarding-btn-primary w-full mt-6 !py-3 !text-sm"
             >
               <span>Go to Dashboard</span>
-              <ArrowRight size={16} />
+              <IconArrowRight size={16} />
             </button>
           </div>
         </main>
@@ -415,7 +414,7 @@ export default function Onboarding() {
                 className={`onboarding-step-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
               >
                 <div className="onboarding-step-circle">
-                  {isCompleted ? <Check size={18} strokeWidth={2.5} /> : step.id}
+                  {isCompleted ? <IconCheck size={18} strokeWidth={2.5} /> : step.id}
                 </div>
                 <span className="onboarding-step-label">{step.label}</span>
               </button>

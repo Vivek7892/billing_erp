@@ -1,5 +1,11 @@
 import { useEffect } from 'react'
-import { X, Play, Volume2, ShieldCheck, CheckCircle } from 'lucide-react'
+import {
+  IconX,
+  IconPlayerPlay,
+  IconVolume,
+  IconShieldCheck,
+  IconCircleCheck,
+} from '@tabler/icons-react'
 import './VisualContent.css'
 
 export default function VideoPlayerModal({
@@ -49,7 +55,7 @@ export default function VideoPlayerModal({
             className="dwt-modal-close"
             aria-label="Close video player"
           >
-            <X size={16} />
+            <IconX size={16} />
           </button>
         </div>
 
@@ -70,7 +76,7 @@ export default function VideoPlayerModal({
               
               <div className="relative z-10 flex flex-col items-center max-w-sm">
                 <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white mb-3 shadow-lg border border-white/30 dwt-pulse-glow">
-                  <Play size={24} className="fill-white translate-x-0.5" />
+                  <IconPlayerPlay size={24} className="fill-white translate-x-0.5" />
                 </div>
                 <span className="text-xs uppercase tracking-wider font-semibold text-sky-200 mb-1">
                   {topic}
@@ -84,7 +90,7 @@ export default function VideoPlayerModal({
                 <div className="mt-4 flex items-center gap-3 text-[11px] text-white/80 font-mono">
                   <span className="bg-white/10 px-2 py-0.5 rounded">Duration: {duration}</span>
                   <span className="flex items-center gap-1">
-                    <ShieldCheck size={12} className="text-emerald-300" /> 1080p HD
+                    <IconShieldCheck size={12} className="text-emerald-300" /> 1080p HD
                   </span>
                 </div>
               </div>

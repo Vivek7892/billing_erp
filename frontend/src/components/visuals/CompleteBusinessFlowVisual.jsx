@@ -1,15 +1,24 @@
 import { useState, useEffect } from 'react'
-import { Package, Boxes, Receipt, CreditCard, FileCheck, Users, BarChart3, ArrowRight } from 'lucide-react'
+import {
+  IconPackage,
+  IconPackages,
+  IconReceipt,
+  IconCreditCard,
+  IconFileCheck,
+  IconUsers,
+  IconChartBar,
+  IconArrowRight,
+} from '@tabler/icons-react'
 import DreamVisualContainer from './DreamVisualContainer'
 
 const FLOW_NODES = [
-  { id: 'products', label: 'Products', icon: Package, desc: 'Central Master Catalog' },
-  { id: 'inventory', label: 'Inventory', icon: Boxes, desc: 'Real-time Stock Control' },
-  { id: 'billing', label: 'Billing', icon: Receipt, desc: 'High-speed POS Counter' },
-  { id: 'payment', label: 'Payment', icon: CreditCard, desc: 'Cash & Dynamic UPI QR' },
-  { id: 'invoice', label: 'Invoice', icon: FileCheck, desc: '58/80mm & A4 GST Bills' },
-  { id: 'customer', label: 'Customer', icon: Users, desc: 'Credit & Loyalty Ledger' },
-  { id: 'reports', label: 'Reports', icon: BarChart3, desc: 'Financial Intelligence' },
+  { id: 'products', label: 'Products', icon: IconPackage, desc: 'Central Master Catalog' },
+  { id: 'inventory', label: 'Inventory', icon: IconPackages, desc: 'Real-time Stock Control' },
+  { id: 'billing', label: 'Billing', icon: IconReceipt, desc: 'High-speed POS Counter' },
+  { id: 'payment', label: 'Payment', icon: IconCreditCard, desc: 'Cash & Dynamic UPI QR' },
+  { id: 'invoice', label: 'Invoice', icon: IconFileCheck, desc: '58/80mm & A4 GST Bills' },
+  { id: 'customer', label: 'Customer', icon: IconUsers, desc: 'Credit & Loyalty Ledger' },
+  { id: 'reports', label: 'Reports', icon: IconChartBar, desc: 'Financial Intelligence' },
 ]
 
 export default function CompleteBusinessFlowVisual({ className = '', uploadedSrc }) {
@@ -74,7 +83,7 @@ export default function CompleteBusinessFlowVisual({ className = '', uploadedSrc
                 {/* Arrow connector */}
                 {i < FLOW_NODES.length - 1 && (
                   <div className="hidden md:block absolute -right-2 top-1/2 -translate-y-1/2 z-20 text-gray-300">
-                    <ArrowRight size={12} className={isCurrent ? 'text-[#0057B8] animate-pulse' : ''} />
+                    <IconArrowRight size={12} className={isCurrent ? 'text-[#0057B8] animate-pulse' : ''} />
                   </div>
                 )}
               </div>

@@ -1,20 +1,29 @@
 import {
-  Package, Boxes, ShoppingCart, FileText, Users,
-  Truck, CreditCard, Wallet, BarChart3, TrendingUp, Layers
-} from 'lucide-react'
+  IconPackage,
+  IconPackages,
+  IconShoppingCart,
+  IconFileText,
+  IconUsers,
+  IconTruck,
+  IconCreditCard,
+  IconWallet,
+  IconChartBar,
+  IconTrendingUp,
+  IconLayersLinked,
+} from '@tabler/icons-react'
 import DreamVisualContainer from './DreamVisualContainer'
 
 const MODULES = [
-  { id: 'products', name: 'Products', icon: Package, color: 'text-[#0057B8]', bg: 'bg-blue-50 dark:bg-blue-950/60' },
-  { id: 'inventory', name: 'Inventory', icon: Boxes, color: 'text-[#16A9D8]', bg: 'bg-cyan-50 dark:bg-cyan-950/60' },
-  { id: 'billing', name: 'Billing / POS', icon: ShoppingCart, color: 'text-[#003F8F]', bg: 'bg-indigo-50 dark:bg-indigo-950/60' },
-  { id: 'invoices', name: 'Invoices', icon: FileText, color: 'text-[#0057B8]', bg: 'bg-blue-50 dark:bg-blue-950/60' },
-  { id: 'customers', name: 'Customers', icon: Users, color: 'text-[#16A9D8]', bg: 'bg-cyan-50 dark:bg-cyan-950/60' },
-  { id: 'purchases', name: 'Purchases', icon: Truck, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/60' },
-  { id: 'payments', name: 'Payments', icon: CreditCard, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-950/60' },
-  { id: 'credit', name: 'Credit Collection', icon: Wallet, color: 'text-[#003F8F]', bg: 'bg-blue-50 dark:bg-blue-950/60' },
-  { id: 'reports', name: 'Reports', icon: BarChart3, color: 'text-[#16A9D8]', bg: 'bg-cyan-50 dark:bg-cyan-950/60' },
-  { id: 'analytics', name: 'Analytics', icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-950/60' },
+  { id: 'products', name: 'Products', icon: IconPackage, color: 'text-[#0057B8]', bg: 'bg-blue-50 dark:bg-blue-950/60' },
+  { id: 'inventory', name: 'Inventory', icon: IconPackages, color: 'text-[#16A9D8]', bg: 'bg-cyan-50 dark:bg-cyan-950/60' },
+  { id: 'billing', name: 'Billing / POS', icon: IconShoppingCart, color: 'text-[#003F8F]', bg: 'bg-indigo-50 dark:bg-indigo-950/60' },
+  { id: 'invoices', name: 'Invoices', icon: IconFileText, color: 'text-[#0057B8]', bg: 'bg-blue-50 dark:bg-blue-950/60' },
+  { id: 'customers', name: 'Customers', icon: IconUsers, color: 'text-[#16A9D8]', bg: 'bg-cyan-50 dark:bg-cyan-950/60' },
+  { id: 'purchases', name: 'Purchases', icon: IconTruck, color: 'text-amber-600', bg: 'bg-amber-50 dark:bg-amber-950/60' },
+  { id: 'payments', name: 'Payments', icon: IconCreditCard, color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-950/60' },
+  { id: 'credit', name: 'Credit Collection', icon: IconWallet, color: 'text-[#003F8F]', bg: 'bg-blue-50 dark:bg-blue-950/60' },
+  { id: 'reports', name: 'Reports', icon: IconChartBar, color: 'text-[#16A9D8]', bg: 'bg-cyan-50 dark:bg-cyan-950/60' },
+  { id: 'analytics', name: 'Analytics', icon: IconTrendingUp, color: 'text-purple-600', bg: 'bg-purple-50 dark:bg-purple-950/60' },
 ]
 
 export default function BusinessEcosystemVisual({ className = '', uploadedSrc }) {
@@ -32,7 +41,7 @@ export default function BusinessEcosystemVisual({ className = '', uploadedSrc })
         {/* Header */}
         <div className="text-center max-w-xl mx-auto">
           <div className="flex items-center justify-center gap-2 mb-1">
-            <Layers size={18} className="text-[#0057B8]" />
+            <IconLayersLinked size={18} className="text-[#0057B8]" />
             <h3 className="text-base md:text-lg font-black text-[#111111] dark:text-white uppercase tracking-wider">
               Dreamwithtech Unified Enterprise Ecosystem
             </h3>

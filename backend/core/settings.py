@@ -514,8 +514,22 @@ FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000').rstrip('/
 
 EMAIL_BACKEND = config(
     'EMAIL_BACKEND',
-    default='django.core.mail.backends.smtp.EmailBackend'
+    default='api.email_backends.TransactionalEmailBackend'
 )
+# Provider Selection: 'auto', 'resend', 'brevo', 'sendgrid', 'mailgun', 'smtp', 'console'
+EMAIL_PROVIDER = config('EMAIL_PROVIDER', default='auto').lower().strip()
+
+# HTTP Transactional Email API Keys (recommended for Render & cloud platforms where port 587 is blocked)
+EMAIL_API_KEY = config('EMAIL_API_KEY', default='')
+RESEND_API_KEY = config('RESEND_API_KEY', default='')
+RESEND_FROM_EMAIL = config('RESEND_FROM_EMAIL', default='')
+BREVO_API_KEY = config('BREVO_API_KEY', default='')
+SENDGRID_API_KEY = config('SENDGRID_API_KEY', default='')
+MAILGUN_API_KEY = config('MAILGUN_API_KEY', default='')
+MAILGUN_DOMAIN = config('MAILGUN_DOMAIN', default='')
+EMAIL_API_URL = config('EMAIL_API_URL', default='')
+
+# SMTP Configuration (Used in local development with open SMTP ports)
 EMAIL_HOST = config('EMAIL_HOST', default='')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)

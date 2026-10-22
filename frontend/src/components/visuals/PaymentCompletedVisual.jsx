@@ -1,32 +1,32 @@
 import { useEffect, useState } from 'react'
 import {
-  FileText,
-  Loader2,
-  IndianRupee,
-  Check,
-} from 'lucide-react'
+  IconFileText,
+  IconLoader2,
+  IconCurrencyRupee,
+  IconCheck,
+} from '@tabler/icons-react'
 import DreamVisualContainer from './DreamVisualContainer'
 
 const PAYMENT_STEPS = [
   {
     label: 'Invoice Created',
     desc: 'Invoice generated successfully',
-    icon: FileText,
+    icon: IconFileText,
   },
   {
     label: 'Payment Processing',
     desc: 'Payment is being processed',
-    icon: Loader2,
+    icon: IconLoader2,
   },
   {
     label: 'Amount Paid',
     desc: 'Payment amount received',
-    icon: IndianRupee,
+    icon: IconCurrencyRupee,
   },
   {
     label: 'Payment Successful',
     desc: 'Settlement confirmed',
-    icon: Check,
+    icon: IconCheck,
   },
 ]
 
@@ -131,7 +131,7 @@ export default function PaymentCompletedVisual({
                 </div>
 
                 {/* STATIC SUCCESS CHECK */}
-                <Check
+                <IconCheck
                   size={48}
                   strokeWidth={2.6}
                   className="relative z-10 text-emerald-600"

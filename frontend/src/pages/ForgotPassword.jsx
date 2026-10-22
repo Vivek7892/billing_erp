@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Mail, ShieldCheck } from 'lucide-react'
+import {
+  IconMail,
+  IconShieldCheck,
+} from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 import http from '../api'
 import { LoginIllustration } from '../components/visuals'
@@ -53,7 +56,7 @@ export default function ForgotPassword() {
           <div className="login-content">
             <div className="login-heading">
               <span className="login-heading-icon" aria-hidden="true">
-                <Mail size={18} />
+                <IconMail size={18} />
               </span>
               <h1 id="forgot-title">Reset your password</h1>
               <p>Enter the email address registered with your business account.</p>
@@ -100,7 +103,7 @@ export default function ForgotPassword() {
             </form>
 
             <div className="login-security-note">
-              <ShieldCheck size={15} aria-hidden="true" />
+              <IconShieldCheck size={15} aria-hidden="true" />
               <span>Your verification code expires in 10 minutes.</span>
             </div>
           </div>

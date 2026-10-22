@@ -1,6 +1,13 @@
 import { useId, useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, UserPlus, ShieldCheck, Check, Sparkles } from 'lucide-react'
+import {
+  IconEye,
+  IconEyeOff,
+  IconUserPlus,
+  IconShieldCheck,
+  IconCheck,
+  IconSparkles,
+} from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../AuthContext'
 import { LoginIllustration } from '../components/visuals'
@@ -190,7 +197,7 @@ export default function Register() {
           <div className="login-content !max-w-[440px] my-6">
             <div className="login-heading mb-5">
               <span className="login-heading-icon" aria-hidden="true">
-                <UserPlus size={18} />
+                <IconUserPlus size={18} />
               </span>
               <h1 id="register-title">Create your account</h1>
               <p>Set up your business workspace in under two minutes.</p>
@@ -295,7 +302,7 @@ export default function Register() {
                     disabled={loading}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
                   </button>
                 </div>
                 {/* Password strength feedback */}
@@ -354,7 +361,7 @@ export default function Register() {
                     disabled={loading}
                     aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                   >
-                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showConfirmPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
                   </button>
                 </div>
                 {errors.confirmPassword && <p className="login-field-error">{errors.confirmPassword}</p>}
@@ -399,7 +406,7 @@ export default function Register() {
             </form>
 
             <div className="login-security-note">
-              <ShieldCheck size={15} aria-hidden="true" />
+              <IconShieldCheck size={15} aria-hidden="true" />
               <span>Bank-grade encryption &amp; multi-tenant data isolation</span>
             </div>
           </div>

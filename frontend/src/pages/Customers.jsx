@@ -15,34 +15,34 @@ import CommunicationHistory from '../components/CommunicationHistory'
 import { QRCodeSVG } from 'qrcode.react'
 import { UpiLogo } from '../components/UpiLogos'
 import {
-  Plus,
-  Search,
-  Edit2,
-  Trash2,
-  Eye,
-  Phone,
-  Mail,
-  MapPin,
-  MessageSquare,
-  Send,
-  Users,
-  WalletCards,
-  IndianRupee,
-  FileText,
-  RefreshCw,
-  X,
-  UserRound,
-  Building2,
-  CheckCircle2,
-  AlertCircle,
-  MoreHorizontal,
-  CircleDollarSign,
-  QrCode,
-  CreditCard,
-  Copy,
-  Check,
-  MessageCircle,
-} from 'lucide-react'
+  IconPlus,
+  IconSearch,
+  IconEdit,
+  IconTrash,
+  IconEye,
+  IconPhone,
+  IconMail,
+  IconMapPin,
+  IconMessage,
+  IconSend,
+  IconUsers,
+  IconWallet,
+  IconCurrencyRupee,
+  IconFileText,
+  IconRefresh,
+  IconX,
+  IconUserCircle,
+  IconBuildingStore,
+  IconCircleCheck,
+  IconAlertCircle,
+  IconDots,
+  IconCoin,
+  IconQrcode,
+  IconCreditCard,
+  IconCopy,
+  IconCheck,
+  IconMessageCircle,
+} from '@tabler/icons-react'
 
 const emptyForm = {
   name: '',
@@ -87,7 +87,7 @@ const CustomerAvatar = ({ customer, size = 'md' }) => {
     />
   ) : (
     <div className={`${dimensions} ${color} rounded-full flex items-center justify-center font-bold ring-2 ring-[var(--surface)] shadow-sm shrink-0`}>
-      {initials || <UserRound size={18} />}
+      {initials || <IconUserCircle size={18} />}
     </div>
   )
 }
@@ -241,17 +241,17 @@ export function CustomerCollectPaymentModal({
     {
       id: 'cash',
       label: 'Cash',
-      icon: IndianRupee,
+      icon: IconCurrencyRupee,
     },
     {
       id: 'upi',
       label: 'UPI',
-      icon: QrCode,
+      icon: IconQrcode,
     },
     {
       id: 'card',
       label: 'Card',
-      icon: CreditCard,
+      icon: IconCreditCard,
     },
   ]
 
@@ -342,7 +342,7 @@ export function CustomerCollectPaymentModal({
     </>
   ) : (
     <>
-      <CheckCircle2 size={14} />
+      <IconCircleCheck size={14} />
       <span>Collect Payment</span>
     </>
   )}
@@ -439,7 +439,7 @@ export function CustomerCollectPaymentModal({
           </div>
 
           <div className="relative">
-            <IndianRupee
+            <IconCurrencyRupee
               size={16}
               className="
                 pointer-events-none
@@ -485,7 +485,7 @@ export function CustomerCollectPaymentModal({
 
           {error && (
             <div className="mt-1.5 flex items-start gap-1.5 text-[11px] font-medium text-rose-500">
-              <AlertCircle
+              <IconAlertCircle
                 size={13}
                 className="mt-0.5 shrink-0"
               />
@@ -594,12 +594,12 @@ export function CustomerCollectPaymentModal({
                     "
                   >
                     {copiedUpi ? (
-                      <Check
+                      <IconCheck
                         size={11}
                         className="text-emerald-500"
                       />
                     ) : (
-                      <Copy size={11} />
+                      <IconCopy size={11} />
                     )}
 
                     {copiedUpi ? 'Copied' : 'Copy'}
@@ -622,7 +622,7 @@ export function CustomerCollectPaymentModal({
             "
           >
             <div className="flex items-center gap-2">
-              <CreditCard
+              <IconCreditCard
                 size={16}
                 className="text-[#1E3A5F] dark:text-sky-400"
               />
@@ -1038,7 +1038,7 @@ export default function Customers() {
             onClick={openAdd}
             className="btn-primary min-h-[38px] w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg font-bold text-xs"
           >
-            <Plus size={15} />
+            <IconPlus size={15} />
             <span>Add Customer</span>
           </button>
         }
@@ -1102,7 +1102,7 @@ export default function Customers() {
           {/* Search */}
           <div className="group relative flex min-w-0 flex-1 items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 transition-all duration-200 hover:border-[var(--line-strong)] focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface)] text-[var(--muted)] group-focus-within:text-[#1E3A5F] dark:group-focus-within:text-sky-400">
-              <Search size={15} strokeWidth={2.2} />
+              <IconSearch size={15} strokeWidth={2.2} />
             </div>
 
             <input
@@ -1120,7 +1120,7 @@ export default function Customers() {
                 title="Clear search"
                 aria-label="Clear search"
               >
-                <X size={14} strokeWidth={2.5} />
+                <IconX size={14} strokeWidth={2.5} />
               </button>
             ) : (
               <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)]">
@@ -1166,7 +1166,7 @@ export default function Customers() {
             <CustomerEmptyIllustration onAddCustomer={openAdd} />
           ) : (
             <EmptyState
-              icon={Users}
+              icon={IconUsers}
               title="No customers match your filters"
               description="Try adjusting your search terms or credit filter."
               action={{
@@ -1219,7 +1219,7 @@ export default function Customers() {
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-3 min-w-[190px]">
                             <div className="w-8 h-8 rounded-full bg-[var(--surface-subtle)] border border-[var(--line)] flex items-center justify-center shrink-0 text-[#1E3A5F] dark:text-slate-300">
-                              <UserRound size={15} />
+                              <IconUserCircle size={15} />
                             </div>
                             <div className="min-w-0">
                               <p className="font-semibold text-[var(--ink)] truncate text-sm">
@@ -1242,7 +1242,7 @@ export default function Customers() {
                                 href={`tel:${customer.mobile}`}
                                 className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 hover:underline font-medium"
                               >
-                                <Phone size={12} />
+                                <IconPhone size={12} />
                                 {customer.mobile}
                               </a>
                             ) : null}
@@ -1251,7 +1251,7 @@ export default function Customers() {
                                 href={`mailto:${customer.email}`}
                                 className="flex items-center gap-1.5 text-[var(--ink-secondary)] hover:text-blue-600 dark:hover:text-blue-400 truncate max-w-[200px]"
                               >
-                                <Mail size={12} />
+                                <IconMail size={12} />
                                 {customer.email}
                               </a>
                             ) : null}
@@ -1303,7 +1303,7 @@ export default function Customers() {
                                 className="inline-flex h-7 shrink-0 items-center gap-0.5 rounded-md bg-emerald-600 px-1.5 text-[10px] font-medium text-white whitespace-nowrap hover:bg-emerald-700 transition-colors"
                                 title={`Collect payment (${currency(outstanding)} due)`}
                               >
-                                <IndianRupee size={10} strokeWidth={2} />
+                                <IconCurrencyRupee size={10} strokeWidth={2} />
                                 <span>Collect</span>
                               </button>
                             )}
@@ -1314,7 +1314,7 @@ export default function Customers() {
                               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:border-[var(--line-strong)] transition"
                               title="View customer"
                             >
-                              <Eye size={13} />
+                              <IconEye size={13} />
                             </button>
 
                             <button
@@ -1323,7 +1323,7 @@ export default function Customers() {
                               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:border-[var(--line-strong)] transition"
                               title="Edit customer"
                             >
-                              <Edit2 size={13} />
+                              <IconEdit size={13} />
                             </button>
 
                             <div className="relative shrink-0">
@@ -1338,7 +1338,7 @@ export default function Customers() {
                                 }`}
                                 title="More actions"
                               >
-                                <MoreHorizontal size={14} />
+                                <IconDots size={14} />
                               </button>
 
                               {activeMenuId === customer.id && (
@@ -1357,7 +1357,7 @@ export default function Customers() {
                                       }}
                                       className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition"
                                     >
-                                      <Send size={13} />
+                                      <IconSend size={13} />
                                       <span>Send Reminder</span>
                                     </button>
                                   )}
@@ -1370,7 +1370,7 @@ export default function Customers() {
                                     }}
                                     className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-950/40 transition"
                                   >
-                                    <FileText size={13} />
+                                    <IconFileText size={13} />
                                     <span>Send Statement</span>
                                   </button>
 
@@ -1384,7 +1384,7 @@ export default function Customers() {
                                     }}
                                     className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-rose-950/40 transition"
                                   >
-                                    <Trash2 size={13} />
+                                    <IconTrash size={13} />
                                     <span>Delete Customer</span>
                                   </button>
                                 </div>
@@ -1415,7 +1415,7 @@ export default function Customers() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 rounded-full bg-[var(--surface-subtle)] border border-[var(--line)] flex items-center justify-center shrink-0 text-[var(--primary)]">
-                          <UserRound size={14} />
+                          <IconUserCircle size={14} />
                         </div>
                         <div className="min-w-0">
                           <h3 className="font-bold text-sm text-[var(--ink)] truncate">
@@ -1427,7 +1427,7 @@ export default function Customers() {
                                 href={`tel:${customer.mobile}`}
                                 className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium"
                               >
-                                <Phone size={10} />
+                                <IconPhone size={10} />
                                 <span>{customer.mobile}</span>
                               </a>
                             ) : (
@@ -1487,7 +1487,7 @@ export default function Customers() {
                           onClick={() => setPayTarget(customer)}
                           className="w-full flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg bg-emerald-600 active:bg-emerald-700 text-xs font-bold text-white shadow-xs transition hover:bg-emerald-700"
                         >
-                          <IndianRupee size={13} />
+                          <IconCurrencyRupee size={13} />
                           <span>Collect Due ({currency(outstanding)})</span>
                         </button>
                       )}
@@ -1498,7 +1498,7 @@ export default function Customers() {
                           onClick={() => openView(customer)}
                           className="flex-1 inline-flex min-h-[38px] items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-xs font-semibold text-[var(--ink)] active:bg-[var(--surface-hover)] transition hover:bg-[var(--surface-elevated)]"
                         >
-                          <Eye size={13} />
+                          <IconEye size={13} />
                           <span>View</span>
                         </button>
 
@@ -1507,7 +1507,7 @@ export default function Customers() {
                           onClick={() => openEdit(customer)}
                           className="flex-1 inline-flex min-h-[38px] items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-xs font-semibold text-[var(--ink)] active:bg-[var(--surface-hover)] transition hover:bg-[var(--surface-elevated)]"
                         >
-                          <Edit2 size={13} />
+                          <IconEdit size={13} />
                           <span>Edit</span>
                         </button>
 
@@ -1519,7 +1519,7 @@ export default function Customers() {
                           }`}
                           title="More customer actions"
                         >
-                          <MoreHorizontal size={16} />
+                          <IconDots size={16} />
                         </button>
                       </div>
                     </div>
@@ -1535,7 +1535,7 @@ export default function Customers() {
                             }}
                             className="flex min-h-[36px] items-center justify-center gap-1 rounded-md border border-amber-300 dark:border-amber-800 bg-[var(--surface)] text-xs font-semibold text-amber-700 dark:text-amber-400"
                           >
-                            <Send size={12} />
+                            <IconSend size={12} />
                             <span>Remind</span>
                           </button>
                         )}
@@ -1547,7 +1547,7 @@ export default function Customers() {
                           }}
                           className="flex min-h-[36px] items-center justify-center gap-1 rounded-md border border-teal-300 dark:border-teal-800 bg-[var(--surface)] text-xs font-semibold text-teal-700 dark:text-teal-400"
                         >
-                          <FileText size={12} />
+                          <IconFileText size={12} />
                           <span>Statement</span>
                         </button>
                         <button
@@ -1558,7 +1558,7 @@ export default function Customers() {
                           }}
                           className="flex min-h-[36px] items-center justify-center gap-1 rounded-md border border-red-300 dark:border-red-800 bg-[var(--surface)] text-xs font-semibold text-red-600 dark:text-red-400"
                         >
-                          <Trash2 size={12} />
+                          <IconTrash size={12} />
                           <span>Delete</span>
                         </button>
                       </div>
@@ -1591,7 +1591,7 @@ export default function Customers() {
               <div className="flex items-center gap-3">
 
                 <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-300 flex items-center justify-center">
-                  <WalletCards size={18} />
+                  <IconWallet size={18} />
                 </div>
 
                 <div>
@@ -1631,7 +1631,7 @@ export default function Customers() {
                 className="flex flex-col items-center gap-2 border border-[var(--line)] bg-[var(--surface)] rounded-md p-3.5 hover:border-[#1E3A5F] hover:bg-[var(--surface-hover)] transition disabled:opacity-50"
               >
 
-                <MessageSquare
+                <IconMessage
                   size={20}
                   className="text-[#1E3A5F] dark:text-slate-300"
                 />
@@ -1652,7 +1652,7 @@ export default function Customers() {
                 className="flex flex-col items-center gap-2 border border-[var(--line)] bg-[var(--surface)] rounded-md p-3.5 hover:border-teal-600 hover:bg-[var(--surface-hover)] transition disabled:opacity-50"
               >
 
-                <Send
+                <IconSend
                   size={20}
                   className="text-teal-700 dark:text-teal-400"
                 />
@@ -1672,7 +1672,7 @@ export default function Customers() {
                 href={`tel:${reminderCustomer.mobile}`}
                 className="flex items-center justify-center gap-2 w-full border border-[var(--line)] rounded-md p-2.5 hover:bg-[var(--surface-hover)] transition text-xs font-semibold text-[var(--ink)]"
               >
-                <Phone
+                <IconPhone
                   size={15}
                   className="text-[var(--muted)]"
                 />
@@ -1723,11 +1723,11 @@ export default function Customers() {
             >
               {saving ? (
                 <>
-                  <RefreshCw size={15} className="animate-spin" /> <span>Saving…</span>
+                  <IconRefresh size={15} className="animate-spin" /> <span>Saving…</span>
                 </>
               ) : (
                 <>
-                  <CheckCircle2 size={15} /> <span>{editId ? 'Update Customer' : 'Save Customer'}</span>
+                  <IconCircleCheck size={15} /> <span>{editId ? 'Update Customer' : 'Save Customer'}</span>
                 </>
               )}
             </button>
@@ -1742,9 +1742,9 @@ export default function Customers() {
             <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[#1E3A5F] dark:text-slate-300 flex items-center justify-center">
 
               {editId ? (
-                <Edit2 size={16} />
+                <IconEdit size={16} />
               ) : (
-                <UserRound size={16} />
+                <IconUserCircle size={16} />
               )}
 
             </div>
@@ -1921,14 +1921,14 @@ export default function Customers() {
               <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="w-11 h-11 rounded-full bg-[#1E3A5F]/10 dark:bg-slate-800 border border-[var(--line)] flex items-center justify-center shrink-0 text-[#1E3A5F] dark:text-slate-300">
-                    <UserRound size={20} />
+                    <IconUserCircle size={20} />
                   </div>
                   <div className="min-w-0">
                     <h3 className="font-bold text-base text-[var(--ink)] truncate">{viewCustomer.name}</h3>
                     <p className="text-xs text-[var(--muted)] mt-0.5">ID: #{viewCustomer.id}</p>
                     {viewCustomer.gstin && (
                       <div className="mt-1 flex items-center gap-1 text-xs">
-                        <Building2 size={11} className="text-[var(--muted)]" />
+                        <IconBuildingStore size={11} className="text-[var(--muted)]" />
                         <span className="font-mono text-[var(--ink-secondary)]">{viewCustomer.gstin}</span>
                       </div>
                     )}
@@ -1940,7 +1940,7 @@ export default function Customers() {
                   {Number(viewCustomer.outstanding_amount || 0) > 0 && (
                     <button type="button" onClick={() => setPayTarget(viewCustomer)}
                       className="inline-flex min-h-[36px] items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-bold shadow-xs transition">
-                      <IndianRupee size={13} />
+                      <IconCurrencyRupee size={13} />
                       <span>Collect {currency(viewCustomer.outstanding_amount)}</span>
                     </button>
                   )}
@@ -1948,13 +1948,13 @@ export default function Customers() {
                     <button onClick={() => { setReminderCustomer(viewCustomer); sendReminder('whatsapp') }}
                       disabled={sending === 'whatsapp'}
                       className="inline-flex min-h-[36px] items-center gap-1.5 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white px-3 py-1.5 text-xs font-bold transition disabled:opacity-50">
-                      <MessageCircle size={13} />
+                      <IconMessageCircle size={13} />
                       <span>{sending === 'whatsapp' ? 'Sending…' : 'Remind'}</span>
                     </button>
                   )}
                   <button onClick={() => sendStatement(viewCustomer)} disabled={sending === 'statement'}
                     className="inline-flex min-h-[36px] items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--surface-hover)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition">
-                    <FileText size={13} />
+                    <IconFileText size={13} />
                     <span>Statement</span>
                   </button>
                 </div>
@@ -1980,7 +1980,7 @@ export default function Customers() {
               {viewCustomer.mobile && (
                 <a href={`tel:${viewCustomer.mobile}`}
                   className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 hover:border-blue-300 transition">
-                  <Phone size={15} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                  <IconPhone size={15} className="text-blue-600 dark:text-blue-400 shrink-0" />
                   <div>
                     <p className="text-[10px] text-[var(--muted)] uppercase font-semibold">Mobile</p>
                     <p className="text-sm font-medium text-[var(--ink)]">{viewCustomer.mobile}</p>
@@ -1990,7 +1990,7 @@ export default function Customers() {
               {viewCustomer.email && (
                 <a href={`mailto:${viewCustomer.email}`}
                   className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 hover:border-blue-300 transition min-w-0">
-                  <Mail size={15} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                  <IconMail size={15} className="text-blue-600 dark:text-blue-400 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-[10px] text-[var(--muted)] uppercase font-semibold">Email</p>
                     <p className="text-sm font-medium text-[var(--ink)] truncate">{viewCustomer.email}</p>
@@ -1999,7 +1999,7 @@ export default function Customers() {
               )}
               {viewCustomer.address && (
                 <div className="sm:col-span-2 flex items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-                  <MapPin size={15} className="text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                  <IconMapPin size={15} className="text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-[10px] text-[var(--muted)] uppercase font-semibold">Address</p>
                     <p className="text-sm font-medium text-[var(--ink)] mt-0.5">{viewCustomer.address}</p>
@@ -2019,7 +2019,7 @@ export default function Customers() {
                 <div className="py-6"><Spinner /></div>
               ) : customerBills.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--surface)] py-8 text-center">
-                  <FileText size={22} className="mx-auto text-[var(--muted)]" />
+                  <IconFileText size={22} className="mx-auto text-[var(--muted)]" />
                   <p className="text-xs text-[var(--muted)] mt-2">No bills yet</p>
                 </div>
               ) : (

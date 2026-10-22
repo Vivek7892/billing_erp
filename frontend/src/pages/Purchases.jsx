@@ -5,12 +5,38 @@ import { Badge, PageHeader, Modal, Spinner, EmptyState, ConfirmDialog, TableSkel
 import toast from 'react-hot-toast'
 import { PurchaseEmptyIllustration } from '../components/visuals'
 import {
-  Plus, Trash2, Printer, Package, ChevronDown, ChevronRight,
-  Building2, Phone, Mail, MapPin, Edit2, Search, Save,
-  Wallet, Clock3, ClipboardList, TrendingUp, Filter, MessageCircle,
-  FileSpreadsheet, Upload, Download, CheckCircle2, AlertCircle, AlertTriangle,
-  RotateCcw, Check, ArrowRight, FileText, X, RefreshCw
-} from 'lucide-react'
+  IconPlus,
+  IconTrash,
+  IconPrinter,
+  IconPackage,
+  IconChevronDown,
+  IconChevronRight,
+  IconBuildingStore,
+  IconPhone,
+  IconMail,
+  IconMapPin,
+  IconEdit,
+  IconSearch,
+  IconDeviceFloppy,
+  IconWallet,
+  IconClockHour3,
+  IconClipboardList,
+  IconTrendingUp,
+  IconFilter,
+  IconMessageCircle,
+  IconFileSpreadsheet,
+  IconUpload,
+  IconDownload,
+  IconCircleCheck,
+  IconAlertCircle,
+  IconAlertTriangle,
+  IconRotate2,
+  IconCheck,
+  IconArrowRight,
+  IconFileText,
+  IconX,
+  IconRefresh,
+} from '@tabler/icons-react'
 import CommunicationHistory from '../components/CommunicationHistory'
 
 const fmt = v => `₹${Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
@@ -132,7 +158,7 @@ function SupplierModal({ open, onClose, initial, onSaved }) {
         </div>
         <div className="flex gap-2.5 pt-2">
           <button onClick={save} disabled={saving} className="btn-primary flex-1 justify-center">
-            <Save size={14} />{saving ? 'Saving…' : 'Save Supplier'}
+            <IconDeviceFloppy size={14} />{saving ? 'Saving…' : 'Save Supplier'}
           </button>
           <button onClick={onClose} className="btn-secondary">Cancel</button>
         </div>
@@ -151,7 +177,7 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-5">
         <div className="flex items-start gap-3.5 min-w-0">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-elevated)] border border-[var(--line)] text-[#1E3A5F] dark:text-slate-200">
-            <Building2 size={20} />
+            <IconBuildingStore size={20} />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -175,13 +201,13 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
             {supProducts.length} product{supProducts.length !== 1 ? 's' : ''}
           </span>
           <button onClick={() => onEdit(supplier)} className="icon-btn hover:bg-[var(--surface-hover)] text-slate-600 dark:text-slate-300" title="Edit supplier">
-            <Edit2 size={14} />
+            <IconEdit size={14} />
           </button>
           <button onClick={() => onDelete(supplier)} className="icon-btn hover:bg-rose-100 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400" title="Delete supplier">
-            <Trash2 size={14} />
+            <IconTrash size={14} />
           </button>
           <button onClick={() => setExpanded(x => !x)} className="icon-btn hover:bg-[var(--surface-hover)] text-slate-600 dark:text-slate-300" title={expanded ? 'Collapse' : 'Expand products'}>
-            {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            {expanded ? <IconChevronDown size={16} /> : <IconChevronRight size={16} />}
           </button>
         </div>
       </div>
@@ -190,7 +216,7 @@ function SupplierCard({ supplier, products, onEdit, onDelete }) {
         <div className="border-t border-[var(--line)] bg-[var(--surface-elevated)] px-4 sm:px-5 py-4">
           {supplier.address && (
             <p className="text-xs text-slate-700 dark:text-slate-300 flex items-start gap-1.5 mb-3 bg-[var(--surface)] p-2.5 rounded-xl border border-[var(--line-subtle)] font-medium">
-              <MapPin size={12} className="mt-0.5 flex-shrink-0 text-slate-500 dark:text-slate-400" />
+              <IconMapPin size={12} className="mt-0.5 flex-shrink-0 text-slate-500 dark:text-slate-400" />
               {supplier.address}
             </p>
           )}
@@ -472,7 +498,7 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
               }`}
             >
               <div className="flex items-center gap-1.5">
-                <Package size={13} />
+                <IconPackage size={13} />
                 <span>Purchase Orders</span>
               </div>
             </button>
@@ -492,7 +518,7 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
               }`}
             >
               <div className="flex items-center gap-1.5">
-                <Building2 size={13} />
+                <IconBuildingStore size={13} />
                 <span>Suppliers</span>
               </div>
             </button>
@@ -507,13 +533,13 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
                   : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
               }`}
             >
-              {step !== 'upload' ? <Check size={11} /> : '1'}
+              {step !== 'upload' ? <IconCheck size={11} /> : '1'}
             </span>
             <span className={step === 'upload' ? 'font-bold text-[var(--ink)]' : 'text-[var(--muted)]'}>
               Upload
             </span>
 
-            <ArrowRight size={12} className="text-[var(--muted-light)]" />
+            <IconArrowRight size={12} className="text-[var(--muted-light)]" />
 
             <span
               className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${
@@ -524,13 +550,13 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
                     : 'bg-[var(--surface-elevated)] border border-[var(--line)] text-[var(--muted)]'
               }`}
             >
-              {step === 'report' ? <Check size={11} /> : '2'}
+              {step === 'report' ? <IconCheck size={11} /> : '2'}
             </span>
             <span className={step === 'preview' ? 'font-bold text-[var(--ink)]' : 'text-[var(--muted)]'}>
               Validate & Preview
             </span>
 
-            <ArrowRight size={12} className="text-[var(--muted-light)]" />
+            <IconArrowRight size={12} className="text-[var(--muted-light)]" />
 
             <span
               className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${
@@ -556,7 +582,7 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
             <div className="rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-md bg-[var(--surface)] border border-[var(--line)] flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0">
-                  <FileSpreadsheet size={20} />
+                  <IconFileSpreadsheet size={20} />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-[var(--ink)]">
@@ -577,7 +603,7 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
                   disabled={downloadingTemplate}
                   className="btn-secondary h-8 px-3 text-xs flex items-center gap-1.5 rounded-md"
                 >
-                  <Download size={13} />
+                  <IconDownload size={13} />
                   <span>{downloadingTemplate ? 'Downloading...' : 'Download Template (.xlsx)'}</span>
                 </button>
               </div>
@@ -599,7 +625,7 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
               />
 
               <div className="w-12 h-12 rounded-full bg-[var(--surface-elevated)] border border-[var(--line)] flex items-center justify-center mx-auto mb-3 text-[#1E3A5F] dark:text-slate-200">
-                <Upload size={22} />
+                <IconUpload size={22} />
               </div>
 
               <h4 className="text-sm font-bold text-[var(--ink)]">
@@ -614,7 +640,7 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
 
               {file && (
                 <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 text-xs font-semibold">
-                  <CheckCircle2 size={13} />
+                  <IconCircleCheck size={13} />
                   File loaded & ready for validation
                 </div>
               )}
@@ -667,13 +693,13 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
               >
                 {validating ? (
                   <>
-                    <RefreshCw size={13} className="animate-spin" />
+                    <IconRefresh size={13} className="animate-spin" />
                     <span>Validating File...</span>
                   </>
                 ) : (
                   <>
                     <span>Validate & Preview</span>
-                    <ArrowRight size={13} />
+                    <IconArrowRight size={13} />
                   </>
                 )}
               </button>
@@ -836,7 +862,7 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
                             >
                               <td className="text-center">
                                 <div className="flex items-center justify-center gap-1">
-                                  {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                                  {isExpanded ? <IconChevronDown size={13} /> : <IconChevronRight size={13} />}
                                   <span className="font-mono text-[10px] text-[var(--muted)]">{idx + 1}</span>
                                 </div>
                               </td>
@@ -844,11 +870,11 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
                               <td>
                                 {hasErrors ? (
                                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300">
-                                    <AlertCircle size={10} /> Error
+                                    <IconAlertCircle size={10} /> Error
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300">
-                                    <Check size={10} /> Valid
+                                    <IconCheck size={10} /> Valid
                                   </span>
                                 )}
                               </td>
@@ -887,14 +913,14 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
                                   <div className="space-y-0.5 max-w-[240px]">
                                     {ord.errors.map((err, eIdx) => (
                                       <div key={eIdx} className="text-[11px] font-semibold text-red-600 dark:text-red-400 flex items-center gap-1">
-                                        <AlertCircle size={10} className="shrink-0" />
+                                        <IconAlertCircle size={10} className="shrink-0" />
                                         <span>{err}</span>
                                       </div>
                                     ))}
                                   </div>
                                 ) : (
                                   <span className="text-[11px] text-teal-600 dark:text-teal-400 font-semibold flex items-center gap-1">
-                                    <Check size={11} /> Ready to import
+                                    <IconCheck size={11} /> Ready to import
                                   </span>
                                 )}
                               </td>
@@ -988,7 +1014,7 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
                               </span>
                             ) : (
                               <span className="text-teal-600 dark:text-teal-400 font-semibold text-[11px] flex items-center gap-1">
-                                <Check size={11} /> Ready
+                                <IconCheck size={11} /> Ready
                               </span>
                             )}
                           </td>
@@ -1047,7 +1073,7 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
                 disabled={importing}
                 className="btn-secondary h-9 px-3.5 text-xs flex items-center gap-1.5"
               >
-                <RotateCcw size={13} />
+                <IconRotate2 size={13} />
                 Upload Different File
               </button>
 
@@ -1069,12 +1095,12 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
                 >
                   {importing ? (
                     <>
-                      <RefreshCw size={13} className="animate-spin" />
+                      <IconRefresh size={13} className="animate-spin" />
                       <span>Importing...</span>
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 size={14} />
+                      <IconCircleCheck size={14} />
                       <span>Confirm & Import ({validOrdersCount} {mode === 'orders' ? 'Orders' : 'Suppliers'})</span>
                     </>
                   )}
@@ -1098,9 +1124,9 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
             >
               <div className="flex items-start gap-3">
                 {importReport.failed_count === 0 ? (
-                  <CheckCircle2 size={24} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <IconCircleCheck size={24} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                 ) : (
-                  <AlertTriangle size={24} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <IconAlertTriangle size={24} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                 )}
 
                 <div>
@@ -1174,7 +1200,7 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
                 onClick={() => setStep('upload')}
                 className="btn-secondary h-9 px-3.5 text-xs flex items-center gap-1.5"
               >
-                <RotateCcw size={13} />
+                <IconRotate2 size={13} />
                 Import Another File
               </button>
 
@@ -1183,7 +1209,7 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
                 onClick={handleDone}
                 className="btn-primary h-9 px-5 text-xs flex items-center gap-1.5"
               >
-                <Check size={14} />
+                <IconCheck size={14} />
                 <span>Done (View Purchases)</span>
               </button>
             </div>
@@ -1390,28 +1416,28 @@ export default function Purchases() {
       label: 'Total Spend',
       value: fmt(totalSpend),
       hint: `${purchases.length} total orders`,
-      icon: TrendingUp,
+      icon: IconTrendingUp,
       iconClass: 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300',
     },
     {
       label: 'Amount Paid',
       value: fmt(totalPaid),
       hint: 'Supplier settlements',
-      icon: Wallet,
+      icon: IconWallet,
       iconClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300',
     },
     {
       label: 'Balance Due',
       value: fmt(totalDue),
       hint: 'Outstanding payable',
-      icon: Clock3,
+      icon: IconClockHour3,
       iconClass: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
     },
     {
       label: 'Active Suppliers',
       value: String(suppliers.length),
       hint: 'Registered vendors',
-      icon: Building2,
+      icon: IconBuildingStore,
       iconClass: 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300',
     },
   ]
@@ -1472,19 +1498,19 @@ export default function Purchases() {
               className="btn-secondary min-h-[42px] flex items-center justify-center gap-2 text-xs font-semibold"
               title="Bulk import from Excel"
             >
-              <FileSpreadsheet size={15} /> Import Excel
+              <IconFileSpreadsheet size={15} /> Import Excel
             </button>
             <button
               onClick={() => { setEditSupplier(null); setSupModal(true) }}
               className="btn-secondary min-h-[42px] flex items-center justify-center gap-2 text-xs font-semibold"
             >
-              <Building2 size={15} /> Add Supplier
+              <IconBuildingStore size={15} /> Add Supplier
             </button>
             <button
               onClick={() => setModal(true)}
               className="btn-primary min-h-[42px] col-span-2 sm:col-span-1 flex items-center justify-center gap-2 text-xs font-semibold"
             >
-              <Plus size={16} /> New Purchase
+              <IconPlus size={16} /> New Purchase
             </button>
           </div>
         }
@@ -1541,7 +1567,7 @@ export default function Purchases() {
               <div className={`flex flex-col gap-3 p-3.5 ${cardCls} sm:flex-row sm:items-center`}>
                 <div className="group relative flex flex-1 items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-slate-600 dark:text-slate-300 transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-                    <Search size={14} strokeWidth={2.2} />
+                    <IconSearch size={14} strokeWidth={2.2} />
                   </div>
                   <input
                     className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
@@ -1557,7 +1583,7 @@ export default function Purchases() {
                       title="Clear search"
                       aria-label="Clear search"
                     >
-                      <X size={13} strokeWidth={2.5} />
+                      <IconX size={13} strokeWidth={2.5} />
                     </button>
                   ) : (
                     <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:text-slate-400 shadow-2xs">
@@ -1575,12 +1601,12 @@ export default function Purchases() {
                     className="btn-secondary h-11 px-3 text-xs flex items-center justify-center gap-1.5 rounded-xl shrink-0 font-semibold text-slate-700 dark:text-slate-200"
                     title="Import purchase orders from Excel"
                   >
-                    <FileSpreadsheet size={14} />
+                    <IconFileSpreadsheet size={14} />
                     <span>Import Excel</span>
                   </button>
 
                   <div className="flex shrink-0 items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 px-1">
-                    <Filter size={14} className="text-slate-500 dark:text-slate-400" />
+                    <IconFilter size={14} className="text-slate-500 dark:text-slate-400" />
                     <span>{filteredPOs.length} result{filteredPOs.length !== 1 ? 's' : ''}</span>
                   </div>
                 </div>
@@ -1637,7 +1663,7 @@ export default function Purchases() {
                             className="text-xs font-semibold text-[#1E3A5F] dark:text-blue-300 hover:underline flex items-center gap-1 min-h-[36px]"
                           >
                             <span>{(p.items || []).length} items</span>
-                            {expandedPO === p.id ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                            {expandedPO === p.id ? <IconChevronDown size={14} /> : <IconChevronRight size={14} />}
                           </button>
 
                           <div className="flex items-center gap-1.5">
@@ -1648,7 +1674,7 @@ export default function Purchases() {
                               className="min-h-[36px] bg-[#25D366] hover:bg-[#1EBE5D] text-white inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold shadow-xs transition"
                               title="Send Confirmation via WhatsApp"
                             >
-                              <MessageCircle size={14} />
+                              <IconMessageCircle size={14} />
                               <span>{sendingPO === p.id ? 'Sending…' : 'WhatsApp'}</span>
                             </button>
 
@@ -1658,7 +1684,7 @@ export default function Purchases() {
                               className="min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-elevated)] shadow-xs transition"
                               title="Print purchase order"
                             >
-                              <Printer size={15} />
+                              <IconPrinter size={15} />
                             </button>
                           </div>
                         </div>
@@ -1742,7 +1768,7 @@ export default function Purchases() {
                                   className="bg-[#25D366] hover:bg-[#1EBE5D] text-white inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-bold mr-1.5 transition shadow-2xs"
                                   title="Send PO Confirmation via WhatsApp"
                                 >
-                                  <MessageCircle size={13} />
+                                  <IconMessageCircle size={13} />
                                   <span className="hidden sm:inline">{sendingPO === p.id ? 'Sending…' : 'Send Confirmation'}</span>
                                 </button>
 
@@ -1751,7 +1777,7 @@ export default function Purchases() {
                                   className="icon-btn"
                                   title="Print purchase order"
                                 >
-                                  <Printer size={14} />
+                                  <IconPrinter size={14} />
                                 </button>
                               </td>
                             </tr>
@@ -1824,7 +1850,7 @@ export default function Purchases() {
               <div className={`flex flex-col gap-3 p-3.5 ${cardCls} sm:flex-row sm:items-center`}>
                 <div className="group relative flex flex-1 items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-                    <Search size={14} strokeWidth={2.2} />
+                    <IconSearch size={14} strokeWidth={2.2} />
                   </div>
                   <input
                     className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
@@ -1840,7 +1866,7 @@ export default function Purchases() {
                       title="Clear search"
                       aria-label="Clear search"
                     >
-                      <X size={13} strokeWidth={2.5} />
+                      <IconX size={13} strokeWidth={2.5} />
                     </button>
                   ) : (
                     <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
@@ -1858,12 +1884,12 @@ export default function Purchases() {
                     className="btn-secondary h-11 px-3 text-xs flex items-center justify-center gap-1.5 rounded-xl shrink-0"
                     title="Import suppliers from Excel"
                   >
-                    <FileSpreadsheet size={14} />
+                    <IconFileSpreadsheet size={14} />
                     <span>Import Excel</span>
                   </button>
 
                   <button onClick={() => { setEditSupplier(null); setSupModal(true) }} className="btn-primary h-11 px-4 justify-center flex items-center gap-2 text-sm rounded-xl shrink-0">
-                    <Plus size={14} /> Add Supplier
+                    <IconPlus size={14} /> Add Supplier
                   </button>
                 </div>
               </div>
@@ -1908,7 +1934,7 @@ export default function Purchases() {
                     ))}
                   </select>
                   <button onClick={() => { setEditSupplier(null); setSupModal(true) }} className="btn-secondary px-3" title="Add new supplier">
-                    <Plus size={14} />
+                    <IconPlus size={14} />
                   </button>
                 </div>
               </div>
@@ -1969,7 +1995,7 @@ export default function Purchases() {
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-sm font-bold text-[var(--ink)]">Items</h3>
               <button onClick={addItem} className="btn-secondary h-8 px-3 text-xs flex items-center gap-1">
-                <Plus size={14} /> Add item
+                <IconPlus size={14} /> Add item
               </button>
             </div>
             <div className="space-y-3">
@@ -2030,7 +2056,7 @@ export default function Purchases() {
                       className="text-rose-500 hover:text-rose-400 p-1 self-end sm:self-center"
                       title="Remove item"
                     >
-                      <Trash2 size={16} />
+                      <IconTrash size={16} />
                     </button>
                   )}
                 </div>
@@ -2078,7 +2104,7 @@ export default function Purchases() {
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:gap-3 pt-2">
             <button onClick={save} disabled={saving} className="btn-primary min-h-11 w-full flex-1 justify-center">
-              <Package size={16} />{saving ? 'Saving…' : 'Save Purchase & Update Stock'}
+              <IconPackage size={16} />{saving ? 'Saving…' : 'Save Purchase & Update Stock'}
             </button>
             <button onClick={() => { setModal(false); setForm(emptyForm) }} className="btn-secondary min-h-11 w-full px-6 sm:w-auto">
               Cancel

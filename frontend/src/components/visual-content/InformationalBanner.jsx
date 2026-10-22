@@ -1,9 +1,14 @@
 import { useState } from 'react'
-import { Info, Sparkles, X, ArrowRight } from 'lucide-react'
+import {
+  IconInfoCircle,
+  IconSparkles,
+  IconX,
+  IconArrowRight,
+} from '@tabler/icons-react'
 import './VisualContent.css'
 
 export default function InformationalBanner({
-  icon = Sparkles,
+  icon = IconSparkles,
   tip = 'Pro Tip: Press F2 anytime on the billing screen to immediately search and add items.',
   actionText = '',
   onActionClick,
@@ -36,7 +41,7 @@ export default function InformationalBanner({
             className="inline-flex items-center gap-1 text-xs font-semibold text-[#0057B8] dark:text-sky-400 hover:underline"
           >
             <span>{actionText}</span>
-            <ArrowRight size={12} />
+            <IconArrowRight size={12} />
           </button>
         )}
 
@@ -47,7 +52,7 @@ export default function InformationalBanner({
             className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition p-1"
             aria-label="Dismiss banner"
           >
-            <X size={14} />
+            <IconX size={14} />
           </button>
         )}
       </div>

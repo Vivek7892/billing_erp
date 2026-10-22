@@ -4,49 +4,49 @@ import { useAuth } from '../AuthContext'
 import { ROLES } from '../constants'
 import toast from 'react-hot-toast'
 import {
-  AlertCircle,
-  AlertTriangle,
-  ArrowUpRight,
-  Bell,
-  Check,
-  CheckCircle2,
-  Clock,
-  CreditCard,
-  ExternalLink,
-  Eye,
-  FileText,
-  Filter,
-  Info,
-  Layers,
-  MoreVertical,
-  Package,
-  RefreshCw,
-  Search,
-  Settings,
-  ShieldAlert,
-  ShoppingBag,
-  Trash2,
-  Truck,
-  UserCheck,
-  X,
-  XCircle,
-} from 'lucide-react'
+  IconAlertCircle,
+  IconAlertTriangle,
+  IconArrowUpRight,
+  IconBell,
+  IconCheck,
+  IconCircleCheck,
+  IconClock,
+  IconCreditCard,
+  IconExternalLink,
+  IconEye,
+  IconFileText,
+  IconFilter,
+  IconInfoCircle,
+  IconLayersLinked,
+  IconDotsVertical,
+  IconPackage,
+  IconRefresh,
+  IconSearch,
+  IconSettings,
+  IconShieldExclamation,
+  IconShoppingBag,
+  IconTrash,
+  IconTruck,
+  IconUserCheck,
+  IconX,
+  IconCircleX,
+} from '@tabler/icons-react'
 import api from '../api'
 import './Notifications.css'
 
 // ─── Notification Types Configuration ──────────────────────────────────────
 
 const TYPE_CONFIG = {
-  low_stock:              { label: 'Low Stock',         icon: Package,       badgeClass: 'badge-low-stock',  category: 'inventory' },
-  invoice_overdue:        { label: 'Invoice Overdue',   icon: FileText,      badgeClass: 'badge-overdue',    category: 'sales_finance' },
-  payment_received:       { label: 'Payment Received',  icon: CreditCard,    badgeClass: 'badge-paid',       category: 'sales_finance' },
-  purchase_order_pending: { label: 'PO Pending',        icon: ShoppingBag,   badgeClass: 'badge-pending',    category: 'sales_finance' },
-  quotation_expiring:     { label: 'Quotation Expiring',icon: Layers,        badgeClass: 'badge-pending',    category: 'sales_finance' },
-  batch_expiring:         { label: 'Batch Expiring',    icon: AlertTriangle, badgeClass: 'badge-overdue',    category: 'inventory' },
-  gst_submission_failed:  { label: 'GST Filing Alert',  icon: ShieldAlert,   badgeClass: 'badge-overdue',    category: 'compliance' },
-  einvoice_failed:        { label: 'E-Invoice Error',   icon: AlertCircle,   badgeClass: 'badge-overdue',    category: 'compliance' },
-  eway_bill_expiring:     { label: 'E-Way Bill',        icon: Truck,         badgeClass: 'badge-pending',    category: 'compliance' },
-  approval_required:      { label: 'Approval Required', icon: UserCheck,     badgeClass: 'badge-active',     category: 'approvals' },
+  low_stock:              { label: 'Low Stock',         icon: IconPackage,       badgeClass: 'badge-low-stock',  category: 'inventory' },
+  invoice_overdue:        { label: 'Invoice Overdue',   icon: IconFileText,      badgeClass: 'badge-overdue',    category: 'sales_finance' },
+  payment_received:       { label: 'Payment Received',  icon: IconCreditCard,    badgeClass: 'badge-paid',       category: 'sales_finance' },
+  purchase_order_pending: { label: 'PO Pending',        icon: IconShoppingBag,   badgeClass: 'badge-pending',    category: 'sales_finance' },
+  quotation_expiring:     { label: 'Quotation Expiring',icon: IconLayersLinked,        badgeClass: 'badge-pending',    category: 'sales_finance' },
+  batch_expiring:         { label: 'Batch Expiring',    icon: IconAlertTriangle, badgeClass: 'badge-overdue',    category: 'inventory' },
+  gst_submission_failed:  { label: 'GST Filing Alert',  icon: IconShieldExclamation,   badgeClass: 'badge-overdue',    category: 'compliance' },
+  einvoice_failed:        { label: 'E-Invoice Error',   icon: IconAlertCircle,   badgeClass: 'badge-overdue',    category: 'compliance' },
+  eway_bill_expiring:     { label: 'E-Way Bill',        icon: IconTruck,         badgeClass: 'badge-pending',    category: 'compliance' },
+  approval_required:      { label: 'Approval Required', icon: IconUserCheck,     badgeClass: 'badge-active',     category: 'approvals' },
 }
 
 // ─── Severity Styles ───────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ const SEVERITY_STYLE = {
     bg: '#FEF2F2',
     border: '#FECACA',
     color: '#B91C1C',
-    icon: AlertCircle,
+    icon: IconAlertCircle,
     label: 'Critical',
   },
   warning: {
@@ -65,7 +65,7 @@ const SEVERITY_STYLE = {
     bg: '#FFFBEB',
     border: '#FDE68A',
     color: '#B45309',
-    icon: AlertTriangle,
+    icon: IconAlertTriangle,
     label: 'Warning',
   },
   success: {
@@ -73,7 +73,7 @@ const SEVERITY_STYLE = {
     bg: '#F0FDF4',
     border: '#BBF7D0',
     color: '#15803D',
-    icon: CheckCircle2,
+    icon: IconCircleCheck,
     label: 'Success',
   },
   info: {
@@ -81,7 +81,7 @@ const SEVERITY_STYLE = {
     bg: '#EFF6FF',
     border: '#BFDBFE',
     color: '#1D4ED8',
-    icon: Info,
+    icon: IconInfoCircle,
     label: 'Info',
   },
 }
@@ -985,7 +985,7 @@ export default function Notifications() {
               title="Open Notifications Drawer"
               aria-label="Open notification drawer"
             >
-              <Bell size={18} className="text-[var(--primary)] sm:w-5 sm:h-5" />
+              <IconBell size={18} className="text-[var(--primary)] sm:w-5 sm:h-5" />
             </button>
 
             <div className="min-w-0 flex-1">
@@ -1016,7 +1016,7 @@ export default function Notifications() {
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 sm:shrink-0">
             {/* Scan timestamp indicator */}
             <div className="hidden lg:flex items-center gap-1 text-[11px] text-[var(--muted)] font-mono mr-1">
-              <Clock size={11} />
+              <IconClock size={11} />
               <span>Last scanned {relativeTime(lastScanTime) || 'just now'}</span>
             </div>
 
@@ -1028,7 +1028,7 @@ export default function Notifications() {
               className="btn-secondary inline-flex h-8 sm:h-9 items-center justify-center gap-1 rounded-lg px-2 sm:px-3 text-[11px] sm:text-xs font-semibold shadow-none transition"
               title="Trigger real-time alert scanner"
             >
-              <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+              <IconRefresh size={12} className={refreshing ? 'animate-spin' : ''} />
               <span className="hidden xs:inline">Scan &amp; Refresh</span>
               <span className="xs:hidden">Scan</span>
             </button>
@@ -1041,7 +1041,7 @@ export default function Notifications() {
                 className="btn-secondary inline-flex h-8 sm:h-9 items-center justify-center gap-1 rounded-lg px-2 sm:px-3 text-[11px] sm:text-xs font-semibold shadow-none transition"
                 title="Mark all notifications as read"
               >
-                <Check size={12} />
+                <IconCheck size={12} />
                 <span className="hidden xs:inline">Mark All Read</span>
                 <span className="xs:hidden">Read All</span>
               </button>
@@ -1055,7 +1055,7 @@ export default function Notifications() {
               title={isAdminOrOwner ? "Notification & Approval Rules Settings" : "Admin access required"}
               aria-label="Notification Settings"
             >
-              <Settings size={13} />
+              <IconSettings size={13} />
               <span className="hidden sm:inline">Settings</span>
             </button>
           </div>
@@ -1149,7 +1149,7 @@ export default function Notifications() {
           {lowStockRollup && (
             <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50/80 px-2.5 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
               <div className="flex items-center gap-1.5 min-w-0">
-                <Package size={14} className="text-amber-600 shrink-0" />
+                <IconPackage size={14} className="text-amber-600 shrink-0" />
                 <span className="font-semibold truncate">{lowStockRollup.label}</span>
               </div>
               <button
@@ -1158,14 +1158,14 @@ export default function Notifications() {
                 className="shrink-0 text-[11px] sm:text-xs font-bold text-amber-800 dark:text-amber-300 hover:underline inline-flex items-center gap-1 ml-2"
               >
                 <span>Inventory</span>
-                <ArrowUpRight size={11} />
+                <IconArrowUpRight size={11} />
               </button>
             </div>
           )}
           {overdueInvoicesRollup && (
             <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50/80 px-2.5 py-1.5 sm:px-3 sm:py-2 text-[11px] sm:text-xs text-red-900 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-200">
               <div className="flex items-center gap-1.5 min-w-0">
-                <FileText size={14} className="text-red-600 shrink-0" />
+                <IconFileText size={14} className="text-red-600 shrink-0" />
                 <span className="font-semibold truncate">{overdueInvoicesRollup.label}</span>
               </div>
               <button
@@ -1174,7 +1174,7 @@ export default function Notifications() {
                 className="shrink-0 text-[11px] sm:text-xs font-bold text-red-800 dark:text-red-300 hover:underline inline-flex items-center gap-1 ml-2"
               >
                 <span>Invoices</span>
-                <ArrowUpRight size={11} />
+                <IconArrowUpRight size={11} />
               </button>
             </div>
           )}
@@ -1218,7 +1218,7 @@ export default function Notifications() {
           {/* Search Box with Ctrl+K */}
           <div className="notifications-search group relative flex items-center h-8 sm:h-9 flex-1 min-w-[180px] max-w-sm rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/15 shadow-2xs">
             <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[var(--muted)] group-focus-within:text-[var(--primary)]">
-              <Search size={13} strokeWidth={2.2} />
+              <IconSearch size={13} strokeWidth={2.2} />
             </div>
             <input
               ref={searchInputRef}
@@ -1236,7 +1236,7 @@ export default function Notifications() {
                 title="Clear search"
                 aria-label="Clear search"
               >
-                <X size={11} strokeWidth={2.5} />
+                <IconX size={11} strokeWidth={2.5} />
               </button>
             ) : (
               <kbd className="hidden sm:inline-flex shrink-0 items-center rounded border border-[var(--line)] bg-[var(--surface-elevated)] px-1 py-0.2 text-[9px] font-semibold text-[var(--muted)] shadow-2xs">
@@ -1252,7 +1252,7 @@ export default function Notifications() {
             aria-expanded={showFilters}
             aria-controls="notifications-advanced-filters"
           >
-            <Filter size={13} />
+            <IconFilter size={13} />
             <span>{showFilters ? 'Hide filters' : 'Filters'}</span>
             {activeChips.length > 0 && <span className="notification-filter-count">{activeChips.length}</span>}
           </button>
@@ -1323,7 +1323,7 @@ export default function Notifications() {
         {activeChips.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
             <span className="text-[10px] sm:text-[11px] font-semibold text-[var(--muted)] flex items-center gap-1 mr-1">
-              <Filter size={10} /> Filters:
+              <IconFilter size={10} /> Filters:
             </span>
             {activeChips.map(chip => (
               <span
@@ -1337,7 +1337,7 @@ export default function Notifications() {
                   className="text-[var(--muted)] hover:text-red-500 rounded-full"
                   aria-label={`Remove filter ${chip.label}`}
                 >
-                  <X size={10} />
+                  <IconX size={10} />
                 </button>
               </span>
             ))}
@@ -1357,7 +1357,7 @@ export default function Notifications() {
         {loading ? (
           <div className="p-10 text-center">
             <div className="inline-flex items-center gap-2 text-xs font-medium text-[var(--muted)]">
-              <RefreshCw size={14} className="animate-spin text-[var(--primary)]" />
+              <IconRefresh size={14} className="animate-spin text-[var(--primary)]" />
               Loading operational notification queues...
             </div>
           </div>
@@ -1372,14 +1372,14 @@ export default function Notifications() {
                   {/* Date Group Header */}
                   <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[var(--line)] bg-[var(--surface-elevated)] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
                     <span className="flex items-center gap-1.5">
-                      <Clock size={10} />
+                      <IconClock size={10} />
                       <span>{bucket}</span>
                     </span>
                     <span className="font-mono text-[9px]">{items.length} alert{items.length === 1 ? '' : 's'}</span>
                   </div>
 
                   {/* Desktop Work Queue Table (hidden md:block) */}
-                  <div className="hidden md:block overflow-x-auto">
+                  <div className="hidden overflow-x-auto">
                     <table className="table w-full notifications-table">
                       <thead>
                         <tr className="border-b border-[var(--line-subtle)] text-[11px] font-semibold text-[var(--muted)]">
@@ -1395,7 +1395,7 @@ export default function Notifications() {
                       </thead>
                       <tbody className="divide-y divide-[var(--line-subtle)]">
                         {items.map(item => {
-                          const cfg = TYPE_CONFIG[item.notification_type] || { label: item.notification_type, icon: Bell, badgeClass: 'status-neutral' }
+                          const cfg = TYPE_CONFIG[item.notification_type] || { label: item.notification_type, icon: IconBell, badgeClass: 'status-neutral' }
                           const sev = SEVERITY_STYLE[item.severity] || SEVERITY_STYLE.info
                           const TypeIcon = cfg.icon
                           const SevIcon = sev.icon
@@ -1486,7 +1486,7 @@ export default function Notifications() {
                                           className="inline-flex h-7 items-center justify-center gap-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 text-[11px] font-semibold shadow-2xs transition"
                                           title="Authorize & execute request"
                                         >
-                                          <CheckCircle2 size={11} />
+                                          <IconCircleCheck size={11} />
                                           <span>{actioningId === item.id ? '…' : 'Approve'}</span>
                                         </button>
                                         <button
@@ -1496,7 +1496,7 @@ export default function Notifications() {
                                           className="inline-flex h-7 items-center justify-center gap-1 rounded-md border border-rose-300 dark:border-rose-800 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 px-2 text-[11px] font-semibold shadow-2xs transition"
                                           title="Reject request"
                                         >
-                                          <XCircle size={11} />
+                                          <IconCircleX size={11} />
                                           <span>Reject</span>
                                         </button>
                                         <button
@@ -1505,7 +1505,7 @@ export default function Notifications() {
                                           className="inline-flex h-7 items-center justify-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] hover:bg-[var(--surface-hover)] text-[var(--ink)] px-2 text-[11px] font-medium shadow-2xs transition"
                                           title="Review live diff & details"
                                         >
-                                          <Eye size={11} />
+                                          <IconEye size={11} />
                                           <span>Diff</span>
                                         </button>
                                       </>
@@ -1515,7 +1515,7 @@ export default function Notifications() {
                                         onClick={() => handleReviewClick(item)}
                                         className="inline-flex h-7 items-center justify-center gap-1 rounded-md border border-amber-300 dark:border-amber-800 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 px-2 text-[11px] font-semibold shadow-2xs transition"
                                       >
-                                        <Clock size={11} />
+                                        <IconClock size={11} />
                                         <span>Pending Sign-off</span>
                                       </button>
                                     )}
@@ -1527,7 +1527,7 @@ export default function Notifications() {
                                     className="inline-flex h-7 items-center justify-center gap-1 rounded-md bg-[var(--primary)] px-2.5 text-[11px] font-semibold text-white shadow-2xs hover:brightness-110 active:scale-95 transition"
                                   >
                                     <span>{actionLabel}</span>
-                                    <ArrowUpRight size={10} />
+                                    <IconArrowUpRight size={10} />
                                   </button>
                                 )}
                               </td>
@@ -1544,7 +1544,7 @@ export default function Notifications() {
                                     className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]"
                                     aria-label="More options"
                                   >
-                                    <MoreVertical size={13} />
+                                    <IconDotsVertical size={13} />
                                   </button>
 
                                   {isMenuOpen && (
@@ -1557,7 +1557,7 @@ export default function Notifications() {
                                         onClick={() => { setActiveMenuId(null); setDetailModal(item) }}
                                         className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[var(--ink)] hover:bg-[var(--surface-hover)]"
                                       >
-                                        <Eye size={12} className="text-[var(--muted)]" />
+                                        <IconEye size={12} className="text-[var(--muted)]" />
                                         <span>View Details</span>
                                       </button>
                                       {item.requires_approval && item.status === 'active' && (
@@ -1566,7 +1566,7 @@ export default function Notifications() {
                                           onClick={() => { setActiveMenuId(null); handleReviewClick(item) }}
                                           className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
                                         >
-                                          <UserCheck size={12} />
+                                          <IconUserCheck size={12} />
                                           <span>Authorize / Review</span>
                                         </button>
                                       )}
@@ -1576,7 +1576,7 @@ export default function Notifications() {
                                           onClick={() => { setActiveMenuId(null); handleMarkRead(item.id) }}
                                           className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[var(--ink)] hover:bg-[var(--surface-hover)]"
                                         >
-                                          <Check size={12} className="text-emerald-600" />
+                                          <IconCheck size={12} className="text-emerald-600" />
                                           <span>Mark as Read</span>
                                         </button>
                                       ) : (
@@ -1589,7 +1589,7 @@ export default function Notifications() {
                                           }}
                                           className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[var(--ink)] hover:bg-[var(--surface-hover)]"
                                         >
-                                          <Clock size={12} className="text-blue-500" />
+                                          <IconClock size={12} className="text-blue-500" />
                                           <span>Mark as Unread</span>
                                         </button>
                                       )}
@@ -1599,7 +1599,7 @@ export default function Notifications() {
                                         disabled={dismissingId === item.id}
                                         className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
                                       >
-                                        <Trash2 size={12} />
+                                        <IconTrash size={12} />
                                         <span>Dismiss Alert</span>
                                       </button>
                                     </div>
@@ -1614,9 +1614,9 @@ export default function Notifications() {
                   </div>
 
                   {/* Mobile & Tablet Notification Cards (md:hidden - Compact Button Sizes) */}
-                  <div className="divide-y divide-[var(--line-subtle)] md:hidden">
+                  <div className="notification-card-list divide-y divide-[var(--line-subtle)]">
                     {items.map(item => {
-                      const cfg = TYPE_CONFIG[item.notification_type] || { label: item.notification_type, icon: Bell, badgeClass: 'status-neutral' }
+                      const cfg = TYPE_CONFIG[item.notification_type] || { label: item.notification_type, icon: IconBell, badgeClass: 'status-neutral' }
                       const sev = SEVERITY_STYLE[item.severity] || SEVERITY_STYLE.info
                       const TypeIcon = cfg.icon
                       const SevIcon = sev.icon
@@ -1627,7 +1627,7 @@ export default function Notifications() {
                       return (
                         <article
                           key={item.id}
-                          className={`p-2.5 sm:p-3 space-y-2 relative transition ${
+                          className={`notification-card p-3 sm:p-4 space-y-3 relative transition ${
                             !item.is_read
                               ? 'bg-blue-50/20 dark:bg-blue-950/20'
                               : 'bg-[var(--surface)]'
@@ -1654,8 +1654,9 @@ export default function Notifications() {
                               </span>
                             </div>
 
-                            <span className="text-[10px] text-[var(--muted)] font-mono shrink-0">
-                              {relativeTime(item.created_at)}
+                            <span className="notification-card-time shrink-0 text-right">
+                              <span className="block text-[11px] font-medium text-[var(--ink-secondary)]">{formatTime(item.created_at)}</span>
+                              <span className="block text-[10px] text-[var(--muted)]">{relativeTime(item.created_at)}</span>
                             </span>
                           </div>
 
@@ -1692,7 +1693,7 @@ export default function Notifications() {
                                       className="inline-flex h-7 items-center gap-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white px-2 text-[11px] font-semibold shadow-2xs transition"
                                       title="Authorize & execute request"
                                     >
-                                      <CheckCircle2 size={11} />
+                                      <IconCircleCheck size={11} />
                                       <span>{actioningId === item.id ? '…' : 'Approve'}</span>
                                     </button>
                                     <button
@@ -1702,7 +1703,7 @@ export default function Notifications() {
                                       className="inline-flex h-7 items-center gap-1 rounded-md border border-rose-300 dark:border-rose-800 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 px-2 text-[11px] font-semibold shadow-2xs transition"
                                       title="Reject request"
                                     >
-                                      <XCircle size={11} />
+                                      <IconCircleX size={11} />
                                       <span>Reject</span>
                                     </button>
                                     <button
@@ -1711,7 +1712,7 @@ export default function Notifications() {
                                       className="inline-flex h-7 items-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] hover:bg-[var(--surface-hover)] text-[var(--ink)] px-2 text-[11px] font-medium transition"
                                       title="Review live diff & details"
                                     >
-                                      <Eye size={11} />
+                                      <IconEye size={11} />
                                       <span>Diff</span>
                                     </button>
                                   </>
@@ -1721,7 +1722,7 @@ export default function Notifications() {
                                     onClick={() => handleReviewClick(item)}
                                     className="inline-flex h-7 items-center gap-1 rounded-md border border-amber-300 dark:border-amber-800 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 px-2 text-[11px] font-semibold shadow-2xs transition"
                                   >
-                                    <Clock size={11} />
+                                    <IconClock size={11} />
                                     <span>Pending Sign-off</span>
                                   </button>
                                 )}
@@ -1733,11 +1734,19 @@ export default function Notifications() {
                                 className="inline-flex h-7 items-center gap-1 rounded-md bg-[var(--primary)] px-2.5 text-[11px] font-semibold text-white shadow-2xs hover:brightness-110 active:scale-95 transition"
                               >
                                 <span>{actionLabel}</span>
-                                <ArrowUpRight size={11} />
+                                <IconArrowUpRight size={11} />
                               </button>
                             )}
 
                             <div className="flex items-center gap-1 relative">
+                              <button
+                                type="button"
+                                onClick={() => setDetailModal(item)}
+                                className="notification-card-details inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] font-medium text-[var(--primary)] hover:bg-[var(--surface-elevated)]"
+                              >
+                                <IconEye size={12} />
+                                <span>Details</span>
+                              </button>
                               {!item.is_read && (
                                 <button
                                   type="button"
@@ -1745,7 +1754,7 @@ export default function Notifications() {
                                   className="inline-flex h-7 items-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 text-[11px] font-medium text-[var(--ink)] shadow-2xs hover:bg-[var(--surface-elevated)]"
                                   title="Mark as read"
                                 >
-                                  <Check size={11} />
+                                  <IconCheck size={11} />
                                   <span>Read</span>
                                 </button>
                               )}
@@ -1759,7 +1768,7 @@ export default function Notifications() {
                                 className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--ink)]"
                                 aria-label="More actions"
                               >
-                                <MoreVertical size={13} />
+                                <IconDotsVertical size={13} />
                               </button>
 
                               {isMenuOpen && (
@@ -1772,7 +1781,7 @@ export default function Notifications() {
                                     onClick={() => { setActiveMenuId(null); setDetailModal(item) }}
                                     className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-[var(--ink)] hover:bg-[var(--surface-hover)]"
                                   >
-                                    <Eye size={12} className="text-[var(--muted)]" />
+                                    <IconEye size={12} className="text-[var(--muted)]" />
                                     <span>View Details</span>
                                   </button>
                                   {item.requires_approval && item.status === 'active' && (
@@ -1781,7 +1790,7 @@ export default function Notifications() {
                                       onClick={() => { setActiveMenuId(null); handleReviewClick(item) }}
                                       className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-indigo-600 hover:bg-indigo-50"
                                     >
-                                      <UserCheck size={12} />
+                                      <IconUserCheck size={12} />
                                       <span>Authorize</span>
                                     </button>
                                   )}
@@ -1791,7 +1800,7 @@ export default function Notifications() {
                                     disabled={dismissingId === item.id}
                                     className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
                                   >
-                                    <Trash2 size={12} />
+                                    <IconTrash size={12} />
                                     <span>Dismiss</span>
                                   </button>
                                 </div>
@@ -1812,7 +1821,7 @@ export default function Notifications() {
             {notifications.length === 0 ? (
               <>
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
-                  <CheckCircle2 size={22} />
+                  <IconCircleCheck size={22} />
                 </div>
                 <h3 className="text-xs sm:text-sm font-bold text-[var(--ink)]">You&apos;re all caught up!</h3>
                 <p className="max-w-sm text-[11px] text-[var(--muted)] leading-relaxed">
@@ -1824,14 +1833,14 @@ export default function Notifications() {
                   disabled={refreshing}
                   className="btn-secondary mt-1 inline-flex h-8 items-center gap-1.5 text-xs px-3"
                 >
-                  <RefreshCw size={11} className={refreshing ? 'animate-spin' : ''} />
+                  <IconRefresh size={11} className={refreshing ? 'animate-spin' : ''} />
                   <span>Run System Check</span>
                 </button>
               </>
             ) : (
               <>
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-[var(--muted)] dark:bg-slate-800">
-                  <Filter size={18} />
+                  <IconFilter size={18} />
                 </div>
                 <h3 className="text-xs sm:text-sm font-bold text-[var(--ink)]">No matching notifications</h3>
                 <p className="max-w-sm text-[11px] text-[var(--muted)] leading-relaxed">
@@ -1901,7 +1910,7 @@ export default function Notifications() {
                 className="text-[var(--muted)] hover:text-[var(--ink)] rounded-md p-1"
                 aria-label="Close details"
               >
-                <X size={16} />
+                <IconX size={16} />
               </button>
             </div>
 
@@ -1915,7 +1924,7 @@ export default function Notifications() {
               {/* Threshold Rule if any */}
               {detailModal.data?.threshold_rule && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-2.5 flex items-center gap-2 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
-                  <AlertCircle size={14} className="text-amber-600 shrink-0" />
+                  <IconAlertCircle size={14} className="text-amber-600 shrink-0" />
                   <div>
                     <span className="font-bold">Threshold Exceeded: </span>
                     <span>{detailModal.data.threshold_rule}</span>
@@ -1984,7 +1993,7 @@ export default function Notifications() {
                     onClick={() => handleMarkRead(detailModal.id)}
                     className="btn-secondary h-7 sm:h-8 text-[11px] px-2.5 inline-flex items-center gap-1"
                   >
-                    <Check size={11} /> Mark Read
+                    <IconCheck size={11} /> Mark Read
                   </button>
                 )}
                 <button
@@ -1993,7 +2002,7 @@ export default function Notifications() {
                   disabled={dismissingId === detailModal.id}
                   className="btn-secondary h-7 sm:h-8 text-[11px] px-2 text-red-600 hover:bg-red-50 hover:border-red-200 inline-flex items-center gap-1"
                 >
-                  <Trash2 size={11} /> Dismiss
+                  <IconTrash size={11} /> Dismiss
                 </button>
               </div>
 
@@ -2019,7 +2028,7 @@ export default function Notifications() {
                           className="h-7 sm:h-8 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold inline-flex items-center gap-1 shadow-2xs transition"
                           title="Authorize & execute request"
                         >
-                          <CheckCircle2 size={12} />
+                          <IconCircleCheck size={12} />
                           <span>Approve</span>
                         </button>
                         <button
@@ -2032,7 +2041,7 @@ export default function Notifications() {
                           className="h-7 sm:h-8 px-2.5 rounded-md border border-rose-300 dark:border-rose-800 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-[11px] font-semibold inline-flex items-center gap-1 shadow-2xs transition"
                           title="Reject request"
                         >
-                          <XCircle size={12} />
+                          <IconCircleX size={12} />
                           <span>Reject</span>
                         </button>
                       </>
@@ -2046,7 +2055,7 @@ export default function Notifications() {
                       }}
                       className="btn-primary h-7 sm:h-8 text-[11px] px-3 inline-flex items-center gap-1 font-semibold"
                     >
-                      <UserCheck size={12} />
+                      <IconUserCheck size={12} />
                       <span>{canManageApprovals ? 'Review Notes' : 'View Details'}</span>
                     </button>
                   </div>
@@ -2062,7 +2071,7 @@ export default function Notifications() {
                     className="btn-primary h-7 sm:h-8 text-[11px] px-3 inline-flex items-center gap-1 font-semibold"
                   >
                     <span>{getNotificationActionLabel(detailModal)}</span>
-                    <ExternalLink size={11} />
+                    <IconExternalLink size={11} />
                   </button>
                 ) : null}
               </div>
@@ -2087,7 +2096,7 @@ export default function Notifications() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--line)] bg-[var(--surface-elevated)]">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/40 flex items-center justify-center text-[var(--primary)]">
-                  <Bell size={16} className={criticalCount > 0 ? 'text-red-600' : ''} />
+                  <IconBell size={16} className={criticalCount > 0 ? 'text-red-600' : ''} />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -2107,7 +2116,7 @@ export default function Notifications() {
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
                 aria-label="Close drawer"
               >
-                <X size={16} />
+                <IconX size={16} />
               </button>
             </div>
 
@@ -2168,7 +2177,7 @@ export default function Notifications() {
                                 disabled={actioningId === item.id}
                                 className="h-6 px-2 rounded bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-semibold inline-flex items-center gap-1"
                               >
-                                <CheckCircle2 size={11} /> Approve
+                                <IconCircleCheck size={11} /> Approve
                               </button>
                               <button
                                 type="button"
@@ -2176,7 +2185,7 @@ export default function Notifications() {
                                 disabled={actioningId === item.id}
                                 className="h-6 px-2 rounded border border-rose-300 dark:border-rose-800 bg-rose-50 text-rose-700 dark:text-rose-300 text-[10px] font-semibold inline-flex items-center gap-1"
                               >
-                                <XCircle size={11} /> Reject
+                                <IconCircleX size={11} /> Reject
                               </button>
                             </>
                           ) : (
@@ -2194,7 +2203,7 @@ export default function Notifications() {
                           }}
                           className="h-6 px-2 rounded bg-[var(--primary)] text-white text-[10px] font-semibold inline-flex items-center gap-1"
                         >
-                          Review PO <ArrowUpRight size={10} />
+                          Review PO <IconArrowUpRight size={10} />
                         </button>
                       ) : (
                         <button
@@ -2205,7 +2214,7 @@ export default function Notifications() {
                           }}
                           className="h-6 px-2 rounded border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] text-[10px] font-medium inline-flex items-center gap-1"
                         >
-                          {getNotificationActionLabel(item)} <ArrowUpRight size={10} />
+                          {getNotificationActionLabel(item)} <IconArrowUpRight size={10} />
                         </button>
                       )}
 
@@ -2219,7 +2228,7 @@ export default function Notifications() {
                           className="h-6 px-1.5 text-[10px] text-[var(--muted)] hover:text-[var(--ink)] inline-flex items-center gap-0.5"
                           title="Mark read"
                         >
-                          <Check size={11} /> Read
+                          <IconCheck size={11} /> Read
                         </button>
                       )}
                     </div>
@@ -2235,14 +2244,14 @@ export default function Notifications() {
                 onClick={() => { setQuickDrawerOpen(false); handleRunChecks() }}
                 className="btn-secondary flex-1 h-8 text-xs inline-flex items-center justify-center gap-1"
               >
-                <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} /> Scan
+                <IconRefresh size={12} className={refreshing ? 'animate-spin' : ''} /> Scan
               </button>
               <button
                 type="button"
                 onClick={() => { setQuickDrawerOpen(false); handleSettingsClick() }}
                 className="btn-secondary flex-1 h-8 text-xs inline-flex items-center justify-center gap-1"
               >
-                <Settings size={12} /> Settings
+                <IconSettings size={12} /> Settings
               </button>
             </div>
           </aside>
@@ -2285,7 +2294,7 @@ export default function Notifications() {
                 className="text-[var(--muted)] hover:text-[var(--ink)] shrink-0 rounded-md p-1"
                 aria-label="Close modal"
               >
-                <X size={15} />
+                <IconX size={15} />
               </button>
             </div>
 
@@ -2294,7 +2303,7 @@ export default function Notifications() {
               {/* Threshold Rule Warning Banner */}
               {approvalModal.data?.threshold_rule && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50/80 dark:bg-amber-950/30 dark:border-amber-900/50 p-2 flex items-center gap-1.5 text-xs text-amber-900 dark:text-amber-200">
-                  <AlertCircle size={14} className="text-amber-600 shrink-0" />
+                  <IconAlertCircle size={14} className="text-amber-600 shrink-0" />
                   <div>
                     <span className="font-bold">Threshold Exceeded: </span>
                     <span>{approvalModal.data.threshold_rule}</span>
@@ -2362,7 +2371,7 @@ export default function Notifications() {
                     disabled={Boolean(actioningId)}
                     className="h-7 sm:h-8 text-[11px] sm:text-xs px-3 font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg inline-flex items-center justify-center gap-1 disabled:cursor-wait disabled:opacity-60 shadow-2xs transition"
                   >
-                    {actioningId === approvalModal.id && <RefreshCw size={11} className="animate-spin" />}
+                    {actioningId === approvalModal.id && <IconRefresh size={11} className="animate-spin" />}
                     <span>Confirm Approval</span>
                   </button>
                 </>

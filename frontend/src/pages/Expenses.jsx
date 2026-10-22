@@ -2,9 +2,21 @@ import { useEffect, useState } from 'react'
 import api from '../api'
 import { Spinner, Modal, EmptyState } from '../components/UI'
 import {
-  IndianRupee, Plus, RefreshCw, Search, X, Pencil, Trash2,
-  ShoppingBag, Zap, Car, Users, MoreHorizontal, TrendingDown, Receipt
-} from 'lucide-react'
+  IconCurrencyRupee,
+  IconPlus,
+  IconRefresh,
+  IconSearch,
+  IconX,
+  IconPencil,
+  IconTrash,
+  IconShoppingBag,
+  IconBolt,
+  IconCar,
+  IconUsers,
+  IconDots,
+  IconTrendingDown,
+  IconReceipt,
+} from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 
 const fmt = v => `₹${Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
@@ -13,9 +25,9 @@ const CATEGORIES = ['Rent', 'Utilities', 'Salaries', 'Transport', 'Supplies', 'M
 const METHODS = ['cash', 'upi', 'card', 'online']
 
 const CAT_ICON = {
-  Rent: ShoppingBag, Utilities: Zap, Salaries: Users,
-  Transport: Car, Supplies: ShoppingBag, Marketing: TrendingDown,
-  Maintenance: MoreHorizontal, Other: IndianRupee,
+  Rent: IconShoppingBag, Utilities: IconBolt, Salaries: IconUsers,
+  Transport: IconCar, Supplies: IconShoppingBag, Marketing: IconTrendingDown,
+  Maintenance: IconDots, Other: IconCurrencyRupee,
 }
 const CAT_ICON_CLS = {
   Rent: 'border-[var(--line)] text-[#1E3A5F] dark:text-slate-300',
@@ -200,7 +212,7 @@ export default function Expenses() {
               {/* Search */}
               <div className="group relative flex min-w-0 flex-1 sm:w-64 sm:flex-none items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-                  <Search size={14} strokeWidth={2.2} />
+                  <IconSearch size={14} strokeWidth={2.2} />
                 </div>
                 <input
                   value={q}
@@ -216,7 +228,7 @@ export default function Expenses() {
                     title="Clear search"
                     aria-label="Clear search"
                   >
-                    <X size={13} strokeWidth={2.5} />
+                    <IconX size={13} strokeWidth={2.5} />
                   </button>
                 ) : (
                   <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
@@ -231,7 +243,7 @@ export default function Expenses() {
                 onClick={openAdd}
                 className="btn-primary min-h-[42px] px-3.5 text-xs font-bold inline-flex items-center gap-1.5 rounded-xl shadow-2xs"
               >
-                <Plus size={14} strokeWidth={2.5} />
+                <IconPlus size={14} strokeWidth={2.5} />
                 <span className="hidden sm:inline">Add Expense</span>
                 <span className="sm:hidden">Add</span>
               </button>
@@ -265,7 +277,7 @@ export default function Expenses() {
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState
-            icon={Receipt}
+            icon={IconReceipt}
             title={q || catFilter !== 'all' ? 'No expenses found' : 'No expenses recorded'}
             description={
               q || catFilter !== 'all'
@@ -284,7 +296,7 @@ export default function Expenses() {
             <div className="divide-y divide-[var(--line-subtle)] sm:hidden">
               {filtered.map(e => {
                 const catName = e.category_name || 'Other'
-                const Icon = CAT_ICON[catName] || IndianRupee
+                const Icon = CAT_ICON[catName] || IconCurrencyRupee
                 const cls = CAT_COLOR[catName] || 'bg-[var(--surface-elevated)] text-[var(--muted)]'
                 const [bg, tx] = cls.split(' ')
 
@@ -326,7 +338,7 @@ export default function Expenses() {
                           title="Edit expense"
                           aria-label="Edit expense"
                         >
-                          <Pencil size={13} />
+                          <IconPencil size={13} />
                         </button>
 
                         <button
@@ -337,7 +349,7 @@ export default function Expenses() {
                           title="Delete expense"
                           aria-label="Delete expense"
                         >
-                          <Trash2 size={13} />
+                          <IconTrash size={13} />
                         </button>
                       </div>
                     </div>
@@ -379,7 +391,7 @@ export default function Expenses() {
                 <tbody>
                   {filtered.map(e => {
                     const catName = e.category_name || 'Other'
-                    const Icon = CAT_ICON[catName] || IndianRupee
+                    const Icon = CAT_ICON[catName] || IconCurrencyRupee
                     const cls = CAT_COLOR[catName] || 'bg-[var(--surface-elevated)] text-[var(--muted)]'
                     const [bg, tx] = cls.split(' ')
 
@@ -423,7 +435,7 @@ export default function Expenses() {
                               title="Edit expense"
                               aria-label="Edit expense"
                             >
-                              <Pencil size={13} />
+                              <IconPencil size={13} />
                             </button>
 
                             <button
@@ -434,7 +446,7 @@ export default function Expenses() {
                               title="Delete expense"
                               aria-label="Delete expense"
                             >
-                              <Trash2 size={13} />
+                              <IconTrash size={13} />
                             </button>
                           </div>
                         </td>

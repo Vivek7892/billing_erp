@@ -1,5 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { CheckCircle2, XCircle, RefreshCw, ShieldCheck, Smartphone, CreditCard, LockKeyhole } from 'lucide-react'
+import {
+  IconCircleCheck,
+  IconCircleX,
+  IconRefresh,
+  IconShieldCheck,
+  IconDeviceMobile,
+  IconCreditCard,
+  IconLock,
+} from '@tabler/icons-react'
 import api from '../../api'
 import { Modal } from '../../components/UI'
 import toast from 'react-hot-toast'
@@ -156,7 +164,7 @@ export default function RazorpayPaymentModal({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 text-left">
               <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-violet-800 dark:bg-violet-900/60 dark:text-violet-200">
-                <ShieldCheck size={13} /> Razorpay checkout
+                <IconShieldCheck size={13} /> Razorpay checkout
               </div>
               <div className="truncate text-sm font-semibold text-[var(--ink)]">
                 {effectiveTitle}
@@ -173,9 +181,9 @@ export default function RazorpayPaymentModal({
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-violet-200/80 pt-3 text-[11px] font-medium text-[var(--muted)] dark:border-violet-800/60">
-            <span className="inline-flex items-center gap-1.5"><Smartphone size={14} /> UPI &amp; wallets</span>
-            <span className="inline-flex items-center gap-1.5"><CreditCard size={14} /> Cards &amp; net banking</span>
-            <span className="inline-flex items-center gap-1.5"><LockKeyhole size={13} /> Verified checkout</span>
+            <span className="inline-flex items-center gap-1.5"><IconDeviceMobile size={14} /> UPI &amp; wallets</span>
+            <span className="inline-flex items-center gap-1.5"><IconCreditCard size={14} /> Cards &amp; net banking</span>
+            <span className="inline-flex items-center gap-1.5"><IconLock size={13} /> Verified checkout</span>
           </div>
         </div>
 
@@ -218,7 +226,7 @@ export default function RazorpayPaymentModal({
         {phase === 'success' && (
           <div className="space-y-3">
             <div className="flex flex-col items-center gap-2 py-2">
-              <CheckCircle2 size={44} className="text-[#15803D]" />
+              <IconCircleCheck size={44} className="text-[#15803D]" />
               <p className="text-lg font-bold text-[#15803D]">Payment Successful!</p>
               <p className="text-sm text-[var(--muted)] text-center">
                 {fmt(effectiveAmount)} received via Razorpay.
@@ -256,7 +264,7 @@ export default function RazorpayPaymentModal({
         {phase === 'failed' && (
           <div className="space-y-3">
             <div className="flex flex-col items-center gap-2 py-2">
-              <XCircle size={44} className="text-[#B91C1C]" />
+              <IconCircleX size={44} className="text-[#B91C1C]" />
               <p className="text-lg font-bold text-[#B91C1C]">Payment Failed</p>
               <p className="text-sm text-[var(--muted)] text-center">{errorMsg || 'The payment could not be completed.'}</p>
             </div>
@@ -265,7 +273,7 @@ export default function RazorpayPaymentModal({
               onClick={() => { setPhase('idle'); setErrorMsg('') }}
               className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-rose-700 text-sm font-extrabold text-white transition hover:bg-rose-800 cursor-pointer"
             >
-              <RefreshCw size={15} /> Try Again
+              <IconRefresh size={15} /> Try Again
             </button>
             <button
               type="button"

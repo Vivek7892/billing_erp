@@ -1,28 +1,28 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import {
-  X,
-  RotateCcw,
-  Save,
-  Building2,
-  Sliders,
-  Type,
-  Percent,
-  CreditCard,
-  Printer,
-  Eye,
-  Sparkles,
-} from 'lucide-react'
+  IconX,
+  IconRotate2,
+  IconDeviceFloppy,
+  IconBuildingStore,
+  IconAdjustments,
+  IconTypography,
+  IconPercentage,
+  IconCreditCard,
+  IconPrinter,
+  IconEye,
+  IconSparkles,
+} from '@tabler/icons-react'
 import api from '../api'
 import InvoiceDocument from './InvoiceDocument'
 import { toast } from 'react-hot-toast'
 
 const TABS = [
-  { id: 'business', label: 'Business Info', icon: Building2 },
-  { id: 'fields', label: 'Invoice Fields', icon: Sliders },
-  { id: 'layout', label: 'Layout & Typography', icon: Type },
-  { id: 'tax', label: 'Tax & Totals', icon: Percent },
-  { id: 'payment', label: 'Payment & Footer', icon: CreditCard },
-  { id: 'page', label: 'Page & Printing', icon: Printer },
+  { id: 'business', label: 'Business Info', icon: IconBuildingStore },
+  { id: 'fields', label: 'Invoice Fields', icon: IconAdjustments },
+  { id: 'layout', label: 'Layout & Typography', icon: IconTypography },
+  { id: 'tax', label: 'Tax & Totals', icon: IconPercentage },
+  { id: 'payment', label: 'Payment & Footer', icon: IconCreditCard },
+  { id: 'page', label: 'Page & Printing', icon: IconPrinter },
 ]
 
 export default function TemplateCustomizerModal({
@@ -234,7 +234,7 @@ export default function TemplateCustomizerModal({
         <div className="px-4 py-3 sm:px-6 sm:py-3.5 border-b border-[#DCE3EC]  flex items-center justify-between bg-slate-50  shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#1E3A5F]/10  text-[#1E3A5F]  flex items-center justify-center font-bold">
-              <Sliders size={17} />
+              <IconAdjustments size={17} />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -263,7 +263,7 @@ export default function TemplateCustomizerModal({
               className="min-h-11 px-2.5 sm:px-3 rounded-lg border border-[#DCE3EC] bg-white text-slate-700 hover:bg-slate-100 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
               title="Reset this template to factory defaults"
             >
-              <RotateCcw size={13} className={resetting ? 'animate-spin' : ''} />
+              <IconRotate2 size={13} className={resetting ? 'animate-spin' : ''} />
               <span className="hidden sm:inline">Reset Defaults</span>
             </button>
 
@@ -273,7 +273,7 @@ export default function TemplateCustomizerModal({
               disabled={saving || loading}
               className="min-h-11 px-3.5 sm:px-4 rounded-lg bg-[#1E3A5F] hover:bg-[#162C46] text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition-colors disabled:opacity-50"
             >
-              <Save size={13} />
+              <IconDeviceFloppy size={13} />
               <span>{saving ? 'Saving...' : 'Save Settings'}</span>
             </button>
 
@@ -282,7 +282,7 @@ export default function TemplateCustomizerModal({
               onClick={onClose}
               className="min-h-11 min-w-11 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200 flex items-center justify-center transition-colors ml-1"
             >
-              <X size={18} />
+              <IconX size={18} />
             </button>
           </div>
         </div>
@@ -317,7 +317,7 @@ export default function TemplateCustomizerModal({
         {loading ? (
           <div className="flex-1 flex items-center justify-center py-20 text-slate-500">
             <div className="animate-spin mr-2">
-              <RotateCcw size={18} />
+              <IconRotate2 size={18} />
             </div>
             <span>Loading template configuration...</span>
           </div>
@@ -879,12 +879,12 @@ export default function TemplateCustomizerModal({
               {/* Preview Header */}
               <div className="px-4 py-2 border-b border-[var(--line)] bg-[var(--surface)] flex items-center justify-between shrink-0 gap-2">
                 <div className="flex items-center gap-2">
-                  <Eye size={14} className="text-[var(--accent)]" />
+                  <IconEye size={14} className="text-[var(--accent)]" />
                   <span className="text-xs font-bold text-[var(--ink)]">
                     Live Bill Preview
                   </span>
                   <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold inline-flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                    <Sparkles size={10} />
+                    <IconSparkles size={10} />
                     <span>Real-time</span>
                   </span>
                 </div>
@@ -972,7 +972,7 @@ export default function TemplateCustomizerModal({
             disabled={resetting || loading}
             className="min-h-11 px-3 flex-1 rounded-lg border border-[#DCE3EC] bg-white text-slate-700 hover:bg-slate-100 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
           >
-            <RotateCcw size={14} className={resetting ? 'animate-spin' : ''} />
+            <IconRotate2 size={14} className={resetting ? 'animate-spin' : ''} />
             <span>Reset Defaults</span>
           </button>
           <button
@@ -981,7 +981,7 @@ export default function TemplateCustomizerModal({
             disabled={saving || loading}
             className="min-h-11 px-4 flex-1 rounded-lg bg-[#1E3A5F] hover:bg-[#162C46] text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 shadow-xs transition-colors disabled:opacity-50"
           >
-            <Save size={14} />
+            <IconDeviceFloppy size={14} />
             <span>{saving ? 'Saving...' : 'Save Settings'}</span>
           </button>
         </div>

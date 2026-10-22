@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import {
-  ChevronLeft,
-  ChevronRight,
-  Package,
-  Receipt,
-  BarChart3,
-  CreditCard,
-  LayoutDashboard,
-} from 'lucide-react'
+  IconChevronLeft,
+  IconChevronRight,
+  IconPackage,
+  IconReceipt,
+  IconChartBar,
+  IconCreditCard,
+  IconLayoutDashboard,
+} from '@tabler/icons-react'
 
 import currentBanner from '../assets/dashboard-banner-v2.webp'
 import inventoryBanner from '../assets/dashboard-banners/inventory.webp'
@@ -20,35 +20,35 @@ import './DashboardBanner.css'
 const slides = [
   {
     image: currentBanner,
-    icon: LayoutDashboard,
+    icon: IconLayoutDashboard,
     eyebrow: 'ERP OVERVIEW',
     title: 'Your business, at a glance',
     description: 'Sales, stock, payments and business activity in one place.',
   },
   {
     image: inventoryBanner,
-    icon: Package,
+    icon: IconPackage,
     eyebrow: 'INVENTORY',
     title: 'Stay ahead of stock',
     description: 'Monitor stock levels and act before products run out.',
   },
   {
     image: billingBanner,
-    icon: Receipt,
+    icon: IconReceipt,
     eyebrow: 'BILLING',
     title: 'Bill faster. Serve better.',
     description: 'Create and print GST-ready invoices with fewer steps.',
   },
   {
     image: reportsBanner,
-    icon: BarChart3,
+    icon: IconChartBar,
     eyebrow: 'REPORTS',
     title: 'Understand your sales',
     description: 'Track trends, performance and business results clearly.',
   },
   {
     image: paymentsBanner,
-    icon: CreditCard,
+    icon: IconCreditCard,
     eyebrow: 'PAYMENTS',
     title: 'Keep collections in view',
     description: 'Monitor received payments and outstanding balances.',
@@ -175,7 +175,7 @@ export default function DashboardBannerCarousel({ className = '' } = {}) {
           onClick={showPrevious}
           aria-label="Show previous banner"
         >
-          <ChevronLeft size={17} aria-hidden="true" />
+          <IconChevronLeft size={17} aria-hidden="true" />
         </button>
 
         <button
@@ -184,7 +184,7 @@ export default function DashboardBannerCarousel({ className = '' } = {}) {
           onClick={showNext}
           aria-label="Show next banner"
         >
-          <ChevronRight size={17} aria-hidden="true" />
+          <IconChevronRight size={17} aria-hidden="true" />
         </button>
       </div>
 

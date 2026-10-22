@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react'
-import { PackagePlus, ShoppingBag, ArrowDown, Activity } from 'lucide-react'
+import {
+  IconPackageExport,
+  IconShoppingBag,
+  IconArrowDown,
+  IconActivity,
+} from '@tabler/icons-react'
 import DreamVisualContainer from './DreamVisualContainer'
 
 const STOCK_STAGES = [
-  { stage: 1, label: 'Stock Added', qty: '100 Units', badge: '+50 Inward Purchase', color: 'text-emerald-600', icon: PackagePlus },
-  { stage: 2, label: 'Product Sold', qty: '100 Units', badge: 'POS Sale #INV-109', color: 'text-[#0057B8]', icon: ShoppingBag },
-  { stage: 3, label: 'Inventory Reduced', qty: '96 Units (-4)', badge: 'Real-time Deduction', color: 'text-[#16A9D8]', icon: ArrowDown },
-  { stage: 4, label: 'Stock Indicator Updated', qty: '96 Units (Optimal)', badge: 'Threshold Synced', color: 'text-emerald-600', icon: Activity },
+  { stage: 1, label: 'Stock Added', qty: '100 Units', badge: '+50 Inward Purchase', color: 'text-emerald-600', icon: IconPackageExport },
+  { stage: 2, label: 'Product Sold', qty: '100 Units', badge: 'POS Sale #INV-109', color: 'text-[#0057B8]', icon: IconShoppingBag },
+  { stage: 3, label: 'Inventory Reduced', qty: '96 Units (-4)', badge: 'Real-time Deduction', color: 'text-[#16A9D8]', icon: IconArrowDown },
+  { stage: 4, label: 'Stock Indicator Updated', qty: '96 Units (Optimal)', badge: 'Threshold Synced', color: 'text-emerald-600', icon: IconActivity },
 ]
 
 export default function InventoryWorkflowVisual({ className = '', productName = 'Basmati Rice Premium 5kg', uploadedSrc }) {

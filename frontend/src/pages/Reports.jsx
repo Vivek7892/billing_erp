@@ -5,22 +5,22 @@ import { PageHeader, Spinner } from '../components/UI'
 import { InformationalBanner } from '../components/visual-content'
 import { ReportsAnalyticsVisual } from '../components/visuals'
 import {
-  TrendingUp,
-  Package,
-  DollarSign,
-  Percent,
-  Users,
-  CreditCard,
-  Receipt,
-  Calendar,
-  RefreshCw,
-  FileText,
-  FileSpreadsheet,
-  AlertCircle,
-  Info,
-  RotateCcw,
-  X,
-} from 'lucide-react'
+  IconTrendingUp,
+  IconPackage,
+  IconCurrencyDollar,
+  IconPercentage,
+  IconUsers,
+  IconCreditCard,
+  IconReceipt,
+  IconCalendar,
+  IconRefresh,
+  IconFileText,
+  IconFileSpreadsheet,
+  IconAlertCircle,
+  IconInfoCircle,
+  IconRotate2,
+  IconX,
+} from '@tabler/icons-react'
 import {
   ResponsiveContainer,
   LineChart,
@@ -142,7 +142,7 @@ function ReportDateField({ label, value, min, max, onChange, id }) {
           title="Open calendar picker"
           aria-label="Open calendar picker"
         >
-          <Calendar size={14} />
+          <IconCalendar size={14} />
         </button>
       </div>
     </div>
@@ -164,13 +164,13 @@ const getLast30Days = () => toLocalDateInput(new Date(Date.now() - 29 * 86400000
 const getLast90Days = () => toLocalDateInput(new Date(Date.now() - 89 * 86400000))
 
 const TABS = [
-  { key: 'sales', label: 'Sales Summary', icon: TrendingUp },
-  { key: 'products', label: 'Product Sales', icon: Package },
-  { key: 'profit', label: 'Profit & Loss', icon: DollarSign },
-  { key: 'gst', label: 'GST Tax Summary', icon: Percent },
-  { key: 'customers', label: 'Customer Receivables', icon: Users },
-  { key: 'payments', label: 'Payment Modes', icon: CreditCard },
-  { key: 'expenses', label: 'Operating Expenses', icon: Receipt },
+  { key: 'sales', label: 'Sales Summary', icon: IconTrendingUp },
+  { key: 'products', label: 'Product Sales', icon: IconPackage },
+  { key: 'profit', label: 'Profit & Loss', icon: IconCurrencyDollar },
+  { key: 'gst', label: 'GST Tax Summary', icon: IconPercentage },
+  { key: 'customers', label: 'Customer Receivables', icon: IconUsers },
+  { key: 'payments', label: 'Payment Modes', icon: IconCreditCard },
+  { key: 'expenses', label: 'Operating Expenses', icon: IconReceipt },
 ]
 
 const ENDPOINTS = {
@@ -447,7 +447,7 @@ export default function Reports() {
               className="btn-secondary inline-flex h-8 min-w-0 items-center justify-center gap-1 px-2 text-[11px] font-semibold sm:h-9 sm:gap-1.5 sm:px-3 sm:text-xs"
               title="View Real-Time Analytics Engine Lifecycle"
             >
-              <TrendingUp size={14} className="text-[#0057B8] dark:text-sky-400" />
+              <IconTrendingUp size={14} className="text-[#0057B8] dark:text-sky-400" />
               <span className="truncate">Analytics Flow</span>
             </button>
 
@@ -458,7 +458,7 @@ export default function Reports() {
               className="btn-secondary inline-flex h-8 min-w-0 items-center justify-center gap-1 px-2 text-[11px] font-semibold sm:h-9 sm:gap-1.5 sm:px-3 sm:text-xs"
               title="Download formal black-and-white A4 PDF Report"
             >
-              <FileText size={14} className="text-slate-700 dark:text-slate-300" />
+              <IconFileText size={14} className="text-slate-700 dark:text-slate-300" />
               <span className="truncate">{exporting === 'pdf' ? 'Generating PDF…' : 'Export PDF'}</span>
             </button>
 
@@ -469,7 +469,7 @@ export default function Reports() {
               className="btn-secondary inline-flex h-8 min-w-0 items-center justify-center gap-1 px-2 text-[11px] font-semibold sm:h-9 sm:gap-1.5 sm:px-3 sm:text-xs"
               title="Download formatted Excel workbook"
             >
-              <FileSpreadsheet size={14} className="text-slate-700 dark:text-slate-300" />
+              <IconFileSpreadsheet size={14} className="text-slate-700 dark:text-slate-300" />
               <span className="truncate">{exporting === 'xlsx' ? 'Generating Excel…' : 'Export Excel'}</span>
             </button>
           </div>
@@ -584,7 +584,7 @@ export default function Reports() {
           aria-label="Reset date range to this month"
           className="   btn-secondary h-9 min-h-9 min-w-20 px-3 text-xs font-semibold justify-center whitespace-nowrap"
         >
-          <RotateCcw
+          <IconRotate2
             size={12}
           />
           <span>Reset</span>
@@ -597,14 +597,14 @@ export default function Reports() {
         className="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-rose-600"
         role="alert"
       >
-        <AlertCircle size={12} />
+        <IconAlertCircle size={12} />
         Start date cannot be after end date.
       </p>
     )}
   </section>
 ) : (
   <div className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] px-3 py-2 text-[11px] text-[var(--muted)]">
-    <Info
+    <IconInfoCircle
       size={13}
       className="shrink-0 text-[#1E3A5F] dark:text-slate-300"
     />
@@ -631,7 +631,7 @@ export default function Reports() {
           </div>
         ) : error ? (
           <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-8 text-center shadow-xs">
-            <AlertCircle className="mx-auto mb-2 text-rose-500" size={30} />
+            <IconAlertCircle className="mx-auto mb-2 text-rose-500" size={30} />
             <h3 className="text-sm font-bold text-[var(--ink)]">
               Unable to Load Report
             </h3>
@@ -681,7 +681,7 @@ export default function Reports() {
             <div className="mb-3 flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <span className="rounded-lg bg-[#0057B8]/10 p-1.5 text-[#0057B8] dark:text-sky-400">
-                  <TrendingUp size={16} />
+                  <IconTrendingUp size={16} />
                 </span>
                 <h3 id="reports-analytics-title" className="text-sm font-bold text-[var(--ink)]">
                   Executive Analytics Engine
@@ -693,7 +693,7 @@ export default function Reports() {
                 className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                 aria-label="Close analytics flow"
               >
-                <X size={16} />
+                <IconX size={16} />
               </button>
             </div>
             <ReportsAnalyticsVisual className="w-full border-0 p-0 shadow-none" />

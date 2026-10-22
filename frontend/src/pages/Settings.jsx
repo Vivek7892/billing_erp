@@ -1,44 +1,44 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  Building2,
-  Receipt,
-  FileText,
-  Printer,
-  Barcode,
-  Users,
-  Bell,
-  Percent,
-  CreditCard,
-  FileSpreadsheet,
-  Tag,
-  Gift,
-  HelpCircle,
-  Keyboard,
-  LogOut,
-  Check,
-  ChevronDown,
-  ChevronUp,
-  Upload,
-  Trash2,
-  Save,
-  Download,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw,
-  ShieldCheck,
-  AlertCircle,
-  Copy,
-  Menu,
-  X,
-  UserCheck,
-  Sliders,
-  CheckCircle2,
-  ExternalLink,
-  MessageCircle,
-  PhoneCall,
-  Mail,
-} from 'lucide-react'
+  IconBuildingStore,
+  IconReceipt,
+  IconFileText,
+  IconPrinter,
+  IconBarcode,
+  IconUsers,
+  IconBell,
+  IconPercentage,
+  IconCreditCard,
+  IconFileSpreadsheet,
+  IconTag,
+  IconGift,
+  IconHelpCircle,
+  IconKeyboard,
+  IconLogout,
+  IconCheck,
+  IconChevronDown,
+  IconChevronUp,
+  IconUpload,
+  IconTrash,
+  IconDeviceFloppy,
+  IconDownload,
+  IconZoomIn,
+  IconZoomOut,
+  IconRotate2,
+  IconShieldCheck,
+  IconAlertCircle,
+  IconCopy,
+  IconMenu2,
+  IconX,
+  IconUserCheck,
+  IconAdjustments,
+  IconCircleCheck,
+  IconExternalLink,
+  IconMessageCircle,
+  IconPhoneCall,
+  IconMail,
+} from '@tabler/icons-react'
 import JsBarcode from 'jsbarcode'
 import { QRCodeSVG } from 'qrcode.react'
 import api from '../api'
@@ -147,7 +147,7 @@ function SettingRow({ label, description, required = false, children, error, id 
         )}
         {error && (
           <p className="text-[11px] text-rose-600 mt-1 font-medium flex items-center gap-1">
-            <AlertCircle size={12} />
+            <IconAlertCircle size={12} />
             <span>{error}</span>
           </p>
         )}
@@ -262,7 +262,7 @@ function AccordionSection({ title, subtitle, icon: Icon, isOpen, onToggle, child
           </div>
         </div>
         <div className="text-slate-400 p-1 shrink-0">
-          {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          {isOpen ? <IconChevronUp size={16} /> : <IconChevronDown size={16} />}
         </div>
       </button>
       {isOpen && (
@@ -448,7 +448,9 @@ export default function Settings() {
       setInitialSettings({ ...settings })
       window.dispatchEvent(new CustomEvent('shop-settings-updated', { detail: settings }))
     } catch (err) {
-      const msg = err.response?.data?.detail || err.response?.data?.error || 'Failed to save settings'
+      const responseData = err.response?.data
+      const unknownKeys = Array.isArray(responseData?.keys) ? `: ${responseData.keys.join(', ')}` : ''
+      const msg = `${responseData?.detail || responseData?.error || 'Failed to save settings'}${unknownKeys}`
       toast.error(msg)
     } finally {
       setSaving(false)
@@ -938,7 +940,7 @@ export default function Settings() {
               disabled={saving}
               className="h-8 px-3 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs inline-flex items-center gap-1.5 transition-colors disabled:opacity-60"
             >
-              <Save size={13} />
+              <IconDeviceFloppy size={13} />
               <span>{saving ? 'Saving...' : 'Save All'}</span>
             </button>
           </div>
@@ -985,7 +987,7 @@ export default function Settings() {
                         className="min-h-10 min-w-10 rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                         title="Zoom Out"
                       >
-                        <ZoomOut size={13} />
+                        <IconZoomOut size={13} />
                       </button>
                       <span className="text-[10px] font-mono font-semibold text-slate-700 min-w-9 text-center">
                         {Math.round(effectivePreviewZoom * 100)}%
@@ -996,7 +998,7 @@ export default function Settings() {
                         className="min-h-10 min-w-10 rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                         title="Zoom In"
                       >
-                        <ZoomIn size={13} />
+                        <IconZoomIn size={13} />
                       </button>
                       {previewZoom !== 1 && (
                         <button
@@ -1005,14 +1007,14 @@ export default function Settings() {
                           className="min-h-10 min-w-10 rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                           title="Reset Zoom"
                         >
-                          <RotateCcw size={11} />
+                          <IconRotate2 size={11} />
                         </button>
                       )}
                     </div>
 
                     {/* Test Print Button */}
                     <button type="button" onClick={() => printInvoiceDirect(previewTemplateId)} className="min-h-10 px-3 text-xs font-semibold rounded-lg bg-teal-700 hover:bg-teal-800 text-white inline-flex items-center gap-1.5 shadow-2xs transition-colors">
-                      <Printer size={13} />
+                      <IconPrinter size={13} />
                       <span>Print Sample</span>
                     </button>
                   </div>
@@ -1059,7 +1061,7 @@ export default function Settings() {
                         >
                           {isDefault && (
                             <span className="absolute right-1 top-1 z-10 inline-flex items-center rounded-full bg-indigo-600 px-1.5 py-0.5 text-[8px] font-bold text-white">
-                              <Check size={11} strokeWidth={3} />
+                              <IconCheck size={11} strokeWidth={3} />
                             </span>
                           )}
 
@@ -1149,7 +1151,7 @@ export default function Settings() {
                       const selected = (settings.invoice_theme_color || '#1e3a5f').toLowerCase() === color.value
                       return (
                         <button key={color.value} type="button" onClick={() => setField('invoice_theme_color', color.value)} aria-label={`${color.name} invoice color`} title={color.name} className={`flex h-11 w-11 items-center justify-center rounded-full border-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${selected ? 'border-slate-900 ring-2 ring-slate-200' : 'border-white shadow ring-1 ring-slate-200'}`} style={{ backgroundColor: color.value }}>
-                          {selected && <Check size={15} className="text-white drop-shadow" />}
+                          {selected && <IconCheck size={15} className="text-white drop-shadow" />}
                         </button>
                       )
                     })}
@@ -1169,7 +1171,7 @@ export default function Settings() {
                 <AccordionSection
                   title="Theme Settings"
                   subtitle="Party balance, phone, alternate unit, and price history"
-                  icon={Sliders}
+                  icon={IconAdjustments}
                   isOpen={invoiceAccordions.theme}
                   onToggle={() => setInvoiceAccordions(prev => ({ ...prev, theme: !prev.theme }))}
                 >
@@ -1236,7 +1238,7 @@ export default function Settings() {
                 <AccordionSection
                   title="Invoice Details"
                   subtitle="Title, invoice numbering, dates, notes, and terms"
-                  icon={Receipt}
+                  icon={IconReceipt}
                   isOpen={invoiceAccordions.invoiceDetails}
                   onToggle={() => setInvoiceAccordions(prev => ({ ...prev, invoiceDetails: !prev.invoiceDetails }))}
                 >
@@ -1327,7 +1329,7 @@ export default function Settings() {
                 <AccordionSection
                   title="Party Details"
                   subtitle="Customer name, addresses, phone number, and GSTIN"
-                  icon={Users}
+                  icon={IconUsers}
                   isOpen={invoiceAccordions.party}
                   onToggle={() => setInvoiceAccordions(prev => ({ ...prev, party: !prev.party }))}
                 >
@@ -1367,7 +1369,7 @@ export default function Settings() {
                 <AccordionSection
                   title="Item Table Columns"
                   subtitle="Configure printed columns (display only · preserves GST math)"
-                  icon={FileSpreadsheet}
+                  icon={IconFileSpreadsheet}
                   isOpen={invoiceAccordions.columns}
                   onToggle={() => setInvoiceAccordions(prev => ({ ...prev, columns: !prev.columns }))}
                 >
@@ -1454,7 +1456,7 @@ export default function Settings() {
                 <AccordionSection
                   title="Miscellaneous Details"
                   subtitle="Bank details, payment QR, signature block, and words"
-                  icon={CheckCircle2}
+                  icon={IconCircleCheck}
                   isOpen={invoiceAccordions.misc}
                   onToggle={() => setInvoiceAccordions(prev => ({ ...prev, misc: !prev.misc }))}
                 >
@@ -1545,7 +1547,7 @@ export default function Settings() {
                         onClick={printThermalDirect}
                         className="min-h-11 px-3 text-xs font-semibold rounded-lg bg-teal-700 hover:bg-teal-800 text-white inline-flex items-center gap-1.5 shadow-2xs transition-colors"
                       >
-                        <Printer size={13} />
+                        <IconPrinter size={13} />
                         <span>Test Print Receipt</span>
                       </button>
                     ) : (
@@ -1554,7 +1556,7 @@ export default function Settings() {
                         onClick={printBarcodeLabelDirect}
                         className="min-h-11 px-3 text-xs font-semibold rounded-lg bg-teal-700 hover:bg-teal-800 text-white inline-flex items-center gap-1.5 shadow-2xs transition-colors"
                       >
-                        <Printer size={13} />
+                        <IconPrinter size={13} />
                         <span>Test Print Label</span>
                       </button>
                     )}
@@ -1670,7 +1672,7 @@ export default function Settings() {
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    <Receipt size={15} />
+                    <IconReceipt size={15} />
                     <span>Thermal Settings</span>
                   </button>
                   <button
@@ -1682,7 +1684,7 @@ export default function Settings() {
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
-                    <Barcode size={15} />
+                    <IconBarcode size={15} />
                     <span>Barcode Print</span>
                   </button>
                 </div>
@@ -1722,7 +1724,7 @@ export default function Settings() {
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-bold text-slate-900">2-inch (58 mm)</span>
                             {(settings.thermal_paper_width === '58' || settings.thermal_paper_width === '2') && (
-                              <Check size={12} className="text-indigo-600" />
+                              <IconCheck size={12} className="text-indigo-600" />
                             )}
                           </div>
                           <span className="text-[11px] text-slate-500 block">Mini Handheld & Bluetooth</span>
@@ -1752,7 +1754,7 @@ export default function Settings() {
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-bold text-slate-900">3-inch (80 mm)</span>
                             {settings.thermal_paper_width !== '58' && settings.thermal_paper_width !== '2' && (
-                              <Check size={12} className="text-indigo-600" />
+                              <IconCheck size={12} className="text-indigo-600" />
                             )}
                           </div>
                           <span className="text-[11px] text-slate-500 block">Standard POS Cash Counter</span>
@@ -1781,7 +1783,7 @@ export default function Settings() {
                           {settings.shop_logo ? (
                             <img src={settings.shop_logo} alt="Logo" className="w-full h-full object-contain p-1" />
                           ) : (
-                            <Building2 size={20} className="text-slate-400" />
+                            <IconBuildingStore size={20} className="text-slate-400" />
                           )}
                         </div>
 
@@ -1792,7 +1794,7 @@ export default function Settings() {
                             disabled={uploadingLogo}
                             className="h-8 px-3 text-xs font-semibold rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
                           >
-                            <Upload size={13} />
+                            <IconUpload size={13} />
                             <span>{uploadingLogo ? 'Uploading...' : settings.shop_logo ? 'Replace Logo' : 'Upload Logo'}</span>
                           </button>
                           {settings.shop_logo && (
@@ -1803,7 +1805,7 @@ export default function Settings() {
                               className="h-8 px-2.5 text-xs font-medium rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors"
                               title="Remove Logo"
                             >
-                              <Trash2 size={13} />
+                              <IconTrash size={13} />
                             </button>
                           )}
                         </div>
@@ -1848,7 +1850,7 @@ export default function Settings() {
                     <AccordionSection
                       title="1. Invoice Details"
                       subtitle="Receipt title, cashier, and transaction metadata"
-                      icon={Receipt}
+                      icon={IconReceipt}
                       isOpen={thermalAccordions.invoiceDetails}
                       onToggle={() => setThermalAccordions(prev => ({ ...prev, invoiceDetails: !prev.invoiceDetails }))}
                     >
@@ -1895,7 +1897,7 @@ export default function Settings() {
                     <AccordionSection
                       title="2. Party Details"
                       subtitle="Customer name, mobile number, and tax IDs"
-                      icon={Users}
+                      icon={IconUsers}
                       isOpen={thermalAccordions.party}
                       onToggle={() => setThermalAccordions(prev => ({ ...prev, party: !prev.party }))}
                     >
@@ -1923,7 +1925,7 @@ export default function Settings() {
                     <AccordionSection
                       title="3. Item Columns"
                       subtitle="Quantity, rate, discounts, and item total format"
-                      icon={FileSpreadsheet}
+                      icon={IconFileSpreadsheet}
                       isOpen={thermalAccordions.columns}
                       onToggle={() => setThermalAccordions(prev => ({ ...prev, columns: !prev.columns }))}
                     >
@@ -1969,7 +1971,7 @@ export default function Settings() {
                     <AccordionSection
                       title="4. Miscellaneous Details"
                       subtitle="UPI QR, greetings footer, cash drawer, and terms"
-                      icon={CheckCircle2}
+                      icon={IconCircleCheck}
                       isOpen={thermalAccordions.misc}
                       onToggle={() => setThermalAccordions(prev => ({ ...prev, misc: !prev.misc }))}
                     >
@@ -2068,7 +2070,7 @@ export default function Settings() {
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-bold text-slate-900">Label Printer (Roll)</span>
                             {(settings.barcode_printer_type || 'label') === 'label' && (
-                              <Check size={12} className="text-indigo-600" />
+                              <IconCheck size={12} className="text-indigo-600" />
                             )}
                           </div>
                           <span className="text-[11px] text-slate-500 block">TVS, Zebra, TSC, Godex</span>
@@ -2089,7 +2091,7 @@ export default function Settings() {
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs font-bold text-slate-900">Standard Printer (A4)</span>
                             {settings.barcode_printer_type === 'a4' && (
-                              <Check size={12} className="text-indigo-600" />
+                              <IconCheck size={12} className="text-indigo-600" />
                             )}
                           </div>
                           <span className="text-[11px] text-slate-500 block">Sticker Sheets (Laser/Inkjet)</span>
@@ -2309,7 +2311,7 @@ export default function Settings() {
                     {settings.shop_logo ? (
                       <img src={settings.shop_logo} alt="Store Logo" className="h-full w-full object-contain p-1" />
                     ) : (
-                      <Building2 size={24} className="text-slate-400" />
+                      <IconBuildingStore size={24} className="text-slate-400" />
                     )}
                   </div>
                   <div className="flex items-center gap-2">
@@ -2326,7 +2328,7 @@ export default function Settings() {
                       disabled={uploadingLogo}
                       className="h-8 px-3 text-xs font-semibold rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
                     >
-                      <Upload size={13} />
+                      <IconUpload size={13} />
                       <span>{uploadingLogo ? 'Uploading...' : settings.shop_logo ? 'Replace Logo' : 'Upload Logo'}</span>
                     </button>
                     {settings.shop_logo && (
@@ -2337,7 +2339,7 @@ export default function Settings() {
                         className="h-8 px-2.5 text-xs font-medium rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors"
                         title="Remove Logo"
                       >
-                        <Trash2 size={13} />
+                        <IconTrash size={13} />
                       </button>
                     )}
                   </div>
@@ -2581,7 +2583,7 @@ export default function Settings() {
               {/* Architecture Workflow Banner */}
               <div className="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50/70 via-blue-50/50 to-indigo-50/70 p-4 sm:p-5 shadow-xs">
                 <div className="flex items-center gap-2 mb-3">
-                  <ShieldCheck size={18} className="text-indigo-600" />
+                  <IconShieldCheck size={18} className="text-indigo-600" />
                   <span className="text-xs font-bold uppercase tracking-wider text-indigo-900">
                     Maker-Checker Audit Architecture
                   </span>
@@ -2893,7 +2895,7 @@ export default function Settings() {
                       disabled={!merchantQrValue || downloadingQrPng}
                       className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50 transition-colors"
                     >
-                      <Download size={14} />
+                      <IconDownload size={14} />
                       <span>{downloadingQrPng ? 'Preparing…' : 'Download PNG'}</span>
                     </button>
                     <button
@@ -2902,7 +2904,7 @@ export default function Settings() {
                       disabled={!merchantQrValue}
                       className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-lg bg-[#1E3A5F] px-3 text-xs font-semibold text-white hover:bg-[#162F4D] disabled:opacity-50 transition-colors"
                     >
-                      <Printer size={14} />
+                      <IconPrinter size={14} />
                       <span>Print QR stand</span>
                     </button>
                   </div>
@@ -2988,9 +2990,9 @@ export default function Settings() {
                   <div className="mt-2 text-2xl font-black text-slate-900">₹0 <span className="text-xs font-normal text-slate-500">/mo</span></div>
                   <p className="text-xs text-slate-600 mt-2">Essential POS billing for single counters.</p>
                   <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                    <li className="flex items-center gap-2"><Check size={14} className="text-teal-600" /> POS billing</li>
-                    <li className="flex items-center gap-2"><Check size={14} className="text-teal-600" /> Thermal receipt printing</li>
-                    <li className="flex items-center gap-2"><Check size={14} className="text-teal-600" /> Basic inventory</li>
+                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-teal-600" /> POS billing</li>
+                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-teal-600" /> Thermal receipt printing</li>
+                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-teal-600" /> Basic inventory</li>
                   </ul>
                 </div>
               </div>
@@ -3004,10 +3006,10 @@ export default function Settings() {
                   <div className="mt-2 text-2xl font-black text-slate-900">₹799 <span className="text-xs font-normal text-slate-500">/mo</span></div>
                   <p className="text-xs text-slate-600 mt-2">Comprehensive retail ERP with GST compliance.</p>
                   <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                    <li className="flex items-center gap-2"><Check size={14} className="text-indigo-600" /> All invoice templates and saved template options</li>
-                    <li className="flex items-center gap-2"><Check size={14} className="text-indigo-600" /> Barcode Sticker Printing (50×25mm)</li>
-                    <li className="flex items-center gap-2"><Check size={14} className="text-indigo-600" /> Maker-Checker Dual-Control Approvals</li>
-                    <li className="flex items-center gap-2"><Check size={14} className="text-indigo-600" /> Tabletop UPI QR Standee</li>
+                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-indigo-600" /> All invoice templates and saved template options</li>
+                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-indigo-600" /> Barcode Sticker Printing (50×25mm)</li>
+                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-indigo-600" /> Maker-Checker Dual-Control Approvals</li>
+                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-indigo-600" /> Tabletop UPI QR Standee</li>
                   </ul>
                 </div>
               </div>
@@ -3018,9 +3020,9 @@ export default function Settings() {
                   <div className="mt-2 text-2xl font-black text-slate-900">₹1,999 <span className="text-xs font-normal text-slate-500">/mo</span></div>
                   <p className="text-xs text-slate-600 mt-2">Multi-branch chains with centralized inventory.</p>
                   <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                    <li className="flex items-center gap-2"><Check size={14} className="text-teal-600" /> Multi-branch central warehouse</li>
-                    <li className="flex items-center gap-2"><Check size={14} className="text-teal-600" /> Automated tally sync</li>
-                    <li className="flex items-center gap-2"><Check size={14} className="text-teal-600" /> Dedicated account manager</li>
+                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-teal-600" /> Multi-branch central warehouse</li>
+                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-teal-600" /> Automated tally sync</li>
+                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-teal-600" /> Dedicated account manager</li>
                   </ul>
                 </div>
               </div>
@@ -3045,7 +3047,7 @@ export default function Settings() {
             <div className="space-y-6">
               <div className="rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50/80 via-white to-indigo-50/80 p-6 shadow-xs">
                 <div className="flex items-center gap-3 mb-2">
-                  <Gift size={24} className="text-indigo-600" />
+                  <IconGift size={24} className="text-indigo-600" />
                   <h3 className="text-base font-bold text-slate-900">Your Merchant Referral Code</h3>
                 </div>
                 <p className="text-xs text-slate-600 max-w-xl">
@@ -3064,7 +3066,7 @@ export default function Settings() {
                     }}
                     className="h-10 px-4 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xs inline-flex items-center gap-1.5 transition-colors"
                   >
-                    <Copy size={14} />
+                    <IconCopy size={14} />
                     <span>Copy Code</span>
                   </button>
                 </div>
@@ -3112,7 +3114,7 @@ export default function Settings() {
                   className="p-4 rounded-xl border border-slate-200 bg-white hover:border-teal-500 shadow-2xs transition-all flex flex-col items-center text-center group"
                 >
                   <div className="w-10 h-10 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
-                    <MessageCircle size={20} />
+                    <IconMessageCircle size={20} />
                   </div>
                   <span className="text-xs font-bold text-slate-900">WhatsApp Helpdesk</span>
                   <span className="text-[11px] text-slate-500 mt-0.5">Average reply in 5 mins</span>
@@ -3120,7 +3122,7 @@ export default function Settings() {
 
                 <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs flex flex-col items-center text-center">
                   <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-700 flex items-center justify-center mb-2">
-                    <PhoneCall size={20} />
+                    <IconPhoneCall size={20} />
                   </div>
                   <span className="text-xs font-bold text-slate-900">Phone Support</span>
                   <span className="text-[11px] text-slate-500 mt-0.5">Mon–Sat, 9:00 AM – 8:00 PM</span>
@@ -3128,7 +3130,7 @@ export default function Settings() {
 
                 <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs flex flex-col items-center text-center">
                   <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center mb-2">
-                    <Mail size={20} />
+                    <IconMail size={20} />
                   </div>
                   <span className="text-xs font-bold text-slate-900">Email Support</span>
                   <span className="text-[11px] text-slate-500 mt-0.5">support@billing-erp.in</span>
@@ -3238,7 +3240,7 @@ export default function Settings() {
                 <h2 id="all-invoice-templates-title" className="text-base font-bold text-slate-900">All Invoice Templates</h2>
                 <p className="mt-0.5 text-xs text-slate-500">Choose a layout after previewing the actual invoice design.</p>
               </div>
-              <button type="button" onClick={() => setShowAllTemplates(false)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800" aria-label="Close all templates"> <X size={18} /></button>
+              <button type="button" onClick={() => setShowAllTemplates(false)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800" aria-label="Close all templates"> <IconX size={18} /></button>
             </div>
             <div className="overflow-y-auto p-4 sm:p-6">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -3257,16 +3259,16 @@ export default function Settings() {
                           <h3 className="text-sm font-bold text-slate-900">{template.name}</h3>
                           <p className="mt-0.5 text-xs text-slate-500">{template.badge || template.size}</p>
                         </div>
-                        {selected && <span className="inline-flex items-center gap-1 rounded-full bg-indigo-600 px-2 py-1 text-[10px] font-bold text-white"><Check size={12} /> Selected</span>}
+                        {selected && <span className="inline-flex items-center gap-1 rounded-full bg-indigo-600 px-2 py-1 text-[10px] font-bold text-white"><IconCheck size={12} /> Selected</span>}
                       </div>
                       <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-600">{template.desc}</p>
                       </button>
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2">
                         <button type="button" onClick={() => { handleSelectInvoiceTemplate(template); setShowAllTemplates(false) }} disabled={selected || Boolean(savingTemplateId)} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-default disabled:bg-indigo-100 disabled:text-indigo-700">
-                          <Check size={13} />{selected ? 'Selected' : 'Use this template'}
+                          <IconCheck size={13} />{selected ? 'Selected' : 'Use this template'}
                         </button>
                         <button type="button" onClick={() => { setShowAllTemplates(false); setCustomizingTemplate(template) }} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">
-                          <Sliders size={13} /> Customize
+                          <IconAdjustments size={13} /> Customize
                         </button>
                       </div>
                     </article>
@@ -3289,7 +3291,7 @@ export default function Settings() {
                 <h2 id="custom-invoice-theme-title" className="text-base font-bold text-slate-900">Create Custom Theme</h2>
                 <p className="mt-0.5 text-xs text-slate-500">Preview updates as you change these settings. Save with the Settings bar.</p>
               </div>
-              <button type="button" onClick={() => setShowCustomTheme(false)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Close custom theme"><X size={18} /></button>
+              <button type="button" onClick={() => setShowCustomTheme(false)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Close custom theme"><IconX size={18} /></button>
             </div>
             <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
               <label className="text-xs font-semibold text-slate-700">Primary color<input type="color" value={settings.invoice_theme_color || '#1e3a5f'} onChange={event => setField('invoice_theme_color', event.target.value)} className="mt-1 block h-10 w-full cursor-pointer rounded-lg border border-slate-200 bg-white p-1" /></label>
@@ -3332,3 +3334,5 @@ export default function Settings() {
     </div>
   )
 }
+
+

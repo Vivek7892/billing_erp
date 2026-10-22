@@ -3,7 +3,12 @@ import { Modal } from './UI'
 import { API_BASE_URL } from '../api'
 import { getAccessToken } from '../services/tokenStorage'
 import toast from 'react-hot-toast'
-import { Printer, Download, Minus, Plus } from 'lucide-react'
+import {
+  IconPrinter,
+  IconDownload,
+  IconMinus,
+  IconPlus,
+} from '@tabler/icons-react'
 import JsBarcode from 'jsbarcode'
 
 const LABEL_SIZES = [
@@ -484,7 +489,7 @@ export default function BarcodePrintModal({
                     }
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]"
                   >
-                    <Minus size={13} />
+                    <IconMinus size={13} />
                   </button>
 
                   <input
@@ -517,7 +522,7 @@ export default function BarcodePrintModal({
                     }
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]"
                   >
-                    <Plus size={13} />
+                    <IconPlus size={13} />
                   </button>
                 </div>
               </div>
@@ -541,7 +546,7 @@ export default function BarcodePrintModal({
 
                   {/* Print instruction notice */}
                   <div className="mb-3 flex items-center gap-2 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800/60 px-3 py-2 text-[11px] text-neutral-800 dark:text-neutral-200">
-                    <Printer size={13} className="shrink-0 text-neutral-600 dark:text-neutral-400" />
+                    <IconPrinter size={13} className="shrink-0 text-neutral-600 dark:text-neutral-400" />
                     <span>
                       Print instruction: <strong>Print at 100% / Actual Size. Disable &quot;Fit to Page&quot;.</strong>
                     </span>
@@ -654,7 +659,7 @@ export default function BarcodePrintModal({
               onClick={handleDownload}
               className="btn-secondary btn-base flex min-h-11 items-center justify-center gap-2 text-xs font-semibold sm:w-auto"
             >
-              <Download size={14} />
+              <IconDownload size={14} />
               Download PDF
             </button>
 
@@ -663,7 +668,7 @@ export default function BarcodePrintModal({
               onClick={handlePrint}
               className="btn-primary btn-base flex min-h-11 items-center justify-center gap-2 text-xs font-semibold sm:w-auto"
             >
-              <Printer size={14} />
+              <IconPrinter size={14} />
               Print Labels
             </button>
           </div>

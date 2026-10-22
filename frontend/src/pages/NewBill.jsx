@@ -42,13 +42,41 @@ import {
 } from '../components/UpiLogos'
 import './NewBill.css'
 import {
-  Plus, Minus, Trash2, Printer, Download, RefreshCw, QrCode, Clock,
-  Keyboard, CheckCircle2, Share2, X, AlertTriangle, FileText,
-  Maximize2, Minimize2, Layers, Receipt,
-  Package, Banknote, Smartphone, CreditCard, BookOpen, Wallet,
-  User, UserPlus, UserRound, ShoppingCart,
-  MoreVertical, ArrowLeft, ArrowRight, Copy, Check, Sparkles,
-} from 'lucide-react'
+  IconPlus,
+  IconMinus,
+  IconTrash,
+  IconPrinter,
+  IconDownload,
+  IconRefresh,
+  IconQrcode,
+  IconClock,
+  IconKeyboard,
+  IconCircleCheck,
+  IconShare,
+  IconX,
+  IconAlertTriangle,
+  IconFileText,
+  IconMaximize,
+  IconMinimize,
+  IconLayersLinked,
+  IconReceipt,
+  IconPackage,
+  IconCash,
+  IconDeviceMobile,
+  IconCreditCard,
+  IconBook2,
+  IconWallet,
+  IconUser,
+  IconUserPlus,
+  IconUserCircle,
+  IconShoppingCart,
+  IconDotsVertical,
+  IconArrowLeft,
+  IconArrowRight,
+  IconCopy,
+  IconCheck,
+  IconSparkles,
+} from '@tabler/icons-react'
 import { Modal, ConfirmDialog, SearchBar } from '../components/UI'
 import { useNavigate } from 'react-router-dom'
 import RazorpayPaymentModal from '../features/billing/RazorpayPaymentModal'
@@ -125,11 +153,11 @@ const enforcedStock = product => {
 const canAutoFocus = () => typeof window !== 'undefined' && Boolean(window.matchMedia?.('(pointer: fine)').matches)
 
 const PAYMENT_METHOD_OPTIONS = [
-  { id: PAYMENT_METHODS.CASH, label: 'Cash', icon: Banknote },
-  { id: PAYMENT_METHODS.UPI, label: 'UPI', icon: Smartphone },
-  { id: PAYMENT_METHODS.CARD, label: 'Card', icon: CreditCard },
-  { id: PAYMENT_METHODS.CREDIT, label: 'Credit', icon: BookOpen },
-  { id: PAYMENT_METHODS.RAZORPAY, label: 'Razorpay', icon: Wallet },
+  { id: PAYMENT_METHODS.CASH, label: 'Cash', icon: IconCash },
+  { id: PAYMENT_METHODS.UPI, label: 'UPI', icon: IconDeviceMobile },
+  { id: PAYMENT_METHODS.CARD, label: 'Card', icon: IconCreditCard },
+  { id: PAYMENT_METHODS.CREDIT, label: 'Credit', icon: IconBook2 },
+  { id: PAYMENT_METHODS.RAZORPAY, label: 'Razorpay', icon: IconWallet },
 ]
 const CASH_CHIPS = [50, 100, 200, 500, 1000, 2000]
 const QR_PRESETS = [100, 200, 500, 1000, 2000]
@@ -221,7 +249,7 @@ function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, on
             aria-label={`Decrease ${item.product_name} quantity`}
             onClick={() => onQty(item.id, item.qty - 1)}
           >
-            <Minus size={11} />
+            <IconMinus size={11} />
           </button>
           <BufferedNumber
             aria-label={`${item.product_name} quantity`}
@@ -237,7 +265,7 @@ function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, on
             aria-label={`Increase ${item.product_name} quantity`}
             onClick={() => onQty(item.id, item.qty + 1)}
           >
-            <Plus size={11} />
+            <IconPlus size={11} />
           </button>
         </div>
         {item.unit ? <span className="pb-item-unit">{item.unit}</span> : null}
@@ -278,7 +306,7 @@ function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, on
           title="Remove item"
           onClick={() => onRemove(item.id)}
         >
-          <Trash2 size={13} />
+          <IconTrash size={13} />
         </button>
       </td>
     </tr>
@@ -538,11 +566,11 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
             {logoDataUrl ? (
               <img src={logoDataUrl} alt={shopName} className="pb-qr-shop-logo" />
             ) : (
-              <Smartphone size={16} className="text-blue-600 shrink-0" />
+              <IconDeviceMobile size={16} className="text-blue-600 shrink-0" />
             )}
             <span className="truncate">{shopName}</span>
             <span className="pb-qr-verified-tag" title="Merchant UPI QR">
-              <CheckCircle2 size={12} className="text-teal-600 dark:text-teal-400 shrink-0" />
+              <IconCircleCheck size={12} className="text-teal-600 dark:text-teal-400 shrink-0" />
               <span>UPI enabled</span>
             </span>
           </div>
@@ -568,7 +596,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
           <div className="pb-qr-meta-sub">
             {differsFromBill ? (
               <span className="pb-text-amber flex items-center gap-1 font-semibold text-xs">
-                <AlertTriangle size={13} className="shrink-0" /> Bill total is {fmt(billTotal)}
+                <IconAlertTriangle size={13} className="shrink-0" /> Bill total is {fmt(billTotal)}
               </span>
             ) : (
               <span className="text-xs text-slate-500 dark:text-slate-400">Scan with any UPI app</span>
@@ -683,12 +711,12 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
             >
               {copied ? (
                 <>
-                  <Check size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  <IconCheck size={13} className="text-emerald-600 dark:text-emerald-400" />
                   <span className="text-emerald-600 dark:text-emerald-400">Copied!</span>
                 </>
               ) : (
                 <>
-                  <Copy size={13} />
+                  <IconCopy size={13} />
                   <span>Copy</span>
                 </>
               )}
@@ -697,7 +725,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
         </div>
 
         <div className="pb-qr-guidance" role="note">
-          <Smartphone size={16} />
+          <IconDeviceMobile size={16} />
           <p>Confirm the payment in your UPI app or bank account before marking this bill paid. The QR code does not confirm payment automatically.</p>
         </div>
 
@@ -711,7 +739,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
                 disabled={!canComplete}
                 className="pb-btn-qr-complete"
               >
-                <CheckCircle2 size={18} />
+                <IconCircleCheck size={18} />
                 <span>Payment Received — Complete Sale</span>
               </button>
 
@@ -722,7 +750,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
                   disabled={!canComplete}
                   className="pb-btn pb-btn-sm"
                 >
-                  <Printer size={14} />
+                  <IconPrinter size={14} />
                   <span>Complete &amp; Print</span>
                 </button>
                 <button
@@ -731,7 +759,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
                   disabled={!canComplete}
                   className="pb-btn pb-btn-sm"
                 >
-                  <CheckCircle2 size={14} />
+                  <IconCircleCheck size={14} />
                   <span>Mark Paid Only</span>
                 </button>
               </div>
@@ -743,7 +771,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
               disabled={!canComplete}
               className="pb-btn pb-btn-primary pb-btn-lg w-full"
             >
-              <CheckCircle2 size={16} /> Payment received — mark paid {numericAmount > 0 ? `(${fmt(numericAmount)})` : ''}
+              <IconCircleCheck size={16} /> Payment received — mark paid {numericAmount > 0 ? `(${fmt(numericAmount)})` : ''}
             </button>
           )}
 
@@ -755,11 +783,11 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
               className="pb-btn pb-btn-sm"
               title="Download scannable high-resolution QR as PNG image"
             >
-              <Download size={13} />
+              <IconDownload size={13} />
               <span>{downloading ? 'Downloading...' : 'Download QR'}</span>
             </button>
             <button type="button" onClick={print} disabled={!canAct} className="pb-btn pb-btn-sm">
-              <Printer size={13} /> Print QR Stand
+              <IconPrinter size={13} /> Print QR Stand
             </button>
           </div>
 
@@ -1664,7 +1692,7 @@ export default function NewBill() {
       <header className="pb-header">
         <div className="pb-head-left">
           <div className="pb-title">
-            <ShoppingCart size={17} className="text-blue-600" />
+            <IconShoppingCart size={17} className="text-blue-600" />
             <span>New Sale</span>
           </div>
           <div className="pb-meta">
@@ -1687,7 +1715,7 @@ export default function NewBill() {
             title="Draft bills (Ctrl+D to save)"
             onClick={() => { setDrafts(loadDrafts()); setShowDrafts(true) }}
           >
-            <Layers size={14} />
+            <IconLayersLinked size={14} />
             <span className="pb-drafts-label">Drafts ({drafts.length})</span>
           </button>
           <button
@@ -1697,7 +1725,7 @@ export default function NewBill() {
             title="Keyboard shortcuts (F1-F10)"
             onClick={() => setShowShortcuts(true)}
           >
-            <Keyboard size={14} />
+            <IconKeyboard size={14} />
             <span className="pb-hide-sm">Shortcuts</span>
           </button>
           <button
@@ -1707,7 +1735,7 @@ export default function NewBill() {
             title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
             onClick={toggleFullscreen}
           >
-            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            {isFullscreen ? <IconMinimize size={14} /> : <IconMaximize size={14} />}
             <span className="pb-hide-sm">{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
           </button>
 
@@ -1720,7 +1748,7 @@ export default function NewBill() {
               aria-expanded={mobileMoreOpen}
               onClick={() => setMobileMoreOpen(v => !v)}
             >
-              <MoreVertical size={16} />
+              <IconDotsVertical size={16} />
             </button>
             {mobileMoreOpen && (
               <>
@@ -1735,7 +1763,7 @@ export default function NewBill() {
                   role="menuitem"
                   onClick={() => { setShowShortcuts(true); setMobileMoreOpen(false) }}
                 >
-                  <Keyboard size={14} />
+                  <IconKeyboard size={14} />
                   <span>Shortcuts</span>
                 </button>
                 <button
@@ -1744,7 +1772,7 @@ export default function NewBill() {
                   role="menuitem"
                   onClick={() => { toggleFullscreen(); setMobileMoreOpen(false) }}
                 >
-                  {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                  {isFullscreen ? <IconMinimize size={14} /> : <IconMaximize size={14} />}
                   <span>{isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}</span>
                 </button>
                 <button
@@ -1754,7 +1782,7 @@ export default function NewBill() {
                   onClick={() => { startNewBill(); setMobileMoreOpen(false) }}
                   disabled={saving || (!cart.length && !lastInvoice)}
                 >
-                  <RefreshCw size={14} />
+                  <IconRefresh size={14} />
                   <span>Start New Bill</span>
                 </button>
                 <div className="pb-more-divider" />
@@ -1771,7 +1799,7 @@ export default function NewBill() {
 
       {loadError && !initializing && (
         <div className="pb-banner" role="alert">
-          <AlertTriangle size={14} />
+          <IconAlertTriangle size={14} />
           <span>Some data could not be loaded (products, customers or settings may be incomplete).</span>
           <button type="button" className="pb-link" onClick={loadInitialData}>Retry</button>
         </div>
@@ -1786,7 +1814,7 @@ export default function NewBill() {
           className={`pb-mobile-tab ${mobileTab === 'catalog' ? 'active' : ''}`}
           onClick={() => setMobileTab('catalog')}
         >
-          <Package size={14} />
+          <IconPackage size={14} />
           <span>Catalog ({filtered.length})</span>
         </button>
         <button
@@ -1796,7 +1824,7 @@ export default function NewBill() {
           className={`pb-mobile-tab ${mobileTab === 'cart' ? 'active' : ''}`}
           onClick={() => setMobileTab('cart')}
         >
-          <ShoppingCart size={14} />
+          <IconShoppingCart size={14} />
           <span>Active Cart</span>
           <span className={`pb-mobile-cart-badge ${cart.length > 0 ? 'has-items' : ''}`}>
             {cart.length} {cart.length > 0 ? `• ${fmt(grandTotal)}` : ''}
@@ -1814,7 +1842,7 @@ export default function NewBill() {
               <div className="pb-last-bill-strip" aria-label="Last completed bill">
                 <div className="pb-last-bill-track">
                   <div className=" pb-last-bill">
-                    <Receipt size={14} />
+                    <IconReceipt size={14} />
                   </div>
                   <div className="pb-last-bill-info">
                     <span className="pb-last-bill-label">Last completed bill</span>
@@ -1823,13 +1851,13 @@ export default function NewBill() {
                   </div>
                   <div className="pb-last-bill-actions">
                     <button type="button" onClick={() => printInvoiceDocument(lastInvoice.id, false)} title="Print last bill">
-                      <Printer size={12} /> <span>Print</span>
+                      <IconPrinter size={12} /> <span>Print</span>
                     </button>
                     <button type="button" onClick={() => printInvoiceDocument(lastInvoice.id, true)} title="Print thermal last bill">
                       <span>Thermal</span>
                     </button>
                     <button type="button" onClick={shareInvoice} title="Share last bill">
-                      <Share2 size={12} /> <span>Share</span>
+                      <IconShare size={12} /> <span>Share</span>
                     </button>
                   </div>
                 </div>
@@ -1923,7 +1951,7 @@ export default function NewBill() {
                                 onMouseDown={e => e.preventDefault()}
                                 onClick={() => { addToCart(p); setSearchActive(false) }}
                               >
-                                <Plus size={12} /> {isOut(p) ? 'Out' : 'Add'}
+                                <IconPlus size={12} /> {isOut(p) ? 'Out' : 'Add'}
                               </button>
                             </div>
                           </div>
@@ -1953,7 +1981,7 @@ export default function NewBill() {
                                 onMouseDown={e => e.preventDefault()}
                                 onClick={() => { addToCart(p); setSearchActive(false) }}
                               >
-                                <Plus size={12} /> {isOut(p) ? 'Out' : 'Add'}
+                                <IconPlus size={12} /> {isOut(p) ? 'Out' : 'Add'}
                               </button>
                             </div>
                           </div>
@@ -2008,7 +2036,7 @@ export default function NewBill() {
                   <tr>
                     <td colSpan="5" className="pb-bill-empty-td">
                       <div className="pb-bill-empty-content">
-                        <Package size={28} className="pb-text-muted" />
+                        <IconPackage size={28} className="pb-text-muted" />
                         <div className="pb-strong">Loading products…</div>
                       </div>
                     </td>
@@ -2059,7 +2087,7 @@ export default function NewBill() {
                               addToCart(p)
                             }}
                           >
-                            <Plus size={13} />
+                            <IconPlus size={13} />
                             {out ? 'Out' : inCart > 0 ? `Add (${inCart})` : 'Add'}
                           </button>
                         </td>
@@ -2070,7 +2098,7 @@ export default function NewBill() {
                   <tr>
                     <td colSpan="5" className="pb-bill-empty-td">
                       <div className="pb-bill-empty-content">
-                        <Package size={28} className="pb-text-muted" />
+                        <IconPackage size={28} className="pb-text-muted" />
                         <div className="pb-strong">No products found</div>
                         <div className="pb-sub">
                           {products.length
@@ -2082,7 +2110,7 @@ export default function NewBill() {
                           className="pb-btn-add mt-2"
                           onClick={() => navigate('/inventory/products')}
                         >
-                          <Plus size={13} /> Add Product
+                          <IconPlus size={13} /> Add Product
                         </button>
                         {(search || catFilter) && (
                           <button
@@ -2113,7 +2141,7 @@ export default function NewBill() {
           <div className="pb-cart-header">
             <div className="pb-cart-header-left">
               <div className="pb-cart-title">
-                <ShoppingCart size={16} className="text-blue-600" />
+                <IconShoppingCart size={16} className="text-blue-600" />
                 <span>Active Sale Cart</span>
               </div>
               <span className="pb-cart-count-pill">
@@ -2130,7 +2158,7 @@ export default function NewBill() {
                   title="Clear all cart items"
                   onClick={() => setShowClearConfirm(true)}
                 >
-                  <Trash2 size={13} />
+                  <IconTrash size={13} />
                   <span>Clear</span>
                 </button>
               )}
@@ -2150,7 +2178,7 @@ export default function NewBill() {
             <div className="pb-cust-select-wrap">
               {customer ? (
                 <div className="pb-cust-selected-badge">
-                  <User size={14} className="text-blue-600" />
+                  <IconUser size={14} className="text-blue-600" />
                   <span className="pb-cust-selected-name">{customer.name}</span>
                   {customer.mobile && <span className="pb-cust-selected-phone">({customer.mobile})</span>}
                   <button
@@ -2159,12 +2187,12 @@ export default function NewBill() {
                     title="Change to Walk-in Customer"
                     onClick={() => { setCustomer(null); setCustomerSearch('') }}
                   >
-                    <X size={12} />
+                    <IconX size={12} />
                   </button>
                 </div>
               ) : (
                 <div className="pb-cust-box">
-                  <User size={14} className="pb-field-icon" />
+                  <IconUser size={14} className="pb-field-icon" />
                   <input
                     id="pb-customer"
                     ref={customerRef}
@@ -2189,7 +2217,7 @@ export default function NewBill() {
                       title="Clear customer"
                       onClick={() => { setCustomer(null); setCustomerSearch('') }}
                     >
-                      <X size={13} />
+                      <IconX size={13} />
                     </button>
                   )}
                 </div>
@@ -2239,7 +2267,7 @@ export default function NewBill() {
               title="Add new customer"
               onClick={() => setShowCustomerModal(true)}
             >
-              <UserPlus size={14} />
+              <IconUserPlus size={14} />
               <span className="pb-hide-sm">+ Customer</span>
             </button>
           </div>
@@ -2279,7 +2307,7 @@ export default function NewBill() {
                       <div className="pb-bill-empty-content py-4">
                         <BillingWorkflowVisual className="w-full max-w-lg mb-3 border-0 bg-transparent shadow-none" compact />
                         <div className="flex items-center justify-center gap-2">
-                          <ShoppingCart size={20} className="pb-muted" />
+                          <IconShoppingCart size={20} className="pb-muted" />
                           <span className="pb-strong text-xs">Ready for Sale · Scan barcode or search product to begin</span>
                         </div>
                       </div>
@@ -2376,7 +2404,7 @@ export default function NewBill() {
                 onClick={() => setMobilePaymentOpen(true)}
               >
                 <span>Continue to Payment</span>
-                <ArrowRight size={16} />
+                <IconArrowRight size={16} />
               </button>
             </div>
           </div>
@@ -2504,7 +2532,7 @@ export default function NewBill() {
                     disabled={grandTotal <= 0 || !cart.length}
                     title={!upiId ? 'Configure shop UPI ID in Settings' : 'Show UPI QR Code'}
                   >
-                    <QrCode size={14} /> Show QR
+                    <IconQrcode size={14} /> Show QR
                   </button>
                   <div className="pb-input-inline">
                     <span className="pb-dock-mini-label">Status:</span>
@@ -2517,7 +2545,7 @@ export default function NewBill() {
                         className={`pb-status-btn${payment.status === 'paid' ? ' active' : ''}`}
                         onClick={() => setPayment(x => ({ ...x, status: 'paid' }))}
                       >
-                        <CheckCircle2 size={12} />
+                        <IconCircleCheck size={12} />
                         <span>Paid</span>
                       </button>
                       <button
@@ -2528,7 +2556,7 @@ export default function NewBill() {
                         className={`pb-status-btn${payment.status === 'pending' ? ' active' : ''}`}
                         onClick={() => setPayment(x => ({ ...x, status: 'pending' }))}
                       >
-                        <Clock size={12} />
+                        <IconClock size={12} />
                         <span>Pending</span>
                       </button>
                     </div>
@@ -2573,7 +2601,7 @@ export default function NewBill() {
                         className={`pb-status-btn${payment.status === 'paid' ? ' active' : ''}`}
                         onClick={() => setPayment(x => ({ ...x, status: 'paid' }))}
                       >
-                        <CheckCircle2 size={12} />
+                        <IconCircleCheck size={12} />
                         <span>Paid</span>
                       </button>
                       <button
@@ -2584,7 +2612,7 @@ export default function NewBill() {
                         className={`pb-status-btn${payment.status === 'pending' ? ' active' : ''}`}
                         onClick={() => setPayment(x => ({ ...x, status: 'pending' }))}
                       >
-                        <Clock size={12} />
+                        <IconClock size={12} />
                         <span>Pending</span>
                       </button>
                     </div>
@@ -2620,7 +2648,7 @@ export default function NewBill() {
                 onClick={startNewBill}
                 disabled={saving || (!cart.length && !lastInvoice)}
               >
-                <RefreshCw size={13} />
+                <IconRefresh size={13} />
                 <span>New Bill</span>
               </button>
               <button
@@ -2630,7 +2658,7 @@ export default function NewBill() {
                 onClick={saveDraft}
                 disabled={saving || !cart.length}
               >
-                <Layers size={13} />
+                <IconLayersLinked size={13} />
                 <span>Save Draft</span>
               </button>
               <button
@@ -2640,7 +2668,7 @@ export default function NewBill() {
                 onClick={openQuickPayment}
                 disabled={grandTotal <= 0 || !cart.length}
               >
-                <QrCode size={13} />
+                <IconQrcode size={13} />
                 <span>Quick QR</span>
               </button>
               <button
@@ -2650,7 +2678,7 @@ export default function NewBill() {
                 onClick={() => setShowClearConfirm(true)}
                 disabled={!cart.length}
               >
-                <Trash2 size={13} />
+                <IconTrash size={13} />
                 <span>Clear</span>
               </button>
             </div>
@@ -2664,7 +2692,7 @@ export default function NewBill() {
                   onClick={() => saveBill(true)}
                   disabled={!canAttemptComplete}
                 >
-                  <Printer size={13} />
+                  <IconPrinter size={13} />
                   <span>Complete &amp; Print</span>
                 </button>
               )}
@@ -2678,7 +2706,7 @@ export default function NewBill() {
                   onClick={openRazorpayCheckout}
                   disabled={!canAttemptComplete}
                 >
-                  <CreditCard size={15} />
+                  <IconCreditCard size={15} />
                   <span>{saving ? 'Processing…' : `Pay with Razorpay · ${fmt(grandTotal)}`}</span>
                 </button>
               ) : (
@@ -2689,7 +2717,7 @@ export default function NewBill() {
                   onClick={() => saveBill(false)}
                   disabled={!canAttemptComplete}
                 >
-                  <CheckCircle2 size={15} />
+                  <IconCircleCheck size={15} />
                   <span>{saving ? 'Processing…' : `✓ COMPLETE SALE · ${fmt(grandTotal)}`}</span>
                 </button>
               )}
@@ -2703,7 +2731,7 @@ export default function NewBill() {
         <aside className="pb-mobile-floating-dock" aria-label="Quick cart bar">
           <div className="pb-floating-info">
             <div className="pb-floating-qty">
-              <ShoppingCart size={15} />
+              <IconShoppingCart size={15} />
               <span><b>{cart.length}</b> {cart.length === 1 ? 'item' : 'items'} ({totalQty} units)</span>
             </div>
             <div className="pb-floating-total">
@@ -2741,7 +2769,7 @@ export default function NewBill() {
                   onClick={() => saveBill(true)}
                   disabled={!canAttemptComplete || saving}
                 >
-                  <Printer size={15} />
+                  <IconPrinter size={15} />
                   <span>Complete &amp; Print</span>
                 </button>
               )}
@@ -2751,7 +2779,7 @@ export default function NewBill() {
                 onClick={saveDraft}
                 disabled={saving || !cart.length}
               >
-                <Layers size={15} />
+                <IconLayersLinked size={15} />
                 <span>Save Draft</span>
               </button>
             </div>
@@ -2776,7 +2804,7 @@ export default function NewBill() {
                   }}
                   disabled={!canAttemptComplete || saving}
                 >
-                  <CreditCard size={18} />
+                  <IconCreditCard size={18} />
                   <span>{saving ? 'Processing…' : `Pay with Razorpay · ${fmt(grandTotal)}`}</span>
                 </button>
               ) : (
@@ -2787,7 +2815,7 @@ export default function NewBill() {
                   onClick={() => saveBill(false)}
                   disabled={!canAttemptComplete || saving}
                 >
-                  <CheckCircle2 size={18} />
+                  <IconCircleCheck size={18} />
                   <span>{saving ? 'Processing Sale…' : `Complete Sale · ${fmt(grandTotal)}`}</span>
                 </button>
               )}
@@ -2947,7 +2975,7 @@ export default function NewBill() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
-                      <QrCode size={20} />
+                      <IconQrcode size={20} />
                     </div>
                     <div>
                       <div className="text-xs font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">Show UPI QR Standee</div>
@@ -2956,7 +2984,7 @@ export default function NewBill() {
                       </div>
                     </div>
                   </div>
-                  <ArrowRight size={18} className="text-blue-600 shrink-0" />
+                  <IconArrowRight size={18} className="text-blue-600 shrink-0" />
                 </button>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2994,7 +3022,7 @@ export default function NewBill() {
                       }`}
                       onClick={() => setPayment(x => ({ ...x, status: 'paid' }))}
                     >
-                      <CheckCircle2 size={14} /> <span>Paid</span>
+                      <IconCircleCheck size={14} /> <span>Paid</span>
                     </button>
                     <button
                       type="button"
@@ -3005,7 +3033,7 @@ export default function NewBill() {
                       }`}
                       onClick={() => setPayment(x => ({ ...x, status: 'pending' }))}
                     >
-                      <Clock size={14} /> <span>Pending</span>
+                      <IconClock size={14} /> <span>Pending</span>
                     </button>
                   </div>
                 </div>
@@ -3049,7 +3077,7 @@ export default function NewBill() {
                       }`}
                       onClick={() => setPayment(x => ({ ...x, status: 'paid' }))}
                     >
-                      <CheckCircle2 size={14} /> <span>Paid</span>
+                      <IconCircleCheck size={14} /> <span>Paid</span>
                     </button>
                     <button
                       type="button"
@@ -3060,7 +3088,7 @@ export default function NewBill() {
                       }`}
                       onClick={() => setPayment(x => ({ ...x, status: 'pending' }))}
                     >
-                      <Clock size={14} /> <span>Pending</span>
+                      <IconClock size={14} /> <span>Pending</span>
                     </button>
                   </div>
                 </div>
@@ -3070,13 +3098,13 @@ export default function NewBill() {
             {payment.method === 'credit' && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 font-bold text-sm text-[var(--ink)]">
-                  <BookOpen size={16} className="text-amber-500" />
+                  <IconBook2 size={16} className="text-amber-500" />
                   <span>Credit Sale / Customer Khata Account</span>
                 </div>
 
                 {CREDIT_REQUIRES_CUSTOMER && !customer ? (
                   <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs text-amber-800 dark:text-amber-300">
-                    <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                    <IconAlertTriangle size={16} className="shrink-0 mt-0.5" />
                     <span>A named customer is required for credit sales. Please select or add a customer in the bill tab.</span>
                   </div>
                 ) : (
@@ -3109,7 +3137,7 @@ export default function NewBill() {
             {payment.method === 'razorpay' && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 font-semibold text-sm text-blue-600 dark:text-blue-400">
-                  <Wallet size={16} />
+                  <IconWallet size={16} />
                   <span>Razorpay Online Gateway</span>
                 </div>
                 <p className="text-xs text-[var(--muted)]">
@@ -3318,7 +3346,7 @@ export default function NewBill() {
               onClick={() => printInvoiceDocument(lastInvoice?.id, false)}
               className="flex h-10 items-center justify-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-[#1E3A5F]/40 hover:bg-[var(--surface-hover)] active:scale-[0.98]"
             >
-              <Printer size={15} className="text-blue-600 dark:text-blue-400 shrink-0" />
+              <IconPrinter size={15} className="text-blue-600 dark:text-blue-400 shrink-0" />
               <span>Print A4</span>
             </button>
             <button
@@ -3326,7 +3354,7 @@ export default function NewBill() {
               onClick={() => printInvoiceDocument(lastInvoice?.id, true)}
               className="flex h-10 items-center justify-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-slate-400 hover:bg-[var(--surface-hover)] active:scale-[0.98]"
             >
-              <Receipt size={15} className="text-slate-600 dark:text-slate-300 shrink-0" />
+              <IconReceipt size={15} className="text-slate-600 dark:text-slate-300 shrink-0" />
               <span>Thermal Slip</span>
             </button>
             <button
@@ -3334,7 +3362,7 @@ export default function NewBill() {
               onClick={shareInvoice}
               className="flex h-10 items-center justify-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-emerald-500/40 hover:bg-[var(--surface-hover)] active:scale-[0.98]"
             >
-              <Share2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <IconShare size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>WhatsApp</span>
             </button>
             <button
@@ -3342,7 +3370,7 @@ export default function NewBill() {
               onClick={() => downloadInvoiceDocument(lastInvoice?.id)}
               className="flex h-10 items-center justify-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-indigo-500/40 hover:bg-[var(--surface-hover)] active:scale-[0.98]"
             >
-              <Download size={15} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <IconDownload size={15} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span>Download PDF</span>
             </button>
           </div>
@@ -3356,7 +3384,7 @@ export default function NewBill() {
             }}
             className="mt-3.5 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 font-bold text-white text-sm shadow-md shadow-emerald-600/20 transition-all hover:bg-emerald-700 active:scale-[0.99]"
           >
-            <Plus size={18} strokeWidth={2.5} />
+            <IconPlus size={18} strokeWidth={2.5} />
             <span>+ Start New Sale (Enter)</span>
           </button>
         </div>

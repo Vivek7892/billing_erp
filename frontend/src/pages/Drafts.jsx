@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Layers,
-  Trash2,
-  RotateCcw,
-  Clock,
-  ShoppingCart,
-  User,
-  ChevronRight,
-  ReceiptText,
-  ArrowLeft,
-  Clock3,
-  Search,
-  X,
-} from 'lucide-react'
+  IconLayersLinked,
+  IconTrash,
+  IconRotate2,
+  IconClock,
+  IconShoppingCart,
+  IconUser,
+  IconChevronRight,
+  IconReceiptTax,
+  IconArrowLeft,
+  IconClockHour3,
+  IconSearch,
+  IconX,
+} from '@tabler/icons-react'
 
 const DRAFT_KEY = 'pos_drafts'
 
@@ -88,7 +88,7 @@ export default function Drafts() {
       <div className="min-h-[calc(100vh-120px)] bg-[var(--app-bg)] flex items-center justify-center px-4">
         <div className="text-center max-w-md">
           <div className="mx-auto mb-4 w-14 h-14 rounded-lg bg-[var(--surface-elevated)] border border-[var(--line)] flex items-center justify-center text-[#1E3A5F] dark:text-slate-200">
-            <ReceiptText size={26} />
+            <IconReceiptTax size={26} />
           </div>
 
           <h2 className="text-lg font-bold text-[var(--ink)]">
@@ -104,7 +104,7 @@ export default function Drafts() {
             onClick={() => navigate('/billing/new')}
             className="btn-primary mt-4 inline-flex items-center gap-2 h-9 px-4 rounded-md text-xs font-semibold transition-colors"
           >
-            <ShoppingCart size={14} />
+            <IconShoppingCart size={14} />
             Create New Bill
           </button>
         </div>
@@ -118,7 +118,7 @@ export default function Drafts() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-md bg-[var(--surface-elevated)] border border-[var(--line)] flex items-center justify-center text-[#1E3A5F] dark:text-slate-200 shrink-0">
-            <Layers size={18} />
+            <IconLayersLinked size={18} />
           </div>
 
           <div>
@@ -137,7 +137,7 @@ export default function Drafts() {
             onClick={() => navigate('/billing/new')}
             className="btn-secondary inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-xs font-semibold shadow-none transition"
           >
-            <ArrowLeft size={13} />
+            <IconArrowLeft size={13} />
             <span>New Bill</span>
           </button>
 
@@ -146,7 +146,7 @@ export default function Drafts() {
             onClick={clearAll}
             className="btn-danger inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-xs font-semibold shadow-none transition"
           >
-            <Trash2 size={13} />
+            <IconTrash size={13} />
             <span>Clear All</span>
           </button>
         </div>
@@ -203,7 +203,7 @@ export default function Drafts() {
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="group relative flex items-center min-h-[38px] w-full sm:w-64 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-2xs">
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-                <Search size={13} strokeWidth={2.2} />
+                <IconSearch size={13} strokeWidth={2.2} />
               </div>
               <input
                 type="text"
@@ -220,7 +220,7 @@ export default function Drafts() {
                   title="Clear search"
                   aria-label="Clear search"
                 >
-                  <X size={12} strokeWidth={2.5} />
+                  <IconX size={12} strokeWidth={2.5} />
                 </button>
               ) : null}
             </div>
@@ -274,11 +274,11 @@ export default function Drafts() {
 
                 <div className="flex items-center justify-between text-xs text-[var(--muted)] border-t border-[var(--line-subtle)] pt-2">
                   <div className="flex items-center gap-1 text-[11px]">
-                    <Clock size={11} />
+                    <IconClock size={11} />
                     <span>{savedAt}</span>
                   </div>
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--surface-elevated)] border border-[var(--line)] text-[11px] font-semibold text-[var(--ink)]">
-                    <ShoppingCart size={11} />
+                    <IconShoppingCart size={11} />
                     {itemCount} item{itemCount !== 1 ? 's' : ''}
                   </span>
                 </div>
@@ -294,9 +294,9 @@ export default function Drafts() {
                     onClick={() => resume(draft)}
                     className="flex-1 btn-primary min-h-[42px] px-3.5 text-xs font-bold flex items-center justify-center gap-1.5 rounded-md shadow-xs active:scale-[0.99] transition"
                   >
-                    <RotateCcw size={13} />
+                    <IconRotate2 size={13} />
                     <span>Resume Bill</span>
-                    <ChevronRight size={13} />
+                    <IconChevronRight size={13} />
                   </button>
 
                   <button
@@ -305,7 +305,7 @@ export default function Drafts() {
                     title="Discard bill"
                     className="w-11 min-h-[42px] rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-red-600 hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 flex items-center justify-center transition-colors active:scale-95"
                   >
-                    <Trash2 size={14} />
+                    <IconTrash size={14} />
                   </button>
                 </div>
               </div>
@@ -362,7 +362,7 @@ export default function Drafts() {
                     <td>
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded bg-[var(--surface-elevated)] border border-[var(--line)] flex items-center justify-center text-[var(--muted)] shrink-0">
-                          <User size={13} />
+                          <IconUser size={13} />
                         </div>
                         <div className="min-w-0">
                           <div className="font-semibold text-xs text-[var(--ink)] truncate">
@@ -380,7 +380,7 @@ export default function Drafts() {
                     {/* Parked At */}
                     <td>
                       <div className="flex items-center gap-1.5 text-xs text-[var(--ink-secondary)]">
-                        <Clock size={12} className="text-[var(--muted)] shrink-0" />
+                        <IconClock size={12} className="text-[var(--muted)] shrink-0" />
                         <span>{savedAt}</span>
                       </div>
                     </td>
@@ -388,7 +388,7 @@ export default function Drafts() {
                     {/* Items Count */}
                     <td className="text-center">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[var(--surface-elevated)] border border-[var(--line)] text-xs font-semibold text-[var(--ink)]">
-                        <ShoppingCart size={11} className="text-[#1E3A5F] dark:text-blue-400" />
+                        <IconShoppingCart size={11} className="text-[#1E3A5F] dark:text-blue-400" />
                         {itemCount}
                       </span>
                     </td>
@@ -419,7 +419,7 @@ export default function Drafts() {
                           className="btn-primary h-7 px-2.5 rounded text-xs font-semibold inline-flex items-center gap-1 transition-colors"
                           title="Resume bill in POS"
                         >
-                          <RotateCcw size={12} />
+                          <IconRotate2 size={12} />
                           Resume
                         </button>
 
@@ -428,7 +428,7 @@ export default function Drafts() {
                           title="Discard draft bill"
                           className="w-7 h-7 rounded border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-red-600 hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 inline-flex items-center justify-center transition-colors"
                         >
-                          <Trash2 size={12} />
+                          <IconTrash size={12} />
                         </button>
                       </div>
                     </td>

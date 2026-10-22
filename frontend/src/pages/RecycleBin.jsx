@@ -3,21 +3,21 @@ import api from '../api'
 import { PageHeader, Spinner, Modal } from '../components/UI'
 import toast from 'react-hot-toast'
 import {
-  Trash2,
-  RotateCcw,
-  ShieldAlert,
-  FileText,
-  Package,
-  ShoppingBag,
-  ExternalLink,
-  CheckCircle2,
-  AlertTriangle,
-  Info,
-  Calendar,
-  User,
-  Search,
-  X,
-} from 'lucide-react'
+  IconTrash,
+  IconRotate2,
+  IconShieldExclamation,
+  IconFileText,
+  IconPackage,
+  IconShoppingBag,
+  IconExternalLink,
+  IconCircleCheck,
+  IconAlertTriangle,
+  IconInfoCircle,
+  IconCalendar,
+  IconUser,
+  IconSearch,
+  IconX,
+} from '@tabler/icons-react'
 
 export default function RecycleBin() {
   const [data, setData] = useState({
@@ -146,7 +146,7 @@ export default function RecycleBin() {
             disabled={loading}
             className="recycle-tab min-h-[42px] btn-base flex w-full items-center justify-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-3 text-xs font-semibold text-sky-700 hover:bg-sky-100 disabled:opacity-60 dark:border-sky-700 dark:bg-sky-950/50 dark:text-sky-200 dark:hover:bg-sky-900/60 sm:w-auto shadow-xs transition"
           >
-            <RotateCcw size={14} className={loading ? 'animate-spin' : ''} />
+            <IconRotate2 size={14} className={loading ? 'animate-spin' : ''} />
             Refresh register
           </button>
         }
@@ -157,7 +157,7 @@ export default function RecycleBin() {
       <div className="rounded-xl border border-amber-300 bg-amber-50 p-3.5 text-xs text-amber-800 shadow-sm dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-200 sm:p-4">
         <div className="flex items-start gap-3">
           <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-800/40 dark:bg-amber-900/50 dark:text-amber-300">
-            <ShieldAlert size={16} />
+            <IconShieldExclamation size={16} />
           </div>
           <div className="space-y-1">
             <span className="font-semibold text-[var(--ink)]">
@@ -182,7 +182,7 @@ export default function RecycleBin() {
                 : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
             }`}
           >
-            <FileText size={14} />
+            <IconFileText size={14} />
             <span>Cancelled Invoices</span>
             <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${tab === 'invoices' ? 'bg-[#1E3A5F] text-white' : 'bg-[var(--line-subtle)] text-[var(--muted)]'}`}>
               {filteredInvoices.length}
@@ -197,7 +197,7 @@ export default function RecycleBin() {
                 : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
             }`}
           >
-            <Package size={14} />
+            <IconPackage size={14} />
             <span>Archived Products</span>
             <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${tab === 'products' ? 'bg-[#1E3A5F] text-white' : 'bg-[var(--line-subtle)] text-[var(--muted)]'}`}>
               {filteredProducts.length}
@@ -212,7 +212,7 @@ export default function RecycleBin() {
                 : 'text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]'
             }`}
           >
-            <ShoppingBag size={14} />
+            <IconShoppingBag size={14} />
             <span>Cancelled Purchases</span>
             <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${tab === 'purchases' ? 'bg-[#1E3A5F] text-white' : 'bg-[var(--line-subtle)] text-[var(--muted)]'}`}>
               {filteredPurchases.length}
@@ -223,7 +223,7 @@ export default function RecycleBin() {
         <div className="w-full md:w-72">
           <div className="group relative flex items-center min-h-[42px] w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-              <Search size={14} strokeWidth={2.2} />
+              <IconSearch size={14} strokeWidth={2.2} />
             </div>
             <input
               type="text"
@@ -240,7 +240,7 @@ export default function RecycleBin() {
                 title="Clear search"
                 aria-label="Clear search"
               >
-                <X size={13} strokeWidth={2.5} />
+                <IconX size={13} strokeWidth={2.5} />
               </button>
             ) : (
               <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
@@ -263,7 +263,7 @@ export default function RecycleBin() {
           <div className="sm:hidden divide-y divide-[var(--line-subtle)]">
             {filteredInvoices.length === 0 ? (
               <div className="py-10 text-center text-[var(--muted)]">
-                <FileText size={22} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
+                <IconFileText size={22} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
                 <p className="font-medium text-xs">No cancelled invoices found</p>
               </div>
             ) : (
@@ -317,7 +317,7 @@ export default function RecycleBin() {
                 {filteredInvoices.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-[var(--muted)]">
-                      <FileText size={24} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
+                      <IconFileText size={24} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
                       <p className="font-medium">No cancelled invoices found</p>
                     </td>
                   </tr>
@@ -369,7 +369,7 @@ export default function RecycleBin() {
           <div className="sm:hidden divide-y divide-[var(--line-subtle)]">
             {filteredProducts.length === 0 ? (
               <div className="py-10 text-center text-[var(--muted)]">
-                <Package size={22} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
+                <IconPackage size={22} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
                 <p className="font-medium text-xs">No archived products found</p>
               </div>
             ) : (
@@ -392,7 +392,7 @@ export default function RecycleBin() {
                       onClick={() => setRestoreModal({ open: true, item: p, reason: '' })}
                       className="btn-primary min-h-[36px] inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg shadow-xs transition"
                     >
-                      <RotateCcw size={13} /> Restore Item
+                      <IconRotate2 size={13} /> Restore Item
                     </button>
                     <button
                       type="button"
@@ -400,7 +400,7 @@ export default function RecycleBin() {
                       disabled={deletingProductId === p.id}
                       className="btn-secondary min-h-[36px] inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-rose-600"
                     >
-                      <Trash2 size={13} /> {deletingProductId === p.id ? 'Deleting...' : 'Delete'}
+                      <IconTrash size={13} /> {deletingProductId === p.id ? 'Deleting...' : 'Delete'}
                     </button>
                   </div>
                 </div>
@@ -426,7 +426,7 @@ export default function RecycleBin() {
                 {filteredProducts.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-[var(--muted)]">
-                      <Package size={24} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
+                      <IconPackage size={24} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
                       <p className="font-medium">No archived products found</p>
                     </td>
                   </tr>
@@ -463,7 +463,7 @@ export default function RecycleBin() {
                             onClick={() => setRestoreModal({ open: true, item: p, reason: '' })}
                             className="btn-primary btn-sm inline-flex items-center gap-1 text-[11px] px-2.5 py-1"
                           >
-                            <RotateCcw size={12} /> Restore
+                            <IconRotate2 size={12} /> Restore
                           </button>
                           <button
                             type="button"
@@ -471,7 +471,7 @@ export default function RecycleBin() {
                             disabled={deletingProductId === p.id}
                             className="btn-secondary btn-sm inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-rose-600"
                           >
-                            <Trash2 size={12} /> {deletingProductId === p.id ? 'Deleting...' : 'Delete'}
+                            <IconTrash size={12} /> {deletingProductId === p.id ? 'Deleting...' : 'Delete'}
                           </button>
                         </div>
                       </td>
@@ -489,7 +489,7 @@ export default function RecycleBin() {
           <div className="sm:hidden divide-y divide-[var(--line-subtle)]">
             {filteredPurchases.length === 0 ? (
               <div className="py-10 text-center text-[var(--muted)]">
-                <ShoppingBag size={22} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
+                <IconShoppingBag size={22} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
                 <p className="font-medium text-xs">No cancelled purchases found</p>
               </div>
             ) : (
@@ -541,7 +541,7 @@ export default function RecycleBin() {
                 {filteredPurchases.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-12 text-center text-[var(--muted)]">
-                      <ShoppingBag size={24} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
+                      <IconShoppingBag size={24} className="mx-auto mb-1.5 opacity-40 text-[#1E3A5F] dark:text-slate-400" />
                       <p className="font-medium">No cancelled purchases found</p>
                     </td>
                   </tr>

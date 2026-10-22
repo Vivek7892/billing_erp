@@ -1,5 +1,13 @@
 import { useEffect, useId, useLayoutEffect, useRef, isValidElement } from 'react'
-import { Search, X } from 'lucide-react'
+import {
+  IconSearch,
+  IconX,
+  IconAlertTriangle,
+  IconAlertCircle,
+  IconPackage,
+  IconRefresh,
+  IconCheck,
+} from '@tabler/icons-react'
 import { usePageLoadingRegistration } from './PageLoadingContext'
 
 
@@ -584,7 +592,7 @@ export function Modal({
               aria-label="Close"
               className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded-xl text-[var(--muted)] transition-colors hover:bg-[var(--surface)] hover:text-[var(--ink)] active:scale-95 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
             >
-              <X size={18} />
+              <IconX size={18} />
             </button>
           </div>
         </div>
@@ -654,35 +662,9 @@ export function ConfirmDialog({
             ].join(' ')}
           >
             {danger ? (
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-                <path d="M12 9v4" />
-                <path d="M12 17h.01" />
-              </svg>
+              <IconAlertTriangle size={22} stroke={2} />
             ) : (
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 8v4" />
-                <path d="M12 16h.01" />
-              </svg>
+              <IconAlertCircle size={22} stroke={2} />
             )}
           </div>
 
@@ -808,7 +790,7 @@ export function Drawer({
             aria-label="Close"
             className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded-xl text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--ink)] transition-colors active:scale-95"
           >
-            <X size={18} />
+            <IconX size={18} />
           </button>
         </div>
 
@@ -847,7 +829,7 @@ export function TagChip({ label, onRemove, color = 'default', className = '' }) 
           aria-label={`Remove ${label}`}
           className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--muted)] hover:bg-[var(--line)] hover:text-red-500 transition-colors"
         >
-          <X size={12} />
+          <IconX size={12} />
         </button>
       )}
     </span>
@@ -912,21 +894,7 @@ export function EmptyState({
 
   const renderIcon = () => {
     if (!Icon) {
-      return (
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <rect width="20" height="14" x="2" y="7" rx="2" />
-          <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
-        </svg>
-      )
+      return <IconPackage size={24} stroke={1.5} />
     }
     if (isValidElement(Icon)) {
       return Icon
@@ -1135,20 +1103,7 @@ export function ErrorState({
       className="flex flex-col items-center justify-center px-6 py-14 text-center"
     >
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-rose-200 bg-rose-50 text-rose-600 dark:border-rose-800/50 dark:bg-rose-950/40 dark:text-rose-400">
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 8v4" />
-          <path d="M12 16h.01" />
-        </svg>
+        <IconAlertCircle size={24} stroke={1.8} />
       </div>
 
       <h2 className="text-base font-semibold text-[var(--ink)]">
@@ -1165,21 +1120,7 @@ export function ErrorState({
           onClick={onRetry}
           className="btn-secondary btn-sm mt-5 flex items-center gap-2"
         >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-            <path d="M21 3v5h-5" />
-            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-            <path d="M8 16H3v5" />
-          </svg>
+          <IconRefresh size={14} stroke={2} />
           Try again
         </button>
       )}
@@ -1199,18 +1140,7 @@ export function SuccessState({
   return (
     <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-800/50 dark:bg-emerald-950/40 dark:text-emerald-400">
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M20 6 9 17l-5-5" />
-        </svg>
+        <IconCheck size={24} stroke={2} />
       </div>
 
       <h2 className="text-base font-semibold text-[var(--ink)]">
@@ -1282,7 +1212,7 @@ export function SearchInput({
   return (
     <div className={`group relative flex items-center min-h-[42px] w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs ${className}`}>
       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-        <Search size={14} strokeWidth={2.2} />
+        <IconSearch size={14} strokeWidth={2.2} />
       </div>
 
       <input
@@ -1305,7 +1235,7 @@ export function SearchInput({
           aria-label="Clear search"
           title="Clear search"
         >
-          <X size={13} strokeWidth={2.5} />
+          <IconX size={13} strokeWidth={2.5} />
         </button>
       ) : null}
     </div>
@@ -1403,27 +1333,11 @@ export function AlertBanner({
       ].join(' ')}
       role="alert"
     >
-      <svg
-        className={`mt-0.5 shrink-0 ${selectedStyle.icon}`}
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        {type === 'success' ? (
-          <path d="M20 6 9 17l-5-5" />
-        ) : (
-          <>
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 8v4" />
-            <path d="M12 16h.01" />
-          </>
-        )}
-      </svg>
+      {type === 'success' ? (
+        <IconCheck size={18} stroke={1.8} className={`mt-0.5 shrink-0 ${selectedStyle.icon}`} />
+      ) : (
+        <IconAlertCircle size={18} stroke={1.8} className={`mt-0.5 shrink-0 ${selectedStyle.icon}`} />
+      )}
 
       <div className="min-w-0 flex-1">
         {title && (
@@ -1446,19 +1360,7 @@ export function AlertBanner({
           className={`shrink-0 rounded-md p-1 ${selectedStyle.icon} transition-opacity hover:opacity-60`}
           aria-label="Dismiss"
         >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M18 6 6 18" />
-            <path d="m6 6 12 12" />
-          </svg>
+          <IconX size={15} stroke={2.2} />
         </button>
       )}
     </div>
@@ -1690,7 +1592,7 @@ export function SearchBar({
   return (
     <div className={`group relative flex items-center min-h-[42px] w-full min-w-[200px] flex-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs ${className}`}>
       <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300 ${iconClassName}`}>
-        <Search size={14} strokeWidth={2.2} />
+        <IconSearch size={14} strokeWidth={2.2} />
       </div>
 
       <input
@@ -1715,7 +1617,7 @@ export function SearchBar({
           aria-label="Clear search"
           title="Clear search"
         >
-          <X size={13} strokeWidth={2.5} />
+          <IconX size={13} strokeWidth={2.5} />
         </button>
       ) : shortcut ? (
         <kbd className={`hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs ${shortcutClassName}`}>

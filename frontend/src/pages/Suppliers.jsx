@@ -4,34 +4,34 @@ import api from '../api'
 import { Badge, Spinner, TableSkeleton, Modal, ConfirmDialog, EmptyState } from '../components/UI'
 
 import {
-  Building2,
-  Truck,
-  Plus,
-  Search,
-  Pencil,
-  Trash2,
-  Phone,
-  Mail,
-  MapPin,
-  ChevronDown,
-  ChevronRight,
-  Package,
-  IndianRupee,
-  Save,
-  X,
-  CreditCard,
-  Clock3,
-  FileSpreadsheet,
-  Upload,
-  Download,
-  CheckCircle2,
-  AlertCircle,
-  AlertTriangle,
-  RotateCcw,
-  Check,
-  FileText,
-  ArrowRight,
-} from 'lucide-react'
+  IconBuildingStore,
+  IconTruck,
+  IconPlus,
+  IconSearch,
+  IconPencil,
+  IconTrash,
+  IconPhone,
+  IconMail,
+  IconMapPin,
+  IconChevronDown,
+  IconChevronRight,
+  IconPackage,
+  IconCurrencyRupee,
+  IconDeviceFloppy,
+  IconX,
+  IconCreditCard,
+  IconClockHour3,
+  IconFileSpreadsheet,
+  IconUpload,
+  IconDownload,
+  IconCircleCheck,
+  IconAlertCircle,
+  IconAlertTriangle,
+  IconRotate2,
+  IconCheck,
+  IconFileText,
+  IconArrowRight,
+} from '@tabler/icons-react'
 
 import toast from 'react-hot-toast'
 
@@ -195,7 +195,7 @@ function SupplierForm({ initial, onSaved, onClose }) {
           disabled={saving}
           className="btn-primary h-9 px-4 text-xs flex items-center justify-center gap-2"
         >
-          <Save size={14} />
+          <IconDeviceFloppy size={14} />
           {saving
             ? 'Saving...'
             : initial?.id
@@ -226,7 +226,7 @@ function SupplierProductsRow({ supplier, products, onClose }) {
           {/* Expanded Header */}
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div className="flex items-center gap-2">
-              <Package size={15} className="text-[#1E3A5F] dark:text-slate-200" />
+              <IconPackage size={15} className="text-[#1E3A5F] dark:text-slate-200" />
               <span className="text-xs font-bold uppercase tracking-wide text-[var(--ink)]">
                 Products supplied by {supplier.name}
               </span>
@@ -247,7 +247,7 @@ function SupplierProductsRow({ supplier, products, onClose }) {
           {/* No Products */}
           {supplierProducts.length === 0 ? (
             <div className="border border-[var(--line)] bg-[var(--surface)] px-4 py-8 text-center rounded-md">
-              <Package size={25} className="mx-auto text-[var(--muted-light)] mb-2" />
+              <IconPackage size={25} className="mx-auto text-[var(--muted-light)] mb-2" />
               <p className="text-xs font-semibold text-[var(--ink)]">
                 No products linked to this supplier
               </p>
@@ -563,7 +563,7 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
                   : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
               }`}
             >
-              {step !== 'upload' ? <Check size={13} /> : '1'}
+              {step !== 'upload' ? <IconCheck size={13} /> : '1'}
             </span>
             <span
               className={`text-xs font-semibold ${
@@ -576,7 +576,7 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
             </span>
           </div>
 
-          <ArrowRight size={14} className="text-[var(--muted-light)]" />
+          <IconArrowRight size={14} className="text-[var(--muted-light)]" />
 
           <div className="flex items-center gap-2">
             <span
@@ -588,7 +588,7 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
                     : 'bg-[var(--surface-elevated)] border border-[var(--line)] text-[var(--muted)]'
               }`}
             >
-              {step === 'report' ? <Check size={13} /> : '2'}
+              {step === 'report' ? <IconCheck size={13} /> : '2'}
             </span>
             <span
               className={`text-xs font-semibold ${
@@ -601,7 +601,7 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
             </span>
           </div>
 
-          <ArrowRight size={14} className="text-[var(--muted-light)]" />
+          <IconArrowRight size={14} className="text-[var(--muted-light)]" />
 
           <div className="flex items-center gap-2">
             <span
@@ -634,7 +634,7 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
             <div className="rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-md bg-[var(--surface)] border border-[var(--line)] flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0">
-                  <FileSpreadsheet size={20} />
+                  <IconFileSpreadsheet size={20} />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-[var(--ink)]">
@@ -653,7 +653,7 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
                   disabled={downloadingTemplate}
                   className="btn-secondary h-8 px-3 text-xs flex items-center gap-1.5 rounded-md"
                 >
-                  <Download size={13} />
+                  <IconDownload size={13} />
                   <span>{downloadingTemplate ? 'Downloading...' : 'Download Template (.xlsx)'}</span>
                 </button>
               </div>
@@ -675,7 +675,7 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
               />
 
               <div className="w-12 h-12 rounded-full bg-[var(--surface-elevated)] border border-[var(--line)] flex items-center justify-center mx-auto mb-3 text-[#1E3A5F] dark:text-slate-200">
-                <Upload size={22} />
+                <IconUpload size={22} />
               </div>
 
               <h4 className="text-sm font-bold text-[var(--ink)]">
@@ -690,7 +690,7 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
 
               {file && (
                 <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300 text-xs font-semibold">
-                  <CheckCircle2 size={13} />
+                  <IconCircleCheck size={13} />
                   File loaded & ready for validation
                 </div>
               )}
@@ -744,7 +744,7 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
                 ) : (
                   <>
                     <span>Validate & Preview</span>
-                    <ArrowRight size={13} />
+                    <IconArrowRight size={13} />
                   </>
                 )}
               </button>
@@ -900,7 +900,7 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
                           <td>
                             {hasErrors ? (
                               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300">
-                                <AlertCircle size={10} />
+                                <IconAlertCircle size={10} />
                                 Error
                               </span>
                             ) : row.action === 'update' ? (
@@ -946,14 +946,14 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
                                     key={eIdx}
                                     className="flex items-center gap-1 text-[11px] font-semibold text-red-600 dark:text-red-400"
                                   >
-                                    <AlertCircle size={11} className="shrink-0" />
+                                    <IconAlertCircle size={11} className="shrink-0" />
                                     <span>{err}</span>
                                   </div>
                                 ))}
                               </div>
                             ) : (
                               <span className="text-[11px] text-teal-600 dark:text-teal-400 font-semibold flex items-center gap-1">
-                                <Check size={11} />
+                                <IconCheck size={11} />
                                 Ready to import
                               </span>
                             )}
@@ -1001,7 +1001,7 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
                 disabled={importing}
                 className="btn-secondary h-9 px-3.5 text-xs flex items-center gap-1.5"
               >
-                <RotateCcw size={13} />
+                <IconRotate2 size={13} />
                 Upload Different File
               </button>
 
@@ -1028,7 +1028,7 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 size={14} />
+                      <IconCircleCheck size={14} />
                       <span>Confirm & Import ({validRowsToImportCount} Suppliers)</span>
                     </>
                   )}
@@ -1053,9 +1053,9 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
             >
               <div className="flex items-start gap-3">
                 {importReport.failed_count === 0 ? (
-                  <CheckCircle2 size={24} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <IconCircleCheck size={24} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                 ) : (
-                  <AlertTriangle size={24} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <IconAlertTriangle size={24} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                 )}
 
                 <div>
@@ -1167,7 +1167,7 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
                 onClick={() => setStep('upload')}
                 className="btn-secondary h-9 px-3.5 text-xs flex items-center gap-1.5"
               >
-                <RotateCcw size={13} />
+                <IconRotate2 size={13} />
                 Import Another File
               </button>
 
@@ -1176,7 +1176,7 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
                 onClick={handleDone}
                 className="btn-primary h-9 px-5 text-xs flex items-center gap-1.5"
               >
-                <Check size={14} />
+                <IconCheck size={14} />
                 <span>Done (View Suppliers)</span>
               </button>
             </div>
@@ -1522,7 +1522,7 @@ export default function Suppliers() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-md bg-[var(--surface-elevated)] border border-[var(--line)] flex items-center justify-center text-[#1E3A5F] dark:text-slate-200 shrink-0">
-            <Building2 size={18} />
+            <IconBuildingStore size={18} />
           </div>
 
           <div>
@@ -1542,7 +1542,7 @@ export default function Suppliers() {
             className="btn-secondary h-9 px-3.5 text-xs flex items-center justify-center gap-1.5 flex-1 sm:flex-none rounded-md"
             title="Bulk import suppliers from Excel or CSV"
           >
-            <FileSpreadsheet size={14} />
+            <IconFileSpreadsheet size={14} />
             Import Excel
           </button>
 
@@ -1551,7 +1551,7 @@ export default function Suppliers() {
             onClick={openAdd}
             className="btn-primary h-9 px-3.5 text-xs flex items-center justify-center gap-1.5 flex-1 sm:flex-none rounded-md"
           >
-            <Plus size={14} />
+            <IconPlus size={14} />
             Add Supplier
           </button>
         </div>
@@ -1617,7 +1617,7 @@ export default function Suppliers() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div className="group relative flex items-center min-h-[42px] w-full md:max-w-xl rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-              <Search size={14} strokeWidth={2.2} />
+              <IconSearch size={14} strokeWidth={2.2} />
             </div>
             <input
               type="text"
@@ -1634,7 +1634,7 @@ export default function Suppliers() {
                 title="Clear search"
                 aria-label="Clear search"
               >
-                <X size={13} strokeWidth={2.5} />
+                <IconX size={13} strokeWidth={2.5} />
               </button>
             ) : (
               <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
@@ -1685,7 +1685,7 @@ export default function Suppliers() {
           </div>
 
           <div className="hidden items-center gap-1.5 text-[11px] text-[var(--muted)] sm:flex">
-            <Clock3 size={12} />
+            <IconClockHour3 size={12} />
             <span>Vendor accounts & payables</span>
           </div>
         </div>
@@ -1694,7 +1694,7 @@ export default function Suppliers() {
           <TableSkeleton rows={8} cols={5} label="Loading suppliers" />
         ) : filtered.length === 0 ? (
           <EmptyState
-            icon={Truck}
+            icon={IconTruck}
             title={q ? 'No suppliers matching your search' : 'No suppliers yet'}
             description={
               q
@@ -1735,7 +1735,7 @@ export default function Suppliers() {
                         </div>
                         {supplier.address && (
                           <div className="flex items-start gap-1 mt-1 text-[11px] text-[var(--muted)]">
-                            <MapPin size={10} className="shrink-0 mt-0.5" />
+                            <IconMapPin size={10} className="shrink-0 mt-0.5" />
                             <span className="truncate">{supplier.address}</span>
                           </div>
                         )}
@@ -1788,9 +1788,9 @@ export default function Suppliers() {
                         onClick={() => toggleExpand(supplier.id)}
                         className="inline-flex items-center gap-1 px-2 py-1 rounded border border-[var(--line)] bg-[var(--surface-elevated)] text-[11px] font-semibold text-[var(--ink)]"
                       >
-                        <Package size={12} className="text-[#1E3A5F] dark:text-slate-300" />
+                        <IconPackage size={12} className="text-[#1E3A5F] dark:text-slate-300" />
                         <span>{supplierProducts.length} Products</span>
-                        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                        {expanded ? <IconChevronDown size={12} /> : <IconChevronRight size={12} />}
                       </button>
 
                       <div className="flex items-center gap-1.5">
@@ -1800,7 +1800,7 @@ export default function Suppliers() {
                             onClick={() => openPayment(supplier)}
                             className="btn-success btn-sm inline-flex items-center gap-1"
                           >
-                            <CreditCard size={12} />
+                            <IconCreditCard size={12} />
                             Pay
                           </button>
                         )}
@@ -1810,7 +1810,7 @@ export default function Suppliers() {
                           className="btn-secondary btn-sm inline-flex items-center gap-1"
                           title="Return items from a supplier purchase"
                         >
-                          <RotateCcw size={12} />
+                          <IconRotate2 size={12} />
                           <span>Return</span>
                         </button>
                         <button
@@ -1818,14 +1818,14 @@ export default function Suppliers() {
                           onClick={() => openEdit(supplier)}
                           className="h-7 px-2 border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:text-[var(--ink)] text-[11px] font-semibold flex items-center gap-1 rounded"
                         >
-                          <Pencil size={12} />
+                          <IconPencil size={12} />
                         </button>
                         <button
                           type="button"
                           onClick={() => setDeleteTarget(supplier)}
                           className="h-7 w-7 border border-[var(--line)] bg-[var(--surface)] text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 rounded flex items-center justify-center"
                         >
-                          <Trash2 size={12} />
+                          <IconTrash size={12} />
                         </button>
                       </div>
                     </div>
@@ -1916,9 +1916,9 @@ export default function Suppliers() {
                                 }
                               >
                                 {expanded ? (
-                                  <ChevronDown size={14} />
+                                  <IconChevronDown size={14} />
                                 ) : (
-                                  <ChevronRight size={14} />
+                                  <IconChevronRight size={14} />
                                 )}
                               </button>
                               <span className="text-[10px] text-[var(--muted)] font-mono">
@@ -1935,7 +1935,7 @@ export default function Suppliers() {
                               </div>
                               {supplier.address && (
                                 <div className="flex items-start gap-1 mt-1 max-w-[280px] text-[11px] text-[var(--muted)]">
-                                  <MapPin
+                                  <IconMapPin
                                     size={10}
                                     className="shrink-0 mt-0.5 text-[var(--muted-light)]"
                                   />
@@ -1952,7 +1952,7 @@ export default function Suppliers() {
                             <div className="space-y-1 min-w-[180px]">
                               {supplier.phone ? (
                                 <div className="flex items-center gap-1.5 text-xs text-[var(--ink-secondary)]">
-                                  <Phone
+                                  <IconPhone
                                     size={11}
                                     className="text-[#1E3A5F] dark:text-slate-300"
                                   />
@@ -1966,7 +1966,7 @@ export default function Suppliers() {
 
                               {supplier.email && (
                                 <div className="flex items-center gap-1.5 max-w-[200px] text-[11px] text-[var(--muted)]">
-                                  <Mail
+                                  <IconMail
                                     size={11}
                                     className="shrink-0 text-[var(--muted-light)]"
                                   />
@@ -1998,7 +1998,7 @@ export default function Suppliers() {
                               onClick={() => toggleExpand(supplier.id)}
                               className="inline-flex items-center gap-1.5 h-7 px-2.5 border border-[var(--line)] bg-[var(--surface)] text-xs font-semibold text-[var(--ink-secondary)] hover:border-[#1E3A5F] hover:text-[var(--primary)] rounded transition-colors"
                             >
-                              <Package
+                              <IconPackage
                                 size={12}
                                 className="text-[#1E3A5F] dark:text-slate-300"
                               />
@@ -2038,7 +2038,7 @@ export default function Suppliers() {
                                   className="btn-success btn-sm inline-flex items-center gap-1"
                                   title="Record payment"
                                 >
-                                  <CreditCard size={12} />
+                                  <IconCreditCard size={12} />
                                   Pay
                                 </button>
                               )}
@@ -2049,7 +2049,7 @@ export default function Suppliers() {
                                 className="btn-secondary btn-sm inline-flex items-center gap-1"
                                 title="Return items from a supplier purchase"
                               >
-                                <RotateCcw size={12} />
+                                <IconRotate2 size={12} />
                                 <span className="hidden xl:inline">Return</span>
                               </button>
 
@@ -2059,7 +2059,7 @@ export default function Suppliers() {
                                 className="h-7 px-2 border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:border-[var(--line-strong)] hover:text-[var(--ink)] text-[11px] font-semibold flex items-center gap-1 rounded transition-colors"
                                 title="Edit supplier"
                               >
-                                <Pencil size={12} />
+                                <IconPencil size={12} />
                                 <span className="hidden xl:inline truncate">Edit</span>
                               </button>
 
@@ -2069,7 +2069,7 @@ export default function Suppliers() {
                                 className="h-7 w-7 border border-[var(--line)] bg-[var(--surface)] text-red-500 hover:border-red-300 hover:bg-red-50 dark:hover:bg-red-950/40 rounded flex items-center justify-center transition-colors"
                                 title="Delete supplier"
                               >
-                                <Trash2 size={12} />
+                                <IconTrash size={12} />
                               </button>
                             </div>
                           </td>
@@ -2143,7 +2143,7 @@ export default function Suppliers() {
               disabled={savingReturn || loadingReturns || !returnOrder}
               className="btn-primary btn-base inline-flex items-center gap-2"
             >
-              <RotateCcw size={14} />
+              <IconRotate2 size={14} />
               {savingReturn ? 'Recording…' : 'Record Return'}
             </button>
           </div>
@@ -2154,7 +2154,7 @@ export default function Suppliers() {
             <div className="py-10 text-center text-sm text-[var(--muted)]">Loading supplier purchases…</div>
           ) : returnOrders.length === 0 ? (
             <EmptyState
-              icon={Package}
+              icon={IconPackage}
               title="No supplier purchases found"
               description="Create a purchase for this supplier before recording a return."
             />
@@ -2259,7 +2259,7 @@ export default function Suppliers() {
               disabled={paying}
               className="min-h-[44px] rounded-xl bg-emerald-600 px-5 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition flex items-center justify-center gap-1.5 disabled:opacity-50"
             >
-              <IndianRupee size={14} />
+              <IconCurrencyRupee size={14} />
               <span>{paying ? 'Recording...' : 'Record Payment'}</span>
             </button>
           </div>

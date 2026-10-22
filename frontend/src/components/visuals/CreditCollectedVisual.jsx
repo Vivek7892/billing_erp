@@ -1,9 +1,9 @@
 import {
-  CheckCircle2,
-  IndianRupee,
-  CreditCard,
-  QrCode,
-} from 'lucide-react'
+  IconCircleCheck,
+  IconCurrencyRupee,
+  IconCreditCard,
+  IconQrcode,
+} from '@tabler/icons-react'
 import DreamVisualContainer from './DreamVisualContainer'
 
 const formatCurrency = value =>
@@ -27,21 +27,21 @@ export default function CreditCollectedVisual({
   const paymentMethods = {
     cash: {
       label: 'Cash',
-      icon: IndianRupee,
+      icon: IconCurrencyRupee,
     },
     upi: {
       label: 'UPI',
-      icon: QrCode,
+      icon: IconQrcode,
     },
     card: {
       label: 'Card',
-      icon: CreditCard,
+      icon: IconCreditCard,
     },
   }
 
   const payment = paymentMethods[method] || {
     label: 'Payment',
-    icon: CreditCard,
+    icon: IconCreditCard,
   }
 
   const PaymentIcon = payment.icon
@@ -78,7 +78,7 @@ export default function CreditCollectedVisual({
                   : 'text-amber-600'
               }`}
             >
-              {collected && <CheckCircle2 size={12} />}
+              {collected && <IconCircleCheck size={12} />}
               {collected ? 'Collected' : 'Pending'}
             </div>
           </div>

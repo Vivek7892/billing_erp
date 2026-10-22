@@ -4,10 +4,22 @@ import api, { API_BASE_URL } from '../api'
 import { getAccessToken } from '../services/tokenStorage'
 import { Badge, Spinner, Modal } from '../components/UI'
 import {
-  RotateCcw, RefreshCw, PackageX, IndianRupee, FileX, TrendingDown,
-  Eye, ChevronDown, ChevronUp, Printer, AlertCircle, Plus, Receipt,
-  Search, X
-} from 'lucide-react'
+  IconRotate2,
+  IconRefresh,
+  IconPackageOff,
+  IconCurrencyRupee,
+  IconFileX,
+  IconTrendingDown,
+  IconEye,
+  IconChevronDown,
+  IconChevronUp,
+  IconPrinter,
+  IconAlertCircle,
+  IconPlus,
+  IconReceipt,
+  IconSearch,
+  IconX,
+} from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 
 const fmt = v => `₹${Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
@@ -87,7 +99,7 @@ function ReturnModal({ open, onClose, invoice, onDone }) {
     <Modal open={open} onClose={onClose} title={`Process Return — ${invoice?.invoice_number}`} size="md">
       <div className="space-y-4">
         <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-md p-3 flex gap-2 text-xs text-amber-800 dark:text-amber-300">
-          <AlertCircle size={14} className="shrink-0 mt-0.5" />
+          <IconAlertCircle size={14} className="shrink-0 mt-0.5" />
           Stock will be restored for returned items. This action cannot be undone.
         </div>
 
@@ -273,10 +285,10 @@ export default function Returns() {
   }, [returns, returnSearch])
 
   const stats = [
-    { label: 'Total Returns', value: returns.length + refundedInvoices.length, icon: RotateCcw },
-    { label: 'Refunded', value: refundedInvoices.length, icon: IndianRupee },
-    { label: 'Cancelled', value: cancelledInvoices.length, icon: FileX },
-    { label: 'Value Refunded', value: fmt(totalRefunded), icon: TrendingDown },
+    { label: 'Total Returns', value: returns.length + refundedInvoices.length, icon: IconRotate2 },
+    { label: 'Refunded', value: refundedInvoices.length, icon: IconCurrencyRupee },
+    { label: 'Cancelled', value: cancelledInvoices.length, icon: IconFileX },
+    { label: 'Value Refunded', value: fmt(totalRefunded), icon: IconTrendingDown },
   ]
 
   const toggleExpand = (id) => setExpandedReturns(prev => ({ ...prev, [id]: !prev[id] }))
@@ -306,7 +318,7 @@ export default function Returns() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-0.5">
         <div>
           <div className="mb-1 flex items-center gap-2 text-[var(--muted-light)]">
-            <RotateCcw size={14} />
+            <IconRotate2 size={14} />
             <span className="text-[10px] font-bold uppercase tracking-wider">Sales / Returns</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--ink)]">Returns &amp; Refunds</h1>
@@ -321,7 +333,7 @@ export default function Returns() {
             className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold shadow-none transition"
             title="Refresh returns list"
           >
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+            <IconRefresh size={13} className={loading ? 'animate-spin' : ''} />
             <span>Refresh</span>
           </button>
           <button
@@ -330,7 +342,7 @@ export default function Returns() {
             className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold shadow-none transition"
             title="View Invoices"
           >
-            <Receipt size={14} />
+            <IconReceipt size={14} />
             <span>Invoices</span>
           </button>
           <button
@@ -338,7 +350,7 @@ export default function Returns() {
             onClick={() => navigate('/billing/new')}
             className="btn-primary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-xs font-bold text-white shadow-none transition"
           >
-            <Plus size={15} />
+            <IconPlus size={15} />
             <span>New Bill</span>
           </button>
         </div>
@@ -394,7 +406,7 @@ export default function Returns() {
 
     {/* Title */}
     <div className="flex items-center gap-2 min-w-0">
-      <RotateCcw
+      <IconRotate2
         size={16}
         className="text-[#1E3A5F] dark:text-slate-300 flex-shrink-0"
       />
@@ -411,7 +423,7 @@ export default function Returns() {
       {/* Search bar */}
       <div className="group relative flex items-center min-h-[38px] w-full sm:w-64 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-2xs">
         <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-          <Search size={13} strokeWidth={2.2} />
+          <IconSearch size={13} strokeWidth={2.2} />
         </div>
         <input
           type="text"
@@ -428,7 +440,7 @@ export default function Returns() {
             title="Clear search"
             aria-label="Clear search"
           >
-            <X size={12} strokeWidth={2.5} />
+            <IconX size={12} strokeWidth={2.5} />
           </button>
         ) : null}
       </div>
@@ -441,7 +453,7 @@ export default function Returns() {
         aria-label="Refresh sales returns"
         title="Refresh"
       >
-        <RefreshCw size={15} strokeWidth={2} />
+        <IconRefresh size={15} strokeWidth={2} />
       </button>
     </div>
   </div>
@@ -480,7 +492,7 @@ export default function Returns() {
                         <td className="text-sm text-[var(--muted)]">{r.created_by_name || (r.created_by ? `User #${r.created_by}` : '—')}</td>
                         <td className="text-center">
                           <button onClick={() => toggleExpand(r.id)} className="w-8 h-8 inline-flex items-center justify-center text-[var(--ink-secondary)] bg-[var(--surface)] border border-[var(--line)] rounded-md hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-all active:scale-95" aria-label="Toggle return details">
-                            {expandedReturns[r.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            {expandedReturns[r.id] ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}
                           </button>
                         </td>
                       </tr>
@@ -545,7 +557,7 @@ export default function Returns() {
                       <div className="font-mono text-xs text-[var(--muted)] mt-0.5">{r.invoice_number}</div>
                     </div>
                     <button onClick={() => toggleExpand(r.id)} className="w-8 h-8 shrink-0 inline-flex items-center justify-center rounded-md bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)]" aria-label="Toggle return details">
-                      {expandedReturns[r.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      {expandedReturns[r.id] ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}
                     </button>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 border-t border-[var(--line-subtle)] pt-2">
@@ -582,7 +594,7 @@ export default function Returns() {
       <div className="bg-[var(--surface)] rounded-lg border border-[var(--line)] shadow-none overflow-hidden min-w-0">
         <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 border-b border-[var(--line-subtle)] bg-[var(--surface)]">
           <div className="flex items-center gap-2">
-            <PackageX size={16} className="text-rose-600" />
+            <IconPackageOff size={16} className="text-rose-600" />
             <h2 className="font-semibold text-[var(--ink)] text-sm sm:text-base leading-5 tracking-tight">Cancelled &amp; Refunded Invoices</h2>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -618,7 +630,7 @@ export default function Returns() {
                     .length === 0 ? (
                     <tr><td colSpan={12} className="text-center py-12">
                       <div className="flex flex-col items-center gap-2 text-[var(--muted-light)]">
-                        <RotateCcw size={28} className="opacity-30" />
+                        <IconRotate2 size={28} className="opacity-30" />
                         <span className="text-sm">No records found</span>
                       </div>
                     </td></tr>
@@ -640,11 +652,11 @@ export default function Returns() {
                         <td className="text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button onClick={() => setViewModal(b)} className="w-8 h-8 inline-flex items-center justify-center text-[var(--ink-secondary)] bg-[var(--surface)] border border-[var(--line)] rounded-md hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-all active:scale-95" title="View" aria-label="View invoice">
-                              <Eye size={14} />
+                              <IconEye size={14} />
                             </button>
                             <a href={`${API_BASE_URL}/invoices/${b.id}/pdf/?token=${getAccessToken()}`}
                               target="_blank" rel="noreferrer" className="w-8 h-8 inline-flex items-center justify-center text-[var(--ink-secondary)] bg-[var(--surface)] border border-[var(--line)] rounded-md hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-all active:scale-95" title="Print" aria-label="Print invoice">
-                              <Printer size={14} />
+                              <IconPrinter size={14} />
                             </a>
                           </div>
                         </td>
@@ -660,7 +672,7 @@ export default function Returns() {
                 .length === 0 ? (
                 <div className="text-center py-12 text-[var(--muted-light)]">
                   <div className="flex flex-col items-center gap-2">
-                    <RotateCcw size={28} className="opacity-30" />
+                    <IconRotate2 size={28} className="opacity-30" />
                     <span className="text-sm">No records found</span>
                   </div>
                 </div>
@@ -693,12 +705,12 @@ export default function Returns() {
                       </div>
                       <div className="flex items-center gap-1.5">
                         <button onClick={() => setViewModal(b)} className="min-h-[38px] px-2.5 inline-flex items-center justify-center gap-1 text-[var(--ink-secondary)] rounded-md bg-[var(--surface)] border border-[var(--line)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-all active:scale-95 text-xs font-semibold" title="View" aria-label="View invoice">
-                          <Eye size={14} />
+                          <IconEye size={14} />
                           <span>View</span>
                         </button>
                         <a href={`${API_BASE_URL}/invoices/${b.id}/pdf/?token=${getAccessToken()}`}
                           target="_blank" rel="noreferrer" className="min-h-[38px] px-2.5 inline-flex items-center justify-center gap-1 text-[var(--ink-secondary)] rounded-md bg-[var(--surface)] border border-[var(--line)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition-all active:scale-95 text-xs font-semibold" title="Print" aria-label="Print invoice">
-                          <Printer size={14} />
+                          <IconPrinter size={14} />
                           <span>Print</span>
                         </a>
                       </div>
@@ -714,7 +726,7 @@ export default function Returns() {
       <div className="bg-[var(--surface)] rounded-md border border-[var(--line)] shadow-none overflow-hidden min-w-0">
         <div className="px-4 sm:px-5 py-4 sm:py-5 border-b border-[var(--line-subtle)] bg-[var(--surface)]">
           <div className="flex items-center gap-2">
-            <RotateCcw size={16} className="text-[#1E3A5F] dark:text-slate-300" />
+            <IconRotate2 size={16} className="text-[#1E3A5F] dark:text-slate-300" />
             <h2 className="font-semibold text-[var(--ink)] text-base leading-5 tracking-tight">Process New Return</h2>
             <span className="text-xs text-[var(--muted-light)]">— select a completed invoice</span>
           </div>
@@ -749,11 +761,11 @@ export default function Returns() {
                         <div className="inline-flex items-center justify-end gap-1.5">
                           <button onClick={() => { setCancelTarget(b); setCancelReason('Customer requested cancellation') }}
                             className="btn-secondary min-h-8 text-xs px-2.5 py-1 rounded-md font-semibold inline-flex items-center justify-center gap-1.5 text-rose-600">
-                            <FileX size={12} /> Cancel Bill
+                            <IconFileX size={12} /> Cancel Bill
                           </button>
                           <button onClick={() => setReturnModal(b)}
                             className="btn-danger min-h-8 text-xs px-2.5 py-1 rounded-md font-semibold inline-flex items-center justify-center gap-1.5">
-                            <RotateCcw size={12} /> Return
+                            <IconRotate2 size={12} /> Return
                           </button>
                         </div>
                       </td>
@@ -790,11 +802,11 @@ export default function Returns() {
                     <div className="flex gap-2">
                       <button onClick={() => { setCancelTarget(b); setCancelReason('Customer requested cancellation') }}
                         className="btn-secondary min-h-[40px] px-3 text-xs rounded-md font-semibold inline-flex items-center justify-center gap-1.5 text-rose-600">
-                        <FileX size={13} /> <span>Cancel Bill</span>
+                        <IconFileX size={13} /> <span>Cancel Bill</span>
                       </button>
                       <button onClick={() => setReturnModal(b)}
                         className="btn-danger min-h-[40px] px-3.5 text-xs rounded-md font-bold inline-flex items-center justify-center gap-1.5 shrink-0 shadow-xs active:scale-95 transition">
-                        <RotateCcw size={13} /> <span>Return</span>
+                        <IconRotate2 size={13} /> <span>Return</span>
                       </button>
                     </div>
                   </div>

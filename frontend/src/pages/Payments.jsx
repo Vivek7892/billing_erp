@@ -4,44 +4,44 @@ import api from '../api'
 import { Spinner, Modal, TableSkeleton, EmptyState, ErrorState, Pagination } from '../components/UI'
 import toast from 'react-hot-toast'
 import {
-  Banknote,
-  CreditCard,
-  RefreshCw,
-  Search,
-  Smartphone,
-  Wallet,
-  X,
-  Receipt,
-  SlidersHorizontal,
-  Eye,
-  UserRound,
-  ReceiptText,
-  Printer,
-  Download,
-  ShieldCheck,
-  ExternalLink,
-  Plus,
-  IndianRupee,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  CircleDot,
-  RotateCcw,
-  Ban,
-  Phone,
-  Mail,
-  Calendar,
-  TrendingUp,
-  BarChart2,
-  ArrowDownRight,
-  ArrowUpRight,
-  ArrowUpDown,
-  MoreVertical,
-  Copy,
-  Check,
-  AlertCircle,
-  FileText,
-} from 'lucide-react'
+  IconCash,
+  IconCreditCard,
+  IconRefresh,
+  IconSearch,
+  IconDeviceMobile,
+  IconWallet,
+  IconX,
+  IconReceipt,
+  IconAdjustmentsHorizontal,
+  IconEye,
+  IconUserCircle,
+  IconReceiptTax,
+  IconPrinter,
+  IconDownload,
+  IconShieldCheck,
+  IconExternalLink,
+  IconPlus,
+  IconCurrencyRupee,
+  IconCircleCheck,
+  IconClock,
+  IconCircleX,
+  IconCircleDot,
+  IconRotate2,
+  IconBan,
+  IconPhone,
+  IconMail,
+  IconCalendar,
+  IconTrendingUp,
+  IconChartBar,
+  IconArrowDownRight,
+  IconArrowUpRight,
+  IconArrowsSort,
+  IconDotsVertical,
+  IconCopy,
+  IconCheck,
+  IconAlertCircle,
+  IconFileText,
+} from '@tabler/icons-react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts'
@@ -128,7 +128,7 @@ const METHOD_META = {
   cash: {
     label: 'Cash',
     description: 'Cash payments',
-    icon: Banknote,
+    icon: IconCash,
     tone: 'success',
     iconClass:
       'bg-[var(--payment-cash-bg)] text-[var(--payment-cash-text)] border-[var(--payment-cash-border)]',
@@ -138,7 +138,7 @@ const METHOD_META = {
   upi: {
     label: 'UPI',
     description: 'UPI transactions',
-    icon: Smartphone,
+    icon: IconDeviceMobile,
     tone: 'info',
     iconClass:
       'bg-[var(--payment-upi-bg)] text-[var(--payment-upi-text)] border-[var(--payment-upi-border)]',
@@ -148,7 +148,7 @@ const METHOD_META = {
   razorpay: {
     label: 'Razorpay',
     description: 'Razorpay Gateway',
-    icon: CreditCard,
+    icon: IconCreditCard,
     tone: 'blue',
     iconClass:
       'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
@@ -158,7 +158,7 @@ const METHOD_META = {
   card: {
     label: 'Card',
     description: 'Card payments',
-    icon: CreditCard,
+    icon: IconCreditCard,
     tone: 'slate',
     iconClass:
       'bg-[var(--payment-card-bg)] text-[var(--payment-card-text)] border-[var(--payment-card-border)]',
@@ -168,7 +168,7 @@ const METHOD_META = {
   credit: {
     label: 'Credit',
     description: 'Credit transactions',
-    icon: Wallet,
+    icon: IconWallet,
     tone: 'danger',
     iconClass:
       'bg-[var(--payment-credit-bg)] text-[var(--payment-credit-text)] border-[var(--payment-credit-border)]',
@@ -272,63 +272,63 @@ function PaymentStatus({ status, showIcon = true }) {
   const statusMap = {
     paid: {
       label: 'Paid',
-      icon: CheckCircle2,
+      icon: IconCircleCheck,
       className:
         'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
       iconClass: 'text-emerald-600 dark:text-emerald-400',
     },
     completed: {
       label: 'Completed',
-      icon: CheckCircle2,
+      icon: IconCircleCheck,
       className:
         'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
       iconClass: 'text-emerald-600 dark:text-emerald-400',
     },
     pending: {
       label: 'Pending',
-      icon: Clock,
+      icon: IconClock,
       className:
         'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
       iconClass: 'text-amber-600 dark:text-amber-400',
     },
     partial: {
       label: 'Partial',
-      icon: CircleDot,
+      icon: IconCircleDot,
       className:
         'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300',
       iconClass: 'text-blue-600 dark:text-blue-400',
     },
     partially_paid: {
       label: 'Partial',
-      icon: CircleDot,
+      icon: IconCircleDot,
       className:
         'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-300',
       iconClass: 'text-blue-600 dark:text-blue-400',
     },
     failed: {
       label: 'Failed',
-      icon: XCircle,
+      icon: IconCircleX,
       className:
         'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300',
       iconClass: 'text-rose-600 dark:text-rose-400',
     },
     refunded: {
       label: 'Refunded',
-      icon: RotateCcw,
+      icon: IconRotate2,
       className:
         'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-300',
       iconClass: 'text-orange-600 dark:text-orange-400',
     },
     cancelled: {
       label: 'Cancelled',
-      icon: Ban,
+      icon: IconBan,
       className:
         'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300',
       iconClass: 'text-slate-500 dark:text-slate-400',
     },
     canceled: {
       label: 'Cancelled',
-      icon: Ban,
+      icon: IconBan,
       className:
         'border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300',
       iconClass: 'text-slate-500 dark:text-slate-400',
@@ -337,7 +337,7 @@ function PaymentStatus({ status, showIcon = true }) {
 
   const current = statusMap[normalized] || {
     label: status ? String(status).charAt(0).toUpperCase() + String(status).slice(1) : 'Pending',
-    icon: Clock,
+    icon: IconClock,
     className:
       'border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--muted)]',
     iconClass: 'text-[var(--muted)]',
@@ -539,7 +539,7 @@ export default function Payments() {
           title="Open invoice for printing"
           className={`inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--primary)] px-2.5 py-2 text-[11px] font-bold text-white shadow-sm transition hover:brightness-110 disabled:cursor-wait disabled:opacity-60 ${compact ? 'flex-1' : ''}`}
         >
-          <Printer size={13} />
+          <IconPrinter size={13} />
           <span>{isBusy ? 'Preparing...' : 'Invoice'}</span>
         </button>
         <button
@@ -549,7 +549,7 @@ export default function Payments() {
           title="Download invoice PDF"
           className="inline-flex items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)] disabled:cursor-wait disabled:opacity-60"
         >
-          <Download size={13} />
+          <IconDownload size={13} />
         </button>
       </div>
     )
@@ -883,7 +883,7 @@ export default function Payments() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="mb-1.5 flex items-center gap-2 text-[var(--muted-light)]">
-            <Receipt size={15} />
+            <IconReceipt size={15} />
             <span className="text-[10px] font-bold uppercase tracking-[0.16em]">
               Finance / Payments
             </span>
@@ -904,7 +904,7 @@ export default function Payments() {
             onClick={() => navigate('/payments/reconciliation')}
             className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--ink-secondary)] shadow-sm transition hover:bg-[var(--surface-elevated)]"
           >
-            <ShieldCheck size={14} className="text-blue-600" />
+            <IconShieldCheck size={14} className="text-blue-600" />
             <span>Transaction Ledger</span>
           </button>
           <button
@@ -912,7 +912,7 @@ export default function Payments() {
             onClick={() => navigate('/billing/new')}
             className="btn-primary inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-xs font-bold text-white shadow-sm transition"
           >
-            <Plus size={15} />
+            <IconPlus size={15} />
             <span>New Bill</span>
           </button>
         </div>
@@ -929,7 +929,7 @@ export default function Payments() {
               : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
           }`}
         >
-          <Receipt size={14} />
+          <IconReceipt size={14} />
           <span>Payment Transactions ({bills.length})</span>
         </button>
 
@@ -942,7 +942,7 @@ export default function Payments() {
               : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
           }`}
         >
-          <IndianRupee size={14} />
+          <IconCurrencyRupee size={14} />
           <span>Customer Credit Collection</span>
           {dueCustomers.length > 0 && (
             <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
@@ -962,7 +962,7 @@ export default function Payments() {
           <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3">
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-1.5 overflow-x-auto">
-                <Calendar size={13} className="shrink-0 text-[var(--muted)]" />
+                <IconCalendar size={13} className="shrink-0 text-[var(--muted)]" />
                 {DATE_PRESETS.map(preset => (
                   <button
                     key={preset.key}
@@ -1073,7 +1073,7 @@ export default function Payments() {
             {/* Daily trend chart */}
             <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
               <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] flex items-center gap-1.5">
-                <BarChart2 size={12} /> Daily Collections Trend
+                <IconChartBar size={12} /> Daily Collections Trend
               </p>
               {dailyChartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={110}>
@@ -1105,7 +1105,7 @@ export default function Payments() {
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <SlidersHorizontal
+                <IconAdjustmentsHorizontal
                   size={15}
                   className="text-[var(--muted)]"
                 />
@@ -1123,7 +1123,7 @@ export default function Payments() {
             <div className="flex w-full min-w-0 items-center gap-2 lg:w-auto">
               <div className="group relative flex min-w-0 flex-1 lg:w-72 lg:flex-none items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-                  <Search size={14} strokeWidth={2.2} />
+                  <IconSearch size={14} strokeWidth={2.2} />
                 </div>
 
                 <input
@@ -1140,7 +1140,7 @@ export default function Payments() {
                     aria-label="Clear search"
                     className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
                   >
-                    <X size={13} strokeWidth={2.5} />
+                    <IconX size={13} strokeWidth={2.5} />
                   </button>
                 ) : (
                   <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
@@ -1156,7 +1156,7 @@ export default function Payments() {
                 aria-label="Refresh payment transactions"
                 className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] hover:border-slate-300 disabled:opacity-50 shadow-xs"
               >
-                <RefreshCw
+                <IconRefresh
                   size={14}
                   className={refreshing || (loading && !bills.length) ? 'animate-spin text-[var(--primary)]' : ''}
                 />
@@ -1195,7 +1195,7 @@ export default function Payments() {
         ) : filteredBills.length === 0 ? (
           bills.length === 0 ? (
             <EmptyState
-              icon={Wallet}
+              icon={IconWallet}
               title="No payments recorded yet"
               description="All invoice payments, customer credit settlements, and online gateway transactions will appear here."
               action={{
@@ -1205,7 +1205,7 @@ export default function Payments() {
             />
           ) : search.trim() !== '' ? (
             <EmptyState
-              icon={Search}
+              icon={IconSearch}
               title="No payments match your search"
               description={`No transactions found matching "${search}". Check for typos or search by invoice number, customer name, or payment ID.`}
               action={{
@@ -1215,7 +1215,7 @@ export default function Payments() {
             />
           ) : (
             <EmptyState
-              icon={SlidersHorizontal}
+              icon={IconAdjustmentsHorizontal}
               title="No transactions for this method"
               description={`There are no ${METHOD_META[filter]?.label || filter} payment transactions recorded for the selected date range.`}
               action={{
@@ -1299,7 +1299,7 @@ export default function Payments() {
                           onClick={() => handleInvoiceAction(bill, 'print')}
                           className="inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)]"
                         >
-                          <Printer size={12} />
+                          <IconPrinter size={12} />
                           <span>Invoice</span>
                         </button>
 
@@ -1310,7 +1310,7 @@ export default function Payments() {
                           className="inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 py-1 text-[11px] font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)]"
                           title="Print thermal receipt"
                         >
-                          <Receipt size={12} />
+                          <IconReceipt size={12} />
                           <span>Receipt</span>
                         </button>
 
@@ -1320,7 +1320,7 @@ export default function Payments() {
                           className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]"
                           aria-label="More actions"
                         >
-                          <MoreVertical size={13} />
+                          <IconDotsVertical size={13} />
                         </button>
 
                         {isMenuOpen && (
@@ -1337,7 +1337,7 @@ export default function Payments() {
                               }}
                               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
                             >
-                              <Eye size={13} className="text-[var(--muted)]" />
+                              <IconEye size={13} className="text-[var(--muted)]" />
                               <span>View Details</span>
                             </button>
                             <button
@@ -1348,7 +1348,7 @@ export default function Payments() {
                               }}
                               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
                             >
-                              <Download size={13} className="text-[var(--muted)]" />
+                              <IconDownload size={13} className="text-[var(--muted)]" />
                               <span>Download PDF</span>
                             </button>
                             <button
@@ -1359,7 +1359,7 @@ export default function Payments() {
                               }}
                               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
                             >
-                              <Copy size={13} className="text-[var(--muted)]" />
+                              <IconCopy size={13} className="text-[var(--muted)]" />
                               <span>Copy Ref ID</span>
                             </button>
                             {(bill.razorpay_payment_id || bill.payment_method === 'razorpay') && (
@@ -1371,7 +1371,7 @@ export default function Payments() {
                                 }}
                                 className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40"
                               >
-                                <ShieldCheck size={13} />
+                                <IconShieldCheck size={13} />
                                 <span>Transaction Ledger</span>
                               </button>
                             )}
@@ -1411,7 +1411,7 @@ export default function Payments() {
                         title="Sort by amount"
                       >
                         <span>Amount</span>
-                        <ArrowUpDown size={11} className={sortBy === 'amount' ? 'text-[var(--primary)]' : 'opacity-40'} />
+                        <IconArrowsSort size={11} className={sortBy === 'amount' ? 'text-[var(--primary)]' : 'opacity-40'} />
                       </button>
                     </th>
                     <th className="text-center font-bold text-xs uppercase tracking-wider text-[var(--muted)]">
@@ -1422,7 +1422,7 @@ export default function Payments() {
                         title="Sort by status"
                       >
                         <span>Status</span>
-                        <ArrowUpDown size={11} className={sortBy === 'status' ? 'text-[var(--primary)]' : 'opacity-40'} />
+                        <IconArrowsSort size={11} className={sortBy === 'status' ? 'text-[var(--primary)]' : 'opacity-40'} />
                       </button>
                     </th>
                     <th className="text-left font-bold text-xs uppercase tracking-wider text-[var(--muted)]">
@@ -1433,7 +1433,7 @@ export default function Payments() {
                         title="Sort by date"
                       >
                         <span>Date</span>
-                        <ArrowUpDown size={11} className={sortBy === 'date' ? 'text-[var(--primary)]' : 'opacity-40'} />
+                        <IconArrowsSort size={11} className={sortBy === 'date' ? 'text-[var(--primary)]' : 'opacity-40'} />
                       </button>
                     </th>
                     <th className="text-right font-bold text-xs uppercase tracking-wider text-[var(--muted)]">Actions</th>
@@ -1463,15 +1463,15 @@ export default function Payments() {
                               title="Copy payment reference"
                             >
                               {copiedKey === `tbl-pmt-${bill.id}` ? (
-                                <Check size={12} className="text-emerald-600" />
+                                <IconCheck size={12} className="text-emerald-600" />
                               ) : (
-                                <Copy size={12} />
+                                <IconCopy size={12} />
                               )}
                             </button>
                           </div>
                           {bill.razorpay_payment_id && (
                             <div className="mt-0.5 flex items-center gap-1 font-mono text-[10px] text-blue-600 dark:text-blue-400">
-                              <ShieldCheck size={11} className="shrink-0" />
+                              <IconShieldCheck size={11} className="shrink-0" />
                               <span className="truncate max-w-[120px]">Gateway</span>
                             </div>
                           )}
@@ -1502,7 +1502,7 @@ export default function Payments() {
                             </p>
                             {bill.customer_phone ? (
                               <p className="mt-0.5 text-[11px] text-[var(--muted-light)] font-mono flex items-center gap-1 truncate">
-                                <Phone size={10} className="shrink-0" />
+                                <IconPhone size={10} className="shrink-0" />
                                 <span>{bill.customer_phone}</span>
                               </p>
                             ) : (
@@ -1549,7 +1549,7 @@ export default function Payments() {
                               className="inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
                               title="View transaction details"
                             >
-                              <Eye size={12} />
+                              <IconEye size={12} />
                               <span>View</span>
                             </button>
 
@@ -1559,7 +1559,7 @@ export default function Payments() {
                               className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
                               title="More actions"
                             >
-                              <MoreVertical size={13} />
+                              <IconDotsVertical size={13} />
                             </button>
 
                             {isMenuOpen && (
@@ -1576,7 +1576,7 @@ export default function Payments() {
                                   }}
                                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
                                 >
-                                  <Eye size={13} className="text-[var(--muted)]" />
+                                  <IconEye size={13} className="text-[var(--muted)]" />
                                   <span>View Details</span>
                                 </button>
                                 <button
@@ -1587,7 +1587,7 @@ export default function Payments() {
                                   }}
                                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
                                 >
-                                  <FileText size={13} className="text-[var(--muted)]" />
+                                  <IconFileText size={13} className="text-[var(--muted)]" />
                                   <span>View Invoice</span>
                                 </button>
                                 <button
@@ -1599,7 +1599,7 @@ export default function Payments() {
                                   }}
                                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
                                 >
-                                  <Printer size={13} className="text-[var(--muted)]" />
+                                  <IconPrinter size={13} className="text-[var(--muted)]" />
                                   <span>Print Invoice</span>
                                 </button>
                                 <button
@@ -1611,7 +1611,7 @@ export default function Payments() {
                                   }}
                                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
                                 >
-                                  <Receipt size={13} className="text-[var(--muted)]" />
+                                  <IconReceipt size={13} className="text-[var(--muted)]" />
                                   <span>Print Thermal Receipt</span>
                                 </button>
                                 <button
@@ -1623,7 +1623,7 @@ export default function Payments() {
                                   }}
                                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
                                 >
-                                  <Download size={13} className="text-[var(--muted)]" />
+                                  <IconDownload size={13} className="text-[var(--muted)]" />
                                   <span>Download PDF</span>
                                 </button>
                                 <button
@@ -1634,7 +1634,7 @@ export default function Payments() {
                                   }}
                                   className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
                                 >
-                                  <Copy size={13} className="text-[var(--muted)]" />
+                                  <IconCopy size={13} className="text-[var(--muted)]" />
                                   <span>Copy Payment ID</span>
                                 </button>
                                 {(bill.razorpay_payment_id || bill.payment_method === 'razorpay') && (
@@ -1646,7 +1646,7 @@ export default function Payments() {
                                     }}
                                     className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40"
                                   >
-                                    <ShieldCheck size={13} />
+                                    <IconShieldCheck size={13} />
                                     <span>Transaction Ledger</span>
                                   </button>
                                 )}
@@ -1765,7 +1765,7 @@ export default function Payments() {
           <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3 space-y-2">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div className="group relative flex min-w-0 flex-1 items-center min-h-[40px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-colors focus-within:border-[var(--primary)]">
-                <Search size={14} className="text-[var(--muted)] shrink-0" />
+                <IconSearch size={14} className="text-[var(--muted)] shrink-0" />
                 <input
                   type="text"
                   placeholder="Search customer by name, mobile, or GSTIN..."
@@ -1779,7 +1779,7 @@ export default function Payments() {
                     onClick={() => setCollectionSearch('')}
                     className="text-[var(--muted)] hover:text-[var(--ink)]"
                   >
-                    <X size={13} />
+                    <IconX size={13} />
                   </button>
                 )}
               </div>
@@ -1804,7 +1804,7 @@ export default function Payments() {
                   className="flex h-[38px] w-[38px] items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-elevated)]"
                   title="Refresh customers"
                 >
-                  <RefreshCw size={13} className={loadingCustomers ? 'animate-spin' : ''} />
+                  <IconRefresh size={13} className={loadingCustomers ? 'animate-spin' : ''} />
                 </button>
               </div>
             </div>
@@ -1818,7 +1818,7 @@ export default function Payments() {
           ) : filteredCustomers.length === 0 ? (
             <div className="flex min-h-60 flex-col items-center justify-center p-6 text-center border border-[var(--line)] rounded-md bg-[var(--surface)]">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-[var(--muted)] mb-2">
-                <CheckCircle2 size={24} className="text-emerald-600 dark:text-emerald-400" />
+                <IconCircleCheck size={24} className="text-emerald-600 dark:text-emerald-400" />
               </div>
               <h4 className="text-sm font-bold text-[var(--ink)]">No customer dues found</h4>
               <p className="text-xs text-[var(--muted)] mt-0.5">
@@ -1856,7 +1856,7 @@ export default function Payments() {
                           <td>
                             <div className="flex items-center gap-2">
                               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-[var(--primary)] border border-[var(--line)] font-bold">
-                                <UserRound size={12} />
+                                <IconUserCircle size={12} />
                               </div>
                               <div>
                                 <span className="font-bold text-[var(--ink)]">{customer.name}</span>
@@ -1872,7 +1872,7 @@ export default function Payments() {
                                 href={`tel:${customer.mobile}`}
                                 className="font-mono text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium"
                               >
-                                <Phone size={11} />
+                                <IconPhone size={11} />
                                 <span>{customer.mobile}</span>
                               </a>
                             ) : (
@@ -1897,12 +1897,12 @@ export default function Payments() {
                                 onClick={() => setSelectedCustomerForPay(customer)}
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs shadow-xs transition"
                               >
-                                <IndianRupee size={12} />
+                                <IconCurrencyRupee size={12} />
                                 <span>Collect Payment</span>
                               </button>
                             ) : (
                               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
-                                <CheckCircle2 size={11} />
+                                <IconCircleCheck size={11} />
                                 <span>Settled</span>
                               </span>
                             )}
@@ -1923,14 +1923,14 @@ export default function Payments() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-[var(--primary)] border border-[var(--line)]">
-                            <UserRound size={14} />
+                            <IconUserCircle size={14} />
                           </div>
                           <div className="min-w-0">
                             <h4 className="font-bold text-sm text-[var(--ink)] truncate">{customer.name}</h4>
                             <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
                               {customer.mobile ? (
                                 <a href={`tel:${customer.mobile}`} className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium">
-                                  <Phone size={10} />
+                                  <IconPhone size={10} />
                                   <span>{customer.mobile}</span>
                                 </a>
                               ) : <span>No phone</span>}
@@ -1958,7 +1958,7 @@ export default function Payments() {
                           onClick={() => setSelectedCustomerForPay(customer)}
                           className="w-full inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs shadow-xs transition"
                         >
-                          <IndianRupee size={13} />
+                          <IconCurrencyRupee size={13} />
                           <span>Collect Payment</span>
                         </button>
                       )}
@@ -1998,12 +1998,12 @@ export default function Payments() {
                     >
                       {copiedKey === 'modal-pmt-ref' ? (
                         <>
-                          <Check size={12} className="text-emerald-600" />
+                          <IconCheck size={12} className="text-emerald-600" />
                           <span className="text-emerald-600 font-bold">Copied!</span>
                         </>
                       ) : (
                         <>
-                          <Copy size={12} />
+                          <IconCopy size={12} />
                           <span>Copy</span>
                         </>
                       )}
@@ -2051,7 +2051,7 @@ export default function Payments() {
             <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-[var(--line)]">
                 <div className="flex items-center gap-2">
-                  <Receipt className="text-[var(--primary)]" size={16} />
+                  <IconReceipt className="text-[var(--primary)]" size={16} />
                   <h3 className="font-bold text-sm text-[var(--ink)]">Associated Invoice Details</h3>
                 </div>
                 <button
@@ -2063,7 +2063,7 @@ export default function Payments() {
                   className="inline-flex items-center gap-1 text-xs font-bold text-[var(--primary)] hover:underline"
                 >
                   <span>Open in Invoices</span>
-                  <ExternalLink size={12} />
+                  <IconExternalLink size={12} />
                 </button>
               </div>
 
@@ -2082,9 +2082,9 @@ export default function Payments() {
                         title="Copy Invoice Number"
                       >
                         {copiedKey === 'modal-inv-num' ? (
-                          <Check size={11} className="text-emerald-600" />
+                          <IconCheck size={11} className="text-emerald-600" />
                         ) : (
-                          <Copy size={11} />
+                          <IconCopy size={11} />
                         )}
                       </button>
                     )}
@@ -2130,7 +2130,7 @@ export default function Payments() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
                 <h4 className="mb-2 flex items-center gap-1.5 font-bold text-[var(--ink)]">
-                  <UserRound size={14} className="text-[var(--primary)]" /> Customer Information
+                  <IconUserCircle size={14} className="text-[var(--primary)]" /> Customer Information
                 </h4>
                 <p className="font-semibold text-sm text-[var(--ink)]">{selectedBill.customer_name || 'Walk-in customer'}</p>
                 {selectedBill.customer_phone ? (
@@ -2138,7 +2138,7 @@ export default function Payments() {
                     href={`tel:${selectedBill.customer_phone}`}
                     className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 hover:underline"
                   >
-                    <Phone size={12} />
+                    <IconPhone size={12} />
                     <span>{selectedBill.customer_phone}</span>
                   </a>
                 ) : (
@@ -2149,7 +2149,7 @@ export default function Payments() {
                     href={`mailto:${selectedBill.customer_email}`}
                     className="mt-1 block text-xs text-blue-600 dark:text-blue-400 hover:underline"
                   >
-                    <Mail size={12} className="inline mr-1" />
+                    <IconMail size={12} className="inline mr-1" />
                     <span>{selectedBill.customer_email}</span>
                   </a>
                 ) : (
@@ -2159,7 +2159,7 @@ export default function Payments() {
 
               <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
                 <h4 className="mb-2 flex items-center gap-1.5 font-bold text-[var(--ink)]">
-                  <ReceiptText size={14} className="text-[var(--primary)]" /> Notes &amp; Biller
+                  <IconReceiptTax size={14} className="text-[var(--primary)]" /> Notes &amp; Biller
                 </h4>
                 <p className="text-xs text-[var(--muted)]">{selectedBill.notes || 'No notes attached to this transaction.'}</p>
                 <div className="mt-3 pt-2 border-t border-[var(--line)] flex items-center justify-between text-xs">
@@ -2174,7 +2174,7 @@ export default function Payments() {
               <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 dark:border-blue-900/60 dark:bg-blue-950/30">
                 <div className="flex items-center justify-between pb-2 border-b border-blue-200/60 dark:border-blue-900/40">
                   <h4 className="flex items-center gap-1.5 font-bold text-blue-900 dark:text-blue-200">
-                    <ShieldCheck size={16} className="text-blue-600 dark:text-blue-400" />
+                    <IconShieldCheck size={16} className="text-blue-600 dark:text-blue-400" />
                     Razorpay Gateway Transaction Details
                   </h4>
                   <button
@@ -2186,7 +2186,7 @@ export default function Payments() {
                     className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100"
                   >
                     <span>Transaction Ledger</span>
-                    <ExternalLink size={12} />
+                    <IconExternalLink size={12} />
                   </button>
                 </div>
 
@@ -2205,9 +2205,9 @@ export default function Payments() {
                           title="Copy Payment ID"
                         >
                           {copiedKey === 'modal-rzp-pmt' ? (
-                            <Check size={11} className="text-emerald-600" />
+                            <IconCheck size={11} className="text-emerald-600" />
                           ) : (
-                            <Copy size={11} />
+                            <IconCopy size={11} />
                           )}
                         </button>
                       )}
@@ -2227,9 +2227,9 @@ export default function Payments() {
                           title="Copy Order ID"
                         >
                           {copiedKey === 'modal-rzp-ord' ? (
-                            <Check size={11} className="text-emerald-600" />
+                            <IconCheck size={11} className="text-emerald-600" />
                           ) : (
-                            <Copy size={11} />
+                            <IconCopy size={11} />
                           )}
                         </button>
                       )}
@@ -2262,7 +2262,7 @@ export default function Payments() {
             {selectedBill.payments && selectedBill.payments.length > 0 && (
               <div className="rounded-xl border border-[var(--line)] p-3">
                 <h4 className="mb-2 flex items-center gap-1.5 font-bold text-[var(--ink)]">
-                  <Banknote size={14} className="text-[var(--primary)]" /> Payment Entries ({selectedBill.payments.length})
+                  <IconCash size={14} className="text-[var(--primary)]" /> Payment Entries ({selectedBill.payments.length})
                 </h4>
                 <div className="space-y-1.5">
                   {selectedBill.payments.map((payment, index) => (
@@ -2314,7 +2314,7 @@ export default function Payments() {
                   onClick={() => handleInvoiceAction(selectedBill, 'print')}
                   className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-bold text-white shadow-xs hover:brightness-110 transition disabled:opacity-50"
                 >
-                  <Printer size={13} />
+                  <IconPrinter size={13} />
                   <span>Print Invoice</span>
                 </button>
                 <button
@@ -2323,7 +2323,7 @@ export default function Payments() {
                   onClick={() => handleReceiptAction(selectedBill)}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-elevated)] transition disabled:opacity-50"
                 >
-                  <Receipt size={13} />
+                  <IconReceipt size={13} />
                   <span>Thermal Receipt</span>
                 </button>
                 <button
@@ -2332,7 +2332,7 @@ export default function Payments() {
                   onClick={() => handleInvoiceAction(selectedBill, 'download')}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-elevated)] transition disabled:opacity-50"
                 >
-                  <Download size={13} />
+                  <IconDownload size={13} />
                   <span>Download PDF</span>
                 </button>
               </div>

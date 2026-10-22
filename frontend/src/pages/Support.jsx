@@ -1,17 +1,17 @@
 import { useMemo, useState } from 'react'
 import { PageHeader } from '../components/UI'
 import {
-  Phone,
-  Mail,
-  MessageCircle,
-  Search,
-  ChevronDown,
-  ChevronUp,
-  Keyboard,
-  CheckCircle2,
-  Server,
-  X,
-} from 'lucide-react'
+  IconPhone,
+  IconMail,
+  IconMessageCircle,
+  IconSearch,
+  IconChevronDown,
+  IconChevronUp,
+  IconKeyboard,
+  IconCircleCheck,
+  IconServer,
+  IconX,
+} from '@tabler/icons-react'
 
 const FAQ_DATA = [
   {
@@ -153,7 +153,7 @@ export default function Support() {
           className="flex items-center gap-3 p-4 transition-colors hover:bg-[var(--surface-elevated)]"
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[var(--surface-elevated)]">
-            <Phone size={16} />
+            <IconPhone size={16} />
           </div>
 
           <div className="min-w-0">
@@ -176,7 +176,7 @@ export default function Support() {
           className="flex items-center gap-3 p-4 transition-colors hover:bg-[var(--surface-elevated)]"
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[var(--surface-elevated)]">
-            <MessageCircle size={16} />
+            <IconMessageCircle size={16} />
           </div>
 
           <div className="min-w-0">
@@ -197,7 +197,7 @@ export default function Support() {
           className="flex items-center gap-3 p-4 transition-colors hover:bg-[var(--surface-elevated)]"
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[var(--surface-elevated)]">
-            <Mail size={16} />
+            <IconMail size={16} />
           </div>
 
           <div className="min-w-0">
@@ -219,7 +219,7 @@ export default function Support() {
       {/* Keyboard shortcuts */}
       <section className="mt-6 border-b border-[var(--line)] pb-6">
         <div className="mb-4 flex items-center gap-2">
-          <Keyboard size={15} />
+          <IconKeyboard size={15} />
           <h2 className="text-sm font-semibold">
             Keyboard Shortcuts
           </h2>
@@ -262,7 +262,7 @@ export default function Support() {
           </div>
 
           <div className="flex h-9 w-full items-center rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 lg:w-72">
-            <Search
+            <IconSearch
               size={14}
               className="shrink-0 text-[var(--muted)]"
             />
@@ -282,7 +282,7 @@ export default function Support() {
                 className="text-[var(--muted)] hover:text-[var(--ink)]"
                 aria-label="Clear search"
               >
-                <X size={13} />
+                <IconX size={13} />
               </button>
             )}
           </div>
@@ -345,12 +345,12 @@ export default function Support() {
                           </span>
 
                           {isOpen ? (
-                            <ChevronUp
+                            <IconChevronUp
                               size={16}
                               className="shrink-0 text-[var(--muted)]"
                             />
                           ) : (
-                            <ChevronDown
+                            <IconChevronDown
                               size={16}
                               className="shrink-0 text-[var(--muted)]"
                             />

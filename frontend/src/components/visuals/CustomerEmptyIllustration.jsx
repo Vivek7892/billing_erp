@@ -1,4 +1,7 @@
-import { Users, UserPlus } from 'lucide-react'
+import {
+  IconUsers,
+  IconUserPlus,
+} from '@tabler/icons-react'
 import DreamVisualContainer from './DreamVisualContainer'
 
 export default function CustomerEmptyIllustration({
@@ -18,7 +21,7 @@ export default function CustomerEmptyIllustration({
 
         {/* Simple icon */}
         <div className="w-11 h-11 rounded-full bg-blue-50 dark:bg-blue-950/50 text-[#0057B8] flex items-center justify-center">
-          <Users size={22} strokeWidth={1.8} />
+          <IconUsers size={22} strokeWidth={1.8} />
         </div>
 
         {/* Title */}
@@ -52,7 +55,7 @@ export default function CustomerEmptyIllustration({
               transition-colors
             "
           >
-            <UserPlus size={13} />
+            <IconUserPlus size={13} />
             Add Customer
           </button>
         )}

@@ -4,12 +4,44 @@ import api from '../api'
 import logoImg from '../assets/logo.png'
 import { ROLES } from '../constants'
 import {
-  LayoutDashboard, ShoppingCart, FileText, Package, Users, BarChart2,
-  UserCog, Settings, ChevronUp, ChevronRight, ChevronDown, Sun, Moon, LogOut,
-  Search, Bell, RotateCcw, CreditCard, Boxes, ShoppingBag, Building2,
-  IndianRupee, HelpCircle, Layers, Activity, X, Clock, ScanLine, ArrowRight, Check,
-  ShieldCheck, Trash2, AlertCircle, AlertTriangle, CheckCircle2, XCircle
-} from 'lucide-react'
+  IconLayoutDashboard,
+  IconShoppingCart,
+  IconFileText,
+  IconPackage,
+  IconUsers,
+  IconChartBar,
+  IconUserCog,
+  IconSettings,
+  IconChevronUp,
+  IconChevronRight,
+  IconChevronDown,
+  IconSun,
+  IconMoon,
+  IconLogout,
+  IconSearch,
+  IconBell,
+  IconRotate2,
+  IconCreditCard,
+  IconPackages,
+  IconShoppingBag,
+  IconBuildingStore,
+  IconCurrencyRupee,
+  IconHelpCircle,
+  IconLayersLinked,
+  IconActivity,
+  IconX,
+  IconClock,
+  IconScan,
+  IconArrowRight,
+  IconCheck,
+  IconShieldCheck,
+  IconTrash,
+  IconAlertCircle,
+  IconAlertTriangle,
+  IconCircleCheck,
+  IconCircleX,
+  IconMenu2,
+} from '@tabler/icons-react'
 import { useEffect, useState, createContext, useContext, useRef, useCallback, useMemo } from 'react'
 import toast from 'react-hot-toast'
 
@@ -19,11 +51,7 @@ import { SETTINGS_TABS } from './SettingsNavigation'
 import { useTheme } from '../ThemeContext'
 
 function MenuIcon({ size = 20 }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 50 50" fill="currentColor" aria-hidden="true">
-      <path d="M 3 9 A 1.0001 1.0001 0 1 0 3 11 L 47 11 A 1.0001 1.0001 0 1 0 47 9 L 3 9 z M 3 24 A 1.0001 1.0001 0 1 0 3 26 L 47 26 A 1.0001 1.0001 0 1 0 47 24 L 3 24 z M 3 39 A 1.0001 1.0001 0 1 0 3 41 L 47 41 A 1.0001 1.0001 0 1 0 47 39 L 3 39 z" />
-    </svg>
-  )
+  return <IconMenu2 size={size} stroke={2} aria-hidden="true" />
 }
 
 export const ShopContext = createContext({ logoSrc: '', shopName: 'Dreamwithtech' })
@@ -33,56 +61,56 @@ const NAV_GROUPS = [
   {
     label: 'Dashboard',
     items: [
-      { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/', icon: IconLayoutDashboard, label: 'Dashboard' },
     ]
   },
   {
     label: 'Billing',
     items: [
-      { to: '/billing/new', icon: ShoppingCart, label: 'New Bill' },
-      { to: '/sales/invoices', icon: FileText, label: 'Invoices' },
-      { to: '/billing/drafts', icon: Layers, label: 'Drafts' },
-      { to: '/sales/returns', icon: RotateCcw, label: 'Returns' },
-      { to: '/sales/payments', icon: CreditCard, label: 'Payments' }
+      { to: '/billing/new', icon: IconShoppingCart, label: 'New Bill' },
+      { to: '/sales/invoices', icon: IconFileText, label: 'Invoices' },
+      { to: '/billing/drafts', icon: IconLayersLinked, label: 'Drafts' },
+      { to: '/sales/returns', icon: IconRotate2, label: 'Returns' },
+      { to: '/sales/payments', icon: IconCreditCard, label: 'Payments' }
     ]
   },
   {
     label: 'Inventory',
     items: [
-      { to: '/inventory/products', icon: Package, label: 'Products' },
-      { to: '/inventory/stock', icon: Boxes, label: 'Stock' },
-      { to: '/inventory/purchases', icon: ShoppingBag, label: 'Purchases' }
+      { to: '/inventory/products', icon: IconPackage, label: 'Products' },
+      { to: '/inventory/stock', icon: IconPackages, label: 'Stock' },
+      { to: '/inventory/purchases', icon: IconShoppingBag, label: 'Purchases' }
     ]
   },
   {
     label: 'Contacts',
     items: [
-      { to: '/parties/customers', icon: Users, label: 'Customers' },
-      { to: '/parties/suppliers', icon: Building2, label: 'Suppliers' }
+      { to: '/parties/customers', icon: IconUsers, label: 'Customers' },
+      { to: '/parties/suppliers', icon: IconBuildingStore, label: 'Suppliers' }
     ]
   },
   {
     label: 'Business',
     items: [
-      { to: '/expenses', icon: IndianRupee, label: 'Expenses' },
-      { to: '/reports', icon: BarChart2, label: 'Reports', roles: [ROLES.OWNER, ROLES.ADMIN, ROLES.MANAGER, ROLES.ACCOUNTANT] }
+      { to: '/expenses', icon: IconCurrencyRupee, label: 'Expenses' },
+      { to: '/reports', icon: IconChartBar, label: 'Reports', roles: [ROLES.OWNER, ROLES.ADMIN, ROLES.MANAGER, ROLES.ACCOUNTANT] }
     ]
   },
   {
     label: 'Administration',
     adminOnly: true,
     items: [
-      { to: '/users', icon: UserCog, label: 'Users', adminOnly: true },
-      { to: '/recycle-bin', icon: Trash2, label: 'Recycle Bin', adminOnly: true },
-      { to: '/payments/reconciliation', icon: ScanLine, label: 'Transaction Ledger', adminOnly: true },
-      { to: '/support', icon: HelpCircle, label: 'Support' }
+      { to: '/users', icon: IconUserCog, label: 'Users', adminOnly: true },
+      { to: '/recycle-bin', icon: IconTrash, label: 'Recycle Bin', adminOnly: true },
+      { to: '/payments/reconciliation', icon: IconScan, label: 'Transaction Ledger', adminOnly: true },
+      { to: '/support', icon: IconHelpCircle, label: 'Support' }
     ]
   }
 ]
 
 const SIDEBAR_UTILITY_ITEMS = [
-  { to: '/settings', icon: Settings, label: 'Settings' },
-  { to: '/audit-trail', icon: ShieldCheck, label: 'Business Activity' },
+  { to: '/settings', icon: IconSettings, label: 'Settings' },
+  { to: '/audit-trail', icon: IconShieldCheck, label: 'Business Activity' },
 ]
 
 const PAGE_META = NAV_GROUPS.reduce((acc, group) => {
@@ -178,7 +206,7 @@ function NavGroupItems({ items, collapsed, mobile, groupLabel, open, setOpen, on
         <span className="text-[10px] font-bold uppercase tracking-[0.14em]">
           {groupLabel}
         </span>
-        {open ? <ChevronUp size={11} className="opacity-50" /> : <ChevronRight size={11} className="opacity-50" />}
+        {open ? <IconChevronUp size={11} className="opacity-50" /> : <IconChevronRight size={11} className="opacity-50" />}
       </button>
 
       {open && (
@@ -278,7 +306,7 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
                 aria-label="Close menu"
                 className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all flex-shrink-0 ${settingsMode ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-white/[0.1]'}`}
               >
-                <X size={17} />
+                <IconX size={17} />
               </button>
             )}
           </>
@@ -292,7 +320,7 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
             onClick={onNav}
             className="flex h-10 items-center justify-center gap-2 rounded-full bg-red-600 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
           >
-            <ArrowRight size={15} className="rotate-180" />
+            <IconArrowRight size={15} className="rotate-180" />
             <span>Back to Dashboard</span>
           </NavLink>
         </div>
@@ -421,7 +449,7 @@ function GlobalSearch() {
           : 'bg-[var(--surface-elevated)] border-[var(--line)] hover:border-slate-300 dark:hover:border-slate-600'
       }`}>
         <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[var(--surface)] text-[var(--muted)] group-focus-within:text-[#1E3A5F] dark:group-focus-within:text-sky-300">
-          <Search size={13} strokeWidth={2.2} />
+          <IconSearch size={13} strokeWidth={2.2} />
         </div>
         <input
           value={q}
@@ -435,7 +463,7 @@ function GlobalSearch() {
         />
         {q ? (
           <button onClick={() => { setQ(''); setOpen(false) }} aria-label="Clear search" className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface)] transition-colors">
-            <X size={12} strokeWidth={2.5} />
+            <IconX size={12} strokeWidth={2.5} />
           </button>
         ) : (
           <kbd className="hidden sm:inline-flex shrink-0 items-center rounded border border-[var(--line)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">Ctrl+K</kbd>
@@ -476,10 +504,10 @@ function GlobalSearch() {
 }
 
 const SEVERITY_ICON_MAP = {
-  danger:  { icon: AlertCircle,   color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA' },
-  warning: { icon: AlertTriangle, color: '#B45309', bg: '#FFFBEB', border: '#FDE68A' },
-  success: { icon: CheckCircle2,  color: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
-  info:    { icon: Bell,          color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
+  danger:  { icon: IconAlertCircle,   color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA' },
+  warning: { icon: IconAlertTriangle, color: '#B45309', bg: '#FFFBEB', border: '#FDE68A' },
+  success: { icon: IconCircleCheck,  color: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
+  info:    { icon: IconBell,          color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
 }
 
 function relativeTime(isoString) {
@@ -489,6 +517,20 @@ function relativeTime(isoString) {
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
   return `${Math.floor(diff / 86400)}d ago`
+}
+
+function notificationTypeLabel(type = '') {
+  return type.replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase()) || 'Notification'
+}
+
+function notificationDateTime(isoString) {
+  if (!isoString) return 'Time unavailable'
+  const date = new Date(isoString)
+  if (Number.isNaN(date.getTime())) return 'Time unavailable'
+  return date.toLocaleString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true,
+  })
 }
 
 function NotificationBell() {
@@ -622,7 +664,7 @@ function NotificationBell() {
         }`}
         title="Open Notifications Drawer"
       >
-        <Bell size={17} className={criticalCount > 0 ? 'text-red-600' : ''} />
+        <IconBell size={17} className={criticalCount > 0 ? 'text-red-600' : ''} />
         {unreadCount > 0 && (
           <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white bg-[#DC2626] animate-pulse">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -647,7 +689,7 @@ function NotificationBell() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--line)] bg-[var(--surface-elevated)]">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/40 flex items-center justify-center text-[var(--primary)]">
-                  <Bell size={16} className={criticalCount > 0 ? 'text-red-600' : ''} />
+                  <IconBell size={16} className={criticalCount > 0 ? 'text-red-600' : ''} />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
@@ -667,10 +709,10 @@ function NotificationBell() {
                   <button
                     type="button"
                     onClick={handleMarkAllRead}
-                    className="btn-secondary h-7 px-2 text-[11px] font-semibold text-[var(--primary)] inline-flex items-center gap-1"
+                    className="btn-secondary min-h-9 px-2 text-[11px] font-semibold text-[var(--primary)] inline-flex items-center gap-1"
                     title="Mark all as read"
                   >
-                    <Check size={11} />
+                    <IconCheck size={11} />
                     <span>Read all</span>
                   </button>
                 )}
@@ -680,7 +722,7 @@ function NotificationBell() {
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
                   aria-label="Close notification drawer"
                 >
-                  <X size={16} />
+                  <IconX size={16} />
                 </button>
               </div>
             </div>
@@ -688,7 +730,7 @@ function NotificationBell() {
             {/* Critical banner */}
             {criticalCount > 0 && (
               <div className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-950/30 border-b border-red-200 dark:border-red-900/40">
-                <AlertCircle size={14} className="text-red-600 flex-shrink-0" />
+                <IconAlertCircle size={14} className="text-red-600 flex-shrink-0" />
                 <span className="text-xs font-semibold text-red-700 dark:text-red-400">
                   {criticalCount} critical alert{criticalCount > 1 ? 's' : ''} require attention
                 </span>
@@ -707,7 +749,7 @@ function NotificationBell() {
                   key={tab.id}
                   type="button"
                   onClick={() => setDrawerFilter(tab.id)}
-                  className={`h-7 px-2.5 rounded-md text-[11px] font-semibold flex items-center gap-1 transition ${
+                  className={`min-h-9 px-2.5 rounded-md text-[11px] font-semibold flex items-center gap-1 transition ${
                     drawerFilter === tab.id
                       ? 'bg-[var(--primary)] text-white shadow-2xs'
                       : 'text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)]'
@@ -732,6 +774,18 @@ function NotificationBell() {
                   const isApproval = n.requires_approval
                   const isPendingPO = n.notification_type === 'purchase_order_pending'
                   const isActing = actioningId === n.id
+                  const data = n.data || {}
+                  const referenceDetails = [
+                    data.invoice_number && `Invoice ${data.invoice_number}`,
+                    data.po_number && `PO ${data.po_number}`,
+                    data.product_name && `Product ${data.product_name}`,
+                    data.sku && `SKU ${data.sku}`,
+                    (data.customer_name || data.customer) && `Customer ${data.customer_name || data.customer}`,
+                    (data.supplier_name || data.supplier) && `Supplier ${data.supplier_name || data.supplier}`,
+                    data.quantity !== undefined && `Qty ${data.quantity}`,
+                    data.amount !== undefined && `Amount ₹${data.amount}`,
+                    data.days_overdue !== undefined && `${data.days_overdue} days overdue`,
+                  ].filter(Boolean)
 
                   return (
                     <div
@@ -743,8 +797,8 @@ function NotificationBell() {
                         'border-l-blue-500'
                       } ${!n.is_read ? 'bg-blue-50/20 dark:bg-blue-950/20' : ''}`}
                     >
-                      {/* Top row: Severity badge & timestamp */}
-                      <div className="flex items-center justify-between gap-1 text-[10px]">
+                      {/* Quick scan: severity, category and recency */}
+                      <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span
                             className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 font-bold"
@@ -752,6 +806,9 @@ function NotificationBell() {
                           >
                             <SevIcon size={10} />
                             <span>{sev.label}</span>
+                          </span>
+                          <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--ink-secondary)]">
+                            {notificationTypeLabel(n.notification_type)}
                           </span>
                           {isApproval && (
                             <span className={`px-1.5 py-0.2 rounded-full font-bold uppercase ${
@@ -763,8 +820,9 @@ function NotificationBell() {
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] text-[var(--muted)] font-mono shrink-0">
-                          {relativeTime(n.created_at)}
+                        <span className="shrink-0 text-right">
+                          <span className="block text-[10px] font-medium text-[var(--ink-secondary)]">{relativeTime(n.created_at)}</span>
+                          <span className="block text-[10px] text-[var(--muted)]">{notificationDateTime(n.created_at)}</span>
                         </span>
                       </div>
 
@@ -776,9 +834,26 @@ function NotificationBell() {
                         <p className={`text-xs leading-snug group-hover:text-[var(--primary)] transition-colors ${!n.is_read ? 'font-bold text-[var(--ink)]' : 'font-medium text-[var(--ink-secondary)]'}`}>
                           {n.title}
                         </p>
-                        <p className="text-[11px] text-[var(--muted)] line-clamp-2 mt-0.5 leading-relaxed">
+                        <p className="text-[11px] text-[var(--muted)] line-clamp-3 mt-0.5 leading-relaxed">
                           {n.message}
                         </p>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-elevated)] px-2.5 py-2 text-[10px]">
+                        <div className="min-w-0">
+                          <span className="block text-[var(--muted)]">Status</span>
+                          <span className={`mt-0.5 inline-flex items-center rounded-full px-1.5 py-0.5 font-semibold ${n.is_read ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300' : 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-200'}`}>
+                            {n.is_read ? 'Read' : 'Unread'}
+                          </span>
+                        </div>
+                        {referenceDetails.length > 0 && (
+                          <div className="min-w-0">
+                            <span className="block text-[var(--muted)]">Reference</span>
+                            <span className="mt-0.5 block break-words font-medium text-[var(--ink-secondary)]">
+                              {referenceDetails.slice(0, 2).join(' · ')}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Direct Inline Action Buttons */}
@@ -791,20 +866,20 @@ function NotificationBell() {
                                   type="button"
                                   onClick={e => handleQuickApproval(e, n, 'approve')}
                                   disabled={isActing}
-                                  className="h-7 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold inline-flex items-center gap-1 shadow-2xs transition"
+                                  className="min-h-9 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold inline-flex items-center gap-1 shadow-2xs transition"
                                   title="Approve & execute request"
                                 >
-                                  <CheckCircle2 size={12} />
+                                  <IconCircleCheck size={12} />
                                   <span>{isActing ? 'Saving…' : 'Approve'}</span>
                                 </button>
                                 <button
                                   type="button"
                                   onClick={e => handleQuickApproval(e, n, 'reject')}
                                   disabled={isActing}
-                                  className="h-7 px-2.5 rounded-md border border-rose-300 dark:border-rose-800 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-[11px] font-semibold inline-flex items-center gap-1 shadow-2xs transition"
+                                  className="min-h-9 px-2.5 rounded-md border border-rose-300 dark:border-rose-800 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-[11px] font-semibold inline-flex items-center gap-1 shadow-2xs transition"
                                   title="Reject request"
                                 >
-                                  <XCircle size={12} />
+                                  <IconCircleX size={12} />
                                   <span>Reject</span>
                                 </button>
                               </>
@@ -818,19 +893,19 @@ function NotificationBell() {
                           <button
                             type="button"
                             onClick={() => handleNotificationClick(n)}
-                            className="h-7 px-2.5 rounded-md bg-[var(--primary)] text-white text-[11px] font-semibold inline-flex items-center gap-1 shadow-2xs hover:brightness-110 transition"
+                            className="min-h-9 px-2.5 rounded-md bg-[var(--primary)] text-white text-[11px] font-semibold inline-flex items-center gap-1 shadow-2xs hover:brightness-110 transition"
                           >
                             <span>Review PO</span>
-                            <ArrowRight size={11} />
+                            <IconArrowRight size={11} />
                           </button>
                         ) : (
                           <button
                             type="button"
                             onClick={() => handleNotificationClick(n)}
-                            className="h-7 px-2.5 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] hover:bg-[var(--surface-hover)] text-[var(--ink)] text-[11px] font-semibold inline-flex items-center gap-1 shadow-2xs transition"
+                            className="min-h-9 px-2.5 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] hover:bg-[var(--surface-hover)] text-[var(--ink)] text-[11px] font-semibold inline-flex items-center gap-1 shadow-2xs transition"
                           >
                             <span>Open Details</span>
-                            <ArrowRight size={11} />
+                            <IconArrowRight size={11} />
                           </button>
                         )}
 
@@ -845,10 +920,10 @@ function NotificationBell() {
                                 setUnreadCount(c => Math.max(0, c - 1))
                               } catch {}
                             }}
-                            className="h-7 px-2 rounded-md text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-elevated)] text-[11px] font-medium inline-flex items-center gap-1"
+                            className="min-h-9 px-2 rounded-md text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-elevated)] text-[11px] font-medium inline-flex items-center gap-1"
                             title="Mark as read"
                           >
-                            <Check size={11} />
+                            <IconCheck size={11} />
                             <span>Read</span>
                           </button>
                         )}
@@ -858,7 +933,7 @@ function NotificationBell() {
                 })
               ) : (
                 <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
-                  <CheckCircle2 size={28} className="text-teal-500" />
+                  <IconCircleCheck size={28} className="text-teal-500" />
                   <p className="text-xs font-semibold text-[var(--ink)]">No notifications in this view</p>
                   <p className="text-[11px] text-[var(--muted)]">Your operational queues are up to date.</p>
                 </div>
@@ -873,7 +948,7 @@ function NotificationBell() {
                 className="btn-secondary h-8 px-2.5 text-xs font-semibold inline-flex items-center gap-1"
                 title="Refresh notifications feed"
               >
-                <Activity size={12} />
+                <IconActivity size={12} />
                 <span>Refresh</span>
               </button>
 
@@ -883,7 +958,7 @@ function NotificationBell() {
                 className="btn-primary h-8 px-3 text-xs font-semibold inline-flex items-center gap-1.5"
               >
                 <span>Full Notifications Center</span>
-                <ArrowRight size={12} />
+                <IconArrowRight size={12} />
               </button>
             </div>
           </aside>
@@ -895,24 +970,24 @@ function NotificationBell() {
 
 function getPageMeta(pathname) {
   if (PAGE_META[pathname]) return PAGE_META[pathname]
-  if (pathname.startsWith('/invoice/')) return { icon: FileText, group: 'Billing', label: 'Invoice Details' }
-  if (pathname.startsWith('/public-bill/') || pathname.startsWith('/bill/')) return { icon: FileText, group: 'Billing', label: 'Digital Bill' }
-  if (pathname.startsWith('/parties/customers/')) return { icon: Users, group: 'Contacts', label: 'Customer Details' }
-  if (pathname.startsWith('/parties/suppliers/')) return { icon: Building2, group: 'Contacts', label: 'Supplier Details' }
-  if (pathname.startsWith('/inventory/products/')) return { icon: Package, group: 'Inventory', label: 'Product Details' }
-  if (pathname.startsWith('/inventory/purchases/')) return { icon: ShoppingBag, group: 'Inventory', label: 'Purchases' }
-  if (pathname.startsWith('/sales/invoices')) return { icon: FileText, group: 'Billing', label: 'Billing & Invoices' }
-  if (pathname.startsWith('/audit-trail')) return { icon: ShieldCheck, group: 'Administration', label: 'Audit Trail' }
-  if (pathname.startsWith('/billing/new')) return { icon: ShoppingCart, group: 'Billing', label: 'New Sale' }
-  if (pathname.startsWith('/sales/payments')) return { icon: CreditCard, group: 'Billing', label: 'Payments' }
-  if (pathname.startsWith('/billing/drafts')) return { icon: Layers, group: 'Billing', label: 'Parked Bills' }
-  if (pathname.startsWith('/sales/returns')) return { icon: RotateCcw, group: 'Billing', label: 'Sales Returns' }
-  return { icon: LayoutDashboard, group: '', label: 'Billing ERP' }
+  if (pathname.startsWith('/invoice/')) return { icon: IconFileText, group: 'Billing', label: 'Invoice Details' }
+  if (pathname.startsWith('/public-bill/') || pathname.startsWith('/bill/')) return { icon: IconFileText, group: 'Billing', label: 'Digital Bill' }
+  if (pathname.startsWith('/parties/customers/')) return { icon: IconUsers, group: 'Contacts', label: 'Customer Details' }
+  if (pathname.startsWith('/parties/suppliers/')) return { icon: IconBuildingStore, group: 'Contacts', label: 'Supplier Details' }
+  if (pathname.startsWith('/inventory/products/')) return { icon: IconPackage, group: 'Inventory', label: 'Product Details' }
+  if (pathname.startsWith('/inventory/purchases/')) return { icon: IconShoppingBag, group: 'Inventory', label: 'Purchases' }
+  if (pathname.startsWith('/sales/invoices')) return { icon: IconFileText, group: 'Billing', label: 'Billing & Invoices' }
+  if (pathname.startsWith('/audit-trail')) return { icon: IconShieldCheck, group: 'Administration', label: 'Audit Trail' }
+  if (pathname.startsWith('/billing/new')) return { icon: IconShoppingCart, group: 'Billing', label: 'New Sale' }
+  if (pathname.startsWith('/sales/payments')) return { icon: IconCreditCard, group: 'Billing', label: 'Payments' }
+  if (pathname.startsWith('/billing/drafts')) return { icon: IconLayersLinked, group: 'Billing', label: 'Parked Bills' }
+  if (pathname.startsWith('/sales/returns')) return { icon: IconRotate2, group: 'Billing', label: 'Sales Returns' }
+  return { icon: IconLayoutDashboard, group: '', label: 'Billing ERP' }
 }
 
 function PageHeading({ shopName, pathname }) {
   const meta = getPageMeta(pathname)
-  const Icon = meta?.icon || LayoutDashboard
+  const Icon = meta?.icon || IconLayoutDashboard
   const title = meta?.label || 'Dashboard'
 
   return (
@@ -955,7 +1030,7 @@ function LiveDateTime() {
 
   return (
     <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--surface-elevated)] border border-[var(--line)] text-xs text-[var(--muted)] shadow-2xs">
-      <Clock size={13} className="text-[#1E3A5F] dark:text-sky-400 flex-shrink-0" />
+      <IconClock size={13} className="text-[#1E3A5F] dark:text-sky-400 flex-shrink-0" />
       <span className="font-semibold text-[var(--ink)] tabular-nums">{date}</span>
       <span className="text-[var(--line-strong)]">·</span>
       <span className="font-mono font-medium text-[var(--ink)] tabular-nums">{time}</span>
@@ -1010,7 +1085,7 @@ function ProfileMenu({ user }) {
           className="flex min-h-10 w-full items-center justify-between rounded-md px-2.5 text-xs font-medium text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)]"
         >
           <span className="inline-flex items-center gap-2">
-            {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
+            {theme === 'dark' ? <IconMoon size={14} /> : <IconSun size={14} />}
             {theme === 'dark' ? 'Dark mode' : 'Light mode'}
           </span>
           <span className={`flex h-4 w-7 items-center rounded-full p-0.5 transition-colors ${theme === 'dark' ? 'bg-[var(--primary)]' : 'bg-[var(--line-strong)]'}`} aria-hidden="true">
@@ -1026,7 +1101,7 @@ function ProfileMenu({ user }) {
           onClick={() => { setOpen(false); navigate('/settings') }}
           className="flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-xs font-medium text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
         >
-          <Settings size={15} /> Settings
+          <IconSettings size={15} /> Settings
         </button>
         <button
           type="button"
@@ -1034,7 +1109,7 @@ function ProfileMenu({ user }) {
           onClick={handleSignOut}
           className="flex min-h-10 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
         >
-          <LogOut size={15} /> Sign out
+          <IconLogout size={15} /> Sign out
         </button>
       </div>
     </>
@@ -1053,7 +1128,7 @@ function ProfileMenu({ user }) {
           {initials}
         </span>
         <span className="hidden max-w-28 truncate text-xs font-semibold sm:inline">{displayName}</span>
-        <ChevronDown size={14} className={`hidden text-[var(--muted)] transition-transform sm:block ${open ? 'rotate-180' : ''}`} />
+        <IconChevronDown size={14} className={`hidden text-[var(--muted)] transition-transform sm:block ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
@@ -1101,7 +1176,7 @@ function ProfileMenu({ user }) {
                 aria-label="Close profile drawer"
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--muted)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
               >
-                <X size={18} />
+                <IconX size={18} />
               </button>
             </div>
             {profileActions()}
@@ -1234,7 +1309,7 @@ export default function Layout({ children }) {
                     : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
                 }`}
               >
-                <Search size={18} />
+                <IconSearch size={18} />
               </button>
 
               <div className="hidden lg:block w-px h-5 bg-[var(--line)]" />

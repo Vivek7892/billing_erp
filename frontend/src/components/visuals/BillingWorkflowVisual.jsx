@@ -1,14 +1,22 @@
 import { useState, useEffect } from 'react'
-import { Package, ShoppingCart, Hash, Calculator, FileText, CreditCard, Check } from 'lucide-react'
+import {
+  IconPackage,
+  IconShoppingCart,
+  IconHash,
+  IconCalculator,
+  IconFileText,
+  IconCreditCard,
+  IconCheck,
+} from '@tabler/icons-react'
 import DreamVisualContainer from './DreamVisualContainer'
 
 const STAGES = [
-  { id: 'product', label: 'Product Selection', icon: Package, detail: 'SKU: PROD-102 · Barcode Scanned' },
-  { id: 'cart', label: 'Cart', icon: ShoppingCart, detail: 'Item Added to Active Bill' },
-  { id: 'qty', label: 'Quantity', icon: Hash, detail: 'Qty: 3 Units @ ₹140.00' },
-  { id: 'total', label: 'Total', icon: Calculator, detail: 'Subtotal ₹420.00 + GST' },
-  { id: 'invoice', label: 'Invoice', icon: FileText, detail: 'Generated INV-2026-089' },
-  { id: 'payment', label: 'Payment', icon: CreditCard, detail: 'Paid via Dynamic UPI QR' },
+  { id: 'product', label: 'Product Selection', icon: IconPackage, detail: 'SKU: PROD-102 · Barcode Scanned' },
+  { id: 'cart', label: 'Cart', icon: IconShoppingCart, detail: 'Item Added to Active Bill' },
+  { id: 'qty', label: 'Quantity', icon: IconHash, detail: 'Qty: 3 Units @ ₹140.00' },
+  { id: 'total', label: 'Total', icon: IconCalculator, detail: 'Subtotal ₹420.00 + GST' },
+  { id: 'invoice', label: 'Invoice', icon: IconFileText, detail: 'Generated INV-2026-089' },
+  { id: 'payment', label: 'Payment', icon: IconCreditCard, detail: 'Paid via Dynamic UPI QR' },
 ]
 
 export default function BillingWorkflowVisual({ className = '', compact = false, uploadedSrc }) {
@@ -71,7 +79,7 @@ export default function BillingWorkflowVisual({ className = '', compact = false,
                 }`}
               >
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center mb-1">
-                  {isCompleted ? <Check size={16} strokeWidth={2.5} /> : <Icon size={16} />}
+                  {isCompleted ? <IconCheck size={16} strokeWidth={2.5} /> : <Icon size={16} />}
                 </div>
                 <span className="text-[9px] font-bold line-clamp-1">{stg.label}</span>
               </div>

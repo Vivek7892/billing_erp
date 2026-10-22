@@ -1,6 +1,13 @@
 import { useState, useId } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { LockKeyhole, Eye, EyeOff, ShieldCheck, CheckCircle2, AlertTriangle } from 'lucide-react'
+import {
+  IconLock,
+  IconEye,
+  IconEyeOff,
+  IconShieldCheck,
+  IconCircleCheck,
+  IconAlertTriangle,
+} from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 import http from '../api'
 import { LoginIllustration } from '../components/visuals'
@@ -99,7 +106,7 @@ export default function ResetPassword() {
           <div className="login-content">
             <div className="login-heading">
               <span className="login-heading-icon" aria-hidden="true">
-                <LockKeyhole size={18} />
+                <IconLock size={18} />
               </span>
               <h1 id="reset-title">Create new password</h1>
               <p>Choose a strong, secure password for your store account.</p>
@@ -107,7 +114,7 @@ export default function ResetPassword() {
 
             {!uid || !token ? (
               <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs flex items-start gap-2.5">
-                <AlertTriangle size={18} className="shrink-0 text-amber-600 mt-0.5" />
+                <IconAlertTriangle size={18} className="shrink-0 text-amber-600 mt-0.5" />
                 <div>
                   <strong className="block font-semibold mb-1">Verification Required</strong>
                   This password reset session is missing its verification details or has expired. Request a new code from the forgot password page.
@@ -120,7 +127,7 @@ export default function ResetPassword() {
               </div>
             ) : success ? (
               <div className="p-5 rounded-xl border border-emerald-200 bg-emerald-50 text-center flex flex-col items-center gap-3">
-                <CheckCircle2 size={36} className="text-emerald-600" />
+                <IconCircleCheck size={36} className="text-emerald-600" />
                 <h2 className="text-base font-bold text-slate-800">Password Updated!</h2>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   Your password has been securely reset. You can now log into your Dreamwithtech ERP account with your new credentials.
@@ -160,7 +167,7 @@ export default function ResetPassword() {
                       disabled={loading}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      {showPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
                     </button>
                   </div>
 
@@ -220,7 +227,7 @@ export default function ResetPassword() {
                       disabled={loading}
                       aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                     >
-                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      {showConfirmPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
                     </button>
                   </div>
                   {errors.confirmPassword && <p className="login-field-error">{errors.confirmPassword}</p>}
@@ -246,7 +253,7 @@ export default function ResetPassword() {
             )}
 
             <div className="login-security-note">
-              <ShieldCheck size={15} aria-hidden="true" />
+              <IconShieldCheck size={15} aria-hidden="true" />
               <span>Password reset is available only after email OTP verification.</span>
             </div>
           </div>
