@@ -245,9 +245,7 @@ function ShareMenu({ bill, shopName, onClose }) {
     {
       label: 'Share Bill',
       icon: <FileText size={16} className="text-rose-600 dark:text-rose-400" />,
-      hover: 'hover:bg-rose-50 dark:bg-rose-950/60',
-      icon: <FileText size={16} className="text-rose-400" />,
-      hover: 'hover:bg-rose-950/40',
+      hover: 'hover:bg-rose-50 dark:hover:bg-rose-950/40',
       action: async () => {
         try {
           const [blob, shortUrl] = await Promise.all([
@@ -545,8 +543,8 @@ function InvoiceActions({
             e.stopPropagation()
             setMenuOpen(v => !v)
           }}
-          className={`p-1.5 rounded-md text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition ${
-            menuOpen ? 'bg-[var(--surface-hover)] text-[var(--ink)]' : ''
+          className={`p-1.5 rounded-md text-[var(--muted)] hover:text-[#1E3A5F] hover:bg-blue-50 dark:hover:bg-blue-950/40 transition ${
+            menuOpen ? 'bg-blue-50 text-[#1E3A5F] dark:bg-blue-950/40 dark:text-sky-300' : ''
           }`}
           title="More actions"
           aria-label="More actions"
@@ -568,7 +566,7 @@ function InvoiceActions({
                   setMenuOpen(false)
                   onCollect?.(bill)
                 }}
-                className="flex min-h-9 w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-semibold text-[#1E3A5F] hover:bg-[var(--surface-elevated)] dark:text-sky-300"
+                className="flex min-h-9 w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
               >
                 <IndianRupee size={13} />
                 <span>Collect Payment</span>
@@ -583,7 +581,7 @@ function InvoiceActions({
               }}
               className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
             >
-              <Printer size={13} />
+              <Printer size={13} className="text-slate-500" />
               <span>Thermal Receipt ({isThermal58 ? '58mm' : '80mm'})</span>
             </button>
 
@@ -630,7 +628,7 @@ function InvoiceActions({
               }}
               className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
             >
-              <ExternalLink size={13} />
+              <ExternalLink size={13} className="text-blue-600 dark:text-blue-400" />
               <span>View Digital Bill</span>
             </button>
 
@@ -648,7 +646,7 @@ function InvoiceActions({
               }}
               className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
             >
-              <Copy size={13} />
+              <Copy size={13} className="text-violet-600 dark:text-violet-400" />
               <span>Copy Bill Link</span>
             </button>
 
@@ -1400,7 +1398,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                 <button
                   type="button"
                   onClick={() => handleAmountChange(String(balanceDue))}
-              className="min-h-8 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[10px] font-semibold text-[#1E3A5F] transition hover:bg-[var(--surface-elevated)] dark:text-sky-300"
+                  className="min-h-8 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-950/70"
                 >
                   Pay Full ({fmt(balanceDue)})
                 </button>
@@ -1408,7 +1406,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                   <button
                     type="button"
                     onClick={() => handleAmountChange(String((balanceDue / 2).toFixed(2)))}
-                    className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[10px] font-semibold text-[var(--ink-secondary)] transition hover:border-[var(--line-strong)]"
+                    className="rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-[10px] font-semibold text-sky-700 transition hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300 dark:hover:bg-sky-950/70"
                   >
                     50%
                   </button>
@@ -1458,7 +1456,11 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                     aria-pressed={selected}
                     className={`flex min-h-16 flex-col items-center justify-center rounded-xl border p-2 text-[11px] font-semibold transition ${
                       selected
-                        ? 'border-[#1E3A5F] bg-[#1E3A5F] text-white shadow-xs'
+                        ? m.id === 'cash'
+                          ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
+                          : m.id === 'upi'
+                            ? 'border-sky-600 bg-sky-600 text-white shadow-sm shadow-sky-600/20'
+                            : 'border-violet-600 bg-violet-600 text-white shadow-sm shadow-violet-600/20'
                         : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:border-[var(--line-strong)]'
                     }`}
                   >
@@ -2702,6 +2704,7 @@ export default function Bills() {
           {/* =================================================
               INTEGRATED SUBTLE PAGINATION FOOTER
           ================================================= */}
+          {totalInvoices > 0 && (
           <div className="flex flex-col gap-2.5 border-t border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 sm:h-12 sm:flex-row sm:items-center sm:justify-between sm:px-4">
             {/* Left: Showing count */}
             <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
@@ -2799,6 +2802,7 @@ export default function Bills() {
               </div>
             </div>
           </div>
+          )}
         </div>
 
         {/* =================================================

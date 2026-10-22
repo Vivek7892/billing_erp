@@ -30,6 +30,7 @@ export default function RecycleBin() {
   const [tab, setTab] = useState('invoices') // invoices | products | purchases
   const [restoreModal, setRestoreModal] = useState({ open: false, item: null, reason: '' })
   const [restoring, setRestoring] = useState(false)
+  const [deletingProductId, setDeletingProductId] = useState(null)
   const [q, setQ] = useState('')
 
   const filteredInvoices = useMemo(() => {
@@ -95,6 +96,23 @@ export default function RecycleBin() {
       toast.error(err.response?.data?.detail || err.response?.data?.error || 'Failed to restore item')
     } finally {
       setRestoring(false)
+    }
+  }
+
+  const handleDeleteProduct = async product => {
+    const confirmed = window.confirm(
+      `Permanently delete "${product.name}"? This cannot be undone. Products with stock or purchase history cannot be deleted.`,
+    )
+    if (!confirmed) return
+    setDeletingProductId(product.id)
+    try {
+      await api.delete(`/recycle-bin/product/${product.id}/delete/`)
+      toast.success(`Product "${product.name}" permanently deleted`)
+      await fetchData()
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to permanently delete product')
+    } finally {
+      setDeletingProductId(null)
     }
   }
 
@@ -369,12 +387,20 @@ export default function RecycleBin() {
                     <span>SKU: {p.sku || '—'} · Stock: {p.current_stock}</span>
                     <span>{p.updated_at ? new Date(p.updated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
                   </div>
-                  <div className="pt-1 flex justify-end">
+                  <div className="pt-1 flex justify-end gap-2">
                     <button
                       onClick={() => setRestoreModal({ open: true, item: p, reason: '' })}
                       className="btn-primary min-h-[36px] inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg shadow-xs transition"
                     >
                       <RotateCcw size={13} /> Restore Item
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteProduct(p)}
+                      disabled={deletingProductId === p.id}
+                      className="btn-secondary min-h-[36px] inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-rose-600"
+                    >
+                      <Trash2 size={13} /> {deletingProductId === p.id ? 'Deleting...' : 'Delete'}
                     </button>
                   </div>
                 </div>
@@ -432,12 +458,22 @@ export default function RecycleBin() {
                           : '—'}
                       </td>
                       <td className="py-2.5 px-3 text-right">
-                        <button
-                          onClick={() => setRestoreModal({ open: true, item: p, reason: '' })}
-                          className="btn-primary btn-sm inline-flex items-center gap-1 text-[11px] px-2.5 py-1"
-                        >
-                          <RotateCcw size={12} /> Restore
-                        </button>
+                        <div className="inline-flex justify-end gap-2">
+                          <button
+                            onClick={() => setRestoreModal({ open: true, item: p, reason: '' })}
+                            className="btn-primary btn-sm inline-flex items-center gap-1 text-[11px] px-2.5 py-1"
+                          >
+                            <RotateCcw size={12} /> Restore
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProduct(p)}
+                            disabled={deletingProductId === p.id}
+                            className="btn-secondary btn-sm inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-rose-600"
+                          >
+                            <Trash2 size={12} /> {deletingProductId === p.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

@@ -4827,6 +4827,43 @@ class RecycleBinView(APIView):
         })
 
 
+class RecycleBinProductDeleteView(APIView):
+    """Permanently remove an archived product when no operational history depends on it."""
+    permission_classes = [IsManagerOrAbove]
+
+    def delete(self, request, pk):
+        product = Product.objects.filter(
+            business=request.user.business, pk=pk, status='inactive'
+        ).first()
+        if not product:
+            return Response({'error': 'Archived product not found.'}, status=404)
+
+        has_history = (
+            ProductBatch.objects.filter(product=product).exists()
+            or PurchaseItem.objects.filter(product=product).exists()
+            or InventoryTransaction.objects.filter(product=product).exists()
+        )
+        if has_history:
+            return Response(
+                {'error': 'This product has stock or purchase history and cannot be permanently deleted. Restore it if you need it again.'},
+                status=409,
+            )
+
+        name = product.name
+        product_id = product.pk
+        audit_event(
+            request,
+            'PRODUCT_PERMANENTLY_DELETED',
+            'Product',
+            product_id,
+            entity_name=name,
+            before={'status': product.status, 'sku': product.sku},
+            reason='Permanently deleted from Recycle Bin',
+        )
+        product.delete()
+        return Response({'status': 'deleted', 'message': f'Product "{name}" permanently deleted.'})
+
+
 class RecycleBinRestoreView(APIView):
     """
     Restore restorable master items from the Recycle Bin.

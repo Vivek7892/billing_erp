@@ -1,157 +1,151 @@
-import { useEffect, useState } from 'react'
 import {
   CheckCircle2,
   IndianRupee,
-  Receipt,
   CreditCard,
+  QrCode,
 } from 'lucide-react'
 import DreamVisualContainer from './DreamVisualContainer'
 
+const formatCurrency = value =>
+  `₹${Number(value || 0).toLocaleString('en-IN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })}`
+
 export default function CreditCollectedVisual({
   className = '',
-  customerName = 'Rajesh Kumar',
+  customer,
+  amount = 0,
+  method = 'cash',
+  collected = false,
   uploadedSrc,
 }) {
-  const [collected, setCollected] = useState(false)
+  const outstanding = Number(customer?.outstanding_amount || 0)
+  const collectedAmount = Number(amount || 0)
+  const remaining = Math.max(outstanding - collectedAmount, 0)
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setCollected(true)
-    }, 1800)
+  const paymentMethods = {
+    cash: {
+      label: 'Cash',
+      icon: IndianRupee,
+    },
+    upi: {
+      label: 'UPI',
+      icon: QrCode,
+    },
+    card: {
+      label: 'Card',
+      icon: CreditCard,
+    },
+  }
 
-    return () => clearTimeout(timer)
-  }, [])
+  const payment = paymentMethods[method] || {
+    label: 'Payment',
+    icon: CreditCard,
+  }
 
-  const outstanding = 4500
-  const collectedAmount = collected ? 4500 : 0
-  const remaining = outstanding - collectedAmount
+  const PaymentIcon = payment.icon
 
   return (
     <DreamVisualContainer
       slotKey="credit-collected"
       title="Credit Collection"
       uploadedSrc={uploadedSrc}
-      className={`p-0 bg-transparent border-0 ${className}`}
-      badgeText={collected ? 'Collected' : 'Pending'}
-      badgeVariant={collected ? 'success' : 'cyan'}
+      className={`p-0 bg-transparent border-0 shadow-none ${className}`}
+      hideBadge
     >
-      <div className="w-full px-1">
+      <div className="w-full px-1 py-1">
 
-        <div
-          className={`
-            w-full
-            rounded-xl
-            border
-            bg-white
-            px-4
-            py-3
-            dark:bg-slate-800
-            ${
-              collected
-                ? 'border-emerald-200 dark:border-emerald-800'
-                : 'border-slate-200 dark:border-slate-700'
-            }
-          `}
-        >
+        {/* Simple rectangular summary */}
+        <div className="w-full border border-slate-200 bg-slate-50/70 px-3 py-3 dark:border-slate-700 dark:bg-slate-800/40">
 
-          {/* Customer */}
-          <div>
-            <div className="text-[9px] uppercase tracking-wide text-slate-400">
-              Customer
+          {/* Customer + status */}
+          <div className="flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="text-[9px] font-medium uppercase tracking-wide text-slate-400">
+                Customer
+              </p>
+
+              <p className="mt-0.5 truncate text-sm font-semibold text-slate-800 dark:text-white">
+                {customer?.name || 'Customer'}
+              </p>
             </div>
 
-            <div className="mt-0.5 truncate text-xs font-semibold text-slate-800 dark:text-white">
-              {customerName}
+            <div
+              className={`flex items-center gap-1 text-[10px] font-semibold ${
+                collected
+                  ? 'text-emerald-600'
+                  : 'text-amber-600'
+              }`}
+            >
+              {collected && <CheckCircle2 size={12} />}
+              {collected ? 'Collected' : 'Pending'}
             </div>
           </div>
 
-          {/* Invoice */}
-          <div className="mt-3 flex items-center gap-1.5 text-[9px] text-slate-400">
-            <Receipt size={11} />
-            <span>INV-2026-089</span>
-            <span>•</span>
-            <span>20 Oct 2026</span>
-          </div>
+          {/* Amounts */}
+          <div className="mt-3 grid grid-cols-3 border-t border-slate-200 pt-3 dark:border-slate-700">
 
-          {/* Amount */}
-          <div className="mt-4 flex items-end justify-between">
+            {/* Due */}
+            <div className="border-r border-slate-200 pr-3 dark:border-slate-700">
+              <p className="text-[9px] font-medium uppercase tracking-wide text-slate-400">
+                Due
+              </p>
 
-            <div>
-              <div className="text-[9px] uppercase tracking-wide text-slate-400">
-                {collected ? 'Collected Amount' : 'Outstanding'}
-              </div>
+              <p className="mt-1 text-base font-bold text-rose-600 dark:text-rose-400">
+                {formatCurrency(outstanding)}
+              </p>
+            </div>
 
-              <div
-                className={`
-                  mt-1
-                  flex
-                  items-center
-                  gap-1
-                  text-2xl
-                  font-bold
-                  ${
-                    collected
-                      ? 'text-emerald-600'
-                      : 'text-slate-900 dark:text-white'
-                  }
-                `}
+            {/* To Collect */}
+            <div className="border-r border-slate-200 px-3 dark:border-slate-700">
+              <p className="text-[9px] font-medium uppercase tracking-wide text-slate-400">
+                {collected ? 'Collected' : 'To Collect'}
+              </p>
+
+              <p
+                className={`mt-1 text-base font-bold ${
+                  collected
+                    ? 'text-emerald-600'
+                    : 'text-[#0057B8]'
+                }`}
               >
-                <IndianRupee size={18} />
-
-                {(collected
-                  ? collectedAmount
-                  : outstanding
-                ).toLocaleString('en-IN')}
-
-                {collected && (
-                  <CheckCircle2
-                    size={17}
-                    className="ml-1 text-emerald-500"
-                    strokeWidth={2.5}
-                  />
-                )}
-              </div>
+                {formatCurrency(collectedAmount)}
+              </p>
             </div>
 
             {/* Remaining */}
-            <div className="text-right">
-              <div className="text-[9px] text-slate-400">
+            <div className="pl-3 text-right">
+              <p className="text-[9px] font-medium uppercase tracking-wide text-slate-400">
                 Remaining
-              </div>
+              </p>
 
-              <div
-                className={`
-                  mt-1
-                  text-sm
-                  font-bold
-                  ${
-                    remaining === 0
-                      ? 'text-emerald-600'
-                      : 'text-slate-700 dark:text-white'
-                  }
-                `}
+              <p
+                className={`mt-1 text-base font-bold ${
+                  remaining === 0
+                    ? 'text-emerald-600'
+                    : 'text-slate-700 dark:text-slate-200'
+                }`}
               >
-                ₹{remaining.toLocaleString('en-IN')}
-              </div>
+                {formatCurrency(remaining)}
+              </p>
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5 dark:border-slate-700">
+          {/* Payment method */}
+          <div className="mt-3 flex items-center gap-1.5 border-t border-slate-200 pt-2.5 text-[9px] text-slate-500 dark:border-slate-700 dark:text-slate-400">
+            <PaymentIcon size={11} />
+            <span>{payment.label}</span>
 
-            <div className="flex items-center gap-1.5 text-[9px] text-slate-500 dark:text-slate-400">
-              <CreditCard size={11} />
-              <span>UPI Payment</span>
-            </div>
+            {!collected && (
+              <span className="ml-auto text-slate-400">
+                Ready to collect
+              </span>
+            )}
 
-            {collected ? (
-              <div className="flex items-center gap-1 text-[9px] font-semibold text-emerald-600">
-                <CheckCircle2 size={11} />
+            {collected && (
+              <span className="ml-auto font-semibold text-emerald-600">
                 Paid
-              </div>
-            ) : (
-              <span className="text-[9px] text-slate-400">
-                Awaiting payment
               </span>
             )}
           </div>
@@ -160,4 +154,4 @@ export default function CreditCollectedVisual({
       </div>
     </DreamVisualContainer>
   )
-} 
+}

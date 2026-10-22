@@ -66,8 +66,17 @@ const LOW_STOCK_THRESHOLD = 5         // display only: product cards turn orange
 // Local drafts (parked bills) — unchanged storage contract
 // ---------------------------------------------------------------------------
 const DRAFT_KEY = 'pos_drafts'
+const ACTIVE_BILL_KEY = 'pos_active_bill'
 function loadDrafts() { try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || '[]') } catch { return [] } }
 function saveDraftsStore(drafts) { localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts)) }
+function loadActiveBill() {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(ACTIVE_BILL_KEY) || 'null')
+    return value && typeof value === 'object' ? value : {}
+  } catch {
+    return {}
+  }
+}
 
 const fmt = value => `₹${Number(value || 0).toFixed(2)}`
 const fmtSigned = value => {
@@ -769,6 +778,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
 // ---------------------------------------------------------------------------
 export default function NewBill() {
   const navigate = useNavigate()
+  const [savedActiveBill] = useState(loadActiveBill)
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [customers, setCustomers] = useState([])
@@ -781,14 +791,14 @@ export default function NewBill() {
   const [catFilter, setCatFilter] = useState('')
   const [searchActive, setSearchActive] = useState(false)
   const [activeIdx, setActiveIdx] = useState(-1)
-  const [cart, setCart] = useState([])
+  const [cart, setCart] = useState(() => Array.isArray(savedActiveBill.cart) ? savedActiveBill.cart : [])
   const [lastAddedId, setLastAddedId] = useState(null)
-  const [customer, setCustomer] = useState(null)
-  const [customerSearch, setCustomerSearch] = useState('')
+  const [customer, setCustomer] = useState(() => savedActiveBill.customer || null)
+  const [customerSearch, setCustomerSearch] = useState(() => savedActiveBill.customerSearch || '')
   const [customerOpen, setCustomerOpen] = useState(false)
-  const [payment, setPayment] = useState(INITIAL_PAYMENT)
-  const [billDiscountInput, setBillDiscountInput] = useState('')
-  const [notes, setNotes] = useState('')
+  const [payment, setPayment] = useState(() => savedActiveBill.payment || INITIAL_PAYMENT)
+  const [billDiscountInput, setBillDiscountInput] = useState(() => savedActiveBill.billDiscountInput || '')
+  const [notes, setNotes] = useState(() => savedActiveBill.notes || '')
   const [saving, setSaving] = useState(false)
   const [lastInvoice, setLastInvoice] = useState(null)
   const [drafts, setDrafts] = useState(loadDrafts)
@@ -860,7 +870,32 @@ export default function NewBill() {
     const [productsResult, categoriesResult, customersResult, dashboardResult, settingsResult] = results
     if (productsResult.status === 'fulfilled') {
       const pVal = productsResult.value
-      setProducts(Array.isArray(pVal) ? pVal : (Array.isArray(pVal?.items) ? pVal.items : []))
+      const freshProducts = Array.isArray(pVal) ? pVal : (Array.isArray(pVal?.items) ? pVal.items : [])
+      setProducts(freshProducts)
+      setCart(current => current.map(item => {
+        const product = freshProducts.find(p => String(p.id) === String(item.id))
+        if (!product) return item
+        const batches = Array.isArray(product.batches) ? product.batches : []
+        const selectedBatch = batches.find(batch => String(batch.id) === String(item.batch_id))
+          || batches.find(batch => batch.active && Number(batch.quantity) > 0)
+        const unitPrice = Number(selectedBatch?.selling_rate ?? product.selling_price ?? item.unit_price)
+        const gstPercent = Number(product.gst_percent ?? item.gst_percent ?? 0)
+        const base = unitPrice * Number(item.qty || 0) * (1 - Number(item.discount_percent || 0) / 100)
+        return {
+          ...item,
+          product_name: product.name || item.product_name,
+          sku: product.sku || item.sku,
+          barcode: product.barcode || item.barcode || '',
+          unit: product.unit || item.unit || '',
+          hsn_code: product.hsn_code || item.hsn_code || '',
+          batches,
+          batch_id: selectedBatch?.id || item.batch_id || '',
+          mrp: Number(selectedBatch?.mrp ?? product.mrp ?? item.mrp ?? 0),
+          unit_price: unitPrice,
+          gst_percent: gstPercent,
+          total: base + base * gstPercent / 100,
+        }
+      }))
     }
     if (categoriesResult.status === 'fulfilled') {
       const cVal = categoriesResult.value
@@ -877,6 +912,19 @@ export default function NewBill() {
   }, [])
 
   useEffect(() => { loadInitialData() }, [loadInitialData])
+
+  useEffect(() => {
+    const hasActiveBill = cart.length > 0 || customer || customerSearch || billDiscountInput || notes
+    if (!hasActiveBill) {
+      sessionStorage.removeItem(ACTIVE_BILL_KEY)
+      return
+    }
+    try {
+      sessionStorage.setItem(ACTIVE_BILL_KEY, JSON.stringify({
+        cart, customer, customerSearch, payment, billDiscountInput, notes,
+      }))
+    } catch { /* storage can be unavailable or full; keep the in-memory bill */ }
+  }, [cart, customer, customerSearch, payment, billDiscountInput, notes])
 
   const productMap = useMemo(() => {
     const list = Array.isArray(products) ? products : []
@@ -1511,13 +1559,29 @@ export default function NewBill() {
   }
 
   // Keyboard shortcuts — handlers are read through a ref so they never go stale.
-  actionsRef.current = { saveBill, saveDraft, printCurrent, focusPayment, navigate, openRazorpayCheckout }
+  actionsRef.current = {
+    saveBill,
+    saveDraft,
+    printCurrent,
+    focusPayment,
+    navigate,
+    openRazorpayCheckout,
+    showSuccess,
+    startNewBill,
+    setShowSuccess,
+  }
   useEffect(() => {
     const onKey = e => {
       const a = actionsRef.current
       const key = e.key
       const mod = e.ctrlKey || e.metaKey
       const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)
+      if (a.showSuccess && key === 'Enter') {
+        e.preventDefault()
+        a.setShowSuccess(false)
+        a.startNewBill()
+        return
+      }
       if (mod && key.toLowerCase() === 'k') { e.preventDefault(); searchRef.current?.focus() }
       else if (mod && key.toLowerCase() === 'd') { e.preventDefault(); a.saveDraft() }
       else if (mod && key.toLowerCase() === 'p') { e.preventDefault(); a.printCurrent() }
@@ -1628,7 +1692,7 @@ export default function NewBill() {
           </button>
           <button
             type="button"
-            className="pb-btn pb-btn-sm pb-desktop-only"
+            className="pb-btn pb-btn-sm pb-desktop-only pb-shortcuts-head-btn"
             aria-label="Keyboard shortcuts"
             title="Keyboard shortcuts (F1-F10)"
             onClick={() => setShowShortcuts(true)}
@@ -1638,7 +1702,7 @@ export default function NewBill() {
           </button>
           <button
             type="button"
-            className="pb-btn pb-btn-sm pb-desktop-only"
+            className="pb-btn pb-btn-sm pb-desktop-only pb-fullscreen-head-btn"
             aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
             title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
             onClick={toggleFullscreen}
@@ -2170,7 +2234,7 @@ export default function NewBill() {
             </div>
             <button
               type="button"
-              className="pb-btn pb-btn-sm"
+              className="pb-btn pb-btn-sm pb-customer-add-btn"
               aria-label="Add new customer"
               title="Add new customer"
               onClick={() => setShowCustomerModal(true)}
@@ -2435,7 +2499,7 @@ export default function NewBill() {
                   </div>
                   <button
                     type="button"
-                    className="pb-btn pb-btn-sm"
+                    className="pb-btn pb-btn-sm pb-qr-action-btn"
                     onClick={openQuickPayment}
                     disabled={grandTotal <= 0 || !cart.length}
                     title={!upiId ? 'Configure shop UPI ID in Settings' : 'Show UPI QR Code'}
@@ -2592,16 +2656,6 @@ export default function NewBill() {
             </div>
 
             <div className="pb-dock-right-actions">
-              <button
-                type="button"
-                className="pb-btn-dock pb-btn-modal-trigger"
-                title="Open detailed payment screen (split pay / ledger balance / change)"
-                onClick={() => setMobilePaymentOpen(true)}
-                disabled={!cart.length || grandTotal <= 0}
-              >
-                <Banknote size={13} />
-                <span>Pay Details</span>
-              </button>
               {payment.method !== 'razorpay' && (
                 <button
                   type="button"
@@ -3208,93 +3262,102 @@ export default function NewBill() {
       </Modal>
 
       {/* ============================ DEDICATED SALE COMPLETED SCREEN ============================ */}
-      <Modal open={showSuccess && Boolean(lastInvoice?.id)} onClose={() => setShowSuccess(false)} title="" size="md">
-        <div className="-mt-2 pb-sale-success space-y-3.5">
-          {/* Animated 5-second Payment Completed Visual */}
-       <PaymentCompletedVisual
-  amount={fmt(lastInvoice?.grand_total || 0).replace(/[^\d.,]/g, '')}
-  invoiceNo={lastInvoice?.invoice_number || 'INV'}
-  customerName={
-    lastInvoice?.customer_name ||
-    lastInvoice?.customer?.name ||
-    'Walk-in Customer'
-  }
-  className="mb-2"
-/>
+      <Modal open={showSuccess && Boolean(lastInvoice?.id)} onClose={() => setShowSuccess(false)} title="" size="sm">
+        <div className="pb-sale-success text-center py-2 px-1">
+          <PaymentCompletedVisual
+            className="mb-3 border-0 shadow-none"
+            amount={Number(lastInvoice?.grand_total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            invoiceNo={lastInvoice?.invoice_number || `INV-${lastInvoice?.id || ''}`}
+            customerName={lastInvoice?.customer_name || lastInvoice?.customer?.name || 'Walk-in Customer'}
+          />
 
-        {/* Payment summary breakdown */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Method</p>
-              <p className="mt-1 text-xs font-bold capitalize truncate text-[var(--ink)]">
+          {/* Heading & Invoice / Customer details */}
+          <h2 className="text-xl font-bold tracking-tight text-[var(--ink)]">Sale Completed!</h2>
+          <div className="mt-1 flex items-center justify-center gap-2 text-xs text-[var(--muted)]">
+            <span className="font-mono font-semibold text-[var(--ink)]">#{lastInvoice?.invoice_number || 'INV'}</span>
+            <span>•</span>
+            <span className="truncate max-w-[200px]">
+              {lastInvoice?.customer_name || lastInvoice?.customer?.name || 'Walk-in Customer'}
+            </span>
+          </div>
+
+          {/* Amount Paid Summary Card */}
+          <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3.5">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">Total Amount Paid</p>
+            <p className="mt-1 font-mono text-2xl font-black text-emerald-600 dark:text-emerald-400">
+              {fmt(lastInvoice?.grand_total || 0)}
+            </p>
+            <div className="mt-2.5 flex items-center justify-center gap-2">
+              <span className="inline-flex items-center rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-0.5 text-[11px] font-semibold capitalize text-[var(--ink)]">
                 {String(lastInvoice?.payment_method || 'Cash').replace(/_/g, ' ')}
-              </p>
-            </div>
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Status</p>
-              <p className="mt-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 capitalize truncate">
-                {lastInvoice?.payment_status || 'Paid'}
-              </p>
-            </div>
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Received</p>
-              <p className="mt-1 font-mono text-xs font-bold text-[var(--ink)]">
-                {fmt(lastPaidAmount(lastInvoice))}
-              </p>
+              </span>
+              <span className="inline-flex items-center rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                {lastInvoice?.payment_status || 'PAID'}
+              </span>
             </div>
           </div>
 
-          {/* Cash change row if applicable */}
-          {String(lastInvoice?.payment_method || '').toLowerCase() === 'cash' && Number(lastInvoice?.amount_received || 0) > Number(lastInvoice?.grand_total || 0) && (
-            <div className="flex items-center justify-between rounded-xl border border-emerald-300 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/30 px-4 py-3">
-              <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                💵 <span>Change Returned to Customer</span>
-              </span>
-              <span className="font-mono text-lg font-black tabular-nums text-emerald-700 dark:text-emerald-300">
-                {fmt(Math.max(0, Number(lastInvoice?.amount_received || 0) - Number(lastInvoice?.grand_total || 0)))}
-              </span>
-            </div>
-          )}
+          {/* Cash Change Banner if applicable */}
+          {String(lastInvoice?.payment_method || '').toLowerCase() === 'cash' &&
+            Number(lastInvoice?.amount_received || 0) > Number(lastInvoice?.grand_total || 0) && (
+              <div className="mt-3 flex items-center justify-between rounded-xl border border-amber-300/80 bg-amber-50 px-4 py-2.5 text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200">
+                <span className="text-xs font-semibold flex items-center gap-1.5">
+                  <span>💵</span>
+                  <span>Change to Return</span>
+                </span>
+                <span className="font-mono text-base font-black text-amber-800 dark:text-amber-300">
+                  {fmt(Math.max(0, Number(lastInvoice?.amount_received || 0) - Number(lastInvoice?.grand_total || 0)))}
+                </span>
+              </div>
+            )}
 
-          {/* Action buttons grid */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* 4 Simple Uniform Action Buttons */}
+          <div className="mt-4 grid grid-cols-2 gap-2 text-left">
             <button
               type="button"
               onClick={() => printInvoiceDocument(lastInvoice?.id, false)}
-              className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg bg-[#1E3A5F] px-2 text-white text-[11px] font-semibold transition sm:gap-2 sm:text-xs"
+              className="flex h-10 items-center justify-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-[#1E3A5F]/40 hover:bg-[var(--surface-hover)] active:scale-[0.98]"
             >
-              <Printer size={16} /><span>Print A4 Invoice</span>
+              <Printer size={15} className="text-blue-600 dark:text-blue-400 shrink-0" />
+              <span>Print A4</span>
             </button>
             <button
               type="button"
               onClick={() => printInvoiceDocument(lastInvoice?.id, true)}
-              className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 text-[var(--ink)] text-[11px] font-semibold hover:bg-[var(--surface-hover)] transition sm:gap-2 sm:text-xs"
+              className="flex h-10 items-center justify-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-slate-400 hover:bg-[var(--surface-hover)] active:scale-[0.98]"
             >
-              <Receipt size={16} /><span>Thermal Receipt</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => downloadInvoiceDocument(lastInvoice?.id)}
-              className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 text-[var(--ink)] text-[11px] font-semibold hover:bg-[var(--surface-hover)] transition sm:gap-2 sm:text-xs"
-            >
-              <Download size={16} /><span>Download PDF</span>
+              <Receipt size={15} className="text-slate-600 dark:text-slate-300 shrink-0" />
+              <span>Thermal Slip</span>
             </button>
             <button
               type="button"
               onClick={shareInvoice}
-              className="flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg bg-[#1E3A5F] px-2 text-white text-[11px] font-semibold transition sm:gap-2 sm:text-xs"
+              className="flex h-10 items-center justify-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-emerald-500/40 hover:bg-[var(--surface-hover)] active:scale-[0.98]"
             >
-              <Share2 size={16} /><span>Share WhatsApp</span>
+              <Share2 size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>WhatsApp</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => downloadInvoiceDocument(lastInvoice?.id)}
+              className="flex h-10 items-center justify-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-indigo-500/40 hover:bg-[var(--surface-hover)] active:scale-[0.98]"
+            >
+              <Download size={15} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <span>Download PDF</span>
             </button>
           </div>
 
-          {/* Primary New Sale CTA */}
+          {/* Primary "+ Start New Sale" CTA */}
           <button
             type="button"
-            onClick={() => { setShowSuccess(false); startNewBill() }}
-            className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 text-white text-sm font-semibold transition hover:bg-emerald-800"
+            onClick={() => {
+              setShowSuccess(false)
+              startNewBill()
+            }}
+            className="mt-3.5 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 font-bold text-white text-sm shadow-md shadow-emerald-600/20 transition-all hover:bg-emerald-700 active:scale-[0.99]"
           >
-            <RefreshCw size={17} /><span>+ Start New Sale</span>
+            <Plus size={18} strokeWidth={2.5} />
+            <span>+ Start New Sale (Enter)</span>
           </button>
         </div>
       </Modal>

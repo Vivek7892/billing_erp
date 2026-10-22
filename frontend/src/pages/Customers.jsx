@@ -366,10 +366,12 @@ export function CustomerCollectPaymentModal({
       >
 
         {/* Compact animation */}
-        <CreditCollectedVisual
-          customerName={customer.name}
-          className="mb-1"
-        />
+       <CreditCollectedVisual
+  customer={customer}
+  amount={amountNum}
+  method={method}
+  className="mb-1"
+/>
 
         {/* Customer + Outstanding */}
         <div

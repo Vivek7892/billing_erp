@@ -1504,129 +1504,177 @@
 }
 
 .pb-btn-dock {
-  height: 31px;
-  padding: 0 9px;
-  border-radius: var(--pb-r);
+  height: 35px;
+  padding: 0 12px;
+  border-radius: var(--pb-r-lg);
   border: 1px solid var(--pb-border);
   background: var(--pb-surface);
   color: var(--pb-text);
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  transition: all 0.12s;
+  gap: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
 }
 
 .pb-btn-dock:hover:not(:disabled) {
   background: var(--pb-surface-alt);
   border-color: var(--pb-border-strong);
+  color: var(--pb-text);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+}
+
+.pb-btn-dock:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .pb-btn-dock:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.pb-btn-dock.pb-btn-danger {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.22);
+  background: rgba(239, 68, 68, 0.04);
 }
 
 .pb-btn-dock.pb-btn-danger:hover:not(:disabled) {
-  color: var(--pb-danger);
-  border-color: rgba(220, 38, 38, 0.3);
-  background: rgba(220, 38, 38, 0.05);
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.09);
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.15);
 }
 
-.pb-btn-dock.pb-btn-modal-trigger {
-  background: rgba(37, 99, 235, 0.06);
-  border-color: rgba(37, 99, 235, 0.25);
-  color: var(--pb-primary);
-}
-
-.pb-btn-dock.pb-btn-modal-trigger:hover:not(:disabled) {
-  background: rgba(37, 99, 235, 0.12);
-  border-color: var(--pb-primary);
-}
-
+/* Complete & Print Secondary Action Button */
 .pb-btn-dock.pb-btn-print {
-  background: var(--pb-surface-alt);
-  border-color: var(--pb-border);
+  height: 38px;
+  padding: 0 15px;
+  border-radius: var(--pb-r-lg);
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  color: #1e3a5f;
+  font-size: 12.5px;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(30, 58, 95, 0.08);
+  gap: 7px;
+}
+
+.pb-btn-dock.pb-btn-print:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.15);
+  transform: translateY(-1px);
+}
+
+.pb-btn-dock.pb-btn-print:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.dark .pb-btn-dock.pb-btn-print {
+  background: #1e293b;
+  border-color: #334155;
+  color: #93c5fd;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.dark .pb-btn-dock.pb-btn-print:hover:not(:disabled) {
+  background: #1e3a5f;
+  border-color: #60a5fa;
+  color: #ffffff;
 }
 
 /* Complete Sale Primary Action */
 .pb-btn-complete-sale {
-  height: 33px;
-  min-width: 175px;
-  padding: 0 14px;
-  border-radius: var(--pb-r);
+  height: 38px;
+  min-width: 195px;
+  padding: 0 18px;
+  border-radius: var(--pb-r-lg);
   border: none;
-  background: var(--pb-success);
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
   color: #ffffff;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  box-shadow: 0 1px 4px rgba(22, 163, 74, 0.25);
-  transition: all 0.12s;
+  gap: 7px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35), 0 1px 2px rgba(0, 0, 0, 0.06);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
 }
 
 .pb-btn-complete-sale:hover:not(:disabled) {
-  background: var(--pb-success-hover);
-  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.35);
+  background: linear-gradient(135deg, #047857 0%, #059669 100%);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.45);
+  transform: translateY(-1px);
 }
 
 .pb-btn-complete-sale:active:not(:disabled) {
   transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);
 }
 
 .pb-btn-complete-sale:disabled {
-  background: var(--pb-border-strong);
-  color: var(--pb-muted);
+  background: #94a3b8;
+  color: #f1f5f9;
   cursor: not-allowed;
   box-shadow: none;
+  transform: none;
+  opacity: 0.6;
 }
 
 /* Razorpay Pay Primary Action */
 .pb-btn-razorpay-pay {
-  height: 33px;
-  min-width: 175px;
-  padding: 0 14px;
-  border-radius: var(--pb-r);
+  height: 38px;
+  min-width: 195px;
+  padding: 0 18px;
+  border-radius: var(--pb-r-lg);
   border: none;
-  background: #2563eb;
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
   color: #ffffff;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.25);
-  transition: all 0.12s;
+  gap: 7px;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35), 0 1px 2px rgba(0, 0, 0, 0.06);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
 }
 
 .pb-btn-razorpay-pay:hover:not(:disabled) {
-  background: #1d4ed8;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45);
+  transform: translateY(-1px);
 }
 
 .pb-btn-razorpay-pay:active:not(:disabled) {
   transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
 }
 
 .pb-btn-razorpay-pay:disabled {
-  background: var(--pb-border-strong);
-  color: var(--pb-muted);
+  background: #94a3b8;
+  color: #f1f5f9;
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
+  opacity: 0.6;
 }
 
 /* Utility buttons */
@@ -1656,6 +1704,28 @@
   padding: 0 9px;
   font-size: 11.5px;
 }
+
+.pb-drafts-head-btn {
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+.pb-drafts-head-btn:hover:not(:disabled) { background: #dbeafe; border-color: #93c5fd; }
+.pb-shortcuts-head-btn { color: #6d28d9; border-color: #ddd6fe; background: #f5f3ff; }
+.pb-shortcuts-head-btn:hover:not(:disabled) { background: #ede9fe; border-color: #c4b5fd; }
+.pb-fullscreen-head-btn { color: #475569; }
+.pb-customer-add-btn { color: #047857; border-color: #a7f3d0; background: #ecfdf5; }
+.pb-customer-add-btn:hover:not(:disabled) { background: #d1fae5; border-color: #6ee7b7; }
+.pb-qr-action-btn { color: #0369a1; border-color: #bae6fd; background: #f0f9ff; }
+.pb-qr-action-btn:hover:not(:disabled) { background: #e0f2fe; border-color: #7dd3fc; }
+.dark .pb-drafts-head-btn { color: #bfdbfe; border-color: #1e3a5f; background: #172554; }
+.dark .pb-drafts-head-btn:hover:not(:disabled) { background: #1e3a8a; }
+.dark .pb-shortcuts-head-btn { color: #ddd6fe; border-color: #4c1d95; background: #2e1065; }
+.dark .pb-shortcuts-head-btn:hover:not(:disabled) { background: #4c1d95; }
+.dark .pb-customer-add-btn { color: #a7f3d0; border-color: #065f46; background: #022c22; }
+.dark .pb-customer-add-btn:hover:not(:disabled) { background: #064e3b; }
+.dark .pb-qr-action-btn { color: #bae6fd; border-color: #075985; background: #082f49; }
+.dark .pb-qr-action-btn:hover:not(:disabled) { background: #0c4a6e; }
 
 .pb-btn-primary {
   background: var(--pb-primary);
@@ -2732,12 +2802,12 @@
 
   .pb-btn-dock {
     width: 100%;
-    height: 32px;
+    height: 35px;
     min-width: 0;
     justify-content: center;
-    padding: 0 6px;
-    font-size: 11px;
-    border-radius: var(--pb-r);
+    padding: 0 8px;
+    font-size: 11.5px;
+    border-radius: var(--pb-r-lg);
   }
 
   .pb-btn-dock span {
@@ -2745,11 +2815,17 @@
     text-overflow: ellipsis;
   }
 
+  .pb-dock-right-actions .pb-btn-print {
+    flex: 0 0 auto;
+    height: 38px;
+    padding: 0 12px;
+  }
+
   .pb-btn-complete-sale,
   .pb-btn-razorpay-pay {
     flex: 1 1 auto;
-    height: 35px;
-    font-size: 12px;
+    height: 38px;
+    font-size: 12.5px;
     min-width: 0;
     margin-left: 0;
   }
@@ -2883,9 +2959,9 @@
     font-size: 11px;
     font-weight: 600;
     border-radius: var(--pb-r);
-    border: 1px solid var(--pb-border);
-    background: var(--pb-surface-alt);
-    color: var(--pb-text);
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
     flex-shrink: 0;
     white-space: nowrap;
   }

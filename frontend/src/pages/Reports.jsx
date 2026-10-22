@@ -472,20 +472,6 @@ export default function Reports() {
               <FileSpreadsheet size={14} className="text-slate-700 dark:text-slate-300" />
               <span className="truncate">{exporting === 'xlsx' ? 'Generating Excel…' : 'Export Excel'}</span>
             </button>
-            <button
-              type="button"
-              onClick={() => fetchReport(tab, appliedDates)}
-              disabled={loading}
-              className="btn-secondary inline-flex h-8 min-w-0 items-center justify-center gap-1 px-2 text-[11px] font-semibold sm:h-9 sm:gap-1.5 sm:px-3 sm:text-xs"
-              title="Refresh report data"
-              aria-label="Refresh report data"
-            >
-              <RefreshCw
-                size={14}
-                className={loading ? 'animate-spin text-[#1E3A5F]' : 'text-[var(--muted)]'}
-              />
-              <span>Refresh</span>
-            </button>
           </div>
         }
       />
@@ -531,47 +517,40 @@ export default function Reports() {
       ====================================================== */}
       {tab !== 'customers' ? (
   <section
-    className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 shadow-xs sm:px-2.5"
+    className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-xs sm:p-5"
     aria-label="Report date filters"
   >
-    <div className="flex flex-col gap-1.5 lg:flex-row lg:items-center lg:justify-between">
-
-      {/* Date presets */}
-      <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
-        <Calendar
-          size={13}
-          className="shrink-0 text-[var(--muted)]"
-        />
-
-        {[
-          ['Today', getToday(), getToday()],
-          ['This Month', getMonthStart(), getToday()],
-          ['Last 30 Days', getLast30Days(), getToday()],
-          ['Last 90 Days', getLast90Days(), getToday()],
-        ].map(([label, fDate, tDate]) => {
-          const isSelected =
-            appliedDates.start === fDate &&
-            appliedDates.end === tDate
-
-          return (
-            <button
-              key={label}
-              type="button"
-              onClick={() => handlePreset(fDate, tDate)}
-              className={`h-7 whitespace-nowrap rounded-md px-2 text-[10px] font-medium transition-colors ${
-                isSelected
-                  ? 'bg-[#1E3A5F] text-white font-semibold'
-                  : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
-              }`}
-            >
-              {label}
-            </button>
-          )
-        })}
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-2">
+        <span className="text-xs font-semibold text-[var(--ink-secondary)]">Date range</span>
+        <div className="flex flex-wrap items-center gap-1.5" aria-label="Quick date ranges">
+          {[
+            ['Today', getToday(), getToday()],
+            ['This Month', getMonthStart(), getToday()],
+            ['Last 30 Days', getLast30Days(), getToday()],
+            ['Last 90 Days', getLast90Days(), getToday()],
+          ].map(([label, fDate, tDate]) => {
+            const isSelected = appliedDates.start === fDate && appliedDates.end === tDate
+            return (
+              <button
+                key={label}
+                type="button"
+                onClick={() => handlePreset(fDate, tDate)}
+                aria-pressed={isSelected}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  isSelected
+                    ? 'border-[#1E3A5F] bg-[#1E3A5F] text-white'
+                    : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:border-[#1E3A5F] hover:text-[var(--ink)]'
+                }`}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
-      {/* Custom date range + actions */}
-      <div className="flex shrink-0 items-end gap-1">
+      <div className="flex flex-wrap items-end gap-2">
         <ReportDateField
           id="report-from-date"
           label="Start Date"
@@ -592,7 +571,7 @@ export default function Reports() {
           type="button"
           onClick={handleApplyFilters}
           disabled={isDateInvalid || loading}
-          className="btn-primary h-8 min-h-8 min-w-14 px-2 text-[10px] font-semibold justify-center whitespace-nowrap"
+          className="btn-primary h-9 min-h-9 min-w-20 px-3 text-xs font-semibold justify-center whitespace-nowrap"
         >
           Apply
         </button>
@@ -603,7 +582,7 @@ export default function Reports() {
           disabled={loading}
           title="Reset date filter to This Month"
           aria-label="Reset date range to this month"
-          className="btn-secondary inline-flex h-8 min-h-8 items-center gap-1 px-2 text-[10px] font-semibold text-[var(--muted)] hover:text-[var(--ink)]"
+          className="   btn-secondary h-9 min-h-9 min-w-20 px-3 text-xs font-semibold justify-center whitespace-nowrap"
         >
           <RotateCcw
             size={12}
@@ -1583,16 +1562,14 @@ function ExpenseReportView({ data }) {
       ? data.by_category
       : []
 
-  const expenses = Array.isArray(data?.expenses) ? data.expenses : []
-
   const totalExpenses = Number(
     data?.total_expenses ??
       data?.summary?.total_amount ??
       categories.reduce((s, c) => s + Number(c.total || 0), 0),
   )
   const totalCount = Number(
-    data?.summary?.count ??
-      categories.reduce((s, c) => s + Number(c.count || 0), expenses.length),
+      data?.summary?.count ??
+      categories.reduce((s, c) => s + Number(c.count || 0), 0),
   )
   const avgAmount = Number(
     data?.summary?.avg_amount ?? (totalCount > 0 ? totalExpenses / totalCount : 0),
@@ -1706,63 +1683,6 @@ function ExpenseReportView({ data }) {
           </table>
         </div>
       </div>
-
-      {/* Detailed Expense Transactions Itemization */}
-      {expenses.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
-          <div className="border-b border-[var(--line)] px-4 py-3 bg-[var(--surface-subtle)] flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-              Expense Itemization
-            </h3>
-            <span className="text-xs font-mono text-[var(--muted)]">
-              {expenses.length} transaction{expenses.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="erp-report-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Description</th>
-                  <th>Category</th>
-                  <th>Payment Method</th>
-                  <th className="text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {expenses.map((exp, idx) => (
-                  <tr key={idx}>
-                    <td className="font-mono text-xs font-medium text-[var(--ink)]">
-                      {exp.expense_date}
-                    </td>
-                    <td className="font-medium text-[var(--ink)]">
-                      {exp.description || '—'}
-                    </td>
-                    <td className="text-[var(--muted)]">
-                      {exp.category || 'General Expense'}
-                    </td>
-                    <td className="text-[var(--muted)] capitalize">
-                      {exp.payment_method || '—'}
-                    </td>
-                    <td className="text-right font-mono font-bold text-rose-700 dark:text-rose-400">
-                      {fmtCurrency(exp.amount)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colSpan={4}>Grand Total</td>
-                  <td className="text-right font-mono text-rose-700 dark:text-rose-400">
-                    {fmtCurrency(totalExpenses)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-      )}
 
     </div>
   )

@@ -1827,6 +1827,8 @@ export function Pagination({
   onPageChange,
   className = '',
 }) {
+  if (totalItems === 0) return null
+
   const start = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1
   const end = Math.min(currentPage * pageSize, totalItems || currentPage * pageSize)
 

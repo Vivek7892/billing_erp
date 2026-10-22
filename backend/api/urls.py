@@ -75,6 +75,7 @@ urlpatterns = [
     path('docs/<str:doc>/', views.PublicDocView.as_view(), name='public-doc'),
     path('recycle-bin/', views.RecycleBinView.as_view(), name='recycle-bin'),
     path('recycle-bin/<str:entity_type>/<int:pk>/restore/', views.RecycleBinRestoreView.as_view(), name='recycle-bin-restore'),
+    path('recycle-bin/product/<int:pk>/delete/', views.RecycleBinProductDeleteView.as_view(), name='recycle-bin-product-delete'),
     path('invoices/<int:pk>/send-whatsapp/', views.InvoiceSendWhatsAppView.as_view(), name='invoice-send-whatsapp'),
     path('customers/<int:pk>/send-reminder/', views.CustomerSendReminderView.as_view(), name='customer-send-reminder'),
     path('customers/<int:pk>/send-statement/', views.CustomerSendStatementView.as_view(), name='customer-send-statement'),

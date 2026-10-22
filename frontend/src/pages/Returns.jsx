@@ -48,7 +48,13 @@ function ReturnModal({ open, onClose, invoice, onDone }) {
   }, [invoice])
 
   const toggle = (id) => setItems(prev => prev.map(it => it.id === id ? { ...it, selected: !it.selected } : it))
-  const setQty = (id, val) => setItems(prev => prev.map(it => it.id === id ? { ...it, return_qty: Math.min(Math.max(0.01, Number(val)), Number(it.quantity)) } : it))
+  const setQty = (id, val) => setItems(prev => prev.map(it => {
+    if (it.id !== id) return it
+    if (val === '') return { ...it, return_qty: '' }
+    const quantity = Number(val)
+    if (!Number.isFinite(quantity) || quantity <= 0) return it
+    return { ...it, return_qty: Math.min(quantity, Number(it.quantity)) }
+  }))
 
   const selectedItems = items.filter(it => it.selected && it.return_qty > 0)
   const refundTotal = selectedItems.reduce((s, it) => s + (Number(it.total) / Number(it.quantity)) * it.return_qty, 0)
@@ -102,9 +108,12 @@ function ReturnModal({ open, onClose, invoice, onDone }) {
               {it.selected && (
                 <div className="flex items-center gap-1.5 shrink-0 ml-6 sm:ml-0">
                   <span className="text-xs text-[var(--muted)]">Qty:</span>
-                  <input type="number" min="0.01" max={it.quantity} step="0.01"
+                  <input type="text" inputMode="decimal" aria-label={`Return quantity for ${it.product_name}`}
                     value={it.return_qty}
                     onChange={e => setQty(it.id, e.target.value)}
+                    onBlur={() => {
+                      if (!it.return_qty) setQty(it.id, '0.01')
+                    }}
                     className="w-20 h-9 sm:h-8 text-center border border-[var(--line)] rounded-md text-xs bg-[var(--surface)] text-[var(--ink)] focus:outline-none focus:ring-1 focus:ring-[#1E3A5F] focus:border-[#1E3A5F] transition-all" />
                 </div>
               )}
@@ -222,6 +231,9 @@ export default function Returns() {
   const [filter, setFilter] = useState('all')
   const [returnModal, setReturnModal] = useState(null)
   const [viewModal, setViewModal] = useState(null)
+  const [cancelTarget, setCancelTarget] = useState(null)
+  const [cancelReason, setCancelReason] = useState('Customer requested cancellation')
+  const [cancelling, setCancelling] = useState(false)
   const [expandedReturns, setExpandedReturns] = useState({})
   const [returnSearch, setReturnSearch] = useState('')
 
@@ -268,6 +280,26 @@ export default function Returns() {
   ]
 
   const toggleExpand = (id) => setExpandedReturns(prev => ({ ...prev, [id]: !prev[id] }))
+
+  const cancelInvoice = async () => {
+    if (!cancelTarget || cancelling) return
+    setCancelling(true)
+    try {
+      const response = await api.post(`/invoices/${cancelTarget.id}/cancel/`, {
+        reason: cancelReason.trim() || 'Customer requested cancellation',
+      })
+      toast.success(response.data?.message || (response.data?.requires_approval
+        ? 'Invoice cancellation submitted for approval'
+        : 'Invoice cancelled and preserved in records'))
+      setCancelTarget(null)
+      setCancelReason('Customer requested cancellation')
+      load()
+    } catch (err) {
+      toast.error(err.response?.data?.error || err.response?.data?.detail || 'Failed to cancel invoice')
+    } finally {
+      setCancelling(false)
+    }
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6 min-w-0 pb-6">
@@ -455,6 +487,20 @@ export default function Returns() {
                       {expandedReturns[r.id] && (
                         <tr className="bg-[var(--surface-elevated)]">
                           <td colSpan={10} className="p-0">
+                            <div className="grid gap-3 border-t border-[var(--line)] p-4 text-xs sm:grid-cols-3">
+                              <div>
+                                <div className="font-semibold uppercase tracking-wide text-[var(--muted)]">Return ID</div>
+                                <div className="mt-1 font-mono font-semibold text-[var(--ink)]">{r.return_number || `#${r.id}`}</div>
+                              </div>
+                              <div>
+                                <div className="font-semibold uppercase tracking-wide text-[var(--muted)]">Bill / Invoice</div>
+                                <div className="mt-1 font-mono font-semibold text-[var(--ink)]">{r.invoice_number || `#${r.invoice}`}</div>
+                              </div>
+                              <div className="sm:col-span-3">
+                                <div className="font-semibold uppercase tracking-wide text-[var(--muted)]">Return reason</div>
+                                <div className="mt-1 whitespace-pre-wrap text-[var(--ink-secondary)]">{r.reason || 'No reason provided.'}</div>
+                              </div>
+                            </div>
                             <table className="erp-table w-full text-xs border-t border-[var(--line)]">
                               <thead>
                                 <tr className="bg-[var(--surface)]">
@@ -465,7 +511,11 @@ export default function Returns() {
                                 </tr>
                               </thead>
                               <tbody>
-                                {(r.items || []).map(it => (
+                                {(r.items || []).length === 0 ? (
+                                  <tr>
+                                    <td colSpan={4} className="py-4 text-center text-[var(--muted)]">No returned item details available.</td>
+                                  </tr>
+                                ) : (r.items || []).map(it => (
                                   <tr key={`${r.id}-${it.id}`}>
                                     <td className="pl-8 py-1.5 text-[var(--ink-secondary)] font-medium">{it.product_name}</td>
                                     <td className="py-1.5 text-center text-[var(--muted)]">{it.quantity}</td>
@@ -696,10 +746,16 @@ export default function Returns() {
                       <td className="text-right font-mono font-bold text-[var(--ink)] text-sm">{fmt(b.grand_total)}</td>
                       <td><Badge status={b.payment_status} /></td>
                       <td className="text-right">
-                        <button onClick={() => setReturnModal(b)}
-                          className="btn-danger min-h-8 text-xs px-2.5 py-1 rounded-md font-semibold inline-flex items-center justify-center gap-1.5">
-                          <RotateCcw size={12} /> Return
-                        </button>
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          <button onClick={() => { setCancelTarget(b); setCancelReason('Customer requested cancellation') }}
+                            className="btn-secondary min-h-8 text-xs px-2.5 py-1 rounded-md font-semibold inline-flex items-center justify-center gap-1.5 text-rose-600">
+                            <FileX size={12} /> Cancel Bill
+                          </button>
+                          <button onClick={() => setReturnModal(b)}
+                            className="btn-danger min-h-8 text-xs px-2.5 py-1 rounded-md font-semibold inline-flex items-center justify-center gap-1.5">
+                            <RotateCcw size={12} /> Return
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -731,10 +787,16 @@ export default function Returns() {
                       <div className="text-[11px] uppercase tracking-wide text-[var(--muted-light)]">Grand Total</div>
                       <div className="text-base font-bold text-[var(--ink)]">{fmt(b.grand_total)}</div>
                     </div>
-                    <button onClick={() => setReturnModal(b)}
-                      className="btn-danger min-h-[40px] px-3.5 text-xs rounded-md font-bold inline-flex items-center justify-center gap-1.5 shrink-0 shadow-xs active:scale-95 transition">
-                      <RotateCcw size={13} /> <span>Return</span>
-                    </button>
+                    <div className="flex gap-2">
+                      <button onClick={() => { setCancelTarget(b); setCancelReason('Customer requested cancellation') }}
+                        className="btn-secondary min-h-[40px] px-3 text-xs rounded-md font-semibold inline-flex items-center justify-center gap-1.5 text-rose-600">
+                        <FileX size={13} /> <span>Cancel Bill</span>
+                      </button>
+                      <button onClick={() => setReturnModal(b)}
+                        className="btn-danger min-h-[40px] px-3.5 text-xs rounded-md font-bold inline-flex items-center justify-center gap-1.5 shrink-0 shadow-xs active:scale-95 transition">
+                        <RotateCcw size={13} /> <span>Return</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -744,6 +806,30 @@ export default function Returns() {
       </div>
 
       <ReturnModal open={!!returnModal} onClose={() => setReturnModal(null)} invoice={returnModal} onDone={load} />
+      <Modal
+        open={Boolean(cancelTarget)}
+        onClose={() => !cancelling && setCancelTarget(null)}
+        title={`Cancel Bill${cancelTarget?.invoice_number ? ` — ${cancelTarget.invoice_number}` : ''}`}
+      >
+        <div className="space-y-4 text-sm">
+          <p className="text-[var(--muted)]">The invoice will be marked cancelled and retained in your records. Inventory and ledger adjustments will be reversed.</p>
+          <div>
+            <label htmlFor="return-cancel-reason" className="mb-1.5 block text-xs font-semibold text-[var(--ink-secondary)]">Cancellation reason</label>
+            <textarea
+              id="return-cancel-reason"
+              value={cancelReason}
+              onChange={event => setCancelReason(event.target.value)}
+              rows={3}
+              className="input w-full resize-y p-2.5 text-xs"
+              placeholder="Why is this bill being cancelled?"
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setCancelTarget(null)} disabled={cancelling} className="btn-secondary px-4 text-xs">Keep Bill</button>
+            <button type="button" onClick={cancelInvoice} disabled={cancelling} className="btn-danger px-4 text-xs font-semibold">{cancelling ? 'Cancelling…' : 'Confirm Cancel'}</button>
+          </div>
+        </div>
+      </Modal>
       <ViewModal open={!!viewModal} onClose={() => setViewModal(null)} invoice={viewModal} />
     </div>
   )
