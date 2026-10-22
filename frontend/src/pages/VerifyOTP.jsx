@@ -3,11 +3,9 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   IconKey,
   IconShieldCheck,
-  IconArrowRight,
-  IconRotateClockwise,
 } from '@tabler/icons-react'
 import toast from 'react-hot-toast'
-import http from '../api'
+import http, { errorMessage } from '../api'
 import { saveAuthSession } from '../services/tokenStorage'
 import { useAuth } from '../AuthContext'
 import { LoginIllustration } from '../components/visuals'
@@ -76,7 +74,12 @@ export default function VerifyOTP() {
         navigate('/login', { replace: true })
       }
     } catch (err) {
-      const msg = err.response?.data?.error || err.response?.data?.detail || 'Verification failed. Please check the code.'
+      const payload = err.response?.data
+      const nestedPayload = payload?.data
+      const normalizedError = nestedPayload && typeof nestedPayload === 'object'
+        ? { ...err, response: { ...err.response, data: nestedPayload } }
+        : err
+      const msg = errorMessage(normalizedError, 'Could not verify the code. Please try again.')
       setErrors({ form: msg })
       toast.error(msg)
     } finally {
@@ -140,7 +143,10 @@ export default function VerifyOTP() {
                     id="identifier"
                     type="text"
                     value={identifier}
-                    onChange={e => setIdentifier(e.target.value)}
+                    onChange={e => {
+                      setIdentifier(e.target.value)
+                      setErrors({})
+                    }}
                     placeholder="Enter email or phone"
                     disabled={loading}
                   />
@@ -155,7 +161,10 @@ export default function VerifyOTP() {
                   inputMode="numeric"
                   maxLength={6}
                   value={otp}
-                  onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+                  onChange={e => {
+                    setOtp(e.target.value.replace(/\D/g, ''))
+                    setErrors({})
+                  }}
                   placeholder="• • • • • •"
                   className="!text-center !tracking-widest !text-xl !font-mono font-bold"
                   autoFocus
@@ -199,7 +208,7 @@ export default function VerifyOTP() {
             </form>
 
             <div className="login-security-note">
-              <ShieldCheck size={15} aria-hidden="true" />
+              <IconShieldCheck size={15} aria-hidden="true" />
               <span>{purposeParam === 'reset' ? 'Your code expires in 10 minutes.' : 'Multi-factor verification for authorized store owners'}</span>
             </div>
           </div>
