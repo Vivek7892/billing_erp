@@ -23,11 +23,9 @@ import {
   IconTrash,
   IconDeviceFloppy,
   IconDownload,
-  IconZoomIn,
-  IconZoomOut,
-  IconRotate2,
   IconShieldCheck,
   IconAlertCircle,
+  IconInfoCircle,
   IconCopy,
   IconMenu2,
   IconX,
@@ -276,7 +274,7 @@ function AccordionSection({ title, subtitle, icon: Icon, isOpen, onToggle, child
 
 function PageHeader({ title, description }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-5 border-b border-slate-200">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-200">
       <div>
         <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
           {title}
@@ -343,6 +341,7 @@ export default function Settings() {
     const found = SETTINGS_TABS.find(item => item.id === rawTab)
     return found ? found.id : 'manage-business'
   }, [rawTab])
+  const isPreviewSettingsTab = activeTab === 'invoice-settings' || activeTab === 'print-settings'
 
   const activeTabObj = useMemo(() => {
     return SETTINGS_TABS.find(item => item.id === activeTab) || SETTINGS_TABS[0]
@@ -363,9 +362,6 @@ export default function Settings() {
   // Print Settings Tab sub-view: 'thermal' or 'barcode'
   const [printSubTab, setPrintSubTab] = useState('thermal')
 
-  // Preview & Zoom controls
-  const [previewZoom, setPreviewZoom] = useState(1)
-  const [previewFitScale, setPreviewFitScale] = useState(1)
   const [downloadingQrPng, setDownloadingQrPng] = useState(false)
 
   // Accordion open states
@@ -394,7 +390,6 @@ export default function Settings() {
   })
 
   const logoInputRef = useRef(null)
-  const previewAreaRef = useRef(null)
 
   // Field Updater
   const setField = useCallback((key, value) => {
@@ -850,6 +845,14 @@ export default function Settings() {
   }
 
   const invoiceTemplates = settings.template_settings?.templates || []
+  const featuredInvoiceTemplates = [
+    { id: 'advanced_gst_a5', baseId: 'half_a4', name: 'Advanced GST (A5)' },
+    { id: 'luxury', baseId: 'gst_a4', name: 'Luxury' },
+    { id: 'stylish', baseId: 'stylish', name: 'Stylish' },
+  ].map(featured => {
+    const baseTemplate = invoiceTemplates.find(template => template.id === featured.baseId)
+    return baseTemplate ? { ...featured, baseTemplate, format: baseTemplate.format } : null
+  }).filter(Boolean)
   const barcodeLabelSize = settings.barcode_label_size || '50x25'
   const barcodeLabelDimensions = BARCODE_LABEL_DIMENSIONS[barcodeLabelSize] || BARCODE_LABEL_DIMENSIONS['50x25']
   const selectedTemplateId = settings.active_templates?.default
@@ -893,40 +896,29 @@ export default function Settings() {
   const is58Settings = settings.thermal_paper_width === '58' || settings.thermal_paper_width === '2' || previewTemplateId === 'thermal_58'
   const previewDocumentWidth = is58Settings ? 216 : previewTemplateId.startsWith('thermal') ? 300 : previewTemplateId === 'half_a4' ? 560 : 794
   const previewDocumentHeight = previewTemplateId.startsWith('thermal') ? 640 : previewTemplateId === 'half_a4' ? 792 : 1123
-  const effectivePreviewZoom = Math.min(1.4, previewZoom * previewFitScale)
-
-  useEffect(() => {
-    const container = previewAreaRef.current
-    if (!container) return undefined
-    const updateFit = () => {
-      const availableWidth = Math.max(0, container.clientWidth - 32)
-      const fitByWidth = availableWidth / previewDocumentWidth
-      setPreviewFitScale(Math.min(1, fitByWidth) || 1)
-    }
-    updateFit()
-    const observer = new ResizeObserver(updateFit)
-    observer.observe(container)
-    return () => observer.disconnect()
-  }, [previewDocumentWidth])
-  const visibleInvoiceTemplates = showAllTemplates ? invoiceTemplates : invoiceTemplates.slice(0, 4)
-
   if (loading) {
     return <Spinner label="Loading ERP settings..." />
   }
 
   return (
-    <div className="settings-page w-full min-w-0 font-sans text-slate-900 pb-16">
+    <div className={`settings-page w-full min-w-0 font-sans text-slate-900 ${['invoice-settings', 'print-settings'].includes(activeTab) ? 'pb-1 xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:overflow-hidden' : 'pb-8'}`}>
       {/* Breadcrumb Navigation & Top Action Bar */}
-      <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-        <nav className="flex items-center gap-1.5 text-xs text-slate-500">
-          <span className="font-semibold text-slate-900">Settings</span>
-          {activeTabObj && (
-            <>
-              <span>/</span>
-              <span className="text-slate-600">{activeTabObj.label}</span>
-            </>
-          )}
-        </nav>
+      <div className={`flex items-center gap-3 flex-wrap justify-between ${isPreviewSettingsTab ? 'mb-1' : 'mb-2'}`}>
+        {isPreviewSettingsTab ? (
+          <h1 className="text-sm font-semibold text-slate-800">
+            {activeTab === 'invoice-settings' ? 'Invoice Settings' : 'Print Settings'}
+          </h1>
+        ) : (
+          <nav className="flex items-center gap-1.5 text-xs text-slate-500">
+            <span className="font-semibold text-slate-900">Settings</span>
+            {activeTabObj && (
+              <>
+                <span>/</span>
+                <span className="text-slate-600">{activeTabObj.label}</span>
+              </>
+            )}
+          </nav>
+        )}
 
         {isDirty && (
           <div className="flex items-center gap-2">
@@ -948,135 +940,83 @@ export default function Settings() {
       </div>
 
       {/* Settings Tab Canvas */}
-      <div className="w-full">
+      <div className={['invoice-settings', 'print-settings'].includes(activeTab) ? 'w-full xl:flex xl:min-h-0 xl:flex-1 xl:flex-col' : 'w-full'}>
         {/* ============================================================
             TAB: INVOICE SETTINGS (Backend Templates + Live Preview)
         ============================================================ */}
         {activeTab === 'invoice-settings' && (
-          <div className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 max-w-[1600px] w-full mx-auto">
-            <PageHeader
-              title="Invoice Settings"
-              description="Choose your active invoice template and customize printed columns, party details, and layout."
-              isDirty={isDirty}
-              saving={saving}
-              onSave={() => saveCurrentSettings('Updated invoice template and layout rules')}
-              saveLabel="Save Changes"
-            />
-
-            {/* Responsive Two-Column Arrangement: Left 60% Live Preview, Right 40% Controls */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1 min-h-0">
-              {/* Left Column (~60% on desktop): Live Invoice Preview */}
-              <div className="lg:col-span-7 flex flex-col rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs">
+          <div className="flex-1 flex flex-col min-h-0 px-1 pt-0 pb-2 sm:px-2 sm:pb-3 max-w-none w-full mx-auto xl:overflow-hidden">
+            {/* Responsive preview and compact theme panel */}
+            <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 xl:flex-1 xl:min-h-0 xl:items-stretch xl:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_420px] 2xl:grid-cols-[minmax(0,1fr)_440px]">
+              {/* Invoice preview */}
+              <div className="order-1 flex min-w-0 flex-col overflow-hidden bg-transparent xl:min-h-0">
                 {/* Preview Toolbar */}
-                <div className="p-3 sm:px-4 border-b border-slate-200 bg-slate-50/90 flex flex-wrap items-center justify-between gap-3">
+                <div className="px-1 pb-2 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                      Live Invoice Preview
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
-                      Real-Time
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {/* Zoom Controls */}
-                    <div className="inline-flex items-center gap-1 border border-slate-200 rounded-lg bg-white px-2 py-1 shadow-2xs">
-                      <button
-                        type="button"
-                        onClick={() => setPreviewZoom(z => Math.max(0.4, Math.round((z - 0.1) * 10) / 10))}
-                        className="min-h-10 min-w-10 rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                        title="Zoom Out"
-                      >
-                        <IconZoomOut size={13} />
-                      </button>
-                      <span className="text-[10px] font-mono font-semibold text-slate-700 min-w-9 text-center">
-                        {Math.round(effectivePreviewZoom * 100)}%
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setPreviewZoom(z => Math.min(1.4, Math.round((z + 0.1) * 10) / 10))}
-                        className="min-h-10 min-w-10 rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                        title="Zoom In"
-                      >
-                        <IconZoomIn size={13} />
-                      </button>
-                      {previewZoom !== 1 && (
-                        <button
-                          type="button"
-                          onClick={() => setPreviewZoom(1)}
-                          className="min-h-10 min-w-10 rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                          title="Reset Zoom"
-                        >
-                          <IconRotate2 size={11} />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Test Print Button */}
-                    <button type="button" onClick={() => printInvoiceDirect(previewTemplateId)} className="min-h-10 px-3 text-xs font-semibold rounded-lg bg-teal-700 hover:bg-teal-800 text-white inline-flex items-center gap-1.5 shadow-2xs transition-colors">
-                      <IconPrinter size={13} />
-                      <span>Print Sample</span>
-                    </button>
-                  </div>
+                      </div>
                 </div>
 
                 {/* Live Canvas Area */}
-                <div ref={previewAreaRef} className="h-[78vh] min-h-[420px] max-h-[850px] p-3 sm:p-5 bg-slate-100/90 overflow-auto flex justify-center items-start">
-                  <div className="settings-print-invoice-target transition-transform" style={{ width: previewDocumentWidth * effectivePreviewZoom, height: previewDocumentHeight * effectivePreviewZoom }}>
-                    <div style={{ width: previewDocumentWidth, transform: `scale(${effectivePreviewZoom})`, transformOrigin: 'top left' }}>
+                <div className="settings-print-preview-stage flex h-[calc(100dvh-9.5rem)] min-h-[420px] min-w-0 items-start justify-start overflow-auto overscroll-contain bg-slate-100/90 p-2.5 sm:p-3 xl:h-auto xl:min-h-0 xl:flex-1">
+                  <div className="settings-print-invoice-target mx-auto my-0 min-w-0 shrink-0" style={{ width: previewDocumentWidth, height: previewDocumentHeight }}>
+                    <div className="origin-top-left bg-white shadow-md" style={{ width: previewDocumentWidth }}>
                       <InvoiceDocument invoice={sampleInvoice} settings={settings} templateConfig={previewTemplateConfig} mode={previewTemplateId} showModePicker={false} />
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Right Column (~40% on desktop): Controls & Accordions */}
-              <div className="lg:col-span-5 space-y-4">
-                {/* Backend-managed invoice templates */}
-                <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
-                  <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900">Invoice Templates</h2>
-                      <p className="mt-1 text-[11px] text-slate-500">Choose a visual invoice style.</p>
+              {/* Theme settings panel */}
+              <div className="order-2 w-full min-w-0 space-y-3 xl:h-full xl:max-h-full xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+                <section className="overflow-hidden">
+                  <div className="flex items-center gap-2 pb-2">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-50 text-indigo-700"><IconReceipt size={16} /></span>
+                    <h2 className="text-sm font-semibold text-slate-900">ThemeStore</h2>
+                  </div>
+
+                  <div className="py-1">
+                    <div className="mb-2.5 flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-semibold text-slate-900">Themes</h3>
                     </div>
-                    <button type="button" onClick={() => setShowAllTemplates(true)} className="min-h-10 rounded-lg bg-indigo-50 px-3 py-2 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100">
-                      See all {invoiceTemplates.length} templates
-                    </button>
+
+                  <div className="mb-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-[12px] leading-relaxed text-amber-950">
+                    <IconInfoCircle size={16} className="mt-0.5 shrink-0 text-amber-700" />
+                    <p>Thermal theme was used previously. To manage preferences, visit{' '}
+                      <button type="button" onClick={() => { setPrintSubTab('thermal'); setSearchParams({ tab: 'print-settings' }) }} className="font-semibold text-indigo-700 underline decoration-indigo-300 underline-offset-2 hover:text-indigo-900">Thermal Settings</button>
+                    </p>
                   </div>
 
                   <div className="pb-1">
-                    <div className="grid w-full grid-cols-2 lg:grid-cols-4 gap-2">
-                    {visibleInvoiceTemplates.map(template => {
-                      const isDefault = selectedTemplateId === template.id
-                      const isThermal = template.format === 'thermal'
-                      const isThermal58 = template.id === 'thermal_58'
+                    <div className="grid w-full grid-cols-4 gap-2">
+                    <div role="radiogroup" aria-label="Invoice themes" className="contents">
+                    {featuredInvoiceTemplates.map(template => {
+                      const isDefault = selectedTemplateId === template.baseId
+                      const base = template.baseTemplate
+                      const isThermal = base.format === 'thermal'
+                      const isThermal58 = base.id === 'thermal_58'
                       return (
                         <article
                           key={template.id}
                           className={`relative min-w-0 overflow-hidden rounded-lg border p-2 transition-colors ${
                             isDefault
-                              ? 'border-indigo-500 bg-indigo-50/30 ring-1 ring-indigo-300'
+                              ? 'border-indigo-600 bg-indigo-50/40'
                               : 'border-slate-200 bg-white hover:border-indigo-300'
                           }`}
                         >
-                          {isDefault && (
-                            <span className="absolute right-1 top-1 z-10 inline-flex items-center rounded-full bg-indigo-600 px-1.5 py-0.5 text-[8px] font-bold text-white">
-                              <IconCheck size={11} strokeWidth={3} />
-                            </span>
-                          )}
-
                           <button
                             type="button"
-                            onClick={() => handleSelectInvoiceTemplate(template)}
-                            disabled={Boolean(savingTemplateId) || isDefault}
-                            className="block w-full overflow-hidden rounded-md bg-slate-100 p-1 text-left"
+                            onClick={() => handleSelectInvoiceTemplate({ ...base, name: template.name })}
+                            disabled={Boolean(savingTemplateId)}
+                            role="radio"
+                            aria-checked={isDefault}
+                            className="block w-full min-w-0 rounded-md text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                             aria-label={`Preview and select ${template.name}`}
                           >
-                            <div className="settings-template-thumb-paper mx-auto flex h-[88px] w-full items-start justify-center overflow-hidden rounded bg-white">
+                            <div className="settings-template-thumb-paper mx-auto flex h-[96px] w-full items-start justify-center overflow-hidden rounded bg-white sm:h-[108px]">
                               <div
                                 style={{
                                   width: isThermal ? (isThermal58 ? 216 : 300) : template.format === 'half_a4' ? 560 : 794,
-                                  transform: `scale(${isThermal ? 0.25 : template.format === 'half_a4' ? 0.15 : 0.105})`,
+                                  transform: `scale(${isThermal ? 0.2 : template.format === 'half_a4' ? 0.13 : 0.09})`,
                                   transformOrigin: 'top center',
                                   pointerEvents: 'none',
                                 }}
@@ -1084,86 +1024,50 @@ export default function Settings() {
                                 <InvoiceDocument
                                   invoice={sampleInvoice}
                                   settings={settings}
-                                  templateConfig={getTemplatePreviewConfig(template)}
-                                  mode={template.id}
+                                  templateConfig={getTemplatePreviewConfig(base)}
+                                  mode={base.id}
                                   showModePicker={false}
                                 />
                               </div>
                             </div>
-                          </button>
-
-                          <div className="flex min-h-8 items-center justify-between gap-1 pt-1.5">
-                            <div className="min-w-0">
-                              <h3 className="truncate text-[10px] font-bold leading-tight text-slate-900" title={template.name}>
-                                {template.name}
-                              </h3>
-                              <span className="text-[9px] text-slate-500 capitalize">
-                                {isThermal ? (isThermal58 ? 'Thermal 58mm' : 'Thermal 80mm') : template.format === 'half_a4' ? 'Half-A4 (A5)' : 'A4 Vertical'}
-                              </span>
+                            <div className="flex min-h-8 items-center justify-between gap-1 pt-1.5">
+                              <h3 className="min-w-0 line-clamp-2 text-[10px] font-semibold leading-tight text-slate-900" title={template.name}>{template.name}</h3>
+                              <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${isDefault ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 bg-white'}`}>{isDefault && <IconCheck size={11} strokeWidth={3} />}</span>
                             </div>
-                          </div>
-
-                          <div className="mt-1 flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleSelectInvoiceTemplate(template)}
-                              disabled={Boolean(savingTemplateId) || isDefault}
-                              className={`min-h-8 flex-1 rounded-md text-[10px] font-semibold transition ${
-                                isDefault
-                                  ? 'bg-indigo-600 text-white cursor-default'
-                                  : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
-                              }`}
-                            >
-                              {isDefault ? 'Selected' : 'Use Template'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setCustomizingTemplate(template)}
-                              className="min-h-8 rounded-md bg-slate-100 px-2 text-[10px] font-semibold text-slate-700 hover:bg-slate-200 transition"
-                              title="Customize template details"
-                            >
-                              Customize
-                            </button>
-                          </div>
+                          </button>
                         </article>
                       )
                     })}
-                    {!invoiceTemplates.length && (
-                      <div className="col-span-full rounded-lg border border-dashed border-slate-300 p-5 text-center">
-                        <p className="text-xs font-semibold text-slate-700">No invoice templates found</p>
-                        <button type="button" onClick={loadSettings} className="mt-2 text-[11px] font-semibold text-indigo-600 hover:text-indigo-700">Reload templates</button>
-                      </div>
-                    )}
                     </div>
+                    <button type="button" onClick={() => setShowAllTemplates(true)} className="flex min-h-[156px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-2 text-xs font-semibold text-slate-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 sm:min-h-[156px]">
+                      See All
+                    </button>
+                    </div>
+                  </div>
                   </div>
                 </section>
 
-                <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900">Select Color</h2>
-                      <p className="mt-1 text-[11px] leading-relaxed text-slate-500">The selected color appears in the live bill and printed invoice. Save Changes to apply it to backend invoices.</p>
-                    </div>
-                    <span className="h-7 w-7 rounded-full border border-slate-200 shadow-inner" style={{ backgroundColor: settings.invoice_theme_color || '#1e3a5f' }} aria-label="Current invoice accent color" />
+                <section className="border-t border-slate-200 pt-3">
+                  <div>
+                    <h2 className="text-sm font-semibold text-slate-900">Select Color</h2>
+                    <p className="mt-0.5 text-[11px] text-slate-500">The selected color appears in the live invoice.</p>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2.5">
+                  <div className="mt-3 flex flex-nowrap items-center justify-between gap-1 pb-1">
                     {INVOICE_THEME_COLORS.map(color => {
                       const selected = (settings.invoice_theme_color || '#1e3a5f').toLowerCase() === color.value
                       return (
-                        <button key={color.value} type="button" onClick={() => setField('invoice_theme_color', color.value)} aria-label={`${color.name} invoice color`} title={color.name} className={`flex h-11 w-11 items-center justify-center rounded-full border-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${selected ? 'border-slate-900 ring-2 ring-slate-200' : 'border-white shadow ring-1 ring-slate-200'}`} style={{ backgroundColor: color.value }}>
+                        <button key={color.value} type="button" onClick={() => setField('invoice_theme_color', color.value)} aria-label={`${color.name} invoice color`} title={color.name} className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${selected ? 'scale-105 border-2 border-white shadow-[0_0_0_2px_#1e293b]' : 'border border-white shadow ring-1 ring-slate-200'}`} style={{ backgroundColor: color.value }}>
                           {selected && <IconCheck size={15} className="text-white drop-shadow" />}
                         </button>
                       )
                     })}
                   </div>
-                  <div className="mt-4 border-t border-slate-100 pt-3">
-                    <div className="flex items-center justify-between gap-2">
+                  <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
                       <div>
                         <h3 className="text-xs font-semibold text-slate-900">Custom Theme</h3>
-                        <p className="mt-0.5 text-[10px] text-slate-500">Tune colors, type, borders, and layout.</p>
+                        <p className="mt-0.5 text-[10px] text-slate-500">Tune colors, type, borders and layout.</p>
                       </div>
-                      <button type="button" onClick={() => setShowCustomTheme(true)} className="h-8 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-[10px] font-semibold text-indigo-700 hover:bg-indigo-100">Create your own theme</button>
-                    </div>
+                      <button type="button" onClick={() => setShowCustomTheme(true)} className="min-h-9 shrink-0 rounded-md border border-slate-300 bg-white px-3 text-[11px] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700">Create your own theme →</button>
                   </div>
                 </section>
 
@@ -1512,66 +1416,24 @@ export default function Settings() {
             TAB: PRINT SETTINGS (Two Main Tabs: Thermal & Barcode Print)
         ============================================================ */}
         {activeTab === 'print-settings' && (
-          <div className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 max-w-[1600px] w-full mx-auto">
-            <PageHeader
-              title="Print Settings"
-              description="Configure thermal receipt printers and generate barcode product labels."
-              isDirty={isDirty}
-              saving={saving}
-              onSave={() => saveCurrentSettings('Updated print and barcode settings')}
-              saveLabel="Save Settings"
-            />
-
+          <div className="flex-1 flex flex-col min-h-0 px-1 pt-0 pb-2 sm:px-2 sm:pb-3 max-w-[1600px] w-full mx-auto xl:overflow-hidden">
             {/* Responsive Two-Column Arrangement: Left 60% Preview, Right 40% Configuration */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1 min-h-0">
+            <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 xl:flex-1 xl:min-h-0 xl:items-stretch xl:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_420px]">
               {/* Left Column (~60%): Live Preview (Thermal Receipt or Barcode Label) */}
-              <div className="lg:col-span-7 flex flex-col rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs">
+              <div className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xs xl:min-h-0">
                 {/* Preview Toolbar */}
                 <div className="p-3 sm:px-4 border-b border-slate-200 bg-slate-50/90 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                      {printSubTab === 'thermal' ? 'Live Thermal Receipt' : 'Live Barcode Label'}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
-                      {printSubTab === 'thermal'
-                        ? (settings.thermal_paper_width === '58' || settings.thermal_paper_width === '2' ? '58 mm (2-inch)' : '80 mm (3-inch)')
-                        : (BARCODE_LABEL_SIZES.find(s => s.id === (settings.barcode_label_size || '50x25'))?.label || '50 × 25 mm')
-                      }
-                    </span>
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    {printSubTab === 'thermal' ? (
-                      <button
-                        type="button"
-                        onClick={printThermalDirect}
-                        className="min-h-11 px-3 text-xs font-semibold rounded-lg bg-teal-700 hover:bg-teal-800 text-white inline-flex items-center gap-1.5 shadow-2xs transition-colors"
-                      >
-                        <IconPrinter size={13} />
-                        <span>Test Print Receipt</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={printBarcodeLabelDirect}
-                        className="min-h-11 px-3 text-xs font-semibold rounded-lg bg-teal-700 hover:bg-teal-800 text-white inline-flex items-center gap-1.5 shadow-2xs transition-colors"
-                      >
-                        <IconPrinter size={13} />
-                        <span>Test Print Label</span>
-                      </button>
-                    )}
                   </div>
-                </div>
-
                 {/* Live Preview Display Stage */}
-                <div className="settings-print-preview-stage p-6 bg-slate-100/90 overflow-x-auto flex justify-center items-start min-h-[520px]">
+                <div className="settings-print-preview-stage flex h-[calc(100dvh-10rem)] min-h-[420px] min-w-0 items-start justify-start overflow-auto overscroll-contain bg-slate-100/90 p-2.5 sm:p-3 xl:h-auto xl:min-h-0 xl:flex-1">
                   {printSubTab === 'thermal' ? (
                     /* Thermal Continuous Receipt Simulator */
                     <div
                       className="thermal-live-preview-paper settings-print-preview-paper settings-print-invoice-target bg-white text-black shadow-md rounded-md overflow-hidden print:border-none print:shadow-none print:m-0"
                       style={{
                         width: settings.thermal_paper_width === '58' || settings.thermal_paper_width === '2' ? '216px' : '300px',
-                        maxWidth: '100%',
                         margin: '0 auto',
                       }}
                     >
@@ -1660,7 +1522,7 @@ export default function Settings() {
               </div>
 
               {/* Right Column (~40%): Controls with EXACTLY TWO TABS */}
-              <div className="lg:col-span-5 space-y-4">
+              <div className="min-w-0 space-y-4 xl:h-full xl:max-h-full xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
                 {/* The Two Main Tabs */}
                 <div className="p-1 rounded-xl bg-slate-200/80 grid grid-cols-2 gap-1">
                   <button
@@ -2285,7 +2147,7 @@ export default function Settings() {
             TAB: MANAGE BUSINESS
         ============================================================ */}
         {activeTab === 'manage-business' && (
-          <div className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 max-w-4xl w-full mx-auto">
+          <div className="flex-1 flex flex-col min-h-0 p-2.5 sm:p-4 max-w-4xl w-full mx-auto">
             <PageHeader
               title="Manage Business"
               description="Manage your business legal profile, trade name, official contacts, and store branding."
@@ -2494,7 +2356,7 @@ export default function Settings() {
             TAB: ACCOUNT
         ============================================================ */}
         {activeTab === 'account' && (
-          <div className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 max-w-4xl w-full mx-auto">
+          <div className="flex-1 flex flex-col min-h-0 p-2.5 sm:p-4 max-w-4xl w-full mx-auto">
             <PageHeader
               title="Account & Profile"
               description="Signed-in user identity, access role, and enterprise credentials."
@@ -2556,7 +2418,7 @@ export default function Settings() {
             TAB: INVENTORY AND BATCH SETTINGS
         ============================================================ */}
         {activeTab === 'inventory' && (
-          <div className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 max-w-4xl w-full mx-auto">
+          <div className="flex-1 flex flex-col min-h-0 p-2.5 sm:p-4 max-w-4xl w-full mx-auto">
             <PageHeader title="Inventory, Batch & Expiry" description="Control batch-level stock tracking and expired stock sales." isDirty={isDirty} saving={saving} onSave={() => saveCurrentSettings('Updated inventory and batch settings')} saveLabel="Save Inventory Settings" />
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs space-y-4">
               <CheckboxField checked={isTrue(settings.expiry_tracking_enabled, true)} onChange={v => setField('expiry_tracking_enabled', String(v))} label="Enable expiry tracking" description="Store manufacturing and expiry dates on batches and show their expiry status." />
@@ -2569,7 +2431,7 @@ export default function Settings() {
             TAB: APPROVAL SETTINGS (MAKER-CHECKER WORKFLOW)
         ============================================================ */}
         {activeTab === 'approvals' && (
-          <div className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 max-w-4xl w-full mx-auto">
+          <div className="flex-1 flex flex-col min-h-0 p-2.5 sm:p-4 max-w-4xl w-full mx-auto">
             <PageHeader
               title="Approval Settings & Thresholds"
               description="Configure maker-checker dual-control compliance rules requiring administrator authorization before committing changes."
@@ -2678,7 +2540,7 @@ export default function Settings() {
             TAB: TAX & GST
         ============================================================ */}
         {activeTab === 'tax' && (
-          <div className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 max-w-4xl w-full mx-auto">
+          <div className="flex-1 flex flex-col min-h-0 p-2.5 sm:p-4 max-w-4xl w-full mx-auto">
             <PageHeader
               title="Tax & GST Settings"
               description="Manage statutory GST registration mode, state of supply, and default tax rates."
@@ -2774,7 +2636,7 @@ export default function Settings() {
             TAB: PAYMENT & BANK DETAILS
         ============================================================ */}
         {activeTab === 'payments' && (
-          <div className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 max-w-4xl w-full mx-auto">
+          <div className="flex-1 flex flex-col min-h-0 p-2.5 sm:p-4 max-w-4xl w-full mx-auto">
             <PageHeader
               title="Payment & Bank Details"
               description="Manage bank account information, UPI payment QR codes, and online payment gateways."
@@ -2918,7 +2780,7 @@ export default function Settings() {
             TAB: REMINDERS & ALERTS
         ============================================================ */}
         {activeTab === 'reminders' && (
-          <div className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 max-w-4xl w-full mx-auto">
+          <div className="flex-1 flex flex-col min-h-0 p-2.5 sm:p-4 max-w-4xl w-full mx-auto">
             <PageHeader
               title="Reminders & Notifications"
               description="Configure automatic overdue customer payment reminders and low inventory stock alerts."
@@ -2972,129 +2834,17 @@ export default function Settings() {
         {/* ============================================================
             TAB: PRICING
         ============================================================ */}
-        {activeTab === 'pricing' && (
-          <div className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 max-w-4xl w-full mx-auto">
-            <PageHeader
-              title="Pricing & Plan"
-              description="View your active ERP subscription tier, features, and upgrade options."
-              isDirty={false}
-              saving={false}
-              onSave={() => {}}
-              saveLabel="Save"
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs flex flex-col justify-between">
-                <div>
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Starter</span>
-                  <div className="mt-2 text-2xl font-black text-slate-900">₹0 <span className="text-xs font-normal text-slate-500">/mo</span></div>
-                  <p className="text-xs text-slate-600 mt-2">Essential POS billing for single counters.</p>
-                  <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-teal-600" /> POS billing</li>
-                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-teal-600" /> Thermal receipt printing</li>
-                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-teal-600" /> Basic inventory</li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="rounded-xl border-2 border-indigo-600 bg-white p-5 shadow-md flex flex-col justify-between relative">
-                <span className="absolute -top-3 right-4 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-600 text-white tracking-wider">
-                  ACTIVE PLAN
-                </span>
-                <div>
-                  <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Business Pro</span>
-                  <div className="mt-2 text-2xl font-black text-slate-900">₹799 <span className="text-xs font-normal text-slate-500">/mo</span></div>
-                  <p className="text-xs text-slate-600 mt-2">Comprehensive retail ERP with GST compliance.</p>
-                  <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-indigo-600" /> All invoice templates and saved template options</li>
-                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-indigo-600" /> Barcode Sticker Printing (50×25mm)</li>
-                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-indigo-600" /> Maker-Checker Dual-Control Approvals</li>
-                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-indigo-600" /> Tabletop UPI QR Standee</li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs flex flex-col justify-between">
-                <div>
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Enterprise</span>
-                  <div className="mt-2 text-2xl font-black text-slate-900">₹1,999 <span className="text-xs font-normal text-slate-500">/mo</span></div>
-                  <p className="text-xs text-slate-600 mt-2">Multi-branch chains with centralized inventory.</p>
-                  <ul className="mt-4 space-y-2 text-xs text-slate-600">
-                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-teal-600" /> Multi-branch central warehouse</li>
-                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-teal-600" /> Automated tally sync</li>
-                    <li className="flex items-center gap-2"><IconCheck size={14} className="text-teal-600" /> Dedicated account manager</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ============================================================
             TAB: REFER & EARN
         ============================================================ */}
-        {activeTab === 'refer' && (
-          <div className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 max-w-4xl w-full mx-auto">
-            <PageHeader
-              title="Refer & Earn Rewards"
-              description="Invite fellow retail business owners and earn ₹500 credits for each activated store."
-              isDirty={false}
-              saving={false}
-              onSave={() => {}}
-              saveLabel="Save"
-            />
 
-            <div className="space-y-6">
-              <div className="rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50/80 via-white to-indigo-50/80 p-6 shadow-xs">
-                <div className="flex items-center gap-3 mb-2">
-                  <IconGift size={24} className="text-indigo-600" />
-                  <h3 className="text-base font-bold text-slate-900">Your Merchant Referral Code</h3>
-                </div>
-                <p className="text-xs text-slate-600 max-w-xl">
-                  Share your unique referral link with fellow distributors, supermarkets, and stores. When they join, both of you receive ₹500 subscription discount credit!
-                </p>
-
-                <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <div className="px-4 py-2 rounded-xl border border-indigo-200 bg-white font-mono text-base font-bold text-indigo-700 shadow-2xs">
-                    BALAJI500
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText('BALAJI500')
-                      toast.success('Referral code copied to clipboard!')
-                    }}
-                    className="h-10 px-4 text-xs font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xs inline-flex items-center gap-1.5 transition-colors"
-                  >
-                    <IconCopy size={14} />
-                    <span>Copy Code</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs text-center">
-                  <span className="text-[11px] font-semibold text-slate-500 block">Invited Stores</span>
-                  <span className="text-2xl font-black text-slate-900 block mt-1">4</span>
-                </div>
-                <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs text-center">
-                  <span className="text-[11px] font-semibold text-slate-500 block">Activated Stores</span>
-                  <span className="text-2xl font-black text-teal-600 block mt-1">2</span>
-                </div>
-                <div className="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs text-center">
-                  <span className="text-[11px] font-semibold text-slate-500 block">Rewards Earned</span>
-                  <span className="text-2xl font-black text-indigo-600 block mt-1">₹1,000</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* ============================================================
             TAB: HELP & SUPPORT
         ============================================================ */}
         {activeTab === 'support' && (
-          <div className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 max-w-4xl w-full mx-auto">
+          <div className="flex-1 flex flex-col min-h-0 p-2.5 sm:p-4 max-w-4xl w-full mx-auto">
             <PageHeader
               title="Help & Support"
               description="Get immediate assistance from our technical team, hardware guides, and FAQ."
@@ -3172,7 +2922,7 @@ export default function Settings() {
             TAB: KEYBOARD SHORTCUTS
         ============================================================ */}
         {activeTab === 'keyboard' && (
-          <div className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 max-w-4xl w-full mx-auto">
+          <div className="flex-1 flex flex-col min-h-0 p-2.5 sm:p-4 max-w-4xl w-full mx-auto">
             <PageHeader
               title="Keyboard Shortcuts"
               description="High-speed cash desk POS shortcuts for rapid checkout without touching the mouse."

@@ -49,6 +49,9 @@ import AppFooter from './AppFooter'
 import { PageLoadingContext } from './PageLoadingContext'
 import { SETTINGS_TABS } from './SettingsNavigation'
 import { useTheme } from '../ThemeContext'
+import appPackage from '../../package.json'
+
+const APP_VERSION = import.meta.env.VITE_APP_VERSION || appPackage.version
 
 function MenuIcon({ size = 20 }) {
   return <IconMenu2 size={size} stroke={2} aria-hidden="true" />
@@ -239,7 +242,7 @@ function NavGroupItems({ items, collapsed, mobile, groupLabel, open, setOpen, on
   )
 }
 
-function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, logoSrc, onNav, onToggle, onClose }) {
+function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, logoSrc, onNav, onToggle, onClose, onLogout }) {
   const [headerHovered, setHeaderHovered] = useState(false)
   const location = useLocation()
   const canAccessUtility = [ROLES.ADMIN, ROLES.OWNER].includes(String(user?.role || '').toLowerCase())
@@ -333,7 +336,7 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
           <div className="px-2">
             {(!collapsed || mobile) && <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">Settings</p>}
             <div className="space-y-0.5">
-              {SETTINGS_TABS.map(({ id, label, icon: Icon, badge }) => {
+              {SETTINGS_TABS.filter(({ id }) => id !== 'pricing' && id !== 'refer').map(({ id, label, icon: Icon, badge }) => {
                 const isActive = currentSettingsTab === id
                 return (
                   <NavLink
@@ -342,18 +345,18 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
                     onClick={onNav}
                     title={collapsed && !mobile ? label : undefined}
                     aria-current={isActive ? 'page' : undefined}
-                    className={`flex ${mobile ? 'min-h-10' : 'min-h-9'} items-center rounded-lg text-[11px] font-medium transition-colors duration-150 ${
+                    className={`flex ${mobile ? 'min-h-10' : 'min-h-9'} items-center rounded-full text-[11px] font-medium transition-colors duration-150 ${
                       collapsed && !mobile ? 'justify-center px-2' : 'gap-3 px-3'
                     } ${isActive
-                      ? 'bg-indigo-50 text-indigo-800 font-semibold shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                      ? 'bg-sky-700 text-white font-semibold shadow-xs'
+                      : 'text-slate-600 hover:bg-sky-100 hover:text-sky-900'
                     }`}
                   >
-                    <Icon size={16} strokeWidth={1.8} className={`shrink-0 ${isActive ? 'text-indigo-700' : 'text-slate-400'}`} />
+                    <Icon size={16} strokeWidth={1.8} className={`shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                     {(!collapsed || mobile) && (
                       <>
                         <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">{label}</span>
-                        {badge && <span className={`max-w-24 truncate rounded px-1.5 py-0.5 text-[9px] ${isActive ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>{badge}</span>}
+                        {badge && <span className={`max-w-24 truncate rounded px-1.5 py-0.5 text-[9px] ${isActive ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-500'}`}>{badge}</span>}
                       </>
                     )}
                   </NavLink>
@@ -388,6 +391,35 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
           </div>,
         ] : [])}
       </nav>
+
+      {settingsMode && (
+        <div className="shrink-0 border-t border-slate-200 px-3 py-2">
+          <button
+            type="button"
+            onClick={onLogout}
+            className="flex min-h-9 w-full items-center gap-2 rounded-full px-3 text-xs font-medium text-slate-600 transition-colors hover:bg-rose-50 hover:text-rose-700"
+          >
+            <IconLogout size={15} />
+            <span>Logout</span>
+          </button>
+          <div className="my-2 border-t border-slate-100" />
+          <div className="flex min-w-0 items-center gap-2.5">
+            <img src="/logo.png" alt="Dreamwithtech logo" className="h-8 w-8 shrink-0 rounded object-contain" />
+            <div className="min-w-0">
+              <p className="truncate text-[11px] font-semibold text-slate-800">Dreamwithtech</p>
+              <a
+                href="https://dreamwithtech.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block truncate text-[10px] text-indigo-600 hover:underline"
+              >
+                dreamwithtech.dev
+              </a>
+            </div>
+          </div>
+          <p className="mt-2 text-[10px] text-slate-400">App version {APP_VERSION}</p>
+        </div>
+      )}
 
     </div>
   )
@@ -1188,7 +1220,8 @@ function ProfileMenu({ user }) {
 }
 
 export default function Layout({ children }) {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const location = useLocation()
   const mainRef = useRef()
 
@@ -1233,6 +1266,15 @@ export default function Layout({ children }) {
 
   const logoSrc = shopLogo || logoImg
   const settingsMode = location.pathname === '/settings' || location.pathname.startsWith('/settings/')
+  const invoiceSettingsMode = location.pathname === '/settings'
+    && ['invoice-settings', 'billing'].includes(new URLSearchParams(location.search).get('tab'))
+  const printSettingsMode = location.pathname === '/settings'
+    && ['print-settings', 'templates'].includes(new URLSearchParams(location.search).get('tab'))
+  const fixedPreviewSettingsMode = invoiceSettingsMode || printSettingsMode
+  const handleSettingsLogout = () => {
+    logout()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <ShopContext.Provider value={{ logoSrc, shopName }}>
@@ -1251,6 +1293,7 @@ export default function Layout({ children }) {
             onNav={() => {}}
             onToggle={() => setCollapsed(v => !v)}
             onClose={() => {}}
+            onLogout={handleSettingsLogout}
           />
         </div>
 
@@ -1268,6 +1311,7 @@ export default function Layout({ children }) {
               onNav={() => setMobileOpen(false)}
               onToggle={() => {}}
               onClose={() => setMobileOpen(false)}
+              onLogout={handleSettingsLogout}
             />
             <div className="flex-1 bg-black/60 backdrop-blur-xs" onClick={() => setMobileOpen(false)} />
           </div>
@@ -1336,8 +1380,8 @@ export default function Layout({ children }) {
           </header>
 
           {/* Page Body */}
-          <main ref={mainRef} className={`min-w-0 min-h-0 flex-1 flex flex-col ${location.pathname.startsWith('/billing/new') ? 'overflow-y-auto md:overflow-hidden' : 'overflow-y-auto'} bg-[var(--app-bg)]`}>
-            <div className={location.pathname.startsWith('/billing/new') ? 'flex-1 flex flex-col p-1.5 sm:p-3 w-full max-w-none min-w-0 min-h-0' : 'flex-1 p-2.5 sm:p-4 md:p-6 max-w-[1600px] w-full min-w-0 mx-auto page-enter'}>
+          <main ref={mainRef} className={`min-w-0 min-h-0 flex-1 flex flex-col ${fixedPreviewSettingsMode ? 'overflow-y-auto xl:overflow-hidden' : location.pathname.startsWith('/billing/new') ? 'overflow-y-auto md:overflow-hidden' : 'overflow-y-auto'} bg-[var(--app-bg)]`}>
+            <div className={location.pathname.startsWith('/billing/new') ? 'flex-1 flex flex-col p-1.5 sm:p-3 w-full max-w-none min-w-0 min-h-0' : invoiceSettingsMode ? 'flex-1 flex flex-col px-1.5 pt-0 pb-1 sm:px-2.5 md:px-2 max-w-none w-full min-w-0 min-h-0 xl:overflow-hidden page-enter' : printSettingsMode ? 'flex-1 flex flex-col px-1.5 pt-0 pb-1 sm:px-2.5 md:px-3 max-w-[1600px] w-full min-w-0 min-h-0 mx-auto xl:overflow-hidden page-enter' : settingsMode ? 'flex-1 p-1.5 sm:p-2.5 md:p-4 max-w-[1600px] w-full min-w-0 mx-auto page-enter' : 'flex-1 p-2.5 sm:p-4 md:p-6 max-w-[1600px] w-full min-w-0 mx-auto page-enter'}>
               <PageLoadingContext.Provider value={registerPageLoader}>
                 {children}
               </PageLoadingContext.Provider>
