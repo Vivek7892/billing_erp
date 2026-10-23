@@ -76,6 +76,7 @@ import {
   IconCopy,
   IconCheck,
   IconSparkles,
+  IconCalculator,
 } from '@tabler/icons-react'
 import { Modal, ConfirmDialog, SearchBar } from '../components/UI'
 import { useNavigate } from 'react-router-dom'
@@ -169,6 +170,155 @@ const lastPaidAmount = inv => {
   if (inv.payment_method === 'razorpay' && inv.payment_status !== 'paid') return 0
   if (inv.payment_method === 'credit') return Number(inv.paid_amount ?? 0)
   return Number(inv.amount_received ?? inv.paid_amount ?? 0)
+}
+
+function SimpleCalculator({ open, onClose }) {
+  const [display, setDisplay] = useState('0')
+  const [storedValue, setStoredValue] = useState(null)
+  const [operator, setOperator] = useState(null)
+  const [startNewValue, setStartNewValue] = useState(false)
+  const [memory, setMemory] = useState(0)
+
+  const clear = () => {
+    setDisplay('0')
+    setStoredValue(null)
+    setOperator(null)
+    setStartNewValue(false)
+  }
+
+  const enterDigit = digit => {
+    setDisplay(current => startNewValue || current === '0' || current === 'Error' ? digit : `${current}${digit}`)
+    setStartNewValue(false)
+  }
+
+  const calculate = (left, right, op) => {
+    if (op === '+') return left + right
+    if (op === '−') return left - right
+    if (op === '×') return left * right
+    if (op === '÷') return right === 0 ? null : left / right
+    return right
+  }
+
+  const chooseOperator = nextOperator => {
+    const currentValue = Number(display)
+    if (!Number.isFinite(currentValue)) return
+    if (storedValue !== null && operator && !startNewValue) {
+      const result = calculate(storedValue, currentValue, operator)
+      if (result === null || !Number.isFinite(result)) {
+        setDisplay('Error')
+        setStoredValue(null)
+        setOperator(null)
+        setStartNewValue(true)
+        return
+      }
+      setStoredValue(result)
+      setDisplay(String(Number(result.toPrecision(10))))
+    } else {
+      setStoredValue(currentValue)
+    }
+    setOperator(nextOperator)
+    setStartNewValue(true)
+  }
+
+  const equals = () => {
+    if (storedValue === null || !operator) return
+    const result = calculate(storedValue, Number(display), operator)
+    setDisplay(result === null || !Number.isFinite(result) ? 'Error' : String(Number(result.toPrecision(10))))
+    setStoredValue(null)
+    setOperator(null)
+    setStartNewValue(true)
+  }
+
+  const backspace = () => {
+    if (startNewValue || display === 'Error' || display.length <= 1) {
+      setDisplay('0')
+      setStartNewValue(false)
+    } else setDisplay(value => value.slice(0, -1))
+  }
+  const appendDecimal = () => {
+    if (startNewValue || display === 'Error') {
+      setDisplay('0.')
+      setStartNewValue(false)
+    } else if (!display.includes('.')) setDisplay(value => `${value}.`)
+  }
+  const handleKeyDown = useCallback(event => {
+    if (event.altKey || event.ctrlKey || event.metaKey || /^(INPUT|TEXTAREA|SELECT)$/.test(event.target?.tagName) || event.target?.isContentEditable) return
+    const key = event.key
+    let handled = true
+    if (/^\d$/.test(key)) enterDigit(key)
+    else if (key === '.') appendDecimal()
+    else if (key === '+') chooseOperator('+')
+    else if (key === '-') chooseOperator('âˆ’')
+    else if (key === '*') chooseOperator('Ã—')
+    else if (key === '/') chooseOperator('Ã·')
+    else if (key === '%') setDisplay(value => value === 'Error' ? '0' : String(Number(value) / 100))
+    else if (key === 'Enter' || key === '=') equals()
+    else if (key === 'Backspace') backspace()
+    else if (key === 'Delete') clear()
+    else handled = false
+    if (handled) event.preventDefault()
+  }, [display, startNewValue, storedValue, operator])
+
+  useEffect(() => {
+    if (!open) return undefined
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [open, handleKeyDown])
+
+  const keys = [
+    { label: 'MC', action: () => setMemory(0), utility: true, name: 'Clear memory' },
+    { label: 'MR', action: () => { setDisplay(String(Number(memory.toPrecision(10)))); setStartNewValue(true) }, utility: true, name: 'Recall memory' },
+    { label: 'M+', action: () => { if (display !== 'Error') setMemory(value => value + Number(display)) }, utility: true, name: 'Add to memory' },
+    { label: 'M−', action: () => { if (display !== 'Error') setMemory(value => value - Number(display)) }, utility: true, name: 'Subtract from memory' },
+    { label: 'AC', action: clear, utility: true },
+    { label: '⌫', action: backspace, utility: true, name: 'Backspace' },
+    { label: '±', action: () => setDisplay(value => value === 'Error' ? '0' : String(Number(value) * -1)), utility: true },
+    { label: '%', action: () => setDisplay(value => value === 'Error' ? '0' : String(Number(value) / 100)), utility: true },
+    { label: '÷', action: () => chooseOperator('÷'), operator: true },
+    ...['7', '8', '9', '×', '4', '5', '6', '−', '1', '2', '3', '+'].map(label => ({
+      label,
+      action: ['×', '−', '+'].includes(label) ? () => chooseOperator(label) : () => enterDigit(label),
+      operator: ['×', '−', '+'].includes(label),
+    })),
+    { label: '0', action: () => enterDigit('0'), wide: true },
+    { label: '.', action: appendDecimal, name: 'Decimal point' },
+    { label: '=', action: equals, equals: true },
+  ]
+
+  return (
+    <Modal open={open} onClose={onClose} title="Calculator" subtitle="Quick calculations" size="sm" contentClassName="!p-4 sm:!p-5">
+      <div className="mx-auto max-w-[320px]">
+        <div className="mb-2 flex min-h-16 items-end justify-end overflow-hidden rounded-xl bg-slate-900 px-4 py-3 text-right font-mono text-3xl font-semibold tracking-tight text-white" aria-label="Calculator display" aria-live="polite">
+          <span className="max-w-full break-all">{display}</span>
+        </div>
+        <div className="mb-3 flex min-h-4 items-center justify-between px-1 text-xs text-slate-500" aria-live="polite">
+          <span>{memory !== 0 ? `M · ${Number(memory.toPrecision(8))}` : ' '}</span>
+          <span>Keyboard: 0–9 · + − × ÷ · Enter · Backspace</span>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+          {keys.map(key => (
+            <button
+              key={key.label}
+              type="button"
+              onClick={key.action}
+              aria-label={key.name || key.label}
+              className={`min-h-12 rounded-xl text-base font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+                key.equals
+                  ? 'bg-sky-700 text-white hover:bg-sky-800'
+                  : key.operator
+                    ? `${operator === key.label ? 'bg-sky-100 text-sky-900' : 'bg-sky-50 text-sky-800'} hover:bg-sky-100`
+                    : key.utility
+                      ? 'bg-slate-200 text-slate-800 hover:bg-slate-300'
+                      : 'bg-[var(--surface-elevated)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+              } ${key.wide ? 'col-span-2' : ''}`}
+            >
+              {key.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </Modal>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -834,6 +984,7 @@ export default function NewBill() {
   const [showCustomerModal, setShowCustomerModal] = useState(false)
   const [showQr, setShowQr] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
+  const [showCalculator, setShowCalculator] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showRazorpay, setShowRazorpay] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
@@ -1730,6 +1881,16 @@ export default function NewBill() {
           </button>
           <button
             type="button"
+            className="pb-btn pb-btn-sm pb-desktop-only"
+            aria-label="Calculator"
+            title="Calculator"
+            onClick={() => setShowCalculator(true)}
+          >
+            <IconCalculator size={14} />
+            <span className="pb-hide-sm">Calculator</span>
+          </button>
+          <button
+            type="button"
             className="pb-btn pb-btn-sm pb-desktop-only pb-fullscreen-head-btn"
             aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
             title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
@@ -1765,6 +1926,15 @@ export default function NewBill() {
                 >
                   <IconKeyboard size={14} />
                   <span>Shortcuts</span>
+                </button>
+                <button
+                  type="button"
+                  className="pb-more-item"
+                  role="menuitem"
+                  onClick={() => { setShowCalculator(true); setMobileMoreOpen(false) }}
+                >
+                  <IconCalculator size={14} />
+                  <span>Calculator</span>
                 </button>
                 <button
                   type="button"
@@ -3470,6 +3640,8 @@ export default function NewBill() {
           }
         }}
       />
+
+      <SimpleCalculator open={showCalculator} onClose={() => setShowCalculator(false)} />
 
       <Modal open={showShortcuts} onClose={() => setShowShortcuts(false)} title="Keyboard shortcuts" size="sm">
         <div className="pb-modal">

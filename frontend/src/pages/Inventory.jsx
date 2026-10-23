@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import api from '../api'
 import inventoryService from '../features/inventory/api/inventoryService'
 import { Badge, Card, PageHeader, Modal, Spinner, EmptyState, TableSkeleton } from '../components/UI'
 import toast from 'react-hot-toast'
@@ -173,13 +174,14 @@ export default function Inventory() {
   }
 
   const downloadImportTemplate = () => {
-    const csv = 'SKU,Quantity\nEXAMPLE-SKU,10\n'
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'stock-import-template.csv'
-    link.click()
-    URL.revokeObjectURL(url)
+    api.get('/inventory/import-template/', { responseType: 'blob' }).then(({ data }) => {
+      const url = URL.createObjectURL(data)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'stock-import-template.xlsx'
+      link.click()
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    }).catch(() => toast.error('Could not download the stock template'))
   }
 
   const importStock = async () => {
@@ -436,7 +438,7 @@ export default function Inventory() {
             <p><b>To add or remove stock:</b> use columns <code>SKU, Quantity</code>; negative quantities remove stock.</p>
             <p><b>To set an exact balance:</b> use <code>SKU, Current Stock</code>.</p>
           </div>
-          <button type="button" onClick={downloadImportTemplate} className="text-xs font-semibold text-[#1E3A5F] dark:text-slate-300 inline-flex items-center gap-1 hover:underline"><IconDownload size={15} /> Download CSV template</button>
+          <button type="button" onClick={downloadImportTemplate} className="text-xs font-semibold text-[#1E3A5F] dark:text-slate-300 inline-flex items-center gap-1 hover:underline"><IconDownload size={15} /> Download Excel template</button>
           <input type="file" accept=".csv,.xlsx,.xlsm,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={e => setImportFile(e.target.files?.[0] || null)} className="block w-full text-sm" disabled={importing} />
           {importFile && <p className="text-xs text-[var(--muted)]">Selected: {importFile.name}</p>}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2"><button onClick={importStock} disabled={importing} className="btn-primary w-full">{importing ? 'Importing...' : 'Import Stock'}</button><button onClick={() => setImportModal(false)} disabled={importing} className="btn-secondary w-full">Cancel</button></div>

@@ -810,6 +810,7 @@ export default function Products() {
       'GST Percent',
       'Current Stock',
       'Minimum Stock',
+      'Supplier',
       'Status',
     ]
 
@@ -828,6 +829,7 @@ export default function Products() {
         '5',
         '60',
         '10',
+        'Fresh Foods Co',
         '"active"',
       ],
       [
@@ -844,6 +846,7 @@ export default function Products() {
         '5',
         '40',
         '8',
+        'Metro Wholesale',
         '"active"',
       ],
     ]
@@ -855,7 +858,7 @@ export default function Products() {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = 'sample_products_import.csv'
+    link.download = 'sample_products_import_excel.csv'
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -945,6 +948,7 @@ export default function Products() {
             minimum_stock: Number(
               rowData.minimum_stock || rowData.min_stock || 5,
             ),
+            supplier: rowData.supplier || rowData.supplier_name || '',
             status:
               rowData.status?.toLowerCase() === 'inactive'
                 ? 'inactive'
@@ -978,6 +982,10 @@ export default function Products() {
     categories.forEach(c => {
       categoryMap[c.name.toLowerCase()] = c.id
     })
+    const supplierMap = {}
+    suppliers.forEach(s => {
+      supplierMap[s.name.toLowerCase()] = s.id
+    })
 
     for (const item of importPreview) {
       try {
@@ -985,10 +993,10 @@ export default function Products() {
           ? categoryMap[item.category.toLowerCase()] || null
           : null
 
-        const payload = {
-          ...item,
-          category: catId,
-        }
+        const { supplier: supplierName, ...productFields } = item
+        const payload = { ...productFields, category: catId }
+        const supplierId = supplierName ? supplierMap[supplierName.toLowerCase()] : null
+        if (supplierId) payload.supplier = supplierId
 
         // Check if product with this SKU already exists
         const existing = products.find(
@@ -2840,10 +2848,10 @@ export default function Products() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold text-[var(--ink)]">
-                  CSV Import Guide
+                  Excel-ready CSV Template
                 </p>
                 <p className="mt-0.5">
-                  Import new products or update existing products by SKU.
+                  Open the sample in Excel or Sheets, then upload the saved CSV. Existing SKUs are updated.
                 </p>
               </div>
               <button

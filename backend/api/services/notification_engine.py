@@ -14,6 +14,7 @@ from api.models import (
     Customer,
     Setting,
     AuditLog,
+    ProductBatch,
 )
 
 logger = logging.getLogger(__name__)
@@ -272,33 +273,75 @@ class NotificationEngine:
     @classmethod
     def check_batches_expiring(cls, business):
         today = timezone.localdate()
-        today_str = today.strftime('%Y-%m-%d')
-
-        # Check products or settings indicating batch/perishable management
-        # We scan products with low movement or batch tags
-        near_expiry_products = Product.objects.filter(
+        batches = ProductBatch.objects.select_related('product').filter(
             business=business,
+            active=True,
+            quantity__gt=0,
+            expiry_date__gte=today,
+            expiry_date__lte=today + timedelta(days=30),
+            product__status='active',
+        ).order_by('expiry_date')
+
+        batch_ids = list(batches.values_list('id', flat=True))
+        stale = Notification.objects.filter(
+            business=business,
+            notification_type='batch_expiring',
             status='active',
-        ).exclude(brand__exact='')[:5]
+        )
+        stale_ids = [
+            notification.id for notification in stale
+            if not notification.data.get('batch_id') or notification.data.get('batch_id') not in batch_ids
+        ]
+        if stale_ids:
+            Notification.objects.filter(id__in=stale_ids).update(status='resolved')
 
-        # Scan for active products where stock is held > 60 days
-        for p in near_expiry_products:
-            if float(p.current_stock or 0) > 0 and (today - p.created_at.date()).days > 45:
-                title = f"Batch Shelf-Life Alert: {p.name}"
-                msg = f"Batch inventory for '{p.name}' (SKU: {p.sku}) has been in stock for over 45 days. Verify expiry dates and plan discount clearance."
-                dedup = f"batch_expiring:{p.id}:{today_str}"
-
-                cls.emit(
-                    business=business,
-                    notification_type='batch_expiring',
-                    title=title,
-                    message=msg,
-                    severity='warning',
-                    action_url='/inventory/stock',
-                    action_label='Inspect Batch',
-                    data={'product_id': p.id, 'sku': p.sku},
-                    dedup_key=dedup,
-                )
+        for batch in batches:
+            days_left = (batch.expiry_date - today).days
+            notification = cls.emit(
+                business=business,
+                notification_type='batch_expiring',
+                title=f"Batch expiring soon: {batch.product.name}",
+                message=(
+                    f"Batch {batch.batch_number} for {batch.product.name} has "
+                    f"{batch.quantity} {batch.product.unit} in stock and expires "
+                    f"on {batch.expiry_date:%d %b %Y} ({days_left} days)."
+                ),
+                severity='danger' if days_left <= 7 else 'warning',
+                action_url=f'/inventory/stock?search={batch.product.sku}',
+                action_label='Review Batch',
+                data={
+                    'batch_id': batch.id,
+                    'batch_number': batch.batch_number,
+                    'product_id': batch.product_id,
+                    'product_name': batch.product.name,
+                    'sku': batch.product.sku,
+                    'expiry_date': batch.expiry_date.isoformat(),
+                    'quantity': float(batch.quantity),
+                    'days_left': days_left,
+                },
+                dedup_key=f'batch_expiring:{batch.id}',
+            )
+            if notification:
+                notification.title = f"Batch expiring soon: {batch.product.name}"
+                notification.action_url = f'/inventory/stock?search={batch.product.sku}'
+                notification.action_label = 'Review Batch'
+                notification.data = {
+                    'batch_id': batch.id,
+                    'batch_number': batch.batch_number,
+                    'product_id': batch.product_id,
+                    'product_name': batch.product.name,
+                    'sku': batch.product.sku,
+                    'expiry_date': batch.expiry_date.isoformat(),
+                    'quantity': float(batch.quantity),
+                    'days_left': days_left,
+                }
+                notification.save(update_fields=['title', 'action_url', 'action_label', 'data', 'updated_at'])
+            if notification and notification.status != 'active':
+                notification.status = 'active'
+                notification.is_read = False
+                notification.read_at = None
+                notification.read_by = None
+                notification.save(update_fields=['status', 'is_read', 'read_at', 'read_by', 'updated_at'])
 
     # -------------------------------------------------------------
     # 7. GST SUBMISSION / VALIDATION FAILED ALERT

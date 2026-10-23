@@ -205,6 +205,7 @@ export default function Dashboard() {
     return [...rows, ...other]
   }, [payments])
   const lowStock = data.low_stock_products || []
+  const nearExpiryBatches = data.near_expiry_batches || []
   const recentBills = data.recent_bills || []
   const topProducts = data.top_products || []
   const actionRequired = data.action_required || []
@@ -311,6 +312,29 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
+
+      {nearExpiryBatches.length > 0 && (
+        <section aria-labelledby="near-expiry-title" className="rounded-xl border border-amber-300 bg-amber-50 p-3.5 shadow-sm dark:border-amber-800 dark:bg-amber-950/30 sm:p-4">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300"><IconAlertTriangle size={17} /></span>
+              <div>
+                <h2 id="near-expiry-title" className="text-sm font-bold text-amber-950 dark:text-amber-100">Stock nearing expiry</h2>
+                <p className="text-xs text-amber-800 dark:text-amber-300">{nearExpiryBatches.length} in-stock batch{nearExpiryBatches.length === 1 ? '' : 'es'} expire within 30 days</p>
+              </div>
+            </div>
+            <button type="button" onClick={() => navigate('/inventory/stock')} className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-200">Review stock</button>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {nearExpiryBatches.slice(0, 6).map(batch => (
+              <button key={batch.id} type="button" onClick={() => navigate(`/inventory/stock?search=${encodeURIComponent(batch.sku || batch.product_name)}`)} className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-amber-200 bg-white/80 px-3 py-2 text-left hover:border-amber-400 dark:border-amber-900/70 dark:bg-slate-900/50">
+                <span className="min-w-0"><span className="block truncate text-xs font-semibold text-[var(--ink)]">{batch.product_name}</span><span className="block truncate text-[11px] text-[var(--muted)]">Batch {batch.batch_number} · {batch.quantity} {batch.unit}</span></span>
+                <span className={`shrink-0 text-right text-[11px] font-bold ${batch.days_left <= 7 ? 'text-rose-700 dark:text-rose-300' : 'text-amber-800 dark:text-amber-300'}`}><span className="block">{batch.days_left === 0 ? 'Expires today' : `${batch.days_left} days`}</span><span className="font-medium">{formatDateShort(batch.expiry_date)}</span></span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* -------------------------------------------------------------
           DASHBOARD BANNER CAROUSEL (Below Name on Top, Above Business Insights)

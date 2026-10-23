@@ -3513,6 +3513,28 @@ class DashboardView(APIView):
             business=biz, current_stock__lte=F('minimum_stock'), status='active'
         ).values('id', 'name', 'current_stock', 'minimum_stock', 'sku').order_by('current_stock')[:10])
 
+        near_expiry_batches = list(ProductBatch.objects.filter(
+            business=biz,
+            active=True,
+            quantity__gt=0,
+            expiry_date__gte=today,
+            expiry_date__lte=today + timedelta(days=30),
+            product__status='active',
+        ).select_related('product').order_by('expiry_date').values(
+            'id', 'batch_number', 'expiry_date', 'quantity',
+            'product__name', 'product__sku', 'product__unit',
+        )[:20])
+        near_expiry_batches = [{
+            'id': batch['id'],
+            'batch_number': batch['batch_number'],
+            'expiry_date': batch['expiry_date'].isoformat(),
+            'quantity': float(batch['quantity']),
+            'product_name': batch['product__name'],
+            'sku': batch['product__sku'],
+            'unit': batch['product__unit'],
+            'days_left': (batch['expiry_date'] - today).days,
+        } for batch in near_expiry_batches]
+
         recent_bills = Invoice.objects.filter(business=biz, status='completed').order_by('-created_at')[:10]
 
         avg_bill_today = float(today_sales) / today_bills if today_bills else 0
@@ -3567,6 +3589,7 @@ class DashboardView(APIView):
             'top_customers': top_customers,
             'action_required': action_required,
             'low_stock_products': low_stock_products,
+            'near_expiry_batches': near_expiry_batches,
             'recent_bills': InvoiceSerializer(recent_bills, many=True).data,
         })
 
@@ -4548,6 +4571,50 @@ class StockImportView(APIView):
             return Response({'detail': str(exc)}, status=400)
         audit_event(request, 'STOCK_ADJUSTED', 'Business', request.user.business_id, after={'imported': imported, 'rows': len(prepared)})
         return Response({'status': 'updated', 'imported': imported, 'rows': len(prepared)})
+
+
+class StockImportTemplateView(APIView):
+    permission_classes = [IsAdmin]
+
+    def get(self, request):
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.title = 'Stock Import'
+        sheet.append(['Product Name', 'SKU', 'Quantity', 'Current Stock'])
+        sheet.append(['Example product - replace this row', 'EXAMPLE-SKU', 10, None])
+        sheet.freeze_panes = 'A2'
+        sheet.auto_filter.ref = 'A1:D2'
+        header_fill = PatternFill('solid', fgColor='1E3A5F')
+        header_font = Font(color='FFFFFF', bold=True)
+        for cell in sheet[1]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(vertical='center')
+        sheet.row_dimensions[1].height = 24
+        for column, width in {'A': 38, 'B': 22, 'C': 16, 'D': 18}.items():
+            sheet.column_dimensions[column].width = width
+
+        guide = workbook.create_sheet('Instructions')
+        guide.append(['Stock import template'])
+        guide.append(['Use one product per row. Replace the example row before importing.'])
+        guide.append(['Identify each product using SKU or Product Name; SKU is the most reliable.'])
+        guide.append(['Quantity is the stock change: positive adds stock and negative removes stock.'])
+        guide.append(['Current Stock is optional and sets an exact stock balance.'])
+        guide.append(['Fill either Quantity or Current Stock for each row, not both.'])
+        guide.append(['Do not use negative values for Current Stock.'])
+        guide.column_dimensions['A'].width = 100
+        guide['A1'].font = Font(size=14, bold=True, color='1E3A5F')
+        guide.freeze_panes = 'A2'
+
+        output = BytesIO()
+        workbook.save(output)
+        output.seek(0)
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = 'attachment; filename="stock-import-template.xlsx"'
+        return response
 
 
 class CustomerPaymentViewSet(viewsets.ModelViewSet):

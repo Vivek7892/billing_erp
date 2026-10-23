@@ -36,6 +36,9 @@ const getStatus = product => {
   if (current <= minimum) return 'low_stock'
   return 'in_stock'
 }
+const hasNearExpiryStock = product => (product.batches || []).some(batch =>
+  Number(batch.quantity) > 0 && batch.inventory_status === 'NEAR_EXPIRY'
+)
 
 const STATUS_META = {
   in_stock: {
@@ -174,7 +177,7 @@ export default function Stock() {
     return products
       .filter(p => {
         const st = getStatus(p)
-        if (filter !== 'all' && st !== filter) return false
+        if (filter === 'near_expiry' ? !hasNearExpiryStock(p) : filter !== 'all' && st !== filter) return false
         if (selectedCat && String(p.category) !== String(selectedCat)) return false
         if (selectedSup && String(p.supplier) !== String(selectedSup)) return false
 
@@ -219,6 +222,11 @@ export default function Stock() {
 
   useEffect(() => setCurrentPage(1), [filter, selectedCat, selectedSup, q])
   const pagedProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const nearExpiryBatches = useMemo(() => products.flatMap(product =>
+    (product.batches || [])
+      .filter(batch => Number(batch.quantity) > 0 && batch.inventory_status === 'NEAR_EXPIRY')
+      .map(batch => ({ ...batch, product_name: product.name, sku: product.sku, unit: product.unit }))
+  ).sort((a, b) => String(a.expiry_date).localeCompare(String(b.expiry_date))), [products])
 
   const handleSort = col => {
     if (sortBy === col) {
@@ -457,6 +465,24 @@ export default function Stock() {
         </div>
       </div>
 
+      {nearExpiryBatches.length > 0 && (
+        <section className="rounded-lg border border-amber-300 bg-amber-50 px-3.5 py-3 dark:border-amber-800 dark:bg-amber-950/30" aria-labelledby="stock-near-expiry-heading">
+          <div className="mb-2 flex items-center gap-2">
+            <IconAlertTriangle size={16} className="text-amber-700 dark:text-amber-300" />
+            <h2 id="stock-near-expiry-heading" className="text-sm font-bold text-amber-950 dark:text-amber-100">Near expiry · {nearExpiryBatches.length} batch{nearExpiryBatches.length === 1 ? '' : 'es'}</h2>
+            <span className="text-xs text-amber-800 dark:text-amber-300">in-stock batches expiring within 30 days</span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {nearExpiryBatches.slice(0, 6).map(batch => (
+              <button key={batch.id} type="button" onClick={() => setQ(batch.sku || batch.product_name)} className="flex min-w-0 items-center justify-between gap-2 rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-left hover:border-amber-400 dark:border-amber-900 dark:bg-slate-900/50">
+                <span className="min-w-0"><span className="block truncate text-xs font-semibold text-[var(--ink)]">{batch.product_name}</span><span className="block text-[11px] text-[var(--muted)]">{batch.quantity} {batch.unit} · {batch.batch_number}</span></span>
+                <span className="shrink-0 text-right text-[11px] font-bold text-amber-800 dark:text-amber-300">{batch.expiry_date}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
 
       {/* =====================================================
           INVENTORY KPI STRIP (Ultra-compact ~70-85px)
@@ -586,6 +612,7 @@ export default function Stock() {
               { key: 'in_stock', label: 'In Stock', count: metrics.inStock },
               { key: 'low_stock', label: 'Low Stock', count: metrics.lowStock },
               { key: 'out_of_stock', label: 'Out of Stock', count: metrics.outStock },
+              { key: 'near_expiry', label: 'Near Expiry', count: nearExpiryBatches.length },
             ].map(tab => (
               <button
                 key={tab.key}

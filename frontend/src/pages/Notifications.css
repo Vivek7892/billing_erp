@@ -152,3 +152,100 @@
     font-size: 9px;
   }
 }
+
+/* Compact notification-center layout */
+.notifications-page {
+  min-width: 0;
+}
+
+.notification-page-header,
+.notification-list-panel {
+  box-shadow: none;
+}
+
+.notification-role-banner {
+  min-height: 0;
+  box-shadow: none;
+}
+
+.notification-kpi {
+  min-height: 58px;
+  border-radius: 7px;
+  padding: 7px 10px;
+}
+
+.notification-kpi strong {
+  font-size: 17px;
+}
+
+.notification-kpi-sub {
+  font-size: 9px;
+}
+
+.notifications-filter-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.notifications-filter-panel .notifications-search {
+  box-shadow: none;
+}
+
+.notifications-filter-panel select {
+  box-shadow: none;
+}
+
+.notification-list-panel .date-group-section > div:first-child {
+  padding: 7px 12px;
+}
+
+.notification-card-list .notification-card {
+  display: grid;
+  gap: 7px;
+  padding: 10px 12px !important;
+  border-bottom: 1px solid var(--line-subtle);
+}
+
+.notification-card-list .notification-card:last-child {
+  border-bottom: 0;
+}
+
+.notification-card-list .notification-card p {
+  line-height: 1.4;
+}
+
+.notification-card-list .notification-card > div:last-of-type {
+  padding-top: 6px;
+}
+
+.notification-card-list .notification-card button {
+  box-shadow: none;
+}
+
+@media (min-width: 768px) {
+  .notification-card-list .notification-card {
+    grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 2fr) auto;
+    align-items: center;
+    column-gap: 14px;
+  }
+
+  .notification-card-list .notification-card > div:nth-child(2) {
+    min-width: 0;
+  }
+
+  .notification-card-list .notification-card > div:last-of-type {
+    justify-content: flex-end;
+    border-top: 0;
+    padding-top: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .notification-kpi {
+    min-height: 56px;
+  }
+
+  .notification-role-banner {
+    padding: 7px 10px;
+  }
+}

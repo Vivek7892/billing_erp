@@ -552,6 +552,7 @@ function relativeTime(isoString) {
 }
 
 function notificationTypeLabel(type = '') {
+  if (type === 'batch_expiring') return 'Near Expiry'
   return type.replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase()) || 'Notification'
 }
 
@@ -627,6 +628,13 @@ function NotificationBell() {
     const timer = setInterval(loadNotifications, 20000)
     return () => clearInterval(timer)
   }, [loadNotifications])
+
+  useEffect(() => {
+    if (!open) return undefined
+    const handleEscape = event => { if (event.key === 'Escape') setOpen(false) }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [open])
 
   const handleMarkAllRead = async () => {
     try {
@@ -708,31 +716,24 @@ function NotificationBell() {
         <>
           {/* Backdrop for Desktop & Mobile */}
           <div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200"
+            className="fixed inset-0 z-40 bg-slate-950/25 backdrop-blur-[2px] animate-in fade-in duration-200"
             onClick={() => setOpen(false)}
           />
 
           {/* Slide-over Drawer from Right (Visible on Desktop, Tablet & Mobile) */}
           <aside
-            className="fixed inset-y-0 right-0 z-50 flex flex-col w-[92vw] max-w-[420px] bg-[var(--surface)] shadow-2xl border-l border-[var(--line)] animate-in slide-in-from-right duration-200 text-[var(--ink)]"
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[420px] flex-col border-l border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-xl animate-in slide-in-from-right duration-200"
             aria-label="Notification Drawer"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--line)] bg-[var(--surface-elevated)]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/40 flex items-center justify-center text-[var(--primary)]">
-                  <IconBell size={16} className={criticalCount > 0 ? 'text-red-600' : ''} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-[var(--ink)] text-sm">Notifications</span>
-                    {unreadCount > 0 && (
-                      <span className="text-[10px] font-bold bg-[#1E3A5F] text-white px-1.5 py-0.2 rounded-full">
-                        {unreadCount} new
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-[var(--muted)]">Work queue & operational alerts</p>
+            <div className="flex shrink-0 items-center justify-between border-b border-[var(--line)] px-4 py-3">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <IconBell size={18} className={criticalCount > 0 ? 'shrink-0 text-rose-600' : 'shrink-0 text-[var(--primary)]'} />
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="text-sm font-bold text-[var(--ink)]">Notifications</span>
+                  <span className="rounded-full bg-[var(--surface-elevated)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)]">{unreadCount} unread</span>
                 </div>
               </div>
 
@@ -741,7 +742,7 @@ function NotificationBell() {
                   <button
                     type="button"
                     onClick={handleMarkAllRead}
-                    className="btn-secondary min-h-9 px-2 text-[11px] font-semibold text-[var(--primary)] inline-flex items-center gap-1"
+                    className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-[11px] font-semibold text-[var(--primary)] hover:bg-[var(--surface-hover)]"
                     title="Mark all as read"
                   >
                     <IconCheck size={11} />
@@ -751,7 +752,7 @@ function NotificationBell() {
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+                  className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
                   aria-label="Close notification drawer"
                 >
                   <IconX size={16} />
@@ -759,29 +760,19 @@ function NotificationBell() {
               </div>
             </div>
 
-            {/* Critical banner */}
-            {criticalCount > 0 && (
-              <div className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-950/30 border-b border-red-200 dark:border-red-900/40">
-                <IconAlertCircle size={14} className="text-red-600 flex-shrink-0" />
-                <span className="text-xs font-semibold text-red-700 dark:text-red-400">
-                  {criticalCount} critical alert{criticalCount > 1 ? 's' : ''} require attention
-                </span>
-              </div>
-            )}
-
             {/* Quick Drawer Filter Chips */}
-            <div className="flex items-center gap-1 px-3 py-2 border-b border-[var(--line)] bg-[var(--surface)] overflow-x-auto">
+            <div className="flex shrink-0 items-center gap-1 border-b border-[var(--line)] px-3 py-2">
               {[
                 { id: 'all', label: 'All', count: notifications.length },
                 { id: 'unread', label: 'Unread', count: unreadCount },
+                { id: 'critical', label: 'Critical', count: criticalCount },
                 { id: 'approvals', label: 'Approvals', count: pendingApprovalCount },
-                { id: 'critical', label: 'Urgent', count: criticalCount },
               ].map(tab => (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setDrawerFilter(tab.id)}
-                  className={`min-h-9 px-2.5 rounded-md text-[11px] font-semibold flex items-center gap-1 transition ${
+                  className={`min-h-8 px-2.5 rounded-md text-[11px] font-semibold flex items-center gap-1 transition ${
                     drawerFilter === tab.id
                       ? 'bg-[var(--primary)] text-white shadow-2xs'
                       : 'text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)]'
@@ -798,7 +789,7 @@ function NotificationBell() {
             </div>
 
             {/* Notification Items List */}
-            <div className="divide-y divide-[var(--line-subtle)] flex-1 overflow-y-auto">
+            <div className="min-h-0 flex-1 divide-y divide-[var(--line-subtle)] overflow-y-auto">
               {filteredDrawerNotifications.length ? (
                 filteredDrawerNotifications.map(n => {
                   const sev = SEVERITY_ICON_MAP[n.severity] || SEVERITY_ICON_MAP.info
@@ -811,18 +802,21 @@ function NotificationBell() {
                     data.invoice_number && `Invoice ${data.invoice_number}`,
                     data.po_number && `PO ${data.po_number}`,
                     data.product_name && `Product ${data.product_name}`,
+                    data.batch_number && `Batch ${data.batch_number}`,
                     data.sku && `SKU ${data.sku}`,
                     (data.customer_name || data.customer) && `Customer ${data.customer_name || data.customer}`,
                     (data.supplier_name || data.supplier) && `Supplier ${data.supplier_name || data.supplier}`,
                     data.quantity !== undefined && `Qty ${data.quantity}`,
                     data.amount !== undefined && `Amount ₹${data.amount}`,
                     data.days_overdue !== undefined && `${data.days_overdue} days overdue`,
+                    data.expiry_date && `Expires ${data.expiry_date}`,
+                    n.reference_id && `Ref ${n.reference_id}`,
                   ].filter(Boolean)
 
                   return (
                     <div
                       key={n.id}
-                      className={`p-3.5 hover:bg-[var(--surface-hover)] transition-colors text-left space-y-2 border-l-3 ${
+                      className={`border-l-2 px-3 py-2.5 text-left transition-colors hover:bg-[var(--surface-hover)] ${
                         n.severity === 'danger' ? 'border-l-rose-500' :
                         n.severity === 'warning' ? 'border-l-amber-500' :
                         n.severity === 'success' ? 'border-l-emerald-500' :
@@ -852,9 +846,8 @@ function NotificationBell() {
                             </span>
                           )}
                         </div>
-                        <span className="shrink-0 text-right">
-                          <span className="block text-[10px] font-medium text-[var(--ink-secondary)]">{relativeTime(n.created_at)}</span>
-                          <span className="block text-[10px] text-[var(--muted)]">{notificationDateTime(n.created_at)}</span>
+                        <span className="shrink-0 text-right text-[10px] text-[var(--muted)]" title={notificationDateTime(n.created_at)}>
+                          {relativeTime(n.created_at)}
                         </span>
                       </div>
 
@@ -866,30 +859,22 @@ function NotificationBell() {
                         <p className={`text-xs leading-snug group-hover:text-[var(--primary)] transition-colors ${!n.is_read ? 'font-bold text-[var(--ink)]' : 'font-medium text-[var(--ink-secondary)]'}`}>
                           {n.title}
                         </p>
-                        <p className="text-[11px] text-[var(--muted)] line-clamp-3 mt-0.5 leading-relaxed">
+                        <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[var(--muted)]">
                           {n.message}
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-elevated)] px-2.5 py-2 text-[10px]">
-                        <div className="min-w-0">
-                          <span className="block text-[var(--muted)]">Status</span>
-                          <span className={`mt-0.5 inline-flex items-center rounded-full px-1.5 py-0.5 font-semibold ${n.is_read ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300' : 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-200'}`}>
-                            {n.is_read ? 'Read' : 'Unread'}
-                          </span>
-                        </div>
-                        {referenceDetails.length > 0 && (
-                          <div className="min-w-0">
-                            <span className="block text-[var(--muted)]">Reference</span>
-                            <span className="mt-0.5 block break-words font-medium text-[var(--ink-secondary)]">
-                              {referenceDetails.slice(0, 2).join(' · ')}
-                            </span>
-                          </div>
-                        )}
+                      <div className="flex min-w-0 items-center justify-between gap-2 text-[10px]">
+                        <span className="min-w-0 truncate text-[var(--muted)]" title={referenceDetails.slice(0, 2).join(' · ')}>
+                          {referenceDetails.length > 0 ? referenceDetails.slice(0, 2).join(' · ') : notificationTypeLabel(n.notification_type)}
+                        </span>
+                        <span className={`shrink-0 font-medium ${n.is_read ? 'text-[var(--muted)]' : 'text-[var(--primary)]'}`}>
+                          {n.is_read ? 'Read' : 'Unread'}
+                        </span>
                       </div>
 
                       {/* Direct Inline Action Buttons */}
-                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-[var(--line-subtle)]">
+                      <div className="mt-2 flex items-center justify-between gap-2 border-t border-[var(--line-subtle)] pt-1.5">
                         {isApproval && n.status === 'active' ? (
                           <div className="flex items-center gap-1.5">
                             {canManageApprovals ? (
@@ -973,7 +958,7 @@ function NotificationBell() {
             </div>
 
             {/* Footer */}
-            <div className="border-t border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-2.5 mt-auto flex items-center justify-between gap-2">
+            <div className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t border-[var(--line)] bg-[var(--surface)] px-4 py-2.5">
               <button
                 type="button"
                 onClick={loadNotifications}
@@ -989,7 +974,7 @@ function NotificationBell() {
                 onClick={() => { setOpen(false); navigate('/notifications') }}
                 className="btn-primary h-8 px-3 text-xs font-semibold inline-flex items-center gap-1.5"
               >
-                <span>Full Notifications Center</span>
+                <span>View All Notifications</span>
                 <IconArrowRight size={12} />
               </button>
             </div>

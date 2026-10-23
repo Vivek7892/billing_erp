@@ -42,7 +42,7 @@ const TYPE_CONFIG = {
   payment_received:       { label: 'Payment Received',  icon: IconCreditCard,    badgeClass: 'badge-paid',       category: 'sales_finance' },
   purchase_order_pending: { label: 'PO Pending',        icon: IconShoppingBag,   badgeClass: 'badge-pending',    category: 'sales_finance' },
   quotation_expiring:     { label: 'Quotation Expiring',icon: IconLayersLinked,        badgeClass: 'badge-pending',    category: 'sales_finance' },
-  batch_expiring:         { label: 'Batch Expiring',    icon: IconAlertTriangle, badgeClass: 'badge-overdue',    category: 'inventory' },
+  batch_expiring:         { label: 'Near Expiry',       icon: IconAlertTriangle, badgeClass: 'badge-pending',    category: 'inventory' },
   gst_submission_failed:  { label: 'GST Filing Alert',  icon: IconShieldExclamation,   badgeClass: 'badge-overdue',    category: 'compliance' },
   einvoice_failed:        { label: 'E-Invoice Error',   icon: IconAlertCircle,   badgeClass: 'badge-overdue',    category: 'compliance' },
   eway_bill_expiring:     { label: 'E-Way Bill',        icon: IconTruck,         badgeClass: 'badge-pending',    category: 'compliance' },
@@ -247,7 +247,7 @@ function getNotificationRoute(item) {
     case 'low_stock':
       return `/inventory/stock?search=${encodeURIComponent(data.sku || data.product_name || data.product_id || refId || '')}`
     case 'batch_expiring':
-      return `/inventory/stock?search=${encodeURIComponent(data.batch_number || data.sku || data.product_name || '')}`
+      return `/inventory/stock?search=${encodeURIComponent(data.sku || data.product_name || '')}`
     case 'invoice_overdue':
       return `/sales/invoices?search=${encodeURIComponent(data.invoice_number || refId || '')}`
     case 'payment_received':
@@ -434,7 +434,7 @@ function NotificationContextStrip({ item }) {
     case 'batch_expiring': {
       const batch = data.batch_number
       const expiry = data.expiry_date
-      const days = data.days_to_expiry
+      const days = data.days_to_expiry ?? data.days_left
       return (
         <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-[var(--ink-secondary)]">
           {batch && (
@@ -971,10 +971,10 @@ export default function Notifications() {
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="notifications-page min-w-0 space-y-3 sm:space-y-4 pb-8">
+    <div className="notifications-page min-w-0 space-y-3 pb-6">
 
       {/* ── 1. Header (Mobile-Friendly & Action-Oriented) ── */}
-      <header className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-4 shadow-2xs">
+      <header className="notification-page-header rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:px-4 sm:py-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
             {/* Bell Icon: Tap to toggle slide-over drawer on desktop and mobile */}
@@ -1063,7 +1063,7 @@ export default function Notifications() {
       </header>
 
       {/* ── Role Scope & Context Banner ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-3 sm:px-4 py-2 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] text-xs shadow-2xs">
+      <div className="notification-role-banner flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-3 sm:px-4 py-2 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-xs">
         <div className="flex items-center gap-2 flex-wrap min-w-0">
           <span className="inline-flex items-center gap-1.5 font-bold text-[var(--ink)]">
             <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
@@ -1353,7 +1353,7 @@ export default function Notifications() {
       </section>
 
       {/* ── 5. Notification List (Grouped by Date) ── */}
-      <section className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
+      <section className="notification-list-panel overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
         {loading ? (
           <div className="p-10 text-center">
             <div className="inline-flex items-center gap-2 text-xs font-medium text-[var(--muted)]">
@@ -1652,6 +1652,7 @@ export default function Notifications() {
                                 <TypeIcon size={9} />
                                 <span>{cfg.label}</span>
                               </span>
+                              <span className="text-[9px] font-medium text-[var(--muted)]">{item.is_read ? 'Read' : 'Unread'}</span>
                             </div>
 
                             <span className="notification-card-time shrink-0 text-right">
@@ -2084,56 +2085,37 @@ export default function Notifications() {
       {quickDrawerOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-xs animate-in fade-in"
+            className="fixed inset-0 z-40 bg-slate-950/25 backdrop-blur-[2px] animate-in fade-in"
             onClick={() => setQuickDrawerOpen(false)}
           />
 
           <aside
-            className="fixed inset-y-0 right-0 z-50 flex flex-col w-[92vw] max-w-[420px] bg-[var(--surface)] shadow-2xl border-l border-[var(--line)] animate-in slide-in-from-right duration-200 text-[var(--ink)]"
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[420px] flex-col border-l border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-xl animate-in slide-in-from-right duration-200"
             aria-label="Operational Notifications Feed"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--line)] bg-[var(--surface-elevated)]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/40 flex items-center justify-center text-[var(--primary)]">
-                  <IconBell size={16} className={criticalCount > 0 ? 'text-red-600' : ''} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-[var(--ink)] text-sm">Operational Feed</span>
-                    {needsActionCount > 0 && (
-                      <span className="text-[10px] font-bold bg-[#1E3A5F] text-white px-1.5 py-0.2 rounded-full">
-                        {needsActionCount}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-[var(--muted)]">Real-time alerts & work items</p>
+            <div className="flex shrink-0 items-center justify-between border-b border-[var(--line)] px-4 py-3">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <IconBell size={18} className="shrink-0 text-[var(--primary)]" />
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="text-sm font-bold text-[var(--ink)]">Notifications</span>
+                  <span className="rounded-full bg-[var(--surface-elevated)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)]">{counts.unread} unread</span>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setQuickDrawerOpen(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
                 aria-label="Close drawer"
               >
                 <IconX size={16} />
               </button>
             </div>
 
-            {/* Quick Metrics */}
-            <div className="grid grid-cols-2 gap-2 p-3 border-b border-[var(--line)] bg-[var(--surface)]">
-              <div className="p-2 rounded-lg border border-red-200 bg-red-50/50 dark:bg-red-950/20 text-center">
-                <span className="text-[9px] font-bold uppercase text-red-700 block">Critical</span>
-                <span className="text-lg font-bold font-mono text-red-600">{criticalCount}</span>
-              </div>
-              <div className="p-2 rounded-lg border border-indigo-200 bg-indigo-50/50 dark:bg-indigo-950/20 text-center">
-                <span className="text-[9px] font-bold uppercase text-indigo-700 block">Approvals</span>
-                <span className="text-lg font-bold font-mono text-indigo-600">{pendingApprovalCount}</span>
-              </div>
-            </div>
-
             {/* Urgent Alerts Feed */}
-            <div className="divide-y divide-[var(--line-subtle)] overflow-y-auto flex-1">
+            <div className="min-h-0 flex-1 divide-y divide-[var(--line-subtle)] overflow-y-auto">
               {notifications.slice(0, 15).map(item => {
                 const isApproval = item.requires_approval
                 const isPendingPO = item.notification_type === 'purchase_order_pending'
@@ -2141,11 +2123,14 @@ export default function Notifications() {
                 return (
                   <div
                     key={item.id}
-                    className="p-3 text-left hover:bg-[var(--surface-hover)] transition-colors space-y-2 border-l-3 border-l-transparent hover:border-l-[var(--primary)]"
+                    className={`border-l-2 px-3 py-2.5 text-left hover:bg-[var(--surface-hover)] ${item.severity === 'danger' ? 'border-l-rose-500' : item.severity === 'warning' ? 'border-l-amber-500' : item.severity === 'success' ? 'border-l-emerald-500' : 'border-l-blue-500'}`}
                   >
                     <div className="flex items-center justify-between text-[10px] text-[var(--muted)] mb-1">
-                      <span className="font-semibold uppercase text-[var(--ink)]">
-                        {TYPE_CONFIG[item.notification_type]?.label || item.notification_type}
+                      <span className="flex min-w-0 items-center gap-1.5 font-semibold text-[var(--ink)]">
+                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${item.severity === 'danger' ? 'bg-rose-500' : item.severity === 'warning' ? 'bg-amber-500' : item.severity === 'success' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                        <span>{SEVERITY_STYLE[item.severity]?.label || 'Info'}</span>
+                        <span className="font-normal text-[var(--muted)]">{TYPE_CONFIG[item.notification_type]?.label || item.notification_type}</span>
+                        <span className="font-normal">{item.is_read ? 'Read' : 'Unread'}</span>
                       </span>
                       <span className="font-mono">{relativeTime(item.created_at)}</span>
                     </div>
@@ -2163,10 +2148,11 @@ export default function Notifications() {
                       <p className="text-[11px] text-[var(--ink-secondary)] line-clamp-2 mt-0.5">
                         {item.message}
                       </p>
+                      <NotificationContextStrip item={item} />
                     </div>
 
                     {/* Inline Actions inside drawer */}
-                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-[var(--line-subtle)]">
+                    <div className="mt-1 flex items-center justify-between gap-2 border-t border-[var(--line-subtle)] pt-1.5">
                       {isApproval && item.status === 'active' ? (
                         <div className="flex items-center gap-1.5">
                           {canManageApprovals ? (
@@ -2238,20 +2224,20 @@ export default function Notifications() {
             </div>
 
             {/* Drawer Actions */}
-            <div className="p-3 border-t border-[var(--line)] bg-[var(--surface-elevated)] flex gap-2">
+            <div className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t border-[var(--line)] bg-[var(--surface)] px-4 py-2.5">
               <button
                 type="button"
-                onClick={() => { setQuickDrawerOpen(false); handleRunChecks() }}
-                className="btn-secondary flex-1 h-8 text-xs inline-flex items-center justify-center gap-1"
+                onClick={() => fetchNotifications()}
+                className="btn-secondary h-8 px-2.5 text-xs inline-flex items-center justify-center gap-1"
               >
-                <IconRefresh size={12} className={refreshing ? 'animate-spin' : ''} /> Scan
+                <IconRefresh size={12} className={refreshing ? 'animate-spin' : ''} /> Refresh
               </button>
               <button
                 type="button"
-                onClick={() => { setQuickDrawerOpen(false); handleSettingsClick() }}
-                className="btn-secondary flex-1 h-8 text-xs inline-flex items-center justify-center gap-1"
+                onClick={() => setQuickDrawerOpen(false)}
+                className="btn-primary h-8 px-3 text-xs inline-flex items-center justify-center gap-1"
               >
-                <IconSettings size={12} /> Settings
+                View All Notifications
               </button>
             </div>
           </aside>
