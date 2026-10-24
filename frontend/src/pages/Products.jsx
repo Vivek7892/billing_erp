@@ -15,10 +15,12 @@ import {
   Pagination,
   SearchBar,
 } from '../components/UI'
+import { MobileKpiGrid, MobileFAB } from '../components/MobileUI'
 import toast from 'react-hot-toast'
 import BarcodePrintModal from '../components/BarcodePrintModal'
 import {
   IconPlus,
+  IconFilter,
   IconEdit,
   IconTrash,
   IconBarcode,
@@ -44,6 +46,7 @@ import {
   IconCopy,
   IconCheck,
   IconFileSpreadsheet,
+  IconFileTypeXls,
   IconDotsVertical,
 } from '@tabler/icons-react'
 
@@ -213,6 +216,7 @@ function BarcodeQuantityControl({ value, onChange }) {
 }
 
 export default function Products() {
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [suppliers, setSuppliers] = useState([])
@@ -1099,15 +1103,16 @@ export default function Products() {
         title="Products & Inventory"
         subtitle={`${stats.total} total items • ${stats.active} active • ${formatCurrency(stats.stockValue)} total stock valuation`}
         action={
-          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
+          <div className="hidden sm:flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
             <button
               type="button"
               onClick={exportToCSV}
-              className="btn-secondary btn-base flex w-full items-center justify-center gap-1.5 text-xs sm:w-auto"
-              title="Export products to CSV"
+              className="btn-secondary h-8.5 w-8.5 sm:w-auto sm:px-2.5 inline-flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg shadow-2xs"
+              title="Export to Excel / CSV"
+              aria-label="Export to Excel / CSV"
             >
-              <IconDownload size={15} />
-              Export
+              <IconFileTypeXls size={16} className="text-emerald-600 dark:text-emerald-400" />
+              <span className="hidden sm:inline">Excel</span>
             </button>
 
             <button
@@ -1118,30 +1123,30 @@ export default function Products() {
                 setImportErrors([])
                 setModal('import')
               }}
-              className="btn-secondary btn-base min-h-[42px] flex items-center justify-center gap-2 text-xs font-semibold"
+              className="btn-secondary h-8.5 px-2.5 inline-flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg shadow-2xs"
               title="Import products from CSV"
             >
-              <IconUpload size={15} />
-              Import
+              <IconUpload size={14} />
+              <span>Import</span>
             </button>
 
             <button
               type="button"
               onClick={() => setModal('categories')}
-              className="btn-secondary btn-base min-h-[42px] flex items-center justify-center gap-2 text-xs font-semibold"
+              className="btn-secondary h-8.5 px-2.5 inline-flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg shadow-2xs"
               title="Manage product categories and tags"
             >
-              <IconTag size={15} />
-              Categories
+              <IconTag size={14} />
+              <span>Categories</span>
             </button>
 
             <button
               type="button"
               onClick={openAdd}
-              className="btn-primary btn-base min-h-[42px] col-span-2 sm:col-span-1 flex items-center justify-center gap-2 text-xs font-semibold"
+              className="btn-primary h-8.5 px-3.5 hidden sm:inline-flex items-center justify-center gap-1.5 text-xs font-semibold rounded-lg shadow-xs"
             >
-              <IconPlus size={16} />
-              Add Product
+              <IconPlus size={15} />
+              <span>Add Product</span>
             </button>
           </div>
         }
@@ -1150,7 +1155,22 @@ export default function Products() {
       {/* =====================================================
           PRODUCT METRICS & STOCK ALERTS SUMMARY TABLE
       ====================================================== */}
-      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
+      {/* Mobile KPI Grid with Top-Right Round Button for >4 KPIs */}
+      <MobileKpiGrid
+        title="Catalog Metrics"
+        primaryKpis={[
+          { label: 'Total Products', value: String(stats.total), sub: 'All catalog items', icon: IconPackages, onClick: () => setStockFilter('all') },
+          { label: 'Active Items', value: String(stats.active), sub: 'Available for sale', icon: IconCircleCheck, onClick: () => setStatusFilter(statusFilter === 'active' ? 'all' : 'active') },
+          { label: 'Low Stock Alert', value: String(stats.low), sub: 'Threshold reached', icon: IconAlertTriangle, onClick: () => setStockFilter(stockFilter === 'low_stock' ? 'all' : 'low_stock') },
+          { label: 'Out of Stock', value: String(stats.out), sub: 'Zero inventory', icon: IconCircleX, onClick: () => setStockFilter(stockFilter === 'out_of_stock' ? 'all' : 'out_of_stock') },
+        ]}
+        secondaryKpis={[
+          { label: 'Stock Valuation', value: formatCurrency(stats.stockValue), sub: `Retail: ${formatCurrency(stats.retailValue)}`, icon: IconTag },
+        ]}
+      />
+
+      {/* Desktop KPI Strip (hidden sm:block) */}
+      <section className="hidden sm:block overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
         <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-5 sm:divide-y-0 sm:divide-x divide-[var(--line)]">
           <div
             onClick={() => setStockFilter('all')}
@@ -1250,12 +1270,39 @@ export default function Products() {
       </section>
 
       {/* =====================================================
-          SEARCH & MULTI-FILTER TOOLBAR
+          SEARCH & MULTI-FILTER TOOLBAR (Hidden on mobile by default)
       ====================================================== */}
-      <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-3.5">
+      {/* Mobile Search & Filter Toggle Bar */}
+      <div className="flex items-center gap-2 sm:hidden">
+        <div className="min-w-0 flex-1">
+          <SearchBar value={search} onChange={setSearch} placeholder="Search products..." />
+        </div>
+        <button
+          type="button"
+          onClick={() => setMobileFiltersOpen(v => !v)}
+          className={`flex h-11 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold shadow-2xs transition active:scale-95 ${
+            mobileFiltersOpen || isFilterActive
+              ? 'border-[#1E3A5F] bg-blue-50 text-[#1E3A5F] dark:border-blue-700 dark:bg-blue-950/60 dark:text-sky-300 font-bold'
+              : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+          }`}
+        >
+          <IconFilter size={15} />
+          <span>Filters</span>
+          {isFilterActive && (
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#1E3A5F] text-[9px] font-bold text-white">
+              •
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Filter Toolbar: Hidden on mobile unless opened, always visible on desktop */}
+      <div className={`${mobileFiltersOpen ? 'block' : 'hidden'} sm:block rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-3.5 space-y-3`}>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-12 lg:items-center">
-          {/* Search bar */}
-          <SearchBar value={search} onChange={setSearch} placeholder="Search name, SKU, barcode, brand..." className="min-w-0 sm:col-span-2 lg:col-span-4" shortcut="Ctrl+K" />
+          {/* Search bar on Desktop */}
+          <div className="hidden sm:block sm:col-span-2 lg:col-span-4 min-w-0">
+            <SearchBar value={search} onChange={setSearch} placeholder="Search name, SKU, barcode, brand..." shortcut="Ctrl+K" />
+          </div>
 
           {/* Category Dropdown */}
           <div className="min-w-0 lg:col-span-2">
@@ -1340,7 +1387,7 @@ export default function Products() {
         </div>
 
         {/* Quick Filter Pill Badges */}
-        <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-[var(--line-subtle)] text-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-[var(--line-subtle)] text-xs no-scrollbar">
           <IconAdjustmentsHorizontal
             size={13}
             className="shrink-0 text-[var(--muted-light)] mr-1"
@@ -1521,18 +1568,19 @@ export default function Products() {
                         <button
                           type="button"
                           onClick={() => openAdjust(product)}
-                          className="min-h-[36px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-elevated)] shadow-xs transition"
+                          className="h-7.5 px-2.5 rounded-md border border-[var(--line)] bg-[var(--surface)] text-[11px] font-semibold text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] inline-flex items-center justify-center gap-1 transition active:scale-95 shadow-2xs"
                           title="Adjust stock"
                         >
-                          Stock
+                          <IconAdjustmentsHorizontal size={13} />
+                          <span>Adjust</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => openBarcode(product)}
-                          className="min-h-[36px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-elevated)] shadow-xs transition flex items-center gap-1"
+                          className="h-7.5 px-2.5 rounded-md border border-[var(--line)] bg-[var(--surface)] text-[11px] font-semibold text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] inline-flex items-center justify-center gap-1 transition active:scale-95 shadow-2xs"
                           title="Print barcode"
                         >
-                          <IconBarcode size={14} />
+                          <IconBarcode size={13} />
                           <span>Barcode</span>
                         </button>
                       </div>
@@ -3057,6 +3105,9 @@ export default function Products() {
         danger
         confirmLabel="Delete Product"
       />
+    
+      
+      <MobileFAB icon={IconPlus} label="Product" onClick={openAdd} />
     </div>
   )
 }

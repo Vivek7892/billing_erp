@@ -1,7 +1,9 @@
+import { MobileFAB } from '../components/MobileUI'
 import { Fragment, useState, useEffect, useMemo, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import api from '../api'
 import { Badge, PageHeader, Modal, Spinner, EmptyState, ConfirmDialog, TableSkeleton } from '../components/UI'
+
 import toast from 'react-hot-toast'
 import { PurchaseEmptyIllustration } from '../components/visuals'
 import {
@@ -25,6 +27,7 @@ import {
   IconFilter,
   IconMessageCircle,
   IconFileSpreadsheet,
+  IconFileTypeXls,
   IconUpload,
   IconDownload,
   IconCircleCheck,
@@ -1489,7 +1492,7 @@ export default function Purchases() {
         title="Purchases"
         subtitle="Manage purchase orders, suppliers, payments and stock-in"
         action={
-          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-row sm:items-center">
+          <div className="hidden sm:flex w-full grid-cols-2 gap-2 sm:w-auto sm:flex-row sm:items-center">
             <button
               onClick={() => {
                 setImportMode(tab === 'suppliers' ? 'suppliers' : 'orders')
@@ -1498,7 +1501,7 @@ export default function Purchases() {
               className="btn-secondary min-h-[42px] flex items-center justify-center gap-2 text-xs font-semibold"
               title="Bulk import from Excel"
             >
-              <IconFileSpreadsheet size={15} /> Import Excel
+              <IconFileTypeXls size={15} /> Import Excel
             </button>
             <button
               onClick={() => { setEditSupplier(null); setSupModal(true) }}
@@ -1538,6 +1541,8 @@ export default function Purchases() {
           ))}
         </div>
       </section>
+
+      
 
       {/* Navigation Tabs */}
       <div className="flex w-full max-w-full gap-1 overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] p-1 shadow-xs sm:inline-flex sm:w-auto">
@@ -2144,6 +2149,9 @@ export default function Purchases() {
         message={`Delete "${deleteConfirm?.name}"? This cannot be undone. Existing purchases will not be affected.`}
         danger
       />
+    
+      {/* Mobile Floating Action Button */}
+      <MobileFAB icon={IconPlus} label="Purchase" onClick={() => setModal(true)} />
     </div>
   )
 }

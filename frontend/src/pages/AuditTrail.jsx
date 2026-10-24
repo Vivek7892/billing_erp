@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import api from '../api'
 import { PageHeader, Spinner, Modal, Pagination } from '../components/UI'
+import { MobileKpiGrid } from '../components/MobileUI'
 import toast from 'react-hot-toast'
 import {
   IconShieldCheck,
@@ -198,6 +199,7 @@ export default function AuditTrail() {
   const [dateTo, setDateTo] = useState('')
   const [highImpactOnly, setHighImpactOnly] = useState(false)
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [showMobileFilters, setShowMobileFilters] = useState(false)
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -662,44 +664,64 @@ export default function AuditTrail() {
 
   return (
     <div className="audit-trail-page w-full min-w-0 space-y-4 pb-16 text-[var(--ink)]">
-      {/* Page Header */}
-      <PageHeader
-        title="Audit Trail"
-        subtitle="Business activity, security events, and recorded changes across your ERP."
-        action={
-          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={fetchLogs}
-              disabled={loading}
-              className="min-h-[38px] flex items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-elevated)] disabled:opacity-60 transition shadow-xs"
-              title="Refresh audit trail"
-            >
-              <IconRotate2 size={14} className={loading ? 'animate-spin' : ''} />
-              <span>Refresh</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleExportCsv}
-              disabled={exporting || filteredLogs.length === 0}
-              className="min-h-[38px] flex items-center justify-center gap-1.5 rounded-lg bg-[#1E3A5F] px-3.5 text-xs font-semibold text-white hover:bg-[#162F4D] disabled:opacity-50 transition shadow-xs"
-              title="Export filtered audit logs to CSV"
-            >
-              <IconDownload size={14} className={exporting ? 'animate-bounce' : ''} />
-              <span>{exporting ? 'Exporting...' : 'Export CSV'}</span>
-            </button>
-          </div>
-        }
-      />
+      
+      {/* Top Page Header with Title, Subtitle and Export CSV */}
+      <header className="flex flex-col justify-between gap-3 border-b border-[var(--line)] pb-4 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Audit Trail</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">Track system events, data mutations, security actions, and user activities.</p>
+        </div>
+     
+      </header>
 
       {/* Audit health summary */}
-      <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-3 shadow-xs" aria-label="Audit health">
-        <div className="mb-2 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-[var(--muted)]">
+      <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 shadow-xs space-y-2.5" aria-label="Audit health">
+        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-[var(--muted)]">
           <IconShieldCheck size={14} className="text-[var(--ink-secondary)]" /> Audit health
           {metrics.failCount === 0 && <span className="normal-case tracking-normal font-medium text-emerald-700 dark:text-emerald-400">· No failures detected</span>}
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+
+        {/* Mobile KPI Grid (Displays 4 initially with Show more for 5th) */}
+        <MobileKpiGrid
+          title="Audit Metrics"
+          allKpis={[
+            {
+              label: 'Failed events',
+              value: metrics.failCount,
+              icon: IconCircleX,
+              sub: metrics.failCount ? 'Review required' : 'No failures',
+              onClick: () => setResultFilter('failure'),
+            },
+            {
+              label: 'High-impact',
+              value: metrics.highImpactCount,
+              icon: IconAlertTriangle,
+              sub: 'Recorded changes',
+              onClick: () => setHighImpactOnly(true),
+            },
+            {
+              label: 'Matching events',
+              value: Number(metrics.totalMatching) ? Number(metrics.totalMatching).toLocaleString() : metrics.totalMatching,
+              icon: IconFileText,
+              sub: `of ${metrics.totalOverall.toLocaleString()} total`,
+            },
+            {
+              label: 'Success rate',
+              value: `${metrics.successRate}%`,
+              icon: IconCircleCheck,
+              sub: `${metrics.successCount.toLocaleString()} successful`,
+            },
+            {
+              label: 'Unique actors',
+              value: metrics.operatorsCount,
+              icon: IconUser,
+              sub: 'Operators recorded',
+            },
+          ]}
+        />
+
+        {/* Desktop/Tablet Metric Grid (all 5) */}
+        <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-5 gap-2">
           {[
             { label: 'Failed events', value: metrics.failCount, icon: IconCircleX, tone: metrics.failCount ? 'text-rose-700 dark:text-rose-300' : 'text-[var(--ink)]', hint: metrics.failCount ? 'Review required' : 'No failures' },
             { label: 'High-impact', value: metrics.highImpactCount, icon: IconAlertTriangle, tone: 'text-amber-700 dark:text-amber-300', hint: 'Recorded changes' },
@@ -893,11 +915,10 @@ export default function AuditTrail() {
       )}
 
       {/* Comprehensive Filter Toolbar (Section C) */}
-      <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-xs space-y-3">
-        {/* Row 1: Search, Module, Action, Outcome */}
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-          {/* Quick Search */}
-          <div className="group relative flex items-center min-h-[40px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 transition focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15">
+      <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-3.5 shadow-xs space-y-3">
+        {/* Quick Search bar + Mobile Filters Toggle */}
+        <div className="flex items-center gap-2">
+          <div className="group relative flex flex-1 items-center min-h-[40px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 transition focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15">
             <IconSearch size={14} className="text-[var(--muted)] shrink-0 group-focus-within:text-[#1E3A5F]" />
             <input
               ref={searchInputRef}
@@ -918,6 +939,27 @@ export default function AuditTrail() {
               </button>
             ) : null}
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowMobileFilters(v => !v)}
+            className="lg:hidden inline-flex h-10 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] shadow-2xs shrink-0"
+            aria-label="Toggle filters"
+          >
+            <IconFilter size={15} />
+            <span>Filters</span>
+            {(moduleFilter !== 'ALL' || actionFilter !== 'ALL' || resultFilter !== 'ALL' || operatorFilter !== 'ALL' || entityFilter !== 'ALL' || dateFrom || dateTo) ? (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#1E3A5F] text-[10px] font-bold text-white">
+                !
+              </span>
+            ) : null}
+          </button>
+        </div>
+
+        {/* Filter Dropdowns (expandable on mobile, always visible on desktop) */}
+        <div className={`${showMobileFilters ? 'block' : 'hidden'} lg:block space-y-3`}>
+        {/* Row 1: Module, Action, Outcome */}
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
 
           {/* Module Filter */}
           <div className="flex items-center gap-1.5">
@@ -1146,6 +1188,7 @@ export default function AuditTrail() {
               <span className="text-[11px] text-[var(--muted)]">No active filters applied</span>
             )}
           </div>
+        </div>
         </div>
       </div>
 

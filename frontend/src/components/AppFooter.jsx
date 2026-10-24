@@ -5,67 +5,46 @@ export default function AppFooter({ shopName }) {
   const brandName = shopName || 'Dreamwithtech'
 
   const quickLinks = [
-    { label: 'Dashboard', path: '/' },
-    { label: 'Billing', path: '/billing/new' },
-    { label: 'Reports', path: '/reports' },
-    { label: 'Settings', path: '/settings' },
-    { label: 'Terms', path: '/terms-and-conditions' },
+    { label: 'Terms & Conditions', path: '/terms-and-conditions' },
+    { label: 'Support', path: '/support' },
   ]
 
   return (
-    <footer className="mt-auto border-t border-[var(--line)] bg-[var(--surface)]">
+    <footer className="mt-auto border-t border-[var(--line)] bg-[var(--surface)] pb-18 md:pb-3">
       <div className="mx-auto flex max-w-[1800px] flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-
         {/* Brand */}
         <div className="flex items-center gap-2">
           <img
             src="/logo.png"
             alt={`${brandName} logo`}
-            className="h-6 w-6 rounded object-contain"
+            className="h-5 w-5 sm:h-6 sm:w-6 rounded object-contain"
           />
-
           <span className="text-xs font-semibold text-[var(--text)]">
             {brandName}
           </span>
+          <span className="text-[11px] text-[var(--muted-light)]">ERP</span>
         </div>
 
-        {/* Links */}
-        <nav
-          aria-label="Footer navigation"
-          className="flex flex-wrap items-center gap-x-3 gap-y-1"
-        >
-          {quickLinks.map((link) => (
-            <Link
-              key={link.path}
-              to={link.path}
-              className="text-[11px] text-[var(--muted-light)] transition-colors hover:text-[var(--text)]"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-
-        {/* Copyright */}
-        <div className="flex items-center gap-3 text-[10px] text-[var(--muted-light)]">
-          <span>
-            © {currentYear} {brandName}
-          </span>
+        {/* Links & Copyright */}
+        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-x-4 gap-y-1 text-[11px] text-[var(--muted-light)]">
+          <nav aria-label="Footer navigation" className="flex items-center gap-3">
+            {quickLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className="transition-colors hover:text-[var(--text)]"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
 
           <span className="hidden sm:inline">·</span>
 
-          <span className="hidden sm:inline">
-            Powered by{' '}
-            <a
-              href="https://dreamwithtech.dev"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-[var(--text)] hover:underline"
-            >
-              Dreamwithtech
-            </a>
+          <span>
+            © {currentYear} {brandName}
           </span>
         </div>
-
       </div>
     </footer>
   )

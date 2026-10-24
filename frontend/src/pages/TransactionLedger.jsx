@@ -25,6 +25,7 @@ import {
 } from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 import { SearchBar } from '../components/UI'
+import { MobileKpiGrid } from '../components/MobileUI'
 
 // --------------------------------------------------
 // CONSTANTS
@@ -663,17 +664,37 @@ export default function TransactionLedger() {
             <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Transaction Ledger</h1>
             <p className="mt-1 text-sm text-[var(--muted)]">View, search, audit, and reconcile all payment transactions in one place.</p>
           </div>
-          <div className="flex gap-2">
-            <button type="button" onClick={exportCSV} disabled={loading || !visibleRows.length} className="btn-secondary inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold">
-              <IconDownload size={14} /> Export CSV
-            </button>
-            <button type="button" onClick={load} disabled={loading} className="btn-primary inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold">
-              <IconRefresh size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={exportCSV} disabled={loading || !visibleRows.length} className="btn-secondary inline-flex h-9 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold shadow-2xs">
+              <IconDownload size={14} /> <span>Export CSV</span>
             </button>
           </div>
         </header>
 
-        <section aria-label="Ledger summary" className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        {/* Mobile KPI Grid (Displays 2 initially with Show more for 3rd) */}
+        <MobileKpiGrid
+          title="Ledger Summary"
+          allKpis={[
+            {
+              label: 'Transactions',
+              value: summary.total.toLocaleString('en-IN'),
+              sub: `${summary.success} successful · ${summary.failed} failed`,
+            },
+            {
+              label: 'Collected',
+              value: fmt(summary.amount),
+              sub: `${summary.successRate.toFixed(1)}% success rate`,
+            },
+            {
+              label: 'Reconciliation · Net',
+              value: fmt(summary.net),
+              sub: 'After fees, tax & refunds',
+            },
+          ]}
+        />
+
+        {/* Desktop/Tablet KPI Summary */}
+        <section aria-label="Ledger summary" className="hidden md:grid md:grid-cols-3 gap-3">
           <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3.5">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">Transactions</h2>
             <p className="mt-1 font-mono text-2xl font-bold tabular-nums">{summary.total.toLocaleString('en-IN')}</p>
@@ -699,22 +720,41 @@ export default function TransactionLedger() {
           <span><strong className="font-semibold text-[var(--ink)]">{fmt(summary.tax)}</strong> tax</span>
         </div>
 
-        <section aria-label="Search and filters" className="flex flex-col gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 lg:flex-row lg:items-center">
-          <div className="min-w-0 flex-1">
-            <SearchBar value={search} onChange={setSearch} placeholder="Search invoice, order ID, payment ID, customer, email, or phone" className="min-w-0 w-full" shortcut="Ctrl+K" />
+        <section aria-label="Search and filters" className="flex flex-col gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <SearchBar value={search} onChange={setSearch} placeholder="Search invoice, order ID, payment ID, customer..." className="min-w-0 w-full" shortcut="Ctrl+K" />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowFilters(v => !v)}
+              className="lg:hidden inline-flex h-10 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] shadow-2xs shrink-0"
+              aria-label="Toggle filters"
+            >
+              <IconFilter size={15} />
+              <span>Filters</span>
+              {(statusFilter || methodFilter || dateFilter || reviewOnly) ? (
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#1E3A5F] text-[10px] font-bold text-white">
+                  {[statusFilter, methodFilter, dateFilter, reviewOnly].filter(Boolean).length}
+                </span>
+              ) : null}
+            </button>
           </div>
-          <select aria-label="Filter by status" className="h-10 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs" value={statusFilter} onChange={e => setStatus(e.target.value)}>
-            <option value="">All statuses</option>
-            {['success', 'failed', 'pending', 'created', 'initiated', 'refunded', 'expired'].map(status => <option key={status} value={status}>{titleCase(status)}</option>)}
-          </select>
-          <select aria-label="Filter by payment method" className="h-10 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs" value={methodFilter} onChange={e => setMethod(e.target.value)}>
-            {PAYMENT_METHODS.map(method => <option key={method} value={method === 'All methods' ? '' : method}>{method === 'All methods' ? method : titleCase(method)}</option>)}
-          </select>
-          <input aria-label="Filter by transaction date" type="date" className="h-10 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs" value={dateFilter} onChange={e => setDateFilter(e.target.value)} />
-          <button type="button" onClick={() => setReviewOnly(value => !value)} aria-pressed={reviewOnly} className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-md border px-2.5 text-xs font-medium ${reviewOnly ? 'border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200' : 'border-[var(--line)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)]'}`}>
-            <IconAlertCircle size={14} /> Needs review <span>{summary.unlinked}</span>
-          </button>
-          {(search || statusFilter || methodFilter || dateFilter || reviewOnly) && <button type="button" onClick={() => { setSearch(''); setStatus(''); setMethod(''); setDateFilter(''); setReviewOnly(false) }} className="h-10 px-2 text-xs font-medium text-[var(--muted)] hover:text-[var(--ink)]">Clear filters</button>}
+
+          <div className={`${showFilters ? 'flex' : 'hidden'} lg:flex flex-col lg:flex-row flex-wrap gap-2 items-stretch lg:items-center pt-2 lg:pt-0 border-t border-[var(--line-subtle)] lg:border-t-0`}>
+            <select aria-label="Filter by status" className="h-10 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs" value={statusFilter} onChange={e => setStatus(e.target.value)}>
+              <option value="">All statuses</option>
+              {['success', 'failed', 'pending', 'created', 'initiated', 'refunded', 'expired'].map(status => <option key={status} value={status}>{titleCase(status)}</option>)}
+            </select>
+            <select aria-label="Filter by payment method" className="h-10 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs" value={methodFilter} onChange={e => setMethod(e.target.value)}>
+              {PAYMENT_METHODS.map(method => <option key={method} value={method === 'All methods' ? '' : method}>{method === 'All methods' ? method : titleCase(method)}</option>)}
+            </select>
+            <input aria-label="Filter by transaction date" type="date" className="h-10 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs" value={dateFilter} onChange={e => setDateFilter(e.target.value)} />
+            <button type="button" onClick={() => setReviewOnly(value => !value)} aria-pressed={reviewOnly} className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-md border px-2.5 text-xs font-medium ${reviewOnly ? 'border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200' : 'border-[var(--line)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)]'}`}>
+              <IconAlertCircle size={14} /> Needs review <span>{summary.unlinked}</span>
+            </button>
+            {(search || statusFilter || methodFilter || dateFilter || reviewOnly) && <button type="button" onClick={() => { setSearch(''); setStatus(''); setMethod(''); setDateFilter(''); setReviewOnly(false) }} className="h-10 px-2 text-xs font-medium text-[var(--muted)] hover:text-[var(--ink)]">Clear filters</button>}
+          </div>
         </section>
 
         <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">

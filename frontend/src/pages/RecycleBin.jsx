@@ -139,17 +139,7 @@ export default function RecycleBin() {
       <PageHeader
         title="Recycle Bin & Reversal Register"
         subtitle="Manage soft-deleted catalog items and audit all cancelled statutory financial transactions."
-        action={
-          <button
-            type="button"
-            onClick={fetchData}
-            disabled={loading}
-            className="recycle-tab min-h-[42px] btn-base flex w-full items-center justify-center gap-1.5 rounded-lg border border-sky-300 bg-sky-50 px-3 text-xs font-semibold text-sky-700 hover:bg-sky-100 disabled:opacity-60 dark:border-sky-700 dark:bg-sky-950/50 dark:text-sky-200 dark:hover:bg-sky-900/60 sm:w-auto shadow-xs transition"
-          >
-            <IconRotate2 size={14} className={loading ? 'animate-spin' : ''} />
-            Refresh register
-          </button>
-        }
+        action={null}
       />
 
       {/* Statutory Notice Banner — Clean Light Amber Alert */}
@@ -284,8 +274,9 @@ export default function RecycleBin() {
                     </span>
                   </div>
                   {inv.cancel_reason && (
-                    <div className="text-[11px] italic text-amber-300 bg-amber-950/30 p-1.5 rounded border border-amber-800/40">
-                      "{inv.cancel_reason}"
+                    <div className="text-xs text-[var(--ink)] bg-[var(--surface-elevated)] p-2 rounded-lg border border-[var(--line)]">
+                      <span className="font-bold text-[var(--muted)] text-[10px] uppercase tracking-wider block mb-0.5">Cancellation Reason</span>
+                      <p className="italic font-medium text-rose-700 dark:text-rose-300">"{inv.cancel_reason}"</p>
                     </div>
                   )}
                   <div className="pt-1 flex items-center justify-between">
@@ -344,8 +335,8 @@ export default function RecycleBin() {
                       <td className="py-2.5 px-3 text-[var(--ink-secondary)]">
                         {inv.cancelled_by__username || 'System'}
                       </td>
-                      <td className="font-mono text-[var(--ink-secondary)] py-2.5 px-3">
-                        "{inv.cancel_reason || 'Reversed'}"
+                      <td className="text-xs text-[var(--ink)] py-2.5 px-3">
+                        <span className="italic font-medium text-rose-700 dark:text-rose-300">"{inv.cancel_reason || 'Reversed'}"</span>
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-semibold text-[var(--ink)]">
                         ₹{Number(inv.grand_total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}

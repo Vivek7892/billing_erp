@@ -299,8 +299,6 @@ function AppRoutes() {
             roles={[
               ROLES.OWNER,
               ROLES.ADMIN,
-              ROLES.MANAGER,
-              ROLES.ACCOUNTANT,
             ]}
           >
             <Reports />

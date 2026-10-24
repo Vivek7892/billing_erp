@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api, { API_BASE_URL } from '../api'
 import { getAccessToken } from '../services/tokenStorage'
 import { Badge, Spinner, Modal } from '../components/UI'
+import { MobileFAB } from '../components/MobileUI'
 import {
   IconRotate2,
   IconRefresh,
@@ -236,6 +237,7 @@ function ViewModal({ open, onClose, invoice }) {
 }
 
 export default function Returns() {
+  const [showKpis, setShowKpis] = useState(false)
   const navigate = useNavigate()
   const [invoices, setInvoices] = useState([])
   const [returns, setReturns] = useState([])
@@ -325,17 +327,7 @@ export default function Returns() {
           <p className="mt-0.5 text-xs text-[var(--muted)] max-w-2xl">Review returned items, refunded invoices, and process new returns.</p>
         </div>
 
-        <div className="grid w-full grid-cols-3 gap-1.5 sm:flex sm:w-auto sm:items-center sm:gap-2">
-          <button
-            type="button"
-            onClick={load}
-            disabled={loading}
-            className="btn-secondary inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold shadow-none transition"
-            title="Refresh returns list"
-          >
-            <IconRefresh size={13} className={loading ? 'animate-spin' : ''} />
-            <span>Refresh</span>
-          </button>
+        <div className="hidden sm:flex sm:w-auto sm:items-center sm:gap-2">
           <button
             type="button"
             onClick={() => navigate('/sales/invoices')}
@@ -356,7 +348,7 @@ export default function Returns() {
         </div>
       </div>
 
-      {/* Return & Refund Summary (Responsive KPI Grid) */}
+      {/* Return & Refund Summary (Responsive 4-card 2x2 Grid) */}
       <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
         <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x divide-[var(--line)]">
           <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
@@ -445,16 +437,7 @@ export default function Returns() {
         ) : null}
       </div>
 
-      {/* Refresh Button */}
-      <button
-        onClick={load}
-        type="button"
-        className="btn-icon h-[38px] w-[38px] rounded-xl border border-[var(--line)]"
-        aria-label="Refresh sales returns"
-        title="Refresh"
-      >
-        <IconRefresh size={15} strokeWidth={2} />
-      </button>
+      
     </div>
   </div>
         {loading ? <Spinner /> : (
@@ -843,6 +826,7 @@ export default function Returns() {
         </div>
       </Modal>
       <ViewModal open={!!viewModal} onClose={() => setViewModal(null)} invoice={viewModal} />
+      <MobileFAB icon={IconPlus} label="New Bill" to="/billing/new" />
     </div>
   )
 }

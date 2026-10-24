@@ -3,14 +3,18 @@ import { useLocation } from 'react-router-dom'
 import api, { API_BASE_URL } from '../api'
 import productService from '../features/inventory/api/productService'
 import { Badge, PageHeader, Modal, Spinner, EmptyState, Pagination, TableSkeleton, SearchBar } from '../components/UI'
+import { MobileKpiGrid, MobileFAB } from '../components/MobileUI'
 import { STOCK_STATUS } from '../constants'
 import toast from 'react-hot-toast'
 import BarcodePrintModal from '../components/BarcodePrintModal'
 import { InformationalBanner } from '../components/visual-content'
-import { InventoryWorkflowVisual } from '../components/visuals'
 import {
+  IconPlus,
   IconPackages,
   IconRefresh,
+  IconFileSpreadsheet,
+  IconFileTypeXls,
+  IconChevronUp,
   IconAlertTriangle,
   IconCircleCheck,
   IconCircleX,
@@ -74,6 +78,7 @@ const fmtCurrency = val =>
   })}`
 
 export default function Stock() {
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const location = useLocation()
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
@@ -112,8 +117,7 @@ export default function Stock() {
   const [historyList, setHistoryList] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [barcodeProduct, setBarcodeProduct] = useState(null)
-  const [workflowModal, setWorkflowModal] = useState(false)
-
+    
   const load = async () => {
     setLoading(true)
     try {
@@ -430,37 +434,17 @@ export default function Stock() {
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
-          <button
-            type="button"
-            onClick={() => setWorkflowModal(true)}
-            className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
-            title="View Real-Time Inventory Lifecycle"
-          >
-            <IconPackages size={13} className="text-[#0057B8] dark:text-sky-400" />
-            <span>Workflow</span>
-          </button>
-
+        <div className="hidden sm:flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
           <button
             type="button"
             onClick={exportStockCSV}
             disabled={loading || products.length === 0}
-            className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 disabled:opacity-50"
-            title="Download Stock CSV"
+            className="btn-secondary h-8 w-8 sm:h-8.5 sm:w-auto sm:px-2.5 text-xs font-semibold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 disabled:opacity-50"
+            title="Export Excel"
+            aria-label="Export Excel"
           >
-            <IconDownload size={13} />
-            <span>Export CSV</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={load}
-            disabled={loading}
-            className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
-            title="Refresh inventory"
-          >
-            <IconRefresh size={13} className={loading ? 'animate-spin text-[#1E3A5F]' : ''} />
-            <span>Refresh</span>
+            <IconFileTypeXls size={16} className="text-emerald-600 dark:text-emerald-400" />
+            <span className="hidden sm:inline">Excel</span>
           </button>
         </div>
       </div>
@@ -487,7 +471,23 @@ export default function Stock() {
       {/* =====================================================
           INVENTORY KPI STRIP (Ultra-compact ~70-85px)
       ====================================================== */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
+      {/* Mobile KPI Grid with Top-Right Round Button for >4 KPIs */}
+      <MobileKpiGrid
+        title="Stock Metrics"
+        primaryKpis={[
+          { label: 'Total Items', value: String(metrics.totalItems), sub: `${metrics.totalStockUnits.toLocaleString('en-IN')} units`, icon: IconPackages, onClick: () => setFilter('all') },
+          { label: 'In Stock', value: String(metrics.inStock), sub: 'Healthy balance', icon: IconCircleCheck, onClick: () => setFilter('in_stock') },
+          { label: 'Low Stock', value: String(metrics.lowStock), sub: 'Reorder alert', icon: IconAlertTriangle, onClick: () => setFilter('low_stock') },
+          { label: 'Out of Stock', value: String(metrics.outStock), sub: 'Zero inventory', icon: IconCircleX, onClick: () => setFilter('out_of_stock') },
+        ]}
+        secondaryKpis={[
+          { label: 'Valuation', value: fmtCurrency(metrics.totalStockValue), sub: 'Cost basis', icon: IconTag },
+          ...(nearExpiryBatches.length > 0 ? [{ label: 'Near Expiry', value: `${nearExpiryBatches.length} batches`, sub: '< 30 days', icon: IconAlertTriangle, onClick: () => setFilter('near_expiry') }] : []),
+        ]}
+      />
+
+      {/* Desktop KPI Strip (hidden sm:block) */}
+      <div className="hidden sm:block overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
         <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-5 sm:divide-y-0 sm:divide-x">
           {/* Total Products */}
           <div
@@ -600,13 +600,93 @@ export default function Stock() {
       </div>
 
       {/* =====================================================
-          COMPACT FILTER TOOLBAR (32-34px controls)
+          COMPACT FILTER TOOLBAR (Hidden on mobile by default)
       ====================================================== */}
-      <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 sm:p-2.5 shadow-2xs space-y-2">
-        {/* Row 1: Status pills + Dropdowns */}
+      {/* Mobile Search & Filter Toggle Bar */}
+      <div className="flex items-center gap-2 sm:hidden">
+        <div className="group relative flex min-w-0 flex-1 items-center h-[36px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5">
+          <IconPackage size={14} className="shrink-0 text-[var(--muted)] mr-2" />
+          <input
+            className="w-full bg-transparent text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
+            placeholder="Search stock..."
+            value={q}
+            onChange={e => setQ(e.target.value)}
+          />
+          {q && (
+            <button
+              type="button"
+              onClick={() => setQ('')}
+              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[var(--muted)]"
+            >
+              <IconX size={13} />
+            </button>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setMobileFiltersOpen(v => !v)}
+          className={`flex h-[36px] items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold shadow-2xs transition active:scale-95 ${
+            mobileFiltersOpen || isFilterActive
+              ? 'border-[#1E3A5F] bg-blue-50 text-[#1E3A5F] dark:border-blue-700 dark:bg-blue-950/60 dark:text-sky-300 font-bold'
+              : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+          }`}
+        >
+          <IconFilter size={14} />
+          <span>Filters</span>
+          {isFilterActive && (
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#1E3A5F] text-[9px] font-bold text-white">
+              •
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Filter Section: Hidden on mobile unless opened; always visible on desktop */}
+      <div className={`${mobileFiltersOpen ? 'block' : 'hidden'} sm:block rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3 shadow-2xs space-y-2.5`}>
+        {/* Search Bar on Desktop */}
+        <div className="hidden sm:flex items-center gap-2">
+          <div className="group relative flex min-w-0 flex-1 items-center h-[36px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 transition hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-1 focus-within:ring-[#1E3A5F]/20">
+            <IconPackage size={14} className="shrink-0 text-[var(--muted)] group-focus-within:text-[#1E3A5F] dark:group-focus-within:text-sky-300 mr-2" />
+            <input
+              className="w-full bg-transparent text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
+              placeholder="Search product name, SKU, barcode, supplier..."
+              value={q}
+              onChange={e => setQ(e.target.value)}
+            />
+            {q ? (
+              <button
+                type="button"
+                onClick={() => setQ('')}
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
+                aria-label="Clear search"
+                title="Clear search"
+              >
+                <IconX size={13} />
+              </button>
+            ) : (
+              <kbd className="hidden sm:inline-flex shrink-0 items-center rounded border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)]">
+                Ctrl+K
+              </kbd>
+            )}
+          </div>
+
+          {isFilterActive && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="inline-flex h-[36px] items-center justify-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300 shrink-0"
+              title="Reset all filters"
+            >
+              <IconX size={13} />
+              <span className="hidden sm:inline">Reset</span>
+            </button>
+          )}
+        </div>
+
+        {/* Status Pills & Dropdowns */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           {/* Quick status pills with live counts */}
-          <div className="flex items-center gap-1 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+          <div className="flex items-center gap-1 overflow-x-auto pb-0.5 no-scrollbar">
             {[
               { key: 'all', label: 'All', count: metrics.totalItems },
               { key: 'in_stock', label: 'In Stock', count: metrics.inStock },
@@ -667,46 +747,6 @@ export default function Stock() {
             </select>
           </div>
         </div>
-
-        {/* Row 2: Search input + Clear button */}
-        <div className="flex items-center gap-2">
-          <div className="group relative flex min-w-0 flex-1 items-center h-[34px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 transition hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-1 focus-within:ring-[#1E3A5F]/20">
-            <IconPackage size={14} className="shrink-0 text-[var(--muted)] group-focus-within:text-[#1E3A5F] dark:group-focus-within:text-sky-300 mr-2" />
-            <input
-              className="w-full bg-transparent text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
-              placeholder="Search product name, SKU, barcode, supplier... (Ctrl+K)"
-              value={q}
-              onChange={e => setQ(e.target.value)}
-            />
-            {q ? (
-              <button
-                type="button"
-                onClick={() => setQ('')}
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
-                aria-label="Clear search"
-                title="Clear search"
-              >
-                <IconX size={13} />
-              </button>
-            ) : (
-              <kbd className="hidden sm:inline-flex shrink-0 items-center rounded border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)]">
-                Ctrl+K
-              </kbd>
-            )}
-          </div>
-
-          {isFilterActive && (
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="inline-flex h-[34px] items-center justify-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300 shrink-0"
-              title="Reset all filters"
-            >
-              <IconX size={13} />
-              <span>Reset</span>
-            </button>
-          )}
-        </div>
       </div>
 
       {/* =====================================================
@@ -717,9 +757,7 @@ export default function Stock() {
           <TableSkeleton rows={10} cols={8} label="Loading inventory stock" />
         ) : filteredProducts.length === 0 ? (
           <div className="px-4 py-12 flex flex-col items-center">
-            {!isFilterActive && (
-              <InventoryWorkflowVisual className="w-full max-w-md mb-4 border-0 shadow-none bg-transparent" />
-            )}
+            
             <EmptyState
               
               action={
@@ -800,35 +838,35 @@ export default function Stock() {
                     </div>
 
                     {/* Action Bar — Mobile-Friendly Button Placements */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-[var(--line-subtle)]">
+                    <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-[var(--line-subtle)]">
                       <button
                         type="button"
                         onClick={() => setBarcodeProduct(p)}
-                        className="min-h-[38px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] flex items-center justify-center gap-1.5 shadow-2xs transition active:scale-95"
+                        className="h-8 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] flex items-center justify-center gap-1 shadow-2xs transition active:scale-95"
                         title="Print Barcode Labels"
                       >
-                        <IconBarcode size={14} />
-                        <span>Barcode</span>
+                        <IconBarcode size={13} className="shrink-0" />
+                        <span className="truncate">Barcode</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => openHistory(p)}
-                        className="min-h-[38px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] flex items-center justify-center gap-1.5 shadow-2xs transition active:scale-95"
+                        className="h-8 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] flex items-center justify-center gap-1 shadow-2xs transition active:scale-95"
                         title="Movement History"
                       >
-                        <IconHistory size={14} />
-                        <span>History</span>
+                        <IconHistory size={13} className="shrink-0" />
+                        <span className="truncate">History</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => openAdjust(p)}
-                        className="col-span-2 sm:col-span-1 min-h-[38px] rounded-lg bg-[#1E3A5F] text-white px-3.5 py-1.5 text-xs font-semibold hover:bg-[#162F4D] flex items-center justify-center gap-1.5 shadow-2xs transition active:scale-95"
-                        title="Adjust"
+                        className="h-8 rounded-lg bg-[#1E3A5F] text-white px-1.5 text-xs font-semibold hover:bg-[#162F4D] flex items-center justify-center gap-1 shadow-2xs transition active:scale-95"
+                        title="Adjust Stock"
                       >
-                        <IconAdjustmentsHorizontal size={14} />
-                        <span>Adjust</span>
+                        <IconAdjustmentsHorizontal size={13} className="shrink-0" />
+                        <span className="truncate">Adjust</span>
                       </button>
                     </div>
                   </article>
@@ -1366,18 +1404,7 @@ export default function Stock() {
         onClose={() => setBarcodeProduct(null)}
         product={barcodeProduct}
       />
-
-      {/* Real-time Inventory Workflow Visual Modal */}
-      {workflowModal && (
-        <Modal
-          isOpen={workflowModal}
-          onClose={() => setWorkflowModal(false)}
-          title="Real-Time Inventory Workflow"
-          size="lg"
-        >
-          <InventoryWorkflowVisual className="w-full border-0 shadow-none p-0" />
-        </Modal>
-      )}
+      <MobileFAB icon={IconPlus} label="Product" onClick={() => navigate('/products')} />
     </div>
   )
 }

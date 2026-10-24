@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom'
 import api from '../api'
 import { PageHeader, Spinner } from '../components/UI'
 import { InformationalBanner } from '../components/visual-content'
-import { ReportsAnalyticsVisual } from '../components/visuals'
 import {
   IconTrendingUp,
   IconPackage,
@@ -16,9 +15,12 @@ import {
   IconRefresh,
   IconFileText,
   IconFileSpreadsheet,
+  IconFileTypePdf,
+  IconFileTypeXls,
   IconAlertCircle,
   IconInfoCircle,
   IconRotate2,
+  IconChevronDown,
   IconX,
 } from '@tabler/icons-react'
 import {
@@ -103,7 +105,7 @@ function ReportDateField({ label, value, min, max, onChange, id }) {
   }
 
   return (
-   <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-none">
+    <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-none">
       <label
         htmlFor={id}
         className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]"
@@ -120,7 +122,7 @@ function ReportDateField({ label, value, min, max, onChange, id }) {
           onBlur={() => setDraft(formatDateInput(value))}
           placeholder="DD/MM/YYYY"
           aria-label={`${label} date in DD/MM/YYYY format`}
-         className="input h-8 min-h-8 w-full min-w-0 pr-7 text-xs font-mono font-semibold tracking-wide sm:w-28 focus:ring-1 focus:ring-[#1E3A5F]"
+          className="input h-8 min-h-8 w-full min-w-0 pr-7 text-xs font-mono font-semibold tracking-wide sm:w-28"
         />
         <input
           ref={dateInputRef}
@@ -206,18 +208,7 @@ export default function Reports() {
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState('')
   const [error, setError] = useState('')
-  const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false)
-
-  useEffect(() => {
-    if (!analyticsModalOpen) return undefined
-
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') setAnalyticsModalOpen(false)
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [analyticsModalOpen])
+  const [mobileDateFilterOpen, setMobileDateFilterOpen] = useState(false)
 
   const activeRequestRef = useRef(0)
   const abortControllerRef = useRef(null)
@@ -268,7 +259,7 @@ export default function Reports() {
         if (reqId === activeRequestRef.current) {
           const msg =
             err.response?.status === 403
-              ? 'Reports are restricted to administrator and accountant roles.'
+              ? 'Reports are restricted to administrator and owner roles.'
               : err.response?.data?.detail ||
                 'Failed to load report from server. Please try again.'
           setError(msg)
@@ -440,37 +431,27 @@ export default function Reports() {
         title="Business Reports"
         subtitle="Sales, tax, payments, and operating summaries for your selected period."
         action={
-          <div className="grid w-full grid-cols-2 gap-1.5 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-2">
-            <button
-              type="button"
-              onClick={() => setAnalyticsModalOpen(true)}
-              className="btn-secondary inline-flex h-8 min-w-0 items-center justify-center gap-1 px-2 text-[11px] font-semibold sm:h-9 sm:gap-1.5 sm:px-3 sm:text-xs"
-              title="View Real-Time Analytics Engine Lifecycle"
-            >
-              <IconTrendingUp size={14} className="text-[#0057B8] dark:text-sky-400" />
-              <span className="truncate">Analytics Flow</span>
-            </button>
-
+          <div className="flex w-full sm:w-auto items-center justify-end gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={() => handleExport('pdf')}
               disabled={Boolean(exporting) || loading}
-              className="btn-secondary inline-flex h-8 min-w-0 items-center justify-center gap-1 px-2 text-[11px] font-semibold sm:h-9 sm:gap-1.5 sm:px-3 sm:text-xs"
+              className="btn-secondary inline-flex h-8 min-w-0 items-center justify-center gap-1.5 px-3 text-xs font-semibold sm:h-9"
               title="Download formal black-and-white A4 PDF Report"
             >
-              <IconFileText size={14} className="text-slate-700 dark:text-slate-300" />
-              <span className="truncate">{exporting === 'pdf' ? 'Generating PDF…' : 'Export PDF'}</span>
+              <IconFileTypePdf size={16} className="text-rose-600 dark:text-rose-400" />
+              <span className="truncate">{exporting === 'pdf' ? 'Generating PDF…' : 'PDF'}</span>
             </button>
 
             <button
               type="button"
               onClick={() => handleExport('xlsx')}
               disabled={Boolean(exporting) || loading}
-              className="btn-secondary inline-flex h-8 min-w-0 items-center justify-center gap-1 px-2 text-[11px] font-semibold sm:h-9 sm:gap-1.5 sm:px-3 sm:text-xs"
+              className="btn-secondary inline-flex h-8 min-w-0 items-center justify-center gap-1.5 px-3 text-xs font-semibold sm:h-9"
               title="Download formatted Excel workbook"
             >
-              <IconFileSpreadsheet size={14} className="text-slate-700 dark:text-slate-300" />
-              <span className="truncate">{exporting === 'xlsx' ? 'Generating Excel…' : 'Export Excel'}</span>
+              <IconFileTypeXls size={16} className="text-emerald-600 dark:text-emerald-400" />
+              <span className="truncate">{exporting === 'xlsx' ? 'Generating Excel…' : 'Excel'}</span>
             </button>
           </div>
         }
@@ -516,10 +497,47 @@ export default function Reports() {
           DATE RANGE & FILTER CONTROLS
       ====================================================== */}
       {tab !== 'customers' ? (
-  <section
-    className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-xs sm:p-5"
-    aria-label="Report date filters"
-  >
+  <>
+    {/* Compact Mobile Date Bar + Simple Excel/PDF Symbol Buttons */}
+    <div className="flex sm:hidden items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-2xs">
+      <button
+        type="button"
+        onClick={() => setMobileDateFilterOpen(v => !v)}
+        className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs font-semibold text-[var(--ink)]"
+      >
+        <IconCalendar size={14} className="text-[#1E3A5F] dark:text-sky-400 shrink-0" />
+        <span className="truncate">{appliedDates.start} → {appliedDates.end}</span>
+        <IconChevronDown size={14} className={`shrink-0 text-[var(--muted)] transition-transform ${mobileDateFilterOpen ? 'rotate-180' : ''}`} />
+      </button>
+      <div className="flex items-center gap-1 shrink-0">
+        <button
+          type="button"
+          onClick={() => handleExport('xlsx')}
+          disabled={Boolean(exporting) || loading}
+          title="Export Excel"
+          aria-label="Export Excel"
+          className="btn-secondary h-8 w-8 inline-flex items-center justify-center rounded-lg p-0"
+        >
+          <IconFileTypeXls size={16} className="text-emerald-600 dark:text-emerald-400" />
+        </button>
+        <button
+          type="button"
+          onClick={() => handleExport('pdf')}
+          disabled={Boolean(exporting) || loading}
+          title="Export PDF"
+          aria-label="Export PDF"
+          className="btn-secondary h-8 w-8 inline-flex items-center justify-center rounded-lg p-0"
+        >
+          <IconFileTypePdf size={16} className="text-rose-600 dark:text-rose-400" />
+        </button>
+      </div>
+    </div>
+
+    {/* Expandable on Mobile, Always Visible on Desktop */}
+    <section
+      className={`${mobileDateFilterOpen ? 'block' : 'hidden'} sm:block rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-5 shadow-xs`}
+      aria-label="Report date filters"
+    >
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
       <div className="flex flex-col gap-2">
         <span className="text-xs font-semibold text-[var(--ink-secondary)]">Date range</span>
@@ -602,6 +620,7 @@ export default function Reports() {
       </p>
     )}
   </section>
+  </>
 ) : (
   <div className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] px-3 py-2 text-[11px] text-[var(--muted)]">
     <IconInfoCircle
@@ -664,43 +683,7 @@ export default function Reports() {
         <span>{tab === 'customers' ? 'Receivables are current as of today.' : `Reporting period: ${formatDateInput(appliedDates.start)} – ${formatDateInput(appliedDates.end)}`}</span>
         <span>Amounts are shown in INR</span>
       </footer>
-      {analyticsModalOpen && createPortal(
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/65 p-3 backdrop-blur-sm sm:p-5"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setAnalyticsModalOpen(false)
-          }}
-          role="presentation"
-        >
-          <section
-            className="relative max-h-[calc(100dvh-24px)] w-full max-w-xl overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-900 sm:max-h-[88vh]"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="reports-analytics-title"
-          >
-            <div className="mb-3 flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <span className="rounded-lg bg-[#0057B8]/10 p-1.5 text-[#0057B8] dark:text-sky-400">
-                  <IconTrendingUp size={16} />
-                </span>
-                <h3 id="reports-analytics-title" className="text-sm font-bold text-[var(--ink)]">
-                  Executive Analytics Engine
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAnalyticsModalOpen(false)}
-                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
-                aria-label="Close analytics flow"
-              >
-                <IconX size={16} />
-              </button>
-            </div>
-            <ReportsAnalyticsVisual className="w-full border-0 p-0 shadow-none" />
-          </section>
-        </div>,
-        document.body,
-      )}
+      
     </div>
   )
 }

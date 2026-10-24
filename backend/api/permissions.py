@@ -1,9 +1,10 @@
 from rest_framework.permissions import BasePermission
 
 ADMIN_ROLES = ('owner', 'admin')
-MANAGER_ROLES = ('owner', 'admin', 'manager')
-ALL_STAFF_ROLES = ('owner', 'admin', 'manager', 'cashier', 'accountant')
-FINANCE_ROLES = ('owner', 'admin', 'manager', 'accountant')
+CASHIER_ROLES = ('cashier',)
+ALL_STAFF_ROLES = ('owner', 'admin', 'cashier')
+MANAGER_ROLES = ADMIN_ROLES
+FINANCE_ROLES = ADMIN_ROLES
 
 
 class IsOwnerOrAdmin(BasePermission):
@@ -17,7 +18,7 @@ IsAdmin = IsOwnerOrAdmin
 
 class IsManagerOrAbove(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role in MANAGER_ROLES
+        return request.user.is_authenticated and request.user.role in ADMIN_ROLES
 
 
 class IsAdminOrReadOnly(BasePermission):
@@ -30,23 +31,23 @@ class IsAdminOrReadOnly(BasePermission):
 
 
 class IsManagerOrReadOnly(BasePermission):
-    """All staff may read; managers and admins may mutate operational data."""
+    """All staff may read; admins and owners may mutate operational data."""
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
         if request.method in ('GET', 'HEAD', 'OPTIONS'):
             return request.user.role in ALL_STAFF_ROLES
-        return request.user.role in MANAGER_ROLES
+        return request.user.role in ADMIN_ROLES
 
 
 class IsFinanceStaff(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role in FINANCE_ROLES
+        return request.user.is_authenticated and request.user.role in ADMIN_ROLES
 
 
 class IsManagerOrAdmin(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role in MANAGER_ROLES
+        return request.user.is_authenticated and request.user.role in ADMIN_ROLES
 
 
 class IsCashierOrAdmin(BasePermission):
@@ -56,4 +57,4 @@ class IsCashierOrAdmin(BasePermission):
 
 class IsAccountantOrAdmin(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role in ('owner', 'admin', 'accountant')
+        return request.user.is_authenticated and request.user.role in ADMIN_ROLES

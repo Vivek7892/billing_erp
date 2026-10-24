@@ -31,6 +31,8 @@ import {
   IconX,
   IconUserCheck,
   IconAdjustments,
+  IconEye,
+  IconArrowLeft,
   IconCircleCheck,
   IconExternalLink,
   IconMessageCircle,
@@ -361,6 +363,8 @@ export default function Settings() {
 
   // Print Settings Tab sub-view: 'thermal' or 'barcode'
   const [printSubTab, setPrintSubTab] = useState('thermal')
+  const [mobileInvoiceView, setMobileInvoiceView] = useState('settings')
+  const [mobilePrintView, setMobilePrintView] = useState('settings')
 
   const [downloadingQrPng, setDownloadingQrPng] = useState(false)
 
@@ -946,10 +950,57 @@ export default function Settings() {
         ============================================================ */}
         {activeTab === 'invoice-settings' && (
           <div className="flex-1 flex flex-col min-h-0 px-1 pt-0 pb-2 sm:px-2 sm:pb-3 max-w-none w-full mx-auto xl:overflow-hidden">
+            {/* Mobile View Switcher: Settings vs Live Preview */}
+            <div className="flex xl:hidden mb-2 p-1 rounded-xl bg-slate-200/80 grid grid-cols-2 gap-1">
+              <button
+                type="button"
+                onClick={() => setMobileInvoiceView('settings')}
+                className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
+                  mobileInvoiceView === 'settings'
+                    ? 'bg-white text-indigo-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <IconAdjustments size={15} />
+                <span>Invoice Settings</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileInvoiceView('preview')}
+                className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
+                  mobileInvoiceView === 'preview'
+                    ? 'bg-white text-indigo-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <IconEye size={15} />
+                <span>Live Preview</span>
+              </button>
+            </div>
+
             {/* Responsive preview and compact theme panel */}
             <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 xl:flex-1 xl:min-h-0 xl:items-stretch xl:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_420px] 2xl:grid-cols-[minmax(0,1fr)_440px]">
               {/* Invoice preview */}
-              <div className="order-1 flex min-w-0 flex-col overflow-hidden bg-transparent xl:min-h-0">
+              <div className={`${mobileInvoiceView === 'preview' ? 'flex' : 'hidden'} xl:flex order-1 flex min-w-0 flex-col overflow-hidden bg-transparent xl:min-h-0`}>
+                {/* Mobile Preview Top Navigation Bar */}
+                <div className="flex xl:hidden items-center justify-between gap-2 p-2 rounded-lg bg-white border border-slate-200 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => setMobileInvoiceView('settings')}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600"
+                  >
+                    <IconArrowLeft size={14} />
+                    <span>Back to Settings</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => printInvoiceDirect(previewTemplateId)}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-2xs active:scale-95 transition-transform"
+                  >
+                    <IconPrinter size={13} />
+                    <span>Print Test</span>
+                  </button>
+                </div>
                 {/* Preview Toolbar */}
                 <div className="px-1 pb-2 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
@@ -957,8 +1008,18 @@ export default function Settings() {
                 </div>
 
                 {/* Live Canvas Area */}
-                <div className="settings-print-preview-stage flex h-[calc(100dvh-9.5rem)] min-h-[420px] min-w-0 items-start justify-start overflow-auto overscroll-contain bg-slate-100/90 p-2.5 sm:p-3 xl:h-auto xl:min-h-0 xl:flex-1">
-                  <div className="settings-print-invoice-target mx-auto my-0 min-w-0 shrink-0" style={{ width: previewDocumentWidth, height: previewDocumentHeight }}>
+                <div className="settings-print-preview-stage flex h-[calc(100dvh-12rem)] min-h-[420px] min-w-0 items-start justify-center overflow-auto overscroll-contain bg-slate-100/90 p-2 sm:p-3 xl:h-auto xl:min-h-0 xl:flex-1">
+                  <div
+                    className="settings-print-invoice-target mx-auto my-0 min-w-0 shrink-0 origin-top"
+                    style={{
+                      width: previewDocumentWidth,
+                      height: previewDocumentHeight,
+                      transform: typeof window !== 'undefined' && window.innerWidth < 768 && previewDocumentWidth > 400
+                        ? `scale(${Math.min(1, (window.innerWidth - 32) / previewDocumentWidth)})`
+                        : undefined,
+                      transformOrigin: 'top center',
+                    }}
+                  >
                     <div className="origin-top-left bg-white shadow-md" style={{ width: previewDocumentWidth }}>
                       <InvoiceDocument invoice={sampleInvoice} settings={settings} templateConfig={previewTemplateConfig} mode={previewTemplateId} showModePicker={false} />
                     </div>
@@ -967,7 +1028,7 @@ export default function Settings() {
               </div>
 
               {/* Theme settings panel */}
-              <div className="order-2 w-full min-w-0 space-y-3 xl:h-full xl:max-h-full xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+              <div className={`${mobileInvoiceView === 'settings' ? 'block' : 'hidden'} xl:block order-2 w-full min-w-0 space-y-3 xl:h-full xl:max-h-full xl:overflow-y-auto xl:overscroll-contain xl:pr-1`}>
                 <section className="overflow-hidden">
                   <div className="flex items-center gap-2 pb-2">
                     <span className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-50 text-indigo-700"><IconReceipt size={16} /></span>
@@ -987,7 +1048,7 @@ export default function Settings() {
                   </div>
 
                   <div className="pb-1">
-                    <div className="grid w-full grid-cols-4 gap-2">
+                    <div className="grid w-full grid-cols-2 sm:grid-cols-4 gap-2">
                     <div role="radiogroup" aria-label="Invoice themes" className="contents">
                     {featuredInvoiceTemplates.map(template => {
                       const isDefault = selectedTemplateId === template.baseId
@@ -1052,7 +1113,7 @@ export default function Settings() {
                     <h2 className="text-sm font-semibold text-slate-900">Select Color</h2>
                     <p className="mt-0.5 text-[11px] text-slate-500">The selected color appears in the live invoice.</p>
                   </div>
-                  <div className="mt-3 flex flex-nowrap items-center justify-between gap-1 pb-1">
+                  <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none">
                     {INVOICE_THEME_COLORS.map(color => {
                       const selected = (settings.invoice_theme_color || '#1e3a5f').toLowerCase() === color.value
                       return (
@@ -1409,6 +1470,18 @@ export default function Settings() {
                 </AccordionSection>
               </div>
             </div>
+            {/* Floating Live Preview Button on Mobile */}
+            {mobileInvoiceView === 'settings' && (
+              <button
+                type="button"
+                onClick={() => setMobileInvoiceView('preview')}
+                className="xl:hidden fixed bottom-20 right-4 z-40 flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-indigo-600/30 active:scale-95 transition-transform"
+                aria-label="View Live Preview"
+              >
+                <IconEye size={16} />
+                <span>Live Preview</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -1417,10 +1490,57 @@ export default function Settings() {
         ============================================================ */}
         {activeTab === 'print-settings' && (
           <div className="flex-1 flex flex-col min-h-0 px-1 pt-0 pb-2 sm:px-2 sm:pb-3 max-w-[1600px] w-full mx-auto xl:overflow-hidden">
+            {/* Mobile View Switcher for Print Settings */}
+            <div className="flex xl:hidden mb-2 p-1 rounded-xl bg-slate-200/80 grid grid-cols-2 gap-1">
+              <button
+                type="button"
+                onClick={() => setMobilePrintView('settings')}
+                className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
+                  mobilePrintView === 'settings'
+                    ? 'bg-white text-indigo-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <IconAdjustments size={15} />
+                <span>Configuration</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobilePrintView('preview')}
+                className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${
+                  mobilePrintView === 'preview'
+                    ? 'bg-white text-indigo-700 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <IconEye size={15} />
+                <span>Live Preview</span>
+              </button>
+            </div>
+
             {/* Responsive Two-Column Arrangement: Left 60% Preview, Right 40% Configuration */}
             <div className="grid grid-cols-1 items-start gap-3 sm:gap-4 xl:flex-1 xl:min-h-0 xl:items-stretch xl:grid-rows-1 xl:grid-cols-[minmax(0,1fr)_420px]">
               {/* Left Column (~60%): Live Preview (Thermal Receipt or Barcode Label) */}
-              <div className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xs xl:min-h-0">
+              <div className={`${mobilePrintView === 'preview' ? 'flex' : 'hidden'} xl:flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xs xl:min-h-0`}>
+                {/* Mobile Preview Top Navigation Bar */}
+                <div className="flex xl:hidden items-center justify-between gap-2 p-2 border-b border-slate-200 bg-slate-50">
+                  <button
+                    type="button"
+                    onClick={() => setMobilePrintView('settings')}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600"
+                  >
+                    <IconArrowLeft size={14} />
+                    <span>Back to Configuration</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => printInvoiceDirect(printSubTab === 'thermal' ? (settings.thermal_paper_width === '58' ? 'thermal_58' : 'thermal_80') : 'barcode')}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-2xs active:scale-95 transition-transform"
+                  >
+                    <IconPrinter size={13} />
+                    <span>Print Test</span>
+                  </button>
+                </div>
                 {/* Preview Toolbar */}
                 <div className="p-3 sm:px-4 border-b border-slate-200 bg-slate-50/90 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
@@ -1522,7 +1642,7 @@ export default function Settings() {
               </div>
 
               {/* Right Column (~40%): Controls with EXACTLY TWO TABS */}
-              <div className="min-w-0 space-y-4 xl:h-full xl:max-h-full xl:overflow-y-auto xl:overscroll-contain xl:pr-1">
+              <div className={`${mobilePrintView === 'settings' ? 'block' : 'hidden'} xl:block min-w-0 space-y-4 xl:h-full xl:max-h-full xl:overflow-y-auto xl:overscroll-contain xl:pr-1`}>
                 {/* The Two Main Tabs */}
                 <div className="p-1 rounded-xl bg-slate-200/80 grid grid-cols-2 gap-1">
                   <button
@@ -2140,6 +2260,18 @@ export default function Settings() {
                 )}
               </div>
             </div>
+            {/* Floating Live Preview Button on Mobile */}
+            {mobilePrintView === 'settings' && (
+              <button
+                type="button"
+                onClick={() => setMobilePrintView('preview')}
+                className="xl:hidden fixed bottom-20 right-4 z-40 flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-indigo-600/30 active:scale-95 transition-transform"
+                aria-label="View Live Preview"
+              >
+                <IconEye size={16} />
+                <span>Live Preview</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -2480,7 +2612,7 @@ export default function Settings() {
 
               {/* Threshold Rules Grid */}
               <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-2xs space-y-4">
-                <SettingRow label="Price Change Threshold (%)" description="Price variance exceeding this % triggers mandatory manager sign-off." id="approval_price_change_pct">
+                <SettingRow label="Price Change Threshold (%)" description="Price variance exceeding this % triggers mandatory admin sign-off." id="approval_price_change_pct">
                   <TextInput
                     id="approval_price_change_pct"
                     type="number"
@@ -2490,7 +2622,7 @@ export default function Settings() {
                   />
                 </SettingRow>
 
-                <SettingRow label="Refund Threshold (₹)" description="Cash/Card refunds exceeding this amount require manager approval." id="approval_refund_threshold">
+                <SettingRow label="Refund Threshold (₹)" description="Cash/Card refunds exceeding this amount require admin approval." id="approval_refund_threshold">
                   <TextInput
                     id="approval_refund_threshold"
                     type="number"
@@ -2518,7 +2650,7 @@ export default function Settings() {
                     checked={isTrue(settings.approval_invoice_cancellation_enabled, true)}
                     onChange={v => setField('approval_invoice_cancellation_enabled', String(v))}
                     label="Invoice Cancellation requires Admin Approval"
-                    description="Cashiers cannot void saved tax invoices without manager dual-control."
+                    description="Cashiers cannot void saved tax invoices without admin approval."
                   />
                   <CheckboxField
                     checked={isTrue(settings.approval_user_role_change_enabled, true)}

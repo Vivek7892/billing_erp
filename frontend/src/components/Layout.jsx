@@ -1,3 +1,4 @@
+import { MobileBottomNav, MobileQuickActionSheet } from './MobileUI'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import api from '../api'
@@ -96,7 +97,7 @@ const NAV_GROUPS = [
     label: 'Business',
     items: [
       { to: '/expenses', icon: IconCurrencyRupee, label: 'Expenses' },
-      { to: '/reports', icon: IconChartBar, label: 'Reports', roles: [ROLES.OWNER, ROLES.ADMIN, ROLES.MANAGER, ROLES.ACCOUNTANT] }
+      { to: '/reports', icon: IconChartBar, label: 'Reports', roles: [ROLES.OWNER, ROLES.ADMIN] }
     ]
   },
   {
@@ -577,7 +578,7 @@ function NotificationBell() {
   const ref = useRef()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const canManageApprovals = [ROLES.OWNER, ROLES.ADMIN, ROLES.MANAGER].includes(user?.role) || user?.is_superuser
+  const canManageApprovals = [ROLES.OWNER, ROLES.ADMIN].includes(user?.role) || user?.is_superuser
 
   const getNotificationDestination = notification => {
     const data = notification.data || {}
@@ -661,7 +662,7 @@ function NotificationBell() {
   const handleQuickApproval = async (e, n, action) => {
     e.stopPropagation()
     if (!canManageApprovals) {
-      toast.error('Access Denied: Manager or Administrator sign-off required for this approval.', { icon: '🔒' })
+      toast.error('Access Denied: Administrator sign-off required for this approval.', { icon: '🔒' })
       return
     }
 
@@ -902,7 +903,7 @@ function NotificationBell() {
                               </>
                             ) : (
                               <span className="text-[11px] font-medium text-amber-700 dark:text-amber-400">
-                                Awaiting Manager Sign-off
+                                Awaiting Admin Sign-off
                               </span>
                             )}
                           </div>
@@ -1149,56 +1150,39 @@ function ProfileMenu({ user }) {
       </button>
 
       {open && (
-        <div
-          role="menu"
-          aria-label="Profile menu"
-          className="absolute right-0 top-full z-50 mt-2 hidden w-[min(18rem,calc(100vw-1rem))] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-lg sm:block"
-        >
-          <div className="flex items-center gap-3 border-b border-[var(--line)] px-3 py-3">
-            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-sm font-bold text-[var(--primary-contrast)]">{initials}</span>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-[var(--ink)]">{displayName}</p>
-              <p className="truncate text-[11px] text-[var(--muted)]">{user?.email || 'Signed in'}</p>
-              {user?.role && <p className="mt-0.5 text-[10px] capitalize text-[var(--muted)]">{user.role}</p>}
-            </div>
-          </div>
-          {profileActions()}
-        </div>
-      )}
-
-      {open && (
-        <div className="fixed inset-0 z-[100] sm:hidden" role="presentation">
-          <button
-            type="button"
-            aria-label="Close profile drawer"
-            className="absolute inset-0 h-full w-full bg-slate-950/45 backdrop-blur-[2px]"
+        <>
+          {/* Backdrop for click outside */}
+          <div
+            className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[1px]"
             onClick={() => setOpen(false)}
           />
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-label="Profile and account options"
-            className="absolute inset-x-3 bottom-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-2xl"
+          {/* Unified compact top-right popup for both mobile and desktop */}
+          <div
+            role="menu"
+            aria-label="Profile menu"
+            className="absolute right-0 top-full z-50 mt-2 w-72 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-xl animate-in fade-in slide-in-from-top-1 duration-150"
           >
-            <div className="flex items-center gap-3 border-b border-[var(--line)] px-4 py-4">
-              <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-sm font-bold text-[var(--primary-contrast)]">{initials}</span>
+            <div className="flex items-center gap-2.5 border-b border-[var(--line)] p-3">
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-xs font-bold text-[var(--primary-contrast)]">
+                {initials}
+              </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-[var(--ink)]">{displayName}</p>
-                <p className="truncate text-xs text-[var(--muted)]">{user?.email || 'Signed in'}</p>
-                {user?.role && <p className="mt-0.5 text-[10px] capitalize text-[var(--muted)]">{user.role}</p>}
+                <p className="truncate text-xs font-bold text-[var(--ink)]">{displayName}</p>
+                <p className="truncate text-[10px] text-[var(--muted)]">{user?.email || 'Signed in'}</p>
+                {user?.role && <span className="mt-0.5 inline-block text-[9px] uppercase tracking-wider font-semibold text-[var(--primary)]">{user.role}</span>}
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                aria-label="Close profile drawer"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--muted)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
+                aria-label="Close profile menu"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
               >
-                <IconX size={18} />
+                <IconX size={15} />
               </button>
             </div>
             {profileActions()}
-          </section>
-        </div>
+          </div>
+        </>
       )}
     </div>
   )
@@ -1212,6 +1196,7 @@ export default function Layout({ children }) {
 
   const [mobileOpen, setMobileOpen] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+  const [quickActionOpen, setQuickActionOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const [shopName, setShopName] = useState('Dreamwithtech')
   const [shopPhone, setShopPhone] = useState('')
@@ -1373,6 +1358,18 @@ export default function Layout({ children }) {
             </div>
             {!activePageLoaders.size && !location.pathname.startsWith('/billing/new') && <AppFooter shopName={shopName} />}
           </main>
+
+          {/* Mobile Bottom Navigation & Quick Action Sheet */}
+          {!location.pathname.startsWith('/billing/new') && (
+            <MobileBottomNav
+            onOpenMenu={() => setMobileOpen(true)}
+            onQuickAction={() => setQuickActionOpen(true)}
+          />
+          )}
+          <MobileQuickActionSheet
+            open={quickActionOpen}
+            onClose={() => setQuickActionOpen(false)}
+          />
         </div>
       </div>
     </ShopContext.Provider>

@@ -543,7 +543,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-3 sm:p-4 md:p-6 backdrop-blur-sm transition-opacity duration-200"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/60 p-0 sm:p-4 md:p-6 backdrop-blur-xs transition-opacity duration-200"
       role="presentation"
       onMouseDown={(event) => {
         if (!preventBackdropClose && event.target === event.currentTarget) {
@@ -559,15 +559,17 @@ export function Modal({
         aria-describedby={subText ? descId : undefined}
         tabIndex={-1}
         className={[
-          'flex flex-col w-[calc(100vw-24px)] max-h-[calc(100dvh-24px)] sm:max-h-[88vh]',
+          'flex flex-col w-full sm:w-[calc(100vw-24px)] max-h-[92dvh] sm:max-h-[88vh]',
           sizes[size] || sizes.md,
-          'rounded-2xl border border-[var(--line)] bg-[var(--surface)]',
+          'rounded-t-2xl sm:rounded-2xl border-t sm:border border-[var(--line)] bg-[var(--surface)]',
           'shadow-2xl shadow-black/25',
           'outline-none overflow-hidden',
-          'transition-all duration-200 ease-out animate-in fade-in zoom-in-[0.98]',
+          'transition-all duration-200 ease-out animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-[0.98]',
           className,
         ].join(' ')}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
+        <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-[var(--line-strong)] sm:hidden shrink-0" />
         {/* Fixed Header */}
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-3.5 sm:px-6 sm:py-4">
           <div className="min-w-0 flex-1">
@@ -1171,25 +1173,25 @@ export function PageHeader({
   return (
     <div
       className={[
-        'mb-4 flex min-w-0 flex-col gap-3 border-b border-[var(--line)] pb-3 sm:pb-4',
+        'mb-3 sm:mb-4 flex min-w-0 flex-col gap-2 sm:gap-3 border-b border-[var(--line)] pb-2.5 sm:pb-4',
         'sm:flex-row sm:items-start sm:justify-between',
         className,
       ].join(' ')}
     >
-      <div className="min-w-0">
-        <h1 className="text-xl font-semibold leading-tight tracking-tight text-[var(--ink)] sm:text-2xl">
+      <div className="min-w-0 flex-1">
+        <h1 className="text-lg sm:text-2xl font-bold leading-tight tracking-tight text-[var(--ink)]">
           {title}
         </h1>
 
         {subtitle && (
-          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-[var(--muted)]">
+          <p className="mt-0.5 sm:mt-1.5 max-w-2xl text-xs sm:text-sm leading-relaxed text-[var(--muted)]">
             {subtitle}
           </p>
         )}
       </div>
 
       {action && (
-        <div className="flex w-full min-w-0 flex-wrap gap-2 shrink-0 sm:w-auto sm:justify-end">
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-2 shrink-0 sm:w-auto sm:justify-end">
           {action}
         </div>
       )}
@@ -1210,7 +1212,7 @@ export function SearchInput({
   onClear,
 }) {
   return (
-    <div className={`group relative flex items-center min-h-[42px] w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs ${className}`}>
+    <div className={`group relative flex items-center min-h-[42px] w-full rounded-xl bg-[var(--surface-elevated)] px-2.5 transition-all duration-200 shadow-2xs ${className}`}>
       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
         <IconSearch size={14} strokeWidth={2.2} />
       </div>
@@ -1653,14 +1655,26 @@ export function DataTable({
   onRowClick,
   rowClassName,
   className = '',
+  renderMobileCard,
 }) {
   if (loading) {
     return <TableSkeleton rows={5} cols={columns.length || 4} />
   }
 
   return (
-    <div className={`overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] ${className}`}>
-      <table className="table">
+    <div className={`w-full min-w-0 ${className}`}>
+      {renderMobileCard && data && data.length > 0 && (
+        <div className="md:hidden space-y-2.5 mb-3">
+          {data.map((row, rIdx) => (
+            <div key={row.id || rIdx} onClick={() => onRowClick?.(row)} className={onRowClick ? 'cursor-pointer' : ''}>
+              {renderMobileCard(row, rIdx)}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className={`overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] ${renderMobileCard && data && data.length > 0 ? 'hidden md:block' : ''}`}>
+        <table className="table">
         <thead>
           <tr>
             {columns.map((col, idx) => {
@@ -1712,6 +1726,7 @@ export function DataTable({
           )}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }

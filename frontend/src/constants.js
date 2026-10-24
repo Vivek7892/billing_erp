@@ -6,9 +6,7 @@
 export const ROLES = Object.freeze({
   OWNER: 'owner',
   ADMIN: 'admin',
-  MANAGER: 'manager',
   CASHIER: 'cashier',
-  ACCOUNTANT: 'accountant',
 })
 
 export const PAYMENT_METHODS = Object.freeze({

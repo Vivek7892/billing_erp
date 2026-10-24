@@ -1,7 +1,9 @@
+import { MobileFAB } from '../components/MobileUI'
 import React, { useEffect, useMemo, useState, useRef } from 'react'
 import api from '../api'
 
 import { Badge, Spinner, TableSkeleton, Modal, ConfirmDialog, EmptyState } from '../components/UI'
+
 
 import {
   IconBuildingStore,
@@ -22,6 +24,7 @@ import {
   IconCreditCard,
   IconClockHour3,
   IconFileSpreadsheet,
+  IconFileTypeXls,
   IconUpload,
   IconDownload,
   IconCircleCheck,
@@ -738,7 +741,7 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
               >
                 {validating ? (
                   <>
-                    <RefreshCw size={13} className="animate-spin" />
+                    <IconRefresh size={13} className="animate-spin" />
                     <span>Validating File...</span>
                   </>
                 ) : (
@@ -1023,7 +1026,7 @@ function SupplierBulkImportModal({ open, onClose, onSuccess }) {
                 >
                   {importing ? (
                     <>
-                      <RefreshCw size={13} className="animate-spin" />
+                      <IconRefresh size={13} className="animate-spin" />
                       <span>Importing Suppliers...</span>
                     </>
                   ) : (
@@ -1535,24 +1538,24 @@ export default function Suppliers() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="hidden sm:flex items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={() => setImportModal(true)}
-            className="btn-secondary h-9 px-3.5 text-xs flex items-center justify-center gap-1.5 flex-1 sm:flex-none rounded-md"
+            className="btn-secondary h-8.5 px-2.5 text-xs inline-flex items-center justify-center gap-1.5 rounded-lg shadow-2xs"
             title="Bulk import suppliers from Excel or CSV"
           >
-            <IconFileSpreadsheet size={14} />
-            Import Excel
+            <IconFileTypeXls size={15} />
+            <span>Import</span>
           </button>
 
           <button
             type="button"
             onClick={openAdd}
-            className="btn-primary h-9 px-3.5 text-xs flex items-center justify-center gap-1.5 flex-1 sm:flex-none rounded-md"
+            className="btn-primary h-8.5 px-3.5 text-xs hidden sm:inline-flex items-center justify-center gap-1.5 rounded-lg shadow-xs"
           >
             <IconPlus size={14} />
-            Add Supplier
+            <span>Add Supplier</span>
           </button>
         </div>
       </div>
@@ -2324,6 +2327,9 @@ export default function Suppliers() {
         confirmText="Delete Supplier"
         isDestructive={true}
       />
+    
+      
+      <MobileFAB icon={IconPlus} label="Supplier" onClick={openAdd} />
     </div>
   )
 }

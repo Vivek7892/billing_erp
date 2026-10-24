@@ -1,6 +1,8 @@
+import { MobileFAB } from '../components/MobileUI'
 import { useEffect, useState } from 'react'
 import api from '../api'
 import { Spinner, Modal, EmptyState } from '../components/UI'
+
 import {
   IconCurrencyRupee,
   IconPlus,
@@ -241,7 +243,7 @@ export default function Expenses() {
               <button
                 type="button"
                 onClick={openAdd}
-                className="btn-primary min-h-[42px] px-3.5 text-xs font-bold inline-flex items-center gap-1.5 rounded-xl shadow-2xs"
+                className="btn-primary h-8.5 px-3.5 text-xs font-bold hidden sm:inline-flex items-center gap-1.5 rounded-lg shadow-2xs"
               >
                 <IconPlus size={14} strokeWidth={2.5} />
                 <span className="hidden sm:inline">Add Expense</span>
@@ -503,6 +505,9 @@ export default function Expenses() {
           </div>
         </div>
       </Modal>
+    
+      
+      
     </div>
   )
 }

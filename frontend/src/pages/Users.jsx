@@ -15,19 +15,14 @@ import {
 } from '@tabler/icons-react'
 
 const ROLE_OPTIONS = [
-  { value: ROLES.OWNER, label: 'Owner', description: 'Full business & system control' },
-  { value: ROLES.ADMIN, label: 'Admin', description: 'System administration & configuration' },
-  { value: ROLES.MANAGER, label: 'Manager', description: 'Store & inventory operations management' },
-  { value: ROLES.ACCOUNTANT, label: 'Accountant', description: 'Financial statements, taxes & report audits' },
-  { value: ROLES.CASHIER, label: 'Cashier', description: 'POS counter billing & receipt generation' },
+  { value: ROLES.ADMIN, label: 'Admin / Owner', description: 'Full business control, settings, reports & approval authority' },
+  { value: ROLES.CASHIER, label: 'Cashier', description: 'POS billing, sales counters & requests for approvals' },
 ]
 
 const ROLE_BADGES = {
-  [ROLES.OWNER]: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
-  [ROLES.ADMIN]: 'bg-slate-100 text-[#1E3A5F] border-[var(--line)] dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700',
-  [ROLES.MANAGER]: 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800',
-  [ROLES.ACCOUNTANT]: 'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800',
-  [ROLES.CASHIER]: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+  [ROLES.OWNER]: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800',
+  [ROLES.ADMIN]: 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800',
+  [ROLES.CASHIER]: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
 }
 
 const emptyForm = {
@@ -79,7 +74,7 @@ export default function Users() {
       first_name: u.first_name || '',
       last_name: u.last_name || '',
       phone: u.phone || '',
-      role: u.role || ROLES.CASHIER,
+      role: [ROLES.ADMIN, ROLES.OWNER, 'manager', 'accountant'].includes(u.role) ? ROLES.ADMIN : ROLES.CASHIER,
       password: '',
       is_active: Boolean(u.is_active),
     })
@@ -133,9 +128,12 @@ export default function Users() {
         String(u.email || '').toLowerCase().includes(q) ||
         String(u.phone || '').includes(q)
 
+      const userRole = String(u.role || '').toLowerCase()
       const matchesRole =
         roleFilter === 'all' ||
-        String(u.role || '').toLowerCase() === roleFilter.toLowerCase()
+        (roleFilter === ROLES.ADMIN
+          ? [ROLES.ADMIN, ROLES.OWNER, 'manager', 'accountant'].includes(userRole)
+          : userRole === ROLES.CASHIER)
 
       const matchesStatus =
         statusFilter === 'all' ||
@@ -166,12 +164,16 @@ export default function Users() {
     URL.revokeObjectURL(url)
   }
 
-  // Count by role
+  // Count by role (Two Roles: Admin / Owner and Cashier)
   const roleCounts = useMemo(() => {
-    const counts = { all: users.length }
+    const counts = { all: users.length, [ROLES.ADMIN]: 0, [ROLES.CASHIER]: 0 }
     users.forEach(u => {
-      const r = (u.role || 'other').toLowerCase()
-      counts[r] = (counts[r] || 0) + 1
+      const r = (u.role || 'cashier').toLowerCase()
+      if ([ROLES.ADMIN, ROLES.OWNER, 'manager', 'accountant'].includes(r)) {
+        counts[ROLES.ADMIN] = (counts[ROLES.ADMIN] || 0) + 1
+      } else {
+        counts[ROLES.CASHIER] = (counts[ROLES.CASHIER] || 0) + 1
+      }
     })
     return counts
   }, [users])
@@ -180,7 +182,7 @@ export default function Users() {
     <div className="users-page w-full min-w-0 space-y-4">
       <PageHeader
         title="Users & Roles"
-        subtitle="Manage system credentials and access roles (Accountant, Admin, Manager, Cashier, Owner)"
+        subtitle="Manage system credentials and access roles: Admin / Owner (full access & approvals) and Cashier (POS billing & approval requests)"
         action={
           <button onClick={openAdd} className="btn-primary flex min-h-[42px] w-full items-center justify-center gap-2 sm:w-auto">
             <IconPlus size={16} /> Add User
@@ -253,20 +255,7 @@ export default function Users() {
             </kbd>
           )}
         </div>
-        <div className="flex w-full items-center justify-between gap-2 text-xs text-[var(--muted)] sm:w-auto">
-          <label className="flex items-center gap-2">
-            <span>Status</span>
-            <select className="input h-9 min-h-9 w-auto py-1 text-xs" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="all">All</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </label>
-          <span>Showing {filteredUsers.length} of {users.length}</span>
-          <button type="button" onClick={exportUsers} disabled={!filteredUsers.length} className="btn-secondary h-9 px-3 text-xs disabled:opacity-50">
-            Export CSV
-          </button>
-        </div>
+       
       </div>
 
       <Card>
@@ -322,8 +311,14 @@ export default function Users() {
                       <td className="text-xs text-[var(--ink-secondary)]">{u.email || '—'}</td>
                       <td className="font-mono text-xs text-[var(--ink-secondary)]">{u.phone || '—'}</td>
                       <td>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${badgeClass}`}>
-                          {u.role || 'Staff'}
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                          [ROLES.ADMIN, ROLES.OWNER, 'manager', 'accountant'].includes(roleKey)
+                            ? ROLE_BADGES[ROLES.ADMIN]
+                            : ROLE_BADGES[ROLES.CASHIER]
+                        }`}>
+                          {[ROLES.ADMIN, ROLES.OWNER, 'manager', 'accountant'].includes(roleKey)
+                            ? (roleKey === ROLES.OWNER ? 'Owner' : 'Admin')
+                            : 'Cashier'}
                         </span>
                       </td>
                       <td className="text-center">
@@ -393,7 +388,7 @@ export default function Users() {
             <label className="label">Role *</label>
             <select
               className="input font-semibold"
-              value={form.role}
+              value={[ROLES.ADMIN, ROLES.OWNER, 'manager', 'accountant'].includes(form.role) ? ROLES.ADMIN : ROLES.CASHIER}
               onChange={e => f('role', e.target.value)}
             >
               {ROLE_OPTIONS.map(opt => (

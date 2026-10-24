@@ -61,8 +61,9 @@ class Business(models.Model):
 
 class User(AbstractUser):
     ROLE_CHOICES = [
-        ('owner', 'Owner'), ('admin', 'Admin'), ('manager', 'Manager'),
-        ('cashier', 'Cashier'), ('accountant', 'Accountant'),
+        ('owner', 'Owner'),
+        ('admin', 'Admin'),
+        ('cashier', 'Cashier'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='cashier')
     phone = models.CharField(max_length=15, blank=True)

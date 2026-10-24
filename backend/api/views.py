@@ -1154,7 +1154,7 @@ class ChangePasswordView(APIView):
 
 class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
-    permission_classes = [IsManagerOrAdmin]
+    permission_classes = [IsAdmin]
     filter_backends = [filters.SearchFilter]
     search_fields = ['username', 'email', 'first_name', 'last_name']
 
@@ -1680,7 +1680,7 @@ class SupplierViewSet(viewsets.ModelViewSet):
 
 class ProductViewSet(viewsets.ModelViewSet):
     serializer_class = ProductSerializer
-    permission_classes = [IsManagerOrReadOnly]
+    permission_classes = [IsCashierOrAdmin]
     pagination_class = NoPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category', 'status', 'supplier']
@@ -1693,6 +1693,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
+        if self.request.user.role not in ('owner', 'admin'):
+            raise PermissionError('Only administrators or owners can create products directly.')
         product = serializer.save(business=self.request.user.business)
         audit_event(
             self.request,
@@ -1710,6 +1712,8 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         # Check if price change requires admin approval
         new_price = request.data.get('selling_price')
+        if request.user.role == 'cashier' and new_price is None:
+            return Response({'error': 'Cashiers can only submit price change requests for admin approval.'}, status=403)
         if new_price is not None:
             try:
                 new_dec = Decimal(str(new_price))
@@ -1815,7 +1819,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         )
 
     def destroy(self, request, *args, **kwargs):
-        if request.user.role not in ('owner', 'admin', 'manager'):
+        if request.user.role not in ('owner', 'admin'):
             return Response({'error': 'Permission denied'}, status=403)
         product = self.get_object()
         previous = product.status
@@ -1837,7 +1841,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
 class ProductBatchViewSet(viewsets.ModelViewSet):
     serializer_class = ProductBatchSerializer
-    permission_classes = [IsManagerOrReadOnly]
+    permission_classes = [IsCashierOrAdmin]
     pagination_class = NoPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['product', 'active']
@@ -2661,8 +2665,8 @@ class InvoiceViewSet(viewsets.ModelViewSet):
         return self.partial_update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
-        if request.user.role not in ('owner', 'admin', 'manager'):
-            return Response({'detail': 'Only managers or admins can edit invoices.', 'error': 'permission_denied'}, status=403)
+        if request.user.role not in ('owner', 'admin'):
+            return Response({'detail': 'Only administrators or owners can edit invoices.', 'error': 'permission_denied'}, status=403)
         invoice = self.get_object()
         if invoice.status in ('cancelled', 'refunded'):
             return Response({'detail': 'Cancelled or refunded invoices cannot be modified.', 'error': 'invoice_immutable'}, status=400)
@@ -5859,18 +5863,7 @@ class NotificationListView(APIView):
                     Q(notification_type__in=cashier_types) |
                     Q(notification_type='approval_required', data__requested_by=request.user.username)
                 )
-            elif user_role == 'accountant':
-                accountant_types = [
-                    'invoice_overdue', 'payment_received', 'gst_submission_failed',
-                    'einvoice_failed', 'eway_bill_expiring', 'approval_required'
-                ]
-                qs = qs.filter(notification_type__in=accountant_types)
-            elif user_role == 'manager':
-                manager_types = [
-                    'low_stock', 'batch_expiring', 'purchase_order_pending',
-                    'quotation_expiring', 'invoice_overdue', 'approval_required'
-                ]
-                qs = qs.filter(notification_type__in=manager_types)
+
 
         limit = min(int(request.query_params.get('limit', 100)), 200)
 
@@ -5928,7 +5921,7 @@ class NotificationMarkAllReadView(APIView):
 
 class NotificationActionView(APIView):
     """Approve or reject a user action requiring approval."""
-    permission_classes = [IsManagerOrAdmin]
+    permission_classes = [IsAdmin]
 
     def post(self, request, pk):
         try:
@@ -6473,7 +6466,7 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
             qs = qs.filter(requested_by=user)
         return qs
 
-    @action(detail=True, methods=['post'], permission_classes=[IsManagerOrAdmin])
+    @action(detail=True, methods=['post'], permission_classes=[IsAdmin])
     def approve(self, request, pk=None):
         from .services.approval_service import ApprovalService
         notes = request.data.get('notes', '').strip()
@@ -6490,7 +6483,7 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
         except Exception as exc:
             return Response({'error': f"Execution failed: {str(exc)}"}, status=500)
 
-    @action(detail=True, methods=['post'], permission_classes=[IsManagerOrAdmin])
+    @action(detail=True, methods=['post'], permission_classes=[IsAdmin])
     def reject(self, request, pk=None):
         from .services.approval_service import ApprovalService
         notes = request.data.get('notes', '').strip()
@@ -6520,7 +6513,7 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
         except (ValueError, PermissionError) as exc:
             return Response({'error': str(exc)}, status=400)
 
-    @action(detail=False, methods=['get', 'post'], url_path='settings', permission_classes=[IsManagerOrAdmin])
+    @action(detail=False, methods=['get', 'post'], url_path='settings', permission_classes=[IsAdmin])
     def approval_settings(self, request):
         from .services.approval_service import ApprovalService
         biz = request.user.business

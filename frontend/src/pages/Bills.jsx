@@ -11,12 +11,14 @@ import InvoiceDocument from '../components/InvoiceDocument'
 import TemplateCustomizerModal from '../components/TemplateCustomizerModal'
 import CommunicationHistory from '../components/CommunicationHistory'
 import { InvoiceEmptyIllustration } from '../components/visuals'
+import { MobileKpiGrid, MobileFAB } from '../components/MobileUI'
 
 import { QRCodeSVG } from 'qrcode.react'
 import {
   IconEye,
   IconPrinter,
   IconDownload,
+  IconFileTypeXls,
   IconCircleX,
   IconRotate2,
   IconSearch,
@@ -44,6 +46,7 @@ import {
   IconBan,
   IconRotate2 as RefundIcon,
   IconAdjustmentsHorizontal,
+  IconFilter,
   IconFileText,
   IconExternalLink,
   IconCopy,
@@ -1603,6 +1606,8 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
 ========================================================= */
 
 export default function Bills() {
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const [showKpis, setShowKpis] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   const [bills, setBills] = useState([])
@@ -2015,7 +2020,7 @@ export default function Bills() {
             </p>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
+          <div className="hidden sm:flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
             <button
               type="button"
               onClick={() => navigate('/sales/payments')}
@@ -2046,21 +2051,11 @@ export default function Bills() {
               onClick={exportCsv}
               disabled={loading || visibleBills.length === 0}
               className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 disabled:opacity-50"
-              title="Export visible invoices to CSV"
+              title="Export Excel"
+              aria-label="Export Excel"
             >
-              <IconDownload size={13} />
-              <span>Export CSV</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => load(page, search)}
-              disabled={loading}
-              className="btn-secondary h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"
-              title="Refresh invoices table"
-            >
-              <IconRefresh size={13} className={loading ? 'animate-spin text-[#1E3A5F]' : ''} />
-              <span>Refresh</span>
+              <IconFileTypeXls size={15} className="text-emerald-600 dark:text-emerald-400" />
+              <span>Excel</span>
             </button>
 
             <button
@@ -2072,6 +2067,18 @@ export default function Bills() {
               <span>New Bill</span>
             </button>
           </div>
+        </div>
+
+        {/* KPI Strip: 5 cards -> displays 4 initially on mobile (2x2), with Show more for 5th */}
+        <div className="sm:hidden flex items-center justify-between px-1 py-1">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">Sales Summary</span>
+          <button
+            type="button"
+            onClick={() => setShowKpis(v => !v)}
+            className="text-xs font-semibold text-[var(--primary)] underline underline-offset-4 hover:opacity-80 transition"
+          >
+            {showKpis ? 'Show less' : 'Show more'}
+          </button>
         </div>
 
         {/* =================================================
@@ -2133,8 +2140,8 @@ export default function Bills() {
               </div>
             </div>
 
-            {/* Average Bill */}
-            <div className="px-3.5 py-2.5 sm:px-4 sm:py-3 min-w-0 col-span-2 sm:col-span-1">
+            {/* Average Bill (5th Card, toggled via Show more on mobile) */}
+            <div className={`${showKpis ? 'block' : 'hidden'} sm:block px-3.5 py-2.5 sm:px-4 sm:py-3 min-w-0 col-span-2 sm:col-span-1`}>
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
                 Average Bill
               </span>
@@ -2153,7 +2160,7 @@ export default function Bills() {
         ================================================= */}
         <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 sm:p-2.5 shadow-2xs space-y-2">
           {/* Status Pills & Date Presets */}
-          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div className={`${advancedFiltersOpen ? 'flex' : 'hidden'} sm:flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between`}>
             {/* Quick Status Filter Pills with live item counts */}
             <div className="flex items-center gap-1 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
               {[
@@ -2913,7 +2920,7 @@ export default function Bills() {
           </div>
         )}
       </ConfirmDialog>
+      <MobileFAB icon={IconPlus} label="New Bill" to="/billing/new" />
     </div>
   )
 }
-  

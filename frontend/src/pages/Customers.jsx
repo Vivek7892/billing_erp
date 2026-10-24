@@ -1,3 +1,4 @@
+import { MobileFAB } from '../components/MobileUI'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import customerService from '../features/customers/api/customerService'
 import settingsService from '../features/settings/api/settingsService'
@@ -9,6 +10,7 @@ import {
   TableSkeleton,
   EmptyState,
 } from '../components/UI'
+
 import { CreditCollectedVisual, CustomerEmptyIllustration } from '../components/visuals'
 import toast from 'react-hot-toast'
 import CommunicationHistory from '../components/CommunicationHistory'
@@ -1036,7 +1038,7 @@ export default function Customers() {
         action={
           <button
             onClick={openAdd}
-            className="btn-primary min-h-[38px] w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg font-bold text-xs"
+            className="btn-primary h-8.5 px-3.5 hidden sm:inline-flex items-center justify-center gap-1.5 rounded-lg font-bold text-xs shadow-xs"
           >
             <IconPlus size={15} />
             <span>Add Customer</span>
@@ -1129,16 +1131,20 @@ export default function Customers() {
             )}
           </div>
 
-          {/* Credit filter */}
-          <label className="flex items-center gap-2 cursor-pointer select-none rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-xs sm:text-sm font-medium text-[var(--ink-secondary)] hover:border-[var(--line-strong)] transition shadow-xs">
-            <input
-              type="checkbox"
-              checked={onlyCredit}
-              onChange={event => setOnlyCredit(event.target.checked)}
-              className="h-4 w-4 rounded border-[var(--line)] text-[#1E3A5F] focus:ring-[#1E3A5F]"
-            />
+          {/* Credit filter - simple pill button */}
+          <button
+            type="button"
+            onClick={() => setOnlyCredit(v => !v)}
+            aria-pressed={onlyCredit}
+            className={`h-[42px] px-3.5 rounded-xl border text-xs font-semibold inline-flex items-center gap-2 transition shadow-xs shrink-0 ${
+              onlyCredit
+                ? 'bg-rose-50 border-rose-300 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300'
+                : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)]'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${onlyCredit ? 'bg-rose-600 dark:bg-rose-400' : 'bg-slate-300 dark:bg-slate-600'}`} />
             <span>Credit Due Only</span>
-          </label>
+          </button>
         </div>
 
         {(hasSearch || onlyCredit) && (
@@ -1485,7 +1491,7 @@ export default function Customers() {
                         <button
                           type="button"
                           onClick={() => setPayTarget(customer)}
-                          className="w-full flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg bg-emerald-600 active:bg-emerald-700 text-xs font-bold text-white shadow-xs transition hover:bg-emerald-700"
+                          className="w-full h-8.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition active:scale-95 shadow-2xs"
                         >
                           <IconCurrencyRupee size={13} />
                           <span>Collect Due ({currency(outstanding)})</span>
@@ -2100,6 +2106,9 @@ export default function Customers() {
         danger
       />
 
+    
+      
+      
     </div>
   )
 }

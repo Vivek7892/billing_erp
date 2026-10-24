@@ -28,6 +28,7 @@ import {
 } from 'recharts'
 import api from '../api'
 import { Badge, Spinner } from '../components/UI'
+import { MobileKpiGrid, MobileFAB } from '../components/MobileUI'
 import { useShop } from '../components/Layout'
 import DashboardBannerCarousel from './DashboardBannerCarousel'
 import FirstUseChecklist from '../components/FirstUseChecklist'
@@ -237,6 +238,59 @@ export default function Dashboard() {
     return items
   }, [actionRequired, creditDueCount, data])
 
+  const primaryKpis = useMemo(() => [
+    {
+      label: "Today's Sales",
+      value: fmtCurrency(data.today_sales),
+      sub: `${data.today_bills || 0} bills`,
+    },
+    {
+      label: "Collections",
+      value: fmtCurrency(data.today_collection || data.today_payments_total),
+      sub: `Tax ${fmtCurrency(data.today_tax)}`,
+    },
+    {
+      label: "Receivables",
+      value: fmtCurrency(data.pending_credit),
+      sub: `${creditDueCount} pending`,
+    },
+    {
+      label: "Today's Bills",
+      value: String(data.today_bills || 0),
+      sub: `Avg ${fmtCurrency(data.avg_bill_today)}`,
+    },
+  ], [data, creditDueCount])
+
+  const secondaryKpis = useMemo(() => [
+    {
+      label: "Gross Profit",
+      value: fmtCurrency(data.today_profit),
+      sub: `Margin ${Number(data.profit_margin || 0).toFixed(1)}%`,
+    },
+    {
+      label: "Stock Alerts",
+      value: `${data.low_stock_count || 0} low`,
+      sub: `${data.out_of_stock || 0} out of stock`,
+    },
+    {
+      label: "Purchases Today",
+      value: fmtCurrency(data.today_purchases),
+    },
+    {
+      label: "Expenses Today",
+      value: fmtCurrency(data.today_expenses),
+    },
+    {
+      label: "Month Sales",
+      value: fmtCurrency(data.month_sales),
+      sub: Number(data.last_month_sales) ? `${data.sales_growth > 0 ? '+' : ''}${Number(data.sales_growth || 0).toFixed(1)}% vs prior` : undefined,
+    },
+    {
+      label: "Month Profit",
+      value: fmtCurrency(data.month_profit),
+    },
+  ], [data])
+
   if (loading) {
     return <Spinner label="Loading dashboard" />
   }
@@ -283,11 +337,11 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
+          <div className="hidden sm:flex sm:w-auto sm:items-center sm:gap-2">
             <button
               type="button"
               onClick={() => navigate('/billing/new')}
-              className="btn-primary col-span-2 inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold text-white shadow-2xs transition sm:col-span-1"
+              className="btn-primary inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold text-white shadow-2xs transition"
             >
               <IconPlus size={15} strokeWidth={2.5} />
               <span>New Bill</span>
@@ -295,19 +349,10 @@ export default function Dashboard() {
             <button
               type="button"
               onClick={() => navigate('/reports')}
-              className="btn-secondary inline-flex min-h-[40px] min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold shadow-2xs transition sm:px-3.5"
+              className="btn-secondary inline-flex min-h-[40px] min-w-0 items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold shadow-2xs transition"
             >
               <IconFileText size={14} />
               <span>Reports</span>
-            </button>
-             <button
-              type="button"
-              onClick={loadDashboard}
-              disabled={refreshing}
-              className="btn-secondary inline-flex min-h-[40px] min-w-0 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold shadow-2xs transition sm:px-3.5"
-            >
-              <IconRefresh size={14} className={refreshing ? 'animate-spin' : ''} />
-              <span>Refresh</span>
             </button>
           </div>
         </div>
@@ -360,6 +405,11 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* MOBILE KPI OVERHAUL */}
+      <MobileKpiGrid primaryKpis={primaryKpis} secondaryKpis={secondaryKpis} />
+
+      {/* DESKTOP BUSINESS SNAPSHOT & AT A GLANCE */}
+      <div className="hidden md:block space-y-4">
       {/* BUSINESS SNAPSHOT */}
       <section aria-labelledby="business-snapshot-title" className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
         <h2 id="business-snapshot-title" className="border-b border-[var(--line)] px-4 py-2.5 text-sm font-semibold">Business Insights</h2>
@@ -399,6 +449,7 @@ export default function Dashboard() {
         <span className="text-[var(--muted)]">Month profit <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.month_profit)}</strong> <span className="text-xs">{Number(data.last_month_profit) ? `${percentChange(data.month_profit, data.last_month_profit) > 0 ? '+' : ''}${percentChange(data.month_profit, data.last_month_profit)}% vs prior month` : ''}</span></span>
         </div>
       </section>
+      </div>
 
       {/* ATTENTION REQUIRED */}
   
@@ -438,7 +489,7 @@ export default function Dashboard() {
           <button
             type="button"
             onClick={() => navigate('/billing/new')}
-            className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg bg-[#1E3A5F] px-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-[#162b47] active:scale-95 dark:bg-sky-600 dark:hover:bg-sky-500 sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
+            className="hidden sm:inline-flex h-8 shrink-0 min-w-0 items-center justify-center gap-1.5 rounded-lg bg-[#1E3A5F] px-2.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-[#162b47] active:scale-95 dark:bg-sky-600 dark:hover:bg-sky-500"
           >
             <IconPlus size={13} strokeWidth={2.5} />
             <span>New Bill</span>
@@ -941,6 +992,30 @@ export default function Dashboard() {
         isOpen={ecosystemModalOpen}
         onClose={() => setEcosystemModalOpen(false)}
       />
+
+      {/* Mobile Floating Action Buttons: New Bill & Reports */}
+      <div className="fixed right-4 bottom-20 z-40 flex flex-col items-end gap-2 sm:hidden print:hidden">
+        <button
+          type="button"
+          onClick={() => navigate('/reports')}
+          className="flex h-10 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface-elevated)] px-3.5 text-xs font-semibold text-[var(--ink)] shadow-md hover:bg-[var(--surface-hover)] active:scale-95 transition-transform backdrop-blur-md"
+          aria-label="Reports"
+        >
+          <IconFileText size={15} />
+          <span>Reports</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/billing/new')}
+          className="flex h-12 items-center gap-1.5 rounded-full bg-[var(--primary)] px-4.5 text-xs font-bold text-white shadow-lg shadow-[var(--primary)]/30 active:scale-95 transition-transform"
+          aria-label="New Bill"
+        >
+          <IconPlus size={18} strokeWidth={2.5} />
+          <span>New Bill</span>
+        </button>
+      </div>
+      
+      
     </div>
   )
 }

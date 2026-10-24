@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import api from '../api'
 import { Spinner, Modal, TableSkeleton, EmptyState, ErrorState, Pagination } from '../components/UI'
+import { MobileKpiGrid, MobileFAB } from '../components/MobileUI'
 import toast from 'react-hot-toast'
 import {
   IconCash,
@@ -21,6 +22,7 @@ import {
   IconShieldCheck,
   IconExternalLink,
   IconPlus,
+  IconFilter,
   IconCurrencyRupee,
   IconCircleCheck,
   IconClock,
@@ -359,6 +361,7 @@ export default function Payments() {
   const navigate = useNavigate()
   const location = useLocation()
   const [activeTab, setActiveTab] = useState('transactions')
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [bills, setBills] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -770,6 +773,15 @@ export default function Payments() {
   return (
     <div className="payments-page min-w-0 space-y-4 overflow-x-hidden pb-4 sm:space-y-6 sm:pb-6">
       <style>{`
+        .payments-page * {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        .payments-page *::-webkit-scrollbar {
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
+        }
         .payments-page {
           --payment-cash-bg: #ecfdf5;
           --payment-cash-text: #047857;
@@ -898,7 +910,7 @@ export default function Payments() {
           </p>
         </div>
 
-        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
+        <div className="hidden sm:flex sm:w-auto sm:items-center sm:gap-2">
           <button
             type="button"
             onClick={() => navigate('/payments/reconciliation')}
@@ -959,7 +971,7 @@ export default function Payments() {
       {activeTab === 'transactions' && (
         <>
           {/* DATE FILTER BAR */}
-          <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3">
+          <section className={`${mobileFiltersOpen ? 'block' : 'hidden'} sm:block rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3`}>
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-1.5 overflow-x-auto">
                 <IconCalendar size={13} className="shrink-0 text-[var(--muted)]" />
@@ -1007,7 +1019,23 @@ export default function Payments() {
             </div>
           </section>
           {/* SUMMARY STRIP */}
-          <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
+          {/* Mobile KPI Grid with Top-Right Round Button for >4 KPIs */}
+          <MobileKpiGrid
+            title="Payment Metrics"
+            primaryKpis={[
+              { label: 'Collected', value: formatCurrency(totalCollected), sub: 'Non-credit receipts' },
+              { label: 'Credit Due', value: formatCurrency(totalCredit), sub: 'Receivable balances' },
+              { label: 'Transactions', value: totalTransactions.toLocaleString('en-IN'), sub: 'Total recorded bills' },
+              { label: 'Avg Bill', value: formatCurrency(paymentMetrics.avgBill), sub: 'Per transaction' },
+            ]}
+            secondaryKpis={[
+              { label: 'Tax Collected', value: formatCurrency(paymentMetrics.tax), sub: 'Output GST' },
+              { label: 'Discounts', value: formatCurrency(paymentMetrics.discounts), sub: 'Total given' },
+            ]}
+          />
+
+          {/* Desktop Summary Strip (hidden sm:block) */}
+          <section className="hidden sm:block overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
             <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-3 lg:grid-cols-6 sm:divide-y-0 sm:divide-x divide-[var(--line)]">
               <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">Collected</span>
@@ -1151,20 +1179,21 @@ export default function Payments() {
 
               <button
                 type="button"
-                onClick={() => loadPayments(true)}
-                disabled={loading || refreshing}
-                aria-label="Refresh payment transactions"
-                className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] hover:border-slate-300 disabled:opacity-50 shadow-xs"
+                onClick={() => setMobileFiltersOpen(v => !v)}
+                className={`sm:hidden inline-flex h-[42px] items-center justify-center gap-1.5 rounded-xl border px-3 text-xs font-semibold shadow-2xs transition shrink-0 ${
+                  mobileFiltersOpen || filter !== 'all' || datePreset !== 'all'
+                    ? 'border-[#1E3A5F] bg-blue-50 text-[#1E3A5F] dark:border-blue-600 dark:bg-blue-950/50 dark:text-sky-300'
+                    : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)]'
+                }`}
+                aria-label="Toggle filters"
               >
-                <IconRefresh
-                  size={14}
-                  className={refreshing || (loading && !bills.length) ? 'animate-spin text-[var(--primary)]' : ''}
-                />
+                <IconFilter size={15} />
+                <span>Filters</span>
               </button>
             </div>
           </div>
 
-          <div className="mt-2.5 flex gap-1 overflow-x-auto rounded-md pb-0.5 bg-[var(--surface-elevated)] p-1">
+          <div className={`${mobileFiltersOpen ? 'flex' : 'hidden'} sm:flex mt-2.5 gap-1 overflow-x-auto rounded-md pb-0.5 bg-[var(--surface-elevated)] p-1`}>
             {FILTERS.map(item => (
               <button
                 key={item.key}
@@ -1227,7 +1256,7 @@ export default function Payments() {
         ) : (
           <>
             {/* MOBILE CARDS VIEW (sm:hidden) */}
-            <div className="hidden">
+            <div className="sm:hidden divide-y divide-[var(--line-subtle)]">
               {pagedBills.map((bill, idx) => {
                 const paymentRef = getPaymentRef(bill)
                 const isMenuOpen = openActionMenuId === `mobile-${bill.id}`
@@ -1385,7 +1414,7 @@ export default function Payments() {
             </div>
 
             {/* DESKTOP TABLE VIEW (hidden sm:block) */}
-            <div className="overflow-x-auto min-h-[280px]">
+            <div className="hidden sm:block overflow-x-auto min-h-[280px]">
               <table className="payment-table table-fixed w-full min-w-[840px]">
                 <colgroup>
                   <col style={{ width: '15%' }} />
@@ -2362,6 +2391,28 @@ export default function Payments() {
           }}
         />
       )}
+      
+      {/* Mobile Dual Floating Action Buttons: New Bill & Transaction Ledger */}
+      <div className="fixed right-4 bottom-20 z-40 flex flex-col items-end gap-2 sm:hidden print:hidden">
+        <button
+          type="button"
+          onClick={() => navigate('/audit/transactions')}
+          className="flex h-10 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface-elevated)] px-3.5 text-xs font-semibold text-[var(--ink)] shadow-md hover:bg-[var(--surface-hover)] active:scale-95 transition-transform backdrop-blur-md"
+          aria-label="Transaction Ledger"
+        >
+          <IconShieldCheck size={16} className="text-blue-600 dark:text-blue-400" />
+          <span>Ledger</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/billing/new')}
+          className="flex h-12 items-center gap-1.5 rounded-full bg-[var(--primary)] px-4.5 text-xs font-bold text-white shadow-lg shadow-[var(--primary)]/30 active:scale-95 transition-transform"
+          aria-label="New Bill"
+        >
+          <IconPlus size={18} strokeWidth={2.5} />
+          <span>New Bill</span>
+        </button>
+      </div>
     </div>
   )
 }

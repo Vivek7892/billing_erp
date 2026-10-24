@@ -83,7 +83,11 @@ class ApprovalService:
         if is_admin_user and cfg['approval_admin_bypass']:
             return False, ''
 
+        is_cashier = getattr(user, 'role', '') == 'cashier'
+
         if request_type == 'price_change':
+            if is_cashier:
+                return True, "Price change requested by Cashier requires Admin approval."
             if not cfg['approval_price_change_enabled']:
                 return False, ''
             old_price = Decimal(str(kwargs.get('old_price', 0) or 0))
@@ -96,24 +100,30 @@ class ApprovalService:
                 return True, f"Price change of {pct:.1f}% exceeds threshold of {cfg['approval_price_change_pct']}%."
 
         elif request_type == 'refund':
+            refund_amount = Decimal(str(kwargs.get('refund_amount', 0) or 0))
+            if is_cashier:
+                return True, f"Sales return / refund of ₹{refund_amount:,.2f} requested by Cashier requires Admin approval."
             if not cfg['approval_refund_enabled']:
                 return False, ''
-            refund_amount = Decimal(str(kwargs.get('refund_amount', 0) or 0))
             if refund_amount > cfg['approval_refund_threshold']:
                 return True, f"Refund amount ₹{refund_amount:,.2f} exceeds threshold of ₹{cfg['approval_refund_threshold']:,.2f}."
 
         elif request_type == 'stock_adjustment':
+            quantity = abs(Decimal(str(kwargs.get('quantity', 0) or 0)))
+            if is_cashier:
+                return True, f"Stock adjustment of {quantity} units requested by Cashier requires Admin approval."
             if not cfg['approval_stock_adjustment_enabled']:
                 return False, ''
-            quantity = abs(Decimal(str(kwargs.get('quantity', 0) or 0)))
             if quantity > cfg['approval_stock_adjustment_qty']:
                 return True, f"Stock adjustment of {quantity} units exceeds threshold of {cfg['approval_stock_adjustment_qty']} units."
 
         elif request_type == 'invoice_cancellation':
-            if cfg['approval_invoice_cancellation_enabled']:
-                return True, "Invoice cancellation requires admin approval."
+            if is_cashier or cfg['approval_invoice_cancellation_enabled']:
+                return True, "Invoice cancellation requested by Cashier requires Admin approval." if is_cashier else "Invoice cancellation requires admin approval."
 
         elif request_type == 'user_role_change':
+            if is_cashier:
+                return True, "User role modification requested by Cashier requires Admin approval."
             if not cfg['approval_user_role_change_enabled']:
                 return False, ''
             old_role = kwargs.get('old_role', 'user')
@@ -122,12 +132,14 @@ class ApprovalService:
                 return True, f"Changing user role from '{old_role}' to '{new_role}' requires admin approval."
 
         elif request_type == 'credit_limit_increase':
-            if not cfg['approval_credit_limit_increase_enabled']:
-                return False, ''
             old_limit = Decimal(str(kwargs.get('old_limit', 0) or 0))
             new_limit = Decimal(str(kwargs.get('new_limit', 0) or 0))
             if new_limit > old_limit:
                 diff = new_limit - old_limit
+                if is_cashier:
+                    return True, f"Increasing customer credit limit by ₹{diff:,.2f} (from ₹{old_limit:,.2f} to ₹{new_limit:,.2f}) requested by Cashier requires Admin approval."
+                if not cfg['approval_credit_limit_increase_enabled']:
+                    return False, ''
                 return True, f"Increasing customer credit limit by ₹{diff:,.2f} (from ₹{old_limit:,.2f} to ₹{new_limit:,.2f}) requires admin approval."
 
         return False, ''
@@ -219,8 +231,8 @@ class ApprovalService:
         Executes the actual entity mutation, updates ApprovalRequest status, resolves linked Notification,
         and logs full audit records.
         """
-        if not (admin_user.is_superuser or getattr(admin_user, 'role', '') in ('owner', 'admin', 'manager')):
-            raise PermissionError('Only managers or administrators can approve requests.')
+        if not (admin_user.is_superuser or getattr(admin_user, 'role', '') in ('owner', 'admin')):
+            raise PermissionError('Only administrators or owners can approve requests.')
 
         with transaction.atomic():
             approval_req = ApprovalRequest.objects.select_for_update().get(id=approval_request_id)
@@ -356,8 +368,8 @@ class ApprovalService:
 
         Updates status, resolves notification, and logs audit record.
         """
-        if not (admin_user.is_superuser or getattr(admin_user, 'role', '') in ('owner', 'admin', 'manager')):
-            raise PermissionError('Only managers or administrators can reject requests.')
+        if not (admin_user.is_superuser or getattr(admin_user, 'role', '') in ('owner', 'admin')):
+            raise PermissionError('Only administrators or owners can reject requests.')
 
         with transaction.atomic():
             approval_req = ApprovalRequest.objects.select_for_update().get(id=approval_request_id)

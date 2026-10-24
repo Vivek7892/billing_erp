@@ -2449,11 +2449,44 @@ header {
 }
 
 /* ============================================================
-   MOBILE SAFE AREA
+   MOBILE-FIRST SAFE AREA & TOUCH TARGETS
 ============================================================ */
 
+.safe-bottom {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+.pb-safe {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+.mobile-content-pad {
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 768px) {
+  .mobile-content-pad {
+    padding-bottom: 1.5rem;
+  }
+}
+
+.fab-bottom {
+  bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 768px) {
+  .fab-bottom {
+    bottom: 1.5rem;
+  }
+}
+
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
 @supports (padding: env(safe-area-inset-bottom)) {
-  .safe-bottom {
+  .safe-bottom-env {
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
@@ -2612,4 +2645,103 @@ header {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
+}
+
+
+/* ============================================================
+   GLOBAL BORDERLESS INPUTS & WRAPPERS
+   Removes borders, outlines, rings, and focus shadows from
+   ALL input fields, selects, textareas, and their input containers
+============================================================ */
+
+/* 1. All text inputs, selects, textareas, and .input / .erp-control across the entire application */
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]),
+select,
+textarea,
+.input,
+.erp-control {
+  border: 0 !important;
+  border-width: 0 !important;
+  border-color: transparent !important;
+  outline: 0 !important;
+  outline-color: transparent !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+  --tw-ring-color: transparent !important;
+  --tw-ring-offset-width: 0px !important;
+  --tw-ring-width: 0px !important;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):hover,
+select:hover,
+textarea:hover,
+.input:hover,
+.erp-control:hover,
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):focus,
+select:focus,
+textarea:focus,
+.input:focus,
+.erp-control:focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.input:focus-visible,
+.erp-control:focus-visible,
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):active,
+select:active,
+textarea:active,
+.input:active,
+.erp-control:active {
+  border: 0 !important;
+  border-width: 0 !important;
+  border-color: transparent !important;
+  outline: 0 !important;
+  outline-color: transparent !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+  --tw-ring-color: transparent !important;
+  --tw-ring-offset-width: 0px !important;
+  --tw-ring-width: 0px !important;
+}
+
+/* 2. Direct parent wrapper/container surrounding inputs (e.g. search boxes, input groups) */
+div:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"])),
+div:has(> select),
+div:has(> textarea),
+label:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"])),
+.group:has(> input:not([type="checkbox"]):not([type="radio"])),
+[class*="focus-within"]:has(> input:not([type="checkbox"]):not([type="radio"])) {
+  border-color: transparent !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+  --tw-ring-color: transparent !important;
+  --tw-ring-offset-width: 0px !important;
+  --tw-ring-width: 0px !important;
+}
+
+div:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"])):hover,
+div:has(> select):hover,
+div:has(> textarea):hover,
+label:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"])):hover,
+.group:has(> input:not([type="checkbox"]):not([type="radio"])):hover,
+div:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"])):focus-within,
+div:has(> select):focus-within,
+div:has(> textarea):focus-within,
+label:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"])):focus-within,
+.group:has(> input:not([type="checkbox"]):not([type="radio"])):focus-within,
+[class*="focus-within"]:has(> input:not([type="checkbox"]):not([type="radio"])):focus-within {
+  border-color: transparent !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+  --tw-ring-color: transparent !important;
+  --tw-ring-offset-width: 0px !important;
+  --tw-ring-width: 0px !important;
 }

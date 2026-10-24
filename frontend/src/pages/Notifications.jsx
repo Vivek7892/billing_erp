@@ -478,7 +478,7 @@ function ActionMetricCard({ label, count, sub, active, onClick }) {
 export default function Notifications() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const canManageApprovals = [ROLES.OWNER, ROLES.ADMIN, ROLES.MANAGER].includes(user?.role) || user?.is_superuser
+  const canManageApprovals = [ROLES.OWNER, ROLES.ADMIN].includes(user?.role) || user?.is_superuser
   const isAdminOrOwner = [ROLES.OWNER, ROLES.ADMIN].includes(user?.role) || user?.is_superuser
 
   // Data & State
@@ -656,7 +656,7 @@ export default function Notifications() {
         data: item.data,
       })
     } else {
-      toast.error('Access Denied: Manager or Administrator sign-off required for this approval.', {
+      toast.error('Access Denied: Administrator sign-off required for this approval.', {
         icon: '🔒',
         duration: 4000,
       })
@@ -675,7 +675,7 @@ export default function Notifications() {
 
   const handleApprovalAction = async (id, action) => {
     if (!canManageApprovals) {
-      toast.error('Access Denied: Only Managers and Administrators can authorize approvals.', {
+      toast.error('Access Denied: Only Administrators and Owners can authorize approvals.', {
         icon: '🔒',
         duration: 4000,
       })
@@ -720,7 +720,7 @@ export default function Notifications() {
 
   const handleDirectApproval = async (item, action) => {
     if (!canManageApprovals) {
-      toast.error('Access Denied: Manager or Administrator sign-off required for this approval.', {
+      toast.error('Access Denied: Administrator sign-off required for this approval.', {
         icon: '🔒',
         duration: 4000,
       })
@@ -1076,10 +1076,6 @@ export default function Notifications() {
           <span className="text-[11px] text-[var(--muted)] hidden md:inline">
             {user?.role === 'cashier'
               ? 'Showing counter payments, stock alerts, and your submitted approval requests.'
-              : user?.role === 'manager'
-              ? 'Showing operational stock, purchase orders, quotations, and authorization queues.'
-              : user?.role === 'accountant'
-              ? 'Showing overdue invoices, payments received, and tax/compliance reports.'
               : 'Showing all operational queues, compliance alerts, and administrator authorizations.'}
           </span>
         </div>

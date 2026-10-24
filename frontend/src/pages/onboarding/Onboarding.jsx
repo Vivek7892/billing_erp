@@ -562,7 +562,7 @@ export default function Onboarding() {
                   className="onboarding-btn-primary"
                 >
                   <span>{saving ? 'Saving...' : 'Save & Continue'}</span>
-                  <ArrowRight size={16} />
+                  <IconArrowRight size={16} />
                 </button>
               </div>
             </section>
@@ -648,7 +648,7 @@ export default function Onboarding() {
                         preferencesData.invoice_format === 'thermal-80mm' ? 'selected' : ''
                       }`}
                     >
-                      <Printer size={24} className="text-[#0057B8]" />
+                      <IconPrinter size={24} className="text-[#0057B8]" />
                       <div className="onboarding-format-title">Thermal 80 mm (3")</div>
                       <div className="onboarding-format-desc">Standard POS roll printers. Ideal for retail counters.</div>
                     </div>
@@ -659,7 +659,7 @@ export default function Onboarding() {
                         preferencesData.invoice_format === 'thermal-58mm' ? 'selected' : ''
                       }`}
                     >
-                      <Printer size={24} className="text-sky-600" />
+                      <IconPrinter size={24} className="text-sky-600" />
                       <div className="onboarding-format-title">Thermal 58 mm (2")</div>
                       <div className="onboarding-format-desc">Compact handheld and Bluetooth receipt printers.</div>
                     </div>
@@ -670,7 +670,7 @@ export default function Onboarding() {
                         preferencesData.invoice_format === 'A4' ? 'selected' : ''
                       }`}
                     >
-                      <Receipt size={24} className="text-indigo-600" />
+                      <IconReceipt size={24} className="text-indigo-600" />
                       <div className="onboarding-format-title">Standard A4 Sheet</div>
                       <div className="onboarding-format-desc">Full-page desktop laser/inkjet billing with itemized tables.</div>
                     </div>
@@ -714,7 +714,7 @@ export default function Onboarding() {
                   onClick={() => setCurrentStep(1)}
                   className="onboarding-btn-secondary"
                 >
-                  <ArrowLeft size={16} />
+                  <IconArrowLeft size={16} />
                   <span>Back</span>
                 </button>
                 <button
@@ -724,7 +724,7 @@ export default function Onboarding() {
                   className="onboarding-btn-primary"
                 >
                   <span>{saving ? 'Saving...' : 'Save & Continue'}</span>
-                  <ArrowRight size={16} />
+                  <IconArrowRight size={16} />
                 </button>
               </div>
             </section>
@@ -744,7 +744,7 @@ export default function Onboarding() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className="p-2 rounded-lg bg-[#0057B8]/10 text-[#0057B8]">
-                        <Package size={20} />
+                        <IconPackage size={20} />
                       </span>
                       <div>
                         <strong className="block text-sm font-bold text-slate-900 dark:text-white">
@@ -826,7 +826,7 @@ export default function Onboarding() {
 
                 {/* Empty catalogue guarantee note */}
                 <div className="p-3.5 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs text-slate-500 flex items-start gap-2">
-                  <Sparkles size={16} className="text-[#0057B8] shrink-0 mt-0.5" />
+                  <IconSparkles size={16} className="text-[#0057B8] shrink-0 mt-0.5" />
                   <span>
                     You can easily bulk import products from Excel/CSV anytime from the Products screen after completing setup.
                   </span>
@@ -839,7 +839,7 @@ export default function Onboarding() {
                   onClick={() => setCurrentStep(2)}
                   className="onboarding-btn-secondary"
                 >
-                  <ArrowLeft size={16} />
+                  <IconArrowLeft size={16} />
                   <span>Back</span>
                 </button>
                 <button
@@ -849,7 +849,7 @@ export default function Onboarding() {
                   className="onboarding-btn-primary"
                 >
                   <span>{saving ? 'Saving...' : 'Continue to Review'}</span>
-                  <ArrowRight size={16} />
+                  <IconArrowRight size={16} />
                 </button>
               </div>
             </section>
@@ -867,7 +867,7 @@ export default function Onboarding() {
               <div className="onboarding-review-card">
                 <div className="onboarding-review-header">
                   <div className="onboarding-review-title">
-                    <Building2 size={16} className="text-[#0057B8]" />
+                    <IconBuildingStore size={16} className="text-[#0057B8]" />
                     <span>Business Profile</span>
                   </div>
                   <button
@@ -910,7 +910,7 @@ export default function Onboarding() {
               <div className="onboarding-review-card">
                 <div className="onboarding-review-header">
                   <div className="onboarding-review-title">
-                    <Receipt size={16} className="text-[#0057B8]" />
+                    <IconReceipt size={16} className="text-[#0057B8]" />
                     <span>Tax &amp; Invoicing</span>
                   </div>
                   <button
@@ -945,7 +945,7 @@ export default function Onboarding() {
               <div className="onboarding-review-card">
                 <div className="onboarding-review-header">
                   <div className="onboarding-review-title">
-                    <Package size={16} className="text-[#0057B8]" />
+                    <IconPackage size={16} className="text-[#0057B8]" />
                     <span>Catalogue Setup</span>
                   </div>
                   <button
@@ -974,7 +974,7 @@ export default function Onboarding() {
                   onClick={() => setCurrentStep(3)}
                   className="onboarding-btn-secondary"
                 >
-                  <ArrowLeft size={16} />
+                  <IconArrowLeft size={16} />
                   <span>Back</span>
                 </button>
                 <button
@@ -983,7 +983,7 @@ export default function Onboarding() {
                   disabled={saving}
                   className="onboarding-btn-primary !px-6"
                 >
-                  <Sparkles size={16} />
+                  <IconSparkles size={16} />
                   <span>{saving ? 'Launching...' : 'Complete Setup & Launch ERP'}</span>
                 </button>
               </div>
