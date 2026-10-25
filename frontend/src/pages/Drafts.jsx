@@ -38,6 +38,7 @@ const fmt = v =>
 export default function Drafts() {
   const [drafts, setDrafts] = useState([])
   const [q, setQ] = useState('')
+  const [showMoreKpi, setShowMoreKpi] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -152,38 +153,60 @@ export default function Drafts() {
         </div>
       </div>
 
-      {/* Summary KPI Strip (Strict ERP Standard) */}
-      <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] mb-4">
-        <div className="grid grid-cols-1 divide-y divide-[var(--line)] sm:grid-cols-3 sm:divide-y-0 sm:divide-x">
-          <div className="p-3 sm:p-3.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-              Parked Invoices
-            </span>
-            <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
-              {drafts.length}
-            </p>
-            <p className="text-[10px] text-[var(--muted)]">Awaiting resumption</p>
+      {/* Summary KPI Strip: 2 Cards Initially + Show More Button */}
+      <div className="space-y-2 mb-4">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            Draft Summary
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowMoreKpi(v => !v)}
+            className="text-xs font-semibold text-[var(--primary)] underline underline-offset-4 hover:opacity-80 transition"
+          >
+            {showMoreKpi ? 'Show less' : 'Show more'}
+          </button>
+        </div>
+
+        <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
+          <div className="grid grid-cols-2 divide-x divide-[var(--line)]">
+            {/* Card 1: Parked Invoices */}
+            <div className="p-3 sm:p-3.5 min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
+                Parked Invoices
+              </span>
+              <p className="mt-1 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
+                {drafts.length}
+              </p>
+              <p className="text-[10px] text-[var(--muted)] truncate">Awaiting resumption</p>
+            </div>
+
+            {/* Card 2: Estimated Draft Value */}
+            <div className="p-3 sm:p-3.5 min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block truncate">
+                Estimated Value
+              </span>
+              <p className="mt-1 font-mono text-base sm:text-lg font-bold text-teal-600 dark:text-teal-400 tabular-nums truncate">
+                {fmt(totalDraftValue)}
+              </p>
+              <p className="text-[10px] text-[var(--muted)] truncate">Gross total</p>
+            </div>
           </div>
 
-          <div className="p-3 sm:p-3.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-              Total Line Items
-            </span>
-            <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
-              {totalLineItems}
-            </p>
-            <p className="text-[10px] text-[var(--muted)]">Products across drafts</p>
-          </div>
-
-          <div className="p-3 sm:p-3.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-              Estimated Draft Value
-            </span>
-            <p className="mt-1 font-mono text-lg font-bold text-teal-600 dark:text-teal-400">
-              {fmt(totalDraftValue)}
-            </p>
-            <p className="text-[10px] text-[var(--muted)]">Estimated gross total</p>
-          </div>
+          {/* Expanded 3rd Card: Total Line Items */}
+          {showMoreKpi && (
+            <div className="border-t border-[var(--line)] bg-[var(--surface-elevated)] p-3 sm:p-3.5 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block">
+                  Total Line Items
+                </span>
+                <p className="text-xs text-[var(--muted)] mt-0.5">Products preserved across all saved drafts</p>
+              </div>
+              <p className="font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums">
+                {totalLineItems} items
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

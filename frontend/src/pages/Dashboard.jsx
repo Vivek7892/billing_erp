@@ -136,6 +136,7 @@ export default function Dashboard() {
   const [error, setError] = useState('')
   const [ecosystemModalOpen, setEcosystemModalOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [showGlance, setShowGlance] = useState(false)
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -242,54 +243,28 @@ export default function Dashboard() {
     {
       label: "Today's Sales",
       value: fmtCurrency(data.today_sales),
-      sub: `${data.today_bills || 0} bills`,
+      sub: `${data.today_bills || 0} bills · ${salesTrendLabel}`,
+      onClick: () => navigate('/sales/invoices'),
     },
     {
       label: "Collections",
       value: fmtCurrency(data.today_collection || data.today_payments_total),
       sub: `Tax ${fmtCurrency(data.today_tax)}`,
+      onClick: () => navigate('/sales/payments'),
     },
     {
       label: "Gross Profit",
       value: fmtCurrency(data.today_profit),
       sub: `Margin ${Number(data.profit_margin || 0).toFixed(1)}%`,
+      onClick: () => navigate('/reports'),
     },
     {
-      label: "Receivables",
-      value: fmtCurrency(data.pending_credit),
-      sub: `${creditDueCount} pending`,
+      label: "Receivables & Stock",
+      value: `${fmtCurrency(data.pending_credit)} due`,
+      sub: `${creditDueCount} pending · ${data.out_of_stock || 0} out`,
+      onClick: () => navigate('/parties/customers?credit_due=1'),
     },
-  ], [data, creditDueCount])
-
-  const secondaryKpis = useMemo(() => [
-    {
-      label: "Gross Profit",
-      value: fmtCurrency(data.today_profit),
-      sub: `Margin ${Number(data.profit_margin || 0).toFixed(1)}%`,
-    },
-    {
-      label: "Stock Alerts",
-      value: `${data.low_stock_count || 0} low`,
-      sub: `${data.out_of_stock || 0} out of stock`,
-    },
-    {
-      label: "Purchases Today",
-      value: fmtCurrency(data.today_purchases),
-    },
-    {
-      label: "Expenses Today",
-      value: fmtCurrency(data.today_expenses),
-    },
-    {
-      label: "Month Sales",
-      value: fmtCurrency(data.month_sales),
-      sub: Number(data.last_month_sales) ? `${data.sales_growth > 0 ? '+' : ''}${Number(data.sales_growth || 0).toFixed(1)}% vs prior` : undefined,
-    },
-    {
-      label: "Month Profit",
-      value: fmtCurrency(data.month_profit),
-    },
-  ], [data])
+  ], [data, creditDueCount, navigate, salesTrendLabel])
 
   if (loading) {
     return <Spinner label="Loading dashboard" />
@@ -405,50 +380,160 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* MOBILE KPI OVERHAUL */}
-      <MobileKpiGrid primaryKpis={primaryKpis} secondaryKpis={secondaryKpis} />
+      {/* MOBILE BUSINESS INSIGHTS (Only 4 KPI Cards + Show More Today's Glance) */}
+      <div className="md:hidden space-y-2.5">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+            Business Insights
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowGlance(v => !v)}
+            className="text-xs font-semibold text-[var(--primary)] underline underline-offset-4 hover:opacity-80 transition"
+          >
+            {showGlance ? 'Show less' : 'Show more'}
+          </button>
+        </div>
+
+        {/* 2x2 Grid: Exactly 4 KPI Cards */}
+        <div className="grid grid-cols-2 gap-2">
+          {primaryKpis.map((kpi, idx) => (
+            <div
+              key={idx}
+              onClick={kpi.onClick}
+              className={`flex flex-col justify-between rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-2xs transition active:scale-[0.99] ${
+                kpi.onClick ? 'cursor-pointer hover:border-[var(--line-strong)]' : ''
+              }`}
+            >
+              <div className="flex items-center justify-between gap-1">
+                <p className="text-[10px] font-medium text-[var(--muted)] truncate">{kpi.label}</p>
+                {kpi.icon && <kpi.icon size={13} className="text-[var(--muted)] shrink-0" />}
+              </div>
+              <p className="mt-1 text-base font-bold font-mono text-[var(--ink)] tracking-tight truncate">
+                {kpi.value}
+              </p>
+              {kpi.sub && (
+                <p className="mt-0.5 text-[9px] text-[var(--muted)] truncate">{kpi.sub}</p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Simple Today at a Glance Information (NOT in KPI Cards) */}
+        {showGlance && (
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-2xs space-y-2 animate-fadeIn">
+            <div className="flex items-center justify-between border-b border-[var(--line-subtle)] pb-1.5">
+              <span className="text-xs font-bold text-[var(--ink)]">Today at a glance</span>
+              <span className="text-[10px] text-[var(--muted)]">Summary</span>
+            </div>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+              <div className="flex items-center justify-between py-1 border-b border-[var(--line-subtle)]/50">
+                <span className="text-[var(--muted)] text-[11px]">Bills Issued</span>
+                <span className="font-mono font-bold text-[var(--ink)]">{data.today_bills || 0}</span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-[var(--line-subtle)]/50">
+                <span className="text-[var(--muted)] text-[11px]">Avg Bill</span>
+                <span className="font-mono font-bold text-[var(--ink)]">{fmtCurrency(data.avg_bill_today)}</span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-[var(--line-subtle)]/50">
+                <span className="text-[var(--muted)] text-[11px]">Purchases</span>
+                <span className="font-mono font-bold text-[var(--ink)]">{fmtCurrency(data.today_purchases)}</span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-[var(--line-subtle)]/50">
+                <span className="text-[var(--muted)] text-[11px]">Expenses</span>
+                <span className="font-mono font-bold text-[var(--ink)]">{fmtCurrency(data.today_expenses)}</span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-[var(--line-subtle)]/50">
+                <span className="text-[var(--muted)] text-[11px]">Tax Collected</span>
+                <span className="font-mono font-bold text-[var(--ink)]">{fmtCurrency(data.today_tax)}</span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-[var(--line-subtle)]/50">
+                <span className="text-[var(--muted)] text-[11px]">Stock Status</span>
+                <span className="font-mono font-bold text-[var(--ink)]">
+                  <span className={Number(data.low_stock_count) ? 'text-amber-600' : ''}>{data.low_stock_count || 0} low</span>
+                  <span className="mx-0.5 text-[var(--muted)]">·</span>
+                  <span className={Number(data.out_of_stock) ? 'text-red-600' : ''}>{data.out_of_stock || 0} out</span>
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-1 border-b border-[var(--line-subtle)]/50 col-span-2">
+                <span className="text-[var(--muted)] text-[11px]">Month Sales</span>
+                <span className="font-mono font-bold text-[var(--ink)]">
+                  {fmtCurrency(data.month_sales)}
+                  {Number(data.last_month_sales) ? (
+                    <span className={`ml-1.5 text-[10px] font-sans font-normal ${data.sales_growth > 0 ? 'text-emerald-600' : data.sales_growth < 0 ? 'text-red-600' : 'text-[var(--muted)]'}`}>
+                      ({data.sales_growth > 0 ? '+' : ''}{Number(data.sales_growth || 0).toFixed(1)}% vs prior)
+                    </span>
+                  ) : null}
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-1 col-span-2">
+                <span className="text-[var(--muted)] text-[11px]">Month Profit</span>
+                <span className="font-mono font-bold text-[var(--ink)]">
+                  {fmtCurrency(data.month_profit)}
+                  {Number(data.last_month_profit) ? (
+                    <span className={`ml-1.5 text-[10px] font-sans font-normal ${percentChange(data.month_profit, data.last_month_profit) > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      ({percentChange(data.month_profit, data.last_month_profit) > 0 ? '+' : ''}{percentChange(data.month_profit, data.last_month_profit)}% vs prior)
+                    </span>
+                  ) : null}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* DESKTOP BUSINESS SNAPSHOT & AT A GLANCE */}
       <div className="hidden md:block space-y-4">
-      {/* BUSINESS SNAPSHOT */}
-      <section aria-labelledby="business-snapshot-title" className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
-        <h2 id="business-snapshot-title" className="border-b border-[var(--line)] px-4 py-2.5 text-sm font-semibold">Business Insights</h2>
-        <div className="grid grid-cols-2 gap-px bg-[var(--line)] lg:grid-cols-4">
-          <button type="button" onClick={() => navigate('/sales/invoices')} className="min-w-0 bg-[var(--surface)] px-3 py-3 text-left transition hover:bg-[var(--surface-hover)] sm:px-4">
-            <span className="text-xs font-semibold text-[var(--muted)]">Sales</span>
-            <p className="mt-1 truncate font-mono text-xl font-extrabold tabular-nums text-[var(--ink)] sm:text-2xl">{fmtCurrency(data.today_sales)}</p>
-            <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-medium text-[var(--muted)]"><span>{data.today_bills || 0} bills</span><span className="px-0.5">·</span><span className={`inline-flex items-center gap-0.5 ${Number(data.yesterday_sales) ? (salesTrend > 0 ? 'text-emerald-700 dark:text-emerald-400' : salesTrend < 0 ? 'text-red-600 dark:text-red-400' : 'text-[var(--muted)]') : ''}`}>{Number(data.yesterday_sales) && (salesTrend > 0 ? <IconArrowUp size={14} aria-label="Up" /> : salesTrend < 0 ? <IconArrowDown size={14} aria-label="Down" /> : null)}{salesTrendLabel}</span></p>
-          </button>
-          <button type="button" onClick={() => navigate('/sales/payments')} className="min-w-0 bg-[var(--surface)] px-3 py-3 text-left transition hover:bg-[var(--surface-hover)] sm:px-4">
-            <span className="text-xs font-semibold text-[var(--muted)]">Collections</span>
-            <p className="mt-1 truncate font-mono text-xl font-extrabold tabular-nums text-[var(--ink)] sm:text-2xl">{fmtCurrency(data.today_collection || data.today_payments_total)}</p>
-            <p className="mt-0.5 text-xs text-[var(--muted)]">Today <span className="px-1">·</span> Tax {fmtCurrency(data.today_tax)}</p>
-          </button>
-          <button type="button" onClick={() => navigate('/reports')} className="min-w-0 bg-[var(--surface)] px-3 py-3 text-left transition hover:bg-[var(--surface-hover)] sm:px-4">
-            <span className="text-xs font-semibold text-[var(--muted)]">Profit</span>
-            <p className={`mt-1 truncate font-mono text-xl font-extrabold tabular-nums sm:text-2xl ${Number(data.today_profit) >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{fmtCurrency(data.today_profit)}</p>
-            <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-medium text-[var(--muted)]"><span>Margin {Number(data.profit_margin || 0).toFixed(1)}%</span>{hasProfitBaseline && <span className={`inline-flex items-center gap-0.5 ${profitDifference >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{profitDifference > 0 ? <IconArrowUp size={14} /> : profitDifference < 0 ? <IconArrowDown size={14} /> : null}{profitTrendLabel}</span>}</p>
-          </button>
-          <div className="min-w-0 bg-[var(--surface)] px-3 py-3 sm:px-4">
-            <span className="text-xs font-semibold text-[var(--muted)]">Receivables & stock</span>
-            <button type="button" onClick={() => navigate('/parties/customers?credit_due=1')} className="mt-1 block max-w-full truncate text-left font-mono text-xl font-extrabold tabular-nums text-amber-700 hover:underline dark:text-amber-400 sm:text-2xl">{fmtCurrency(data.pending_credit)} due</button>
-            <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-[var(--muted)]"><span>{creditDueCount} customers pending</span><button type="button" onClick={() => navigate('/inventory/stock')} className={Number(data.out_of_stock) ? 'text-red-600 dark:text-red-400' : ''}>{data.out_of_stock || 0} out</button><button type="button" onClick={() => navigate('/inventory/stock')} className={Number(data.low_stock_count) ? 'text-amber-700 dark:text-amber-400' : ''}>{data.low_stock_count || 0} low</button></div>
+        {/* BUSINESS SNAPSHOT (Only 4 KPI Cards) */}
+        <section aria-labelledby="business-snapshot-title" className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
+          <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
+            <h2 id="business-snapshot-title" className="text-sm font-semibold">Business Insights</h2>
+            <button
+              type="button"
+              onClick={() => setShowGlance(v => !v)}
+              className="text-xs font-semibold text-[var(--primary)] underline underline-offset-4 hover:opacity-80 transition"
+            >
+              {showGlance ? 'Hide today at a glance' : 'Show today at a glance'}
+            </button>
           </div>
-        </div>
-      </section>
+          <div className="grid grid-cols-2 gap-px bg-[var(--line)] lg:grid-cols-4">
+            <button type="button" onClick={() => navigate('/sales/invoices')} className="min-w-0 bg-[var(--surface)] px-3 py-3 text-left transition hover:bg-[var(--surface-hover)] sm:px-4">
+              <span className="text-xs font-semibold text-[var(--muted)]">Sales</span>
+              <p className="mt-1 truncate font-mono text-xl font-extrabold tabular-nums text-[var(--ink)] sm:text-2xl">{fmtCurrency(data.today_sales)}</p>
+              <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-medium text-[var(--muted)]"><span>{data.today_bills || 0} bills</span><span className="px-0.5">·</span><span className={`inline-flex items-center gap-0.5 ${Number(data.yesterday_sales) ? (salesTrend > 0 ? 'text-emerald-700 dark:text-emerald-400' : salesTrend < 0 ? 'text-red-600 dark:text-red-400' : 'text-[var(--muted)]') : ''}`}>{Number(data.yesterday_sales) && (salesTrend > 0 ? <IconArrowUp size={14} aria-label="Up" /> : salesTrend < 0 ? <IconArrowDown size={14} aria-label="Down" /> : null)}{salesTrendLabel}</span></p>
+            </button>
+            <button type="button" onClick={() => navigate('/sales/payments')} className="min-w-0 bg-[var(--surface)] px-3 py-3 text-left transition hover:bg-[var(--surface-hover)] sm:px-4">
+              <span className="text-xs font-semibold text-[var(--muted)]">Collections</span>
+              <p className="mt-1 truncate font-mono text-xl font-extrabold tabular-nums text-[var(--ink)] sm:text-2xl">{fmtCurrency(data.today_collection || data.today_payments_total)}</p>
+              <p className="mt-0.5 text-xs text-[var(--muted)]">Today <span className="px-1">·</span> Tax {fmtCurrency(data.today_tax)}</p>
+            </button>
+            <button type="button" onClick={() => navigate('/reports')} className="min-w-0 bg-[var(--surface)] px-3 py-3 text-left transition hover:bg-[var(--surface-hover)] sm:px-4">
+              <span className="text-xs font-semibold text-[var(--muted)]">Profit</span>
+              <p className={`mt-1 truncate font-mono text-xl font-extrabold tabular-nums sm:text-2xl ${Number(data.today_profit) >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{fmtCurrency(data.today_profit)}</p>
+              <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-medium text-[var(--muted)]"><span>Margin {Number(data.profit_margin || 0).toFixed(1)}%</span>{hasProfitBaseline && <span className={`inline-flex items-center gap-0.5 ${profitDifference >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{profitDifference > 0 ? <IconArrowUp size={14} /> : profitDifference < 0 ? <IconArrowDown size={14} /> : null}{profitTrendLabel}</span>}</p>
+            </button>
+            <div className="min-w-0 bg-[var(--surface)] px-3 py-3 sm:px-4">
+              <span className="text-xs font-semibold text-[var(--muted)]">Receivables & stock</span>
+              <button type="button" onClick={() => navigate('/parties/customers?credit_due=1')} className="mt-1 block max-w-full truncate text-left font-mono text-xl font-extrabold tabular-nums text-amber-700 hover:underline dark:text-amber-400 sm:text-2xl">{fmtCurrency(data.pending_credit)} due</button>
+              <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-[var(--muted)]"><span>{creditDueCount} customers pending</span><button type="button" onClick={() => navigate('/inventory/stock')} className={Number(data.out_of_stock) ? 'text-red-600 dark:text-red-400' : ''}>{data.out_of_stock || 0} out</button><button type="button" onClick={() => navigate('/inventory/stock')} className={Number(data.low_stock_count) ? 'text-amber-700 dark:text-amber-400' : ''}>{data.low_stock_count || 0} low</button></div>
+            </div>
+          </div>
+        </section>
 
-      {/* TODAY AT A GLANCE */}
-      <section aria-label="Today at a glance" className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 sm:px-4">
-        <h2 className="mb-2 text-sm font-semibold text-[var(--ink)]">Today at a glance</h2>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
-        <span className="text-[var(--muted)]">Bills <strong className="font-mono tabular-nums text-[var(--ink)]">{data.today_bills || 0}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
-        <span className="text-[var(--muted)]">Avg bill <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.avg_bill_today)}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
-        <span className="text-[var(--muted)]">Purchases <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.today_purchases)}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
-        <span className="text-[var(--muted)]">Expenses <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.today_expenses)}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
-        <span className="text-[var(--muted)]">Month sales <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.month_sales)}</strong> <span className="text-xs">{Number(data.last_month_sales) ? `${data.sales_growth > 0 ? '+' : ''}${Number(data.sales_growth || 0).toFixed(1)}% vs prior month` : ''}</span></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
-        <span className="text-[var(--muted)]">Month profit <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.month_profit)}</strong> <span className="text-xs">{Number(data.last_month_profit) ? `${percentChange(data.month_profit, data.last_month_profit) > 0 ? '+' : ''}${percentChange(data.month_profit, data.last_month_profit)}% vs prior month` : ''}</span></span>
-        </div>
-      </section>
+        {/* TODAY AT A GLANCE (Desktop) */}
+        {showGlance && (
+          <section aria-label="Today at a glance" className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 sm:px-4 transition-all">
+            <h2 className="mb-2 text-sm font-semibold text-[var(--ink)]">Today at a glance</h2>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+              <span className="text-[var(--muted)]">Bills <strong className="font-mono tabular-nums text-[var(--ink)]">{data.today_bills || 0}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
+              <span className="text-[var(--muted)]">Avg bill <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.avg_bill_today)}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
+              <span className="text-[var(--muted)]">Purchases <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.today_purchases)}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
+              <span className="text-[var(--muted)]">Expenses <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.today_expenses)}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
+              <span className="text-[var(--muted)]">Month sales <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.month_sales)}</strong> <span className="text-xs">{Number(data.last_month_sales) ? `${data.sales_growth > 0 ? '+' : ''}${Number(data.sales_growth || 0).toFixed(1)}% vs prior month` : ''}</span></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
+              <span className="text-[var(--muted)]">Month profit <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.month_profit)}</strong> <span className="text-xs">{Number(data.last_month_profit) ? `${percentChange(data.month_profit, data.last_month_profit) > 0 ? '+' : ''}${percentChange(data.month_profit, data.last_month_profit)}% vs prior month` : ''}</span></span>
+            </div>
+          </section>
+        )}
       </div>
 
       {/* ATTENTION REQUIRED */}
@@ -546,16 +631,6 @@ export default function Dashboard() {
           >
             <IconFileText size={13} />
             <span>Reports</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setEcosystemModalOpen(true)}
-            className="inline-flex h-9 min-w-0 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 text-xs font-medium text-[var(--ink)] shadow-2xs transition hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] active:scale-95 sm:h-8 sm:shrink-0 sm:gap-1.5 sm:px-2.5"
-            title="View Connected Enterprise Ecosystem Architecture"
-          >
-            <IconRoute size={13} className="text-[#0057B8] dark:text-sky-400" />
-            <span>Ecosystem</span>
           </button>
         </div>
       </section>

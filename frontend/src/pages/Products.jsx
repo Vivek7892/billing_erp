@@ -24,6 +24,7 @@ import {
   IconEdit,
   IconTrash,
   IconBarcode,
+  IconDots,
   IconPackage,
   IconRefresh,
   IconAdjustmentsHorizontal,
@@ -217,6 +218,7 @@ function BarcodeQuantityControl({ value, onChange }) {
 
 export default function Products() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const [mobileMoreId, setMobileMoreId] = useState(null)
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [suppliers, setSuppliers] = useState([])
@@ -1155,17 +1157,18 @@ export default function Products() {
       {/* =====================================================
           PRODUCT METRICS & STOCK ALERTS SUMMARY TABLE
       ====================================================== */}
-      {/* Mobile KPI Grid with Top-Right Round Button for >4 KPIs */}
+      
+      {/* Mobile KPI Grid (< 640px) */}
       <MobileKpiGrid
-        title="Catalog Metrics"
+        title="Product Metrics"
         primaryKpis={[
-          { label: 'Total Products', value: String(stats.total), sub: 'All catalog items', icon: IconPackages, onClick: () => setStockFilter('all') },
-          { label: 'Active Items', value: String(stats.active), sub: 'Available for sale', icon: IconCircleCheck, onClick: () => setStatusFilter(statusFilter === 'active' ? 'all' : 'active') },
-          { label: 'Low Stock Alert', value: String(stats.low), sub: 'Threshold reached', icon: IconAlertTriangle, onClick: () => setStockFilter(stockFilter === 'low_stock' ? 'all' : 'low_stock') },
-          { label: 'Out of Stock', value: String(stats.out), sub: 'Zero inventory', icon: IconCircleX, onClick: () => setStockFilter(stockFilter === 'out_of_stock' ? 'all' : 'out_of_stock') },
+          { label: 'Total Items', value: String(stats.total), sub: 'All catalog items', icon: IconPackages, onClick: () => resetFilters() },
+          { label: 'Active', value: String(stats.active), sub: 'Available for sale', icon: IconCircleCheck, onClick: () => setStatusFilter('active') },
+          { label: 'Low Stock', value: String(stats.low), sub: 'Threshold reached', icon: IconAlertTriangle, onClick: () => setStockFilter('low_stock') },
+          { label: 'Out of Stock', value: String(stats.out), sub: 'Zero balance', icon: IconCircleX, onClick: () => setStockFilter('out_of_stock') },
         ]}
         secondaryKpis={[
-          { label: 'Stock Valuation', value: formatCurrency(stats.stockValue), sub: `Retail: ${formatCurrency(stats.retailValue)}`, icon: IconTag },
+          { label: 'Stock Value', value: formatCurrency(stats.stockValue), sub: `Retail: ${formatCurrency(stats.retailValue)}`, icon: IconTag },
         ]}
       />
 
@@ -1470,119 +1473,136 @@ export default function Products() {
           />
         ) : (
           <>
-            {/* Mobile Cards View (< 768px) */}
-            <div className="divide-y divide-[var(--line-subtle)] md:hidden">
+            {/* Mobile Cards View (< 768px): Clean Single-Column Cards */}
+            <div className="md:hidden space-y-3 px-4 pb-28">
               {pagedProducts.map(product => {
                 const stockAlert = getStockAlertState(product)
                 const StockIcon = stockAlert.icon
                 return (
-                  <article key={product.id} className="p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="text-sm font-bold text-[var(--ink)] truncate">
-                          {product.name}
-                        </h3>
-                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-[var(--muted)]">
-                          {product.brand && (
-                            <span className="font-medium text-[var(--ink-secondary)]">
-                              {product.brand}
-                            </span>
-                          )}
-                          {product.brand && <span>•</span>}
-                          <span>{product.category_name || 'Uncategorized'}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => openDetails(product)}
-                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-elevated)] transition shadow-xs"
-                          title="View Details"
-                        >
-                          <IconEye size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openEdit(product)}
-                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-elevated)] transition shadow-xs"
-                          title="Edit"
-                        >
-                          <IconEdit size={15} />
-                        </button>
-                      </div>
+                  <article
+                    key={product.id}
+                    className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 space-y-2.5 shadow-2xs transition active:bg-[var(--surface-elevated)]"
+                    onClick={() => openDetails(product)}
+                  >
+                    {/* Line 1: Product Name & Stock Status Badge */}
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-sm font-bold text-[var(--ink)] truncate flex-1">
+                        {product.name}
+                      </h3>
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold shrink-0 ${stockAlert.badgeClass}`}
+                      >
+                        <StockIcon size={11} />
+                        {stockAlert.label}
+                      </span>
                     </div>
 
-                    {/* Identifiers */}
-                    <div className="flex items-center gap-3 text-xs font-mono text-[var(--muted)]">
-                      <span>SKU: {product.sku || '—'}</span>
-                      <span>•</span>
-                      <span>Bar: {product.barcode || '—'}</span>
+                    {/* Line 2: Brand · Category */}
+                    <div className="flex items-center gap-1.5 text-xs text-[var(--muted)] truncate">
+                      {product.brand && (
+                        <>
+                          <span className="font-medium text-[var(--ink-secondary)]">{product.brand}</span>
+                          <span>·</span>
+                        </>
+                      )}
+                      <span>{product.category_name || 'Uncategorized'}</span>
                     </div>
 
-                    {/* Price & Stock Grid */}
-                    <div className="grid grid-cols-3 gap-2 rounded-xl bg-[var(--surface-elevated)] p-2.5 text-xs">
-                      <div>
-                        <span className="text-[10px] uppercase font-bold text-[var(--muted-light)]">
-                          Selling Price
-                        </span>
-                        <p className="mt-0.5 font-mono font-bold text-[var(--ink)]">
-                          {formatCurrency(product.selling_price)}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-[10px] uppercase font-bold text-[var(--muted-light)]">
-                          Purchase
-                        </span>
-                        <p className="mt-0.5 font-mono text-[var(--muted)]">
-                          {formatCurrency(product.purchase_price)}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-[10px] uppercase font-bold text-[var(--muted-light)]">
-                          Current Stock
-                        </span>
-                        <p className={`mt-0.5 font-mono ${stockAlert.textClass}`}>
-                          {product.current_stock ?? 0}{' '}
-                          <span className="text-[10px] font-normal text-[var(--muted)]">
-                            {product.unit || 'pcs'}
-                          </span>
-                        </p>
-                      </div>
+                    {/* Line 3: Price · Stock */}
+                    <div className="flex items-center gap-2 text-xs font-mono">
+                      <span className="font-bold text-[var(--ink)] text-sm">
+                        {formatCurrency(product.selling_price)}
+                      </span>
+                      <span className="text-[var(--muted)]">·</span>
+                      <span className={`font-semibold ${stockAlert.textClass}`}>
+                        Stock: {product.current_stock ?? 0} {product.unit || 'pcs'}
+                      </span>
                     </div>
 
-                    {/* Stock Alert Badge & Actions */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${stockAlert.badgeClass}`}
-                        >
-                          <StockIcon size={12} />
-                          {stockAlert.label}
-                        </span>
+                    {/* Actions: Eye (View) · Barcode · Adjust · ⋯ (More) */}
+                    <div
+                      className="flex items-center gap-1.5 pt-2 border-t border-[var(--line-subtle)]"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => openDetails(product)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition shrink-0"
+                        title="View Product"
+                      >
+                        <IconEye size={15} />
+                      </button>
 
-                        <Badge status={product.status || 'active'} />
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => openBarcode(product)}
+                        className="flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition shadow-2xs"
+                        title="Print Barcode"
+                      >
+                        <IconBarcode size={13} className="shrink-0" />
+                        <span className="truncate">Barcode</span>
+                      </button>
 
-                      <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => openAdjust(product)}
+                        className="flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-[#1E3A5F] text-white text-xs font-semibold hover:bg-[#162F4D] active:scale-95 transition shadow-2xs"
+                        title="Adjust Stock"
+                      >
+                        <IconAdjustmentsHorizontal size={13} className="shrink-0" />
+                        <span className="truncate">Adjust</span>
+                      </button>
+
+                      <div className="relative shrink-0">
                         <button
                           type="button"
-                          onClick={() => openAdjust(product)}
-                          className="h-7.5 px-2.5 rounded-md border border-[var(--line)] bg-[var(--surface)] text-[11px] font-semibold text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] inline-flex items-center justify-center gap-1 transition active:scale-95 shadow-2xs"
-                          title="Adjust stock"
+                          onClick={() => setMobileMoreId(current => current === product.id ? null : product.id)}
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition ${
+                            mobileMoreId === product.id ? 'border-[var(--primary)] bg-[var(--surface-hover)]' : ''
+                          }`}
+                          aria-label="More actions"
                         >
-                          <IconAdjustmentsHorizontal size={13} />
-                          <span>Adjust</span>
+                          <IconDots size={16} />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => openBarcode(product)}
-                          className="h-7.5 px-2.5 rounded-md border border-[var(--line)] bg-[var(--surface)] text-[11px] font-semibold text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] inline-flex items-center justify-center gap-1 transition active:scale-95 shadow-2xs"
-                          title="Print barcode"
-                        >
-                          <IconBarcode size={13} />
-                          <span>Barcode</span>
-                        </button>
+
+                        {mobileMoreId === product.id && (
+                          <div className="absolute right-0 bottom-full mb-1 z-50 w-44 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMobileMoreId(null)
+                                openEdit(product)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+                            >
+                              <IconEdit size={14} />
+                              <span>Edit Product</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMobileMoreId(null)
+                                toggleProductStatus(product)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+                            >
+                              <IconCircleCheck size={14} />
+                              <span>{product.status === 'active' ? 'Deactivate' : 'Activate'}</span>
+                            </button>
+                            <div className="my-1 border-t border-[var(--line-subtle)]" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMobileMoreId(null)
+                                setDeleteId(product.id)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition"
+                            >
+                              <IconTrash size={14} />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </article>

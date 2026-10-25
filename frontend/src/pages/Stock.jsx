@@ -30,6 +30,8 @@ import {
   IconTag,
   IconArrowsSort,
   IconFilter,
+  IconEye,
+  IconDots,
 } from '@tabler/icons-react'
 
 const getStatus = product => {
@@ -117,6 +119,7 @@ export default function Stock() {
   const [historyList, setHistoryList] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [barcodeProduct, setBarcodeProduct] = useState(null)
+  const [mobileMoreId, setMobileMoreId] = useState(null)
     
   const load = async () => {
     setLoading(true)
@@ -837,12 +840,24 @@ export default function Stock() {
                       </div>
                     </div>
 
-                    {/* Action Bar — Mobile-Friendly Button Placements */}
-                    <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-[var(--line-subtle)]">
+                    {/* Action Bar: Eye (View History) · Barcode · Adjust · ⋯ (More) */}
+                    <div
+                      className="flex items-center gap-1.5 pt-2 border-t border-[var(--line-subtle)]"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => openHistory(p)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition shrink-0"
+                        title="Movement History"
+                      >
+                        <IconEye size={15} />
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => setBarcodeProduct(p)}
-                        className="h-8 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] flex items-center justify-center gap-1 shadow-2xs transition active:scale-95"
+                        className="flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] shadow-2xs transition active:scale-95"
                         title="Print Barcode Labels"
                       >
                         <IconBarcode size={13} className="shrink-0" />
@@ -851,23 +866,53 @@ export default function Stock() {
 
                       <button
                         type="button"
-                        onClick={() => openHistory(p)}
-                        className="h-8 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] flex items-center justify-center gap-1 shadow-2xs transition active:scale-95"
-                        title="Movement History"
-                      >
-                        <IconHistory size={13} className="shrink-0" />
-                        <span className="truncate">History</span>
-                      </button>
-
-                      <button
-                        type="button"
                         onClick={() => openAdjust(p)}
-                        className="h-8 rounded-lg bg-[#1E3A5F] text-white px-1.5 text-xs font-semibold hover:bg-[#162F4D] flex items-center justify-center gap-1 shadow-2xs transition active:scale-95"
+                        className="flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-[#1E3A5F] text-white px-1.5 text-xs font-semibold hover:bg-[#162F4D] shadow-2xs transition active:scale-95"
                         title="Adjust Stock"
                       >
                         <IconAdjustmentsHorizontal size={13} className="shrink-0" />
                         <span className="truncate">Adjust</span>
                       </button>
+
+                      <div className="relative shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setMobileMoreId(curr => curr === p.id ? null : p.id)}
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition ${
+                            mobileMoreId === p.id ? 'border-[var(--primary)] bg-[var(--surface-hover)]' : ''
+                          }`}
+                          aria-label="More actions"
+                        >
+                          <IconDots size={16} />
+                        </button>
+
+                        {mobileMoreId === p.id && (
+                          <div className="absolute right-0 bottom-full mb-1 z-50 w-44 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMobileMoreId(null)
+                                openHistory(p)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+                            >
+                              <IconHistory size={14} />
+                              <span>Movement History</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMobileMoreId(null)
+                                setBarcodeProduct(p)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+                            >
+                              <IconBarcode size={14} />
+                              <span>Barcode Labels</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </article>
                 )
