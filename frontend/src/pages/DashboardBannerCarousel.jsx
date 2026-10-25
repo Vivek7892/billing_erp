@@ -21,7 +21,7 @@ const slides = [
   {
     image: currentBanner,
     icon: IconLayoutDashboard,
-    eyebrow: 'OVERVIEW',
+    eyebrow: 'ERP OVERVIEW',
     title: 'Your business, at a glance',
     description: 'Sales, stock, payments and business activity in one place.',
   },

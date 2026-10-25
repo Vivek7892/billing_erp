@@ -90,7 +90,8 @@ const CustomerAvatar = ({ customer, size = 'md' }) => {
   ) : (
     <div className={`${dimensions} ${color} rounded-full flex items-center justify-center font-bold ring-2 ring-[var(--surface)] shadow-sm shrink-0`}>
       {initials || <IconUserCircle size={18} />}
-
+      {/* Mobile Floating Action Button */}
+      <MobileFAB icon={IconPlus} label="Add Customer" onClick={openAdd} />
     </div>
   )
 }
@@ -1051,7 +1052,7 @@ export default function Customers() {
           ERP SUMMARY (Tokenized Surfaces, Clean & Accessible)
       ====================================================== */}
 
-      <section className="hidden sm:block overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
+      <section className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
         <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x divide-[var(--line)]">
           <div className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-[var(--surface)]">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
@@ -1407,26 +1408,25 @@ export default function Customers() {
             </div>
 
             {/* =================================================
-                MOBILE CARD LIST (Clean Single-Column Cards)
+                MOBILE CARD LIST (Clean, 1-Tap Touch Ergonomics)
             ================================================== */}
 
-            <div className="lg:hidden space-y-3 px-4 pb-28">
+            <div className="lg:hidden divide-y divide-[var(--line)]">
               {displayed.map(customer => {
                 const outstanding = Number(customer.outstanding_amount || 0)
 
                 return (
                   <article
                     key={customer.id}
-                    className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-3.5 space-y-2 shadow-2xs transition active:bg-[var(--surface-elevated)]"
-                    onClick={() => openView(customer)}
+                    className="p-3 bg-[var(--surface)] space-y-2 hover:bg-[var(--surface-hover)]/40 transition-colors"
                   >
-                    {/* Line 1: Name — Outstanding */}
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="font-bold text-sm text-[var(--ink)] truncate flex-1">
+                    {/* Top Row: Name and Balance */}
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h3 className="font-bold text-sm text-[var(--ink)] truncate">
                         {customer.name}
                       </h3>
                       <span
-                        className={`font-mono text-sm font-bold ${
+                        className={`shrink-0 font-mono text-sm font-bold ${
                           outstanding > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'
                         }`}
                       >
@@ -1434,89 +1434,81 @@ export default function Customers() {
                       </span>
                     </div>
 
-                    {/* Line 2: Phone · Bills */}
-                    <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-                      {customer.mobile ? (
-                        <a
-                          href={`tel:${customer.mobile}`}
-                          onClick={e => e.stopPropagation()}
-                          className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium"
+                    {/* Info Sub-row: Phone · Bills · Credit / Status */}
+                    <div className="flex items-center justify-between text-xs text-[var(--muted)] gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0 truncate">
+                        {customer.mobile ? (
+                          <a
+                            href={`tel:${customer.mobile}`}
+                            className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium shrink-0"
+                          >
+                            <IconPhone size={11} />
+                            <span>{customer.mobile}</span>
+                          </a>
+                        ) : (
+                          <span className="shrink-0">No phone</span>
+                        )}
+                        <span>·</span>
+                        <span className="truncate">{customer.total_bills ?? 0} bills</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0 text-[11px]">
+                        <span className="font-mono text-[var(--ink-secondary)]">Limit: {currency(customer.credit_limit || 0)}</span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[10px] font-semibold ${
+                            outstanding > 0
+                              ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300'
+                              : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                          }`}
                         >
-                          <IconPhone size={11} />
-                          <span>{customer.mobile}</span>
-                        </a>
-                      ) : (
-                        <span>No mobile</span>
-                      )}
-                      <span>·</span>
-                      <span>{customer.total_bills ?? 0} bills</span>
+                          {outstanding > 0 ? 'Due' : 'Paid'}
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Line 3: Credit Limit · Status */}
-                    <div className="flex items-center justify-between gap-2 text-xs">
-                      <span className="font-mono text-[var(--muted)]">
-                        Credit: {currency(customer.credit_limit || 0)}
-                      </span>
-                      <span
-                        className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                          outstanding > 0
-                            ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800'
-                            : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                        }`}
-                      >
-                        {outstanding > 0 ? 'Credit Due' : 'Paid Up'}
-                      </span>
-                    </div>
-
-                    {/* Actions: Eye (View) · Collect · Statement · ⋯ (More) */}
-                    <div
-                      className="flex items-center gap-1.5 pt-2 border-t border-[var(--line-subtle)]"
-                      onClick={e => e.stopPropagation()}
-                    >
+                    {/* Action Row: View Eye, Collect Due, Send Statement, Three dots */}
+                    <div className="flex items-center gap-1.5 pt-1.5 border-t border-[var(--line-subtle)]">
+                      {/* View Eye Button */}
                       <button
                         type="button"
                         onClick={() => openView(customer)}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition shrink-0"
-                        title="View Profile & Bills"
+                        title="View Customer"
                       >
                         <IconEye size={15} />
                       </button>
 
+                      {/* Collect Button */}
                       <button
                         type="button"
-                        onClick={() => {
-                          if (outstanding > 0) {
-                            setPayTarget(customer)
-                          } else {
-                            toast('No balance due for this customer', { icon: 'ℹ️' })
-                          }
-                        }}
-                        className={`flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg text-xs font-semibold shadow-2xs transition active:scale-95 ${
+                        onClick={() => setPayTarget(customer)}
+                        className={`flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg text-xs font-semibold active:scale-95 transition shadow-2xs ${
                           outstanding > 0
-                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                            : 'border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
+                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                            : 'border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
                         }`}
-                        title={outstanding > 0 ? `Collect Payment (${currency(outstanding)})` : 'No balance due'}
+                        title="Collect Payment"
                       >
                         <IconCurrencyRupee size={13} className="shrink-0" />
                         <span className="truncate">Collect</span>
                       </button>
 
+                      {/* Send Statement Button */}
                       <button
                         type="button"
                         onClick={() => sendStatement(customer)}
-                        disabled={sending === 'statement'}
-                        className="flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-teal-200 bg-teal-50 text-xs font-semibold text-teal-800 hover:bg-teal-100 dark:border-teal-800 dark:bg-teal-950/50 dark:text-teal-200 shadow-2xs transition active:scale-95 disabled:opacity-50"
-                        title="Send Account Statement via WhatsApp"
+                        className="flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition shadow-2xs"
+                        title="Send Statement"
                       >
                         <IconFileText size={13} className="shrink-0" />
                         <span className="truncate">Statement</span>
                       </button>
 
+                      {/* Three Dot Button */}
                       <div className="relative shrink-0">
                         <button
                           type="button"
-                          onClick={() => setMobileActionId(current => current === customer.id ? null : customer.id)}
+                          onClick={() => setMobileActionId(curr => curr === customer.id ? null : customer.id)}
                           className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition ${
                             mobileActionId === customer.id ? 'border-[var(--primary)] bg-[var(--surface-hover)]' : ''
                           }`}
@@ -1524,6 +1516,7 @@ export default function Customers() {
                         >
                           <IconDots size={16} />
                         </button>
+
                         {mobileActionId === customer.id && (
                           <div className="absolute right-0 bottom-full mb-1 z-50 w-44 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl">
                             <button
@@ -1535,7 +1528,7 @@ export default function Customers() {
                               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
                             >
                               <IconEdit size={14} />
-                              <span>Edit Details</span>
+                              <span>Edit Customer</span>
                             </button>
                             {outstanding > 0 && (
                               <button
@@ -1544,7 +1537,7 @@ export default function Customers() {
                                   setMobileActionId(null)
                                   openReminder(customer)
                                 }}
-                                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition"
+                                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-[var(--surface-hover)] transition"
                               >
                                 <IconSend size={14} />
                                 <span>Send Reminder</span>
@@ -1567,10 +1560,10 @@ export default function Customers() {
                                 setMobileActionId(null)
                                 setDeleteId(customer.id)
                               }}
-                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-rose-950/40 transition"
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition"
                             >
                               <IconTrash size={14} />
-                              <span>Delete Customer</span>
+                              <span>Delete</span>
                             </button>
                           </div>
                         )}
@@ -2113,8 +2106,9 @@ export default function Customers() {
         danger
       />
 
-      {/* Floating Action Button on Mobile */}
-      <MobileFAB icon={IconPlus} label="Customer" onClick={openAdd} />
+    
+      
+      
     </div>
   )
 }

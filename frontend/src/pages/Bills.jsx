@@ -37,7 +37,6 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconDots,
-  IconEdit,
   IconRefresh,
   IconClockHour3,
   IconUserCircle,
@@ -704,12 +703,11 @@ function InvoiceModal({
 }) {
   const modalRef = useRef(null)
   const [shareOpen, setShareOpen] = useState(false)
-  const [mobileMoreOpen, setMobileMoreOpen] = useState(false)
-  const [mobileTab, setMobileTab] = useState('summary')
   const [customizingTpl, setCustomizingTpl] = useState(null)
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false)
   const [historyKey, setHistoryKey] = useState(0)
-  const [selectedDetail, setSelectedDetail] = useState(selected)
+  const [mobileTab, setMobileTab] = useState('summary') // 'summary' | 'preview' | 'activity'
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const isHalfA4 = settings?.invoice_template === 'half_a4' || settings?.printer_type === 'half_a4' || settings?.invoice_template === 'advanced_gst_a5'
   const isThermal58 = settings?.printer_type === 'thermal_58' || settings?.invoice_template === 'thermal_58'
@@ -722,35 +720,26 @@ function InvoiceModal({
 
   useEffect(() => {
     setModalMode(defaultMode)
-    setMobileTab('summary')
-    setMobileMoreOpen(false)
-    if (selected?.id) {
-      if (!selected.items || selected.items.length === 0) {
-        invoiceService.getInvoice(selected.id)
-          .then(res => { if (res) setSelectedDetail(res) })
-          .catch(() => setSelectedDetail(selected))
-      } else {
-        setSelectedDetail(selected)
-      }
-    }
   }, [selected?.id, defaultMode])
 
   useModalA11y(Boolean(selected), onClose, modalRef)
 
   if (!selected) return null
 
-  const inv = selectedDetail || selected
-  const isDue = Number(inv.balance_due || 0) > 0 && inv.status !== 'cancelled' && inv.status !== 'refunded'
-  const balance = Number(inv.balance_due || 0)
-  const paid = Number(inv.paid_amount || 0)
-  const items = Array.isArray(inv.items) ? inv.items : []
+  const items = Array.isArray(selected?.items) && selected.items.length > 0
+    ? selected.items
+    : (Array.isArray(selected?.invoice_items) ? selected.invoice_items : [])
+
+  const dateStr = selected.created_at
+    ? new Date(selected.created_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+    : (selected.date || '—')
 
   const handleSendWhatsApp = async () => {
     setSendingWhatsApp(true)
-    const cleanPhone = (inv.customer_phone || '').replace(/\D/g, '')
+    const cleanPhone = (selected.customer_phone || '').replace(/\D/g, '')
     const popup = window.open('', '_blank')
     try {
-      const res = await invoiceService.sendWhatsApp(inv.id, cleanPhone)
+      const res = await invoiceService.sendWhatsApp(selected.id, cleanPhone)
       if (res?.whatsapp_url) {
         if (popup) popup.location.href = res.whatsapp_url
         else window.location.href = res.whatsapp_url
@@ -770,7 +759,7 @@ function InvoiceModal({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-0 sm:p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/60 p-0 sm:p-4 backdrop-blur-sm"
       role="presentation"
       onClick={onClose}
     >
@@ -783,128 +772,137 @@ function InvoiceModal({
         className="flex h-full sm:h-auto sm:max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-none sm:rounded-2xl bg-[var(--surface)] shadow-2xl border-0 sm:border border-[var(--line)] outline-none"
         onClick={e => e.stopPropagation()}
       >
-        {/* Modal Header */}
+        {/* Top Header Bar */}
         <div className="border-b border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 sm:px-6">
-          {/* Top Row: Title, Invoice No, Status & Close Button */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-              <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[#1E3A5F] border border-[#D7DEE7] dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-[#1E3A5F] border border-[#D7DEE7] dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700">
                 <IconReceipt size={18} />
               </div>
 
               <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
-                  Invoice Details
-                </p>
                 <div className="flex items-center gap-2">
-                  <h2 id="invoice-modal-title" className="text-sm sm:text-lg font-bold text-[var(--ink)] truncate">
-                    {inv.invoice_number}
+                  <h2 id="invoice-modal-title" className="text-base sm:text-lg font-bold text-[var(--ink)] truncate">
+                    {selected.invoice_number}
                   </h2>
-                  <StatusPill bill={inv} />
+                  <StatusPill bill={selected} />
                 </div>
+                <p className="text-[11px] text-[var(--muted)] truncate">
+                  {selected.customer_name || 'Walk-in Customer'} {selected.customer_phone ? `• ${selected.customer_phone}` : ''}
+                </p>
               </div>
             </div>
 
             <button
               onClick={onClose}
-              className="inline-flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg sm:rounded-xl border border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-elevated)] transition"
+              className="inline-flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl border border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-elevated)] transition shrink-0"
               aria-label="Close modal"
             >
-              <IconX size={17} />
+              <IconX size={18} />
             </button>
           </div>
 
-          {/* Action Toolbar on Mobile (< 640px) */}
-          <div className="mt-2.5 pt-2 border-t border-[var(--line-subtle)] flex items-center gap-1.5 sm:hidden">
+          {/* =====================================================
+              MOBILE ACTION BAR (sm:hidden) — 1 Simple Clean Row
+          ====================================================== */}
+          <div className="mt-2.5 pt-2 border-t border-[var(--line-subtle)] sm:hidden flex items-center gap-1.5">
+            {/* WhatsApp */}
             <button
               type="button"
               onClick={handleSendWhatsApp}
               disabled={sendingWhatsApp}
-              className="flex-1 inline-flex h-8.5 items-center justify-center gap-1 rounded-lg bg-[#25D366] px-2 text-xs font-semibold text-white hover:bg-[#1EBE5D] active:scale-95 transition shadow-2xs disabled:opacity-50"
+              className="flex-1 inline-flex h-8.5 items-center justify-center gap-1.5 rounded-lg bg-[#25D366] hover:bg-[#1EBE5D] text-xs font-bold text-white transition active:scale-95 shadow-2xs disabled:opacity-50 min-w-0 px-2"
+              title="Send invoice via WhatsApp"
             >
               <IconMessageCircle size={14} className="shrink-0" />
               <span className="truncate">{sendingWhatsApp ? 'Sending…' : 'WhatsApp'}</span>
             </button>
 
+            {/* Print Direct */}
             <button
               type="button"
-              onClick={() => openPdf(inv.id, modalMode)}
-              className="flex-1 inline-flex h-8.5 items-center justify-center gap-1 rounded-lg bg-[#1E3A5F] px-2 text-xs font-semibold text-white hover:bg-[#162a45] active:scale-95 transition shadow-2xs"
+              onClick={() => openPdf(selected.id, defaultMode)}
+              className="flex-1 inline-flex h-8.5 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition shadow-2xs min-w-0 px-2"
+              title="Print Invoice"
             >
               <IconPrinter size={14} className="shrink-0" />
               <span className="truncate">Print</span>
             </button>
 
-            {isDue && (
+            {/* Collect Due */}
+            {Number(selected.balance_due || 0) > 0 && selected.status !== 'cancelled' && selected.status !== 'refunded' && (
               <button
                 type="button"
-                onClick={() => onCollect?.(inv)}
-                className="flex-1 inline-flex h-8.5 items-center justify-center gap-1 rounded-lg bg-emerald-600 px-2 text-xs font-semibold text-white hover:bg-emerald-700 active:scale-95 transition shadow-2xs"
+                onClick={() => onCollect?.(selected)}
+                className="flex-1 inline-flex h-8.5 items-center justify-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-xs font-bold text-white transition active:scale-95 shadow-2xs min-w-0 px-2"
+                title={`Collect ${fmt(selected.balance_due)}`}
               >
-                <IconCurrencyRupee size={14} className="shrink-0" />
+                <IconCurrencyRupee size={13} className="shrink-0" />
                 <span className="truncate">Collect</span>
               </button>
             )}
 
+            {/* 3-Dots Dropdown Menu */}
             <div className="relative shrink-0">
               <button
                 type="button"
-                onClick={() => setMobileMoreOpen(v => !v)}
-                className={`inline-flex h-8.5 w-8.5 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] active:scale-95 transition ${
-                  mobileMoreOpen ? 'border-[var(--primary)] bg-[var(--surface-hover)]' : ''
+                onClick={() => setMobileMenuOpen(curr => !curr)}
+                className={`inline-flex h-8.5 w-8.5 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition ${
+                  mobileMenuOpen ? 'border-[var(--primary)] bg-[var(--surface-hover)]' : ''
                 }`}
                 aria-label="More actions"
               >
                 <IconDots size={16} />
               </button>
 
-              {mobileMoreOpen && (
+              {mobileMenuOpen && (
                 <div className="absolute right-0 top-full mt-1.5 z-50 w-52 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl">
                   <button
                     type="button"
                     onClick={() => {
-                      setMobileMoreOpen(false)
-                      openPdf(inv.id, thermalMode)
+                      setMobileMenuOpen(false)
+                      openPdf(selected.id, thermalMode)
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
                   >
                     <IconPrinter size={14} />
-                    <span>Thermal Receipt ({isThermal58 ? '58mm' : '80mm'})</span>
+                    <span>Thermal ({isThermal58 ? '58mm' : '80mm'})</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      setMobileMoreOpen(false)
-                      openPdf(inv.id, sheetMode)
+                      setMobileMenuOpen(false)
+                      openPdf(selected.id, sheetMode)
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
                   >
-                    <IconPrinter size={14} />
+                    <IconFileText size={14} />
                     <span>Sheet Bill ({isHalfA4 ? 'Half-A4' : 'A4'})</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      setMobileMoreOpen(false)
-                      openPdf(inv.id, modalMode)
+                      setMobileMenuOpen(false)
+                      openPdf(selected.id, modalMode)
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
                   >
                     <IconDownload size={14} />
                     <span>Download PDF</span>
                   </button>
+                  <div className="my-1 border-t border-[var(--line-subtle)]" />
                   <button
                     type="button"
                     onClick={async () => {
-                      setMobileMoreOpen(false)
+                      setMobileMenuOpen(false)
                       try {
-                        const url = inv.short_url || await getShortUrl(inv.id)
+                        const url = selected.short_url || await getShortUrl(selected.id)
                         window.open(url, '_blank')
                       } catch {
                         toast.error('Could not get bill link')
                       }
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
                   >
                     <IconExternalLink size={14} />
                     <span>View Digital Bill</span>
@@ -912,36 +910,36 @@ function InvoiceModal({
                   <button
                     type="button"
                     onClick={async () => {
-                      setMobileMoreOpen(false)
+                      setMobileMenuOpen(false)
                       try {
-                        const url = inv.short_url || await getShortUrl(inv.id)
+                        const url = selected.short_url || await getShortUrl(selected.id)
                         await navigator.clipboard.writeText(url)
                         toast.success('Bill link copied!')
                       } catch {
                         toast.error('Could not copy link')
                       }
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
                   >
                     <IconCopy size={14} />
-                    <span>Copy Link</span>
+                    <span>Copy Bill Link</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      setMobileMoreOpen(false)
+                      setMobileMenuOpen(false)
                       setShareOpen(true)
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)]"
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
                   >
                     <IconShare size={14} />
-                    <span>Share Options…</span>
+                    <span>Share Invoice</span>
                   </button>
                   <div className="my-1 border-t border-[var(--line-subtle)]" />
                   <button
                     type="button"
                     onClick={() => {
-                      setMobileMoreOpen(false)
+                      setMobileMenuOpen(false)
                       const activeMap = settings?.active_templates || {}
                       const targetId = modalMode === 'half_a4' ? (activeMap.half_a4 || 'half_a4')
                         : modalMode === 'thermal_58' ? 'thermal_58'
@@ -950,26 +948,59 @@ function InvoiceModal({
                       const meta = (settings?.template_settings?.templates || []).find(t => t.id === targetId) || { id: targetId, name: targetId }
                       setCustomizingTpl(meta)
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[#0057B8] dark:text-sky-400 hover:bg-[var(--surface-hover)]"
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
                   >
-                    <IconAdjustmentsHorizontal size={14} />
+                    <IconAdjustmentsHorizontal size={14} className="text-[#0057B8] dark:text-sky-400" />
                     <span>Customize Template</span>
                   </button>
                 </div>
               )}
-
-              {shareOpen && (
-                <ShareMenu
-                  bill={inv}
-                  shopName={shopName}
-                  onClose={() => setShareOpen(false)}
-                />
-              )}
             </div>
           </div>
 
-          {/* Action Toolbar on Desktop (sm:flex) */}
-          <div className="mt-3 pt-3 border-t border-[var(--line)]/70 hidden sm:flex sm:items-center justify-between gap-2.5">
+          {/* =====================================================
+              MOBILE NAVIGATION TABS (sm:hidden)
+          ====================================================== */}
+          <div className="mt-2.5 sm:hidden flex rounded-lg bg-[var(--surface-subtle)] p-0.5 border border-[var(--line-subtle)]">
+            <button
+              type="button"
+              onClick={() => setMobileTab('summary')}
+              className={`flex-1 py-1.5 text-center text-xs font-semibold rounded-md transition ${
+                mobileTab === 'summary'
+                  ? 'bg-[var(--surface)] text-[var(--ink)] shadow-2xs'
+                  : 'text-[var(--muted)] hover:text-[var(--ink)]'
+              }`}
+            >
+              Summary & Items
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab('preview')}
+              className={`flex-1 py-1.5 text-center text-xs font-semibold rounded-md transition ${
+                mobileTab === 'preview'
+                  ? 'bg-[var(--surface)] text-[var(--ink)] shadow-2xs'
+                  : 'text-[var(--muted)] hover:text-[var(--ink)]'
+              }`}
+            >
+              Document Preview
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab('activity')}
+              className={`flex-1 py-1.5 text-center text-xs font-semibold rounded-md transition ${
+                mobileTab === 'activity'
+                  ? 'bg-[var(--surface)] text-[var(--ink)] shadow-2xs'
+                  : 'text-[var(--muted)] hover:text-[var(--ink)]'
+              }`}
+            >
+              Activity
+            </button>
+          </div>
+
+          {/* =====================================================
+              DESKTOP ACTION TOOLBAR (hidden sm:flex)
+          ====================================================== */}
+          <div className="mt-3 pt-3 border-t border-[var(--line)]/70 hidden sm:flex items-center justify-between gap-2.5">
             {/* Primary Actions (WhatsApp, Collect) */}
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -983,24 +1014,25 @@ function InvoiceModal({
                 <span>{sendingWhatsApp ? 'Sending…' : 'Send WhatsApp'}</span>
               </button>
 
-              {isDue && (
+              {Number(selected.balance_due || 0) > 0 && selected.status !== 'cancelled' && selected.status !== 'refunded' && (
                 <button
                   type="button"
-                  onClick={() => onCollect?.(inv)}
+                  onClick={() => onCollect?.(selected)}
                   className="btn-success inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition active:scale-95 shadow-xs"
-                  title={`Collect outstanding balance (${fmt(inv.balance_due)})`}
+                  title={`Collect outstanding balance (${fmt(selected.balance_due)})`}
                 >
                   <IconCurrencyRupee size={14} />
-                  <span>Collect Due ({fmt(inv.balance_due)})</span>
+                  <span>Collect Due ({fmt(selected.balance_due)})</span>
                 </button>
               )}
             </div>
 
             {/* Print & Secondary Actions */}
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Sheet Bill */}
               <button
                 type="button"
-                onClick={() => openPdf(inv.id, sheetMode)}
+                onClick={() => openPdf(selected.id, sheetMode)}
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
                 title={`Print Sheet Bill (${isHalfA4 ? 'Half-A4' : 'A4'})`}
               >
@@ -1008,9 +1040,10 @@ function InvoiceModal({
                 <span>{isHalfA4 ? 'Half-A4' : 'A4 Bill'}</span>
               </button>
 
+              {/* Thermal Receipt */}
               <button
                 type="button"
-                onClick={() => openPdf(inv.id, thermalMode)}
+                onClick={() => openPdf(selected.id, thermalMode)}
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
                 title={`Print Thermal Receipt (${isThermal58 ? '58mm' : '80mm'})`}
               >
@@ -1018,16 +1051,18 @@ function InvoiceModal({
                 <span>Thermal ({isThermal58 ? '58mm' : '80mm'})</span>
               </button>
 
+              {/* Download PDF */}
               <button
                 type="button"
-                onClick={() => openPdf(inv.id, modalMode)}
+                onClick={() => openPdf(selected.id, modalMode)}
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
-                title="Download PDF in current preview layout"
+                title="Download PDF"
               >
                 <IconDownload size={13} />
                 <span>PDF</span>
               </button>
 
+              {/* Customize Template */}
               <button
                 type="button"
                 onClick={() => {
@@ -1040,38 +1075,40 @@ function InvoiceModal({
                   setCustomizingTpl(meta)
                 }}
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
-                title="Customize invoice template style, fields, and printing layout"
+                title="Customize invoice template style and layout"
               >
                 <IconAdjustmentsHorizontal size={13} className="text-[#0057B8] dark:text-sky-400" />
                 <span>Customize Template</span>
               </button>
 
+              {/* Digital Bill Link */}
               <button
                 type="button"
                 onClick={async () => {
                   try {
-                    const url = inv.short_url || await getShortUrl(inv.id)
+                    const url = selected.short_url || await getShortUrl(selected.id)
                     window.open(url, '_blank')
                   } catch {
                     toast.error('Could not get bill link')
                   }
                 }}
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
-                title="View mobile-friendly digital bill"
+                title="View digital bill"
               >
                 <IconExternalLink size={13} />
                 <span>View Bill</span>
               </button>
 
+              {/* Copy Link */}
               <button
                 type="button"
                 onClick={async () => {
                   try {
-                    const url = inv.short_url || await getShortUrl(inv.id)
+                    const url = selected.short_url || await getShortUrl(selected.id)
                     await navigator.clipboard.writeText(url)
                     toast.success('Bill link copied!')
                   } catch {
-                    toast.error('Could not copy bill link')
+                    toast.error('Could not copy link')
                   }
                 }}
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
@@ -1081,6 +1118,7 @@ function InvoiceModal({
                 <span>Copy</span>
               </button>
 
+              {/* Share Menu */}
               <div className="relative">
                 <button
                   type="button"
@@ -1097,7 +1135,7 @@ function InvoiceModal({
 
                 {shareOpen && (
                   <ShareMenu
-                    bill={inv}
+                    bill={selected}
                     shopName={shopName}
                     onClose={() => setShareOpen(false)}
                   />
@@ -1107,251 +1145,183 @@ function InvoiceModal({
           </div>
         </div>
 
-        {/* Mobile Navigation Tab Bar (< 640px) */}
-        <div className="sm:hidden flex items-center border-b border-[var(--line)] bg-[var(--surface-elevated)] p-1.5 gap-1 shrink-0">
-          {[
-            { key: 'summary', label: 'Summary & Items' },
-            { key: 'document', label: 'Document Preview' },
-            { key: 'history', label: 'Activity' },
-          ].map(tab => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setMobileTab(tab.key)}
-              className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded-lg text-center transition ${
-                mobileTab === tab.key
-                  ? 'bg-[#1E3A5F] text-white shadow-2xs'
-                  : 'text-[var(--muted)] hover:text-[var(--ink)] bg-[var(--surface)]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Modal Body */}
-        <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--surface-elevated)] p-3 sm:p-5 space-y-4">
-          {/* MOBILE VIEW (< 640px): TABS */}
-          <div className="sm:hidden space-y-3">
-            {mobileTab === 'summary' && (
-              <>
-                {/* 1. Customer & Payment Details Card */}
-                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 space-y-2.5 shadow-2xs">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block">Customer</span>
-                      <h4 className="text-sm font-bold text-[var(--ink)] truncate mt-0.5">
-                        {inv.customer_name || 'Walk-in customer'}
-                      </h4>
-                      {inv.customer_phone ? (
-                        <a
-                          href={`tel:${inv.customer_phone}`}
-                          className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline mt-0.5"
-                        >
-                          <IconPhone size={12} />
-                          <span>{inv.customer_phone}</span>
-                        </a>
-                      ) : (
-                        <p className="text-[11px] text-[var(--muted)] mt-0.5">No phone number</p>
-                      )}
-                    </div>
-
-                    <div className="text-right shrink-0">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block">Date</span>
-                      <p className="text-xs font-medium text-[var(--ink)] mt-0.5">
-                        {formatDate(inv.created_at)}
-                      </p>
-                      <div className="mt-1 flex justify-end">
-                        <PaymentBadge method={inv.payment_method} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Financial Breakdown Card */}
-                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 space-y-2 text-xs shadow-2xs">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] block">
-                    Payment Breakdown
-                  </span>
-                  <div className="space-y-1.5 pt-0.5">
-                    <div className="flex justify-between text-[var(--ink-secondary)]">
-                      <span>Subtotal</span>
-                      <span className="font-mono">{fmt(inv.subtotal || 0)}</span>
-                    </div>
-                    {Number(inv.discount_amount || 0) > 0 && (
-                      <div className="flex justify-between text-rose-600 dark:text-rose-400">
-                        <span>Discount</span>
-                        <span className="font-mono">-{fmt(inv.discount_amount)}</span>
-                      </div>
-                    )}
-                    {Number(inv.tax_amount || 0) > 0 && (
-                      <div className="flex justify-between text-[var(--ink-secondary)]">
-                        <span>GST / Tax</span>
-                        <span className="font-mono">+{fmt(inv.tax_amount)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between font-bold text-sm text-[var(--ink)] border-t border-[var(--line-subtle)] pt-1.5">
-                      <span>Grand Total</span>
-                      <span className="font-mono text-base">{fmt(inv.grand_total)}</span>
-                    </div>
-                    <div className="flex justify-between text-teal-600 dark:text-teal-400 font-medium pt-0.5">
-                      <span>Paid Amount</span>
-                      <span className="font-mono">{fmt(paid)}</span>
-                    </div>
-                    {balance > 0 ? (
-                      <div className="flex justify-between text-amber-600 dark:text-amber-400 font-bold">
-                        <span>Balance Due</span>
-                        <span className="font-mono">{fmt(balance)}</span>
-                      </div>
+        {/* =====================================================
+            MOBILE BODY CONTAINER (sm:hidden)
+        ====================================================== */}
+        <div className="sm:hidden flex-1 min-h-0 overflow-y-auto bg-[var(--surface-elevated)]">
+          {/* Tab 1: Summary & Items */}
+          {mobileTab === 'summary' && (
+            <div className="space-y-3 p-3">
+              {/* Customer & Bill Overview Card */}
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 space-y-2.5 shadow-2xs">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-light)]">Customer</p>
+                    <p className="text-sm font-bold text-[var(--ink)] truncate">
+                      {selected.customer_name || 'Walk-in Customer'}
+                    </p>
+                    {selected.customer_phone ? (
+                      <a
+                        href={`tel:${selected.customer_phone}`}
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline mt-0.5"
+                      >
+                        <IconPhone size={12} />
+                        <span>{selected.customer_phone}</span>
+                      </a>
                     ) : (
-                      <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">
-                        <span>Payment Status</span>
-                        <span>Fully Paid</span>
-                      </div>
+                      <p className="text-[11px] text-[var(--muted)] mt-0.5">No phone number</p>
                     )}
                   </div>
-                </div>
-
-                {/* 3. Items List Card */}
-                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 space-y-2.5 shadow-2xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                      Items Breakdown ({items.length})
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setMobileTab('document')}
-                      className="text-[11px] font-semibold text-[var(--primary)] underline hover:opacity-80"
-                    >
-                      View Invoice Sheet
-                    </button>
+                  <div className="shrink-0 text-right">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-light)]">Date & Mode</p>
+                    <p className="text-xs font-semibold text-[var(--ink)]">
+                      {dateStr}
+                    </p>
+                    <p className="text-[11px] text-[var(--muted)] capitalize mt-0.5">
+                      {selected.payment_method || 'Cash'}
+                    </p>
                   </div>
-
-                  {items.length === 0 ? (
-                    <p className="text-xs text-[var(--muted)] py-2 text-center">No individual items recorded</p>
-                  ) : (
-                    <div className="divide-y divide-[var(--line-subtle)]">
-                      {items.map((item, idx) => {
-                        const qty = Number(item.quantity ?? item.qty ?? 1)
-                        const rate = Number(item.unit_price ?? item.selling_price ?? item.rate ?? 0)
-                        const total = Number(item.total ?? item.total_price ?? (qty * rate))
-                        return (
-                          <div key={item.id || idx} className="py-2 flex items-start justify-between gap-2 first:pt-1 last:pb-1">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs font-semibold text-[var(--ink)] truncate">
-                                {item.product_name || item.name || `Item ${idx + 1}`}
-                              </p>
-                              <p className="text-[11px] text-[var(--muted)] font-mono mt-0.5">
-                                {qty} {item.unit || 'pcs'} × {fmt(rate)}
-                              </p>
-                            </div>
-                            <span className="font-mono text-xs font-bold text-[var(--ink)] shrink-0 pt-0.5">
-                              {fmt(total)}
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
                 </div>
 
-                {/* Notes (if present) */}
-                {inv.notes && (
-                  <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 space-y-1 text-xs">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Notes</span>
-                    <p className="text-[var(--ink-secondary)] whitespace-pre-wrap">{inv.notes}</p>
+                {/* Financial Numbers Strip */}
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[var(--line-subtle)] text-xs">
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-[var(--muted)]">Grand Total</span>
+                    <p className="font-mono font-bold text-sm text-[var(--ink)] tabular-nums">{fmt(selected.grand_total)}</p>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-[var(--muted)]">Paid</span>
+                    <p className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400 tabular-nums">{fmt(selected.paid_amount || 0)}</p>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-[var(--muted)]">Balance Due</span>
+                    <p className={`font-mono font-bold text-sm tabular-nums ${Number(selected.balance_due || 0) > 0 ? 'text-red-600 dark:text-red-400' : 'text-[var(--muted)]'}`}>
+                      {fmt(selected.balance_due || 0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Line Items List */}
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 space-y-2 shadow-2xs">
+                <div className="flex items-center justify-between pb-1.5 border-b border-[var(--line-subtle)]">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">
+                    Items ({items.length})
+                  </h4>
+                  <span className="text-xs font-mono font-semibold text-[var(--ink)]">Total: {fmt(selected.grand_total)}</span>
+                </div>
+
+                {items.length === 0 ? (
+                  <p className="text-xs text-[var(--muted)] py-3 text-center">No line items details available</p>
+                ) : (
+                  <div className="divide-y divide-[var(--line-subtle)]">
+                    {items.map((it, idx) => {
+                      const qty = Number(it.quantity ?? it.qty ?? 1)
+                      const rate = Number(it.unit_price ?? it.rate ?? 0)
+                      const total = Number(it.total ?? (qty * rate))
+                      return (
+                        <div key={idx} className="py-2.5 flex items-center justify-between gap-3 text-xs">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-[var(--ink)] truncate">{it.product_name || it.name || 'Item'}</p>
+                            <p className="text-[11px] text-[var(--muted)] font-mono mt-0.5">
+                              {qty} {it.unit || 'pcs'} × {fmt(rate)}
+                              {Number(it.discount_percent || 0) > 0 ? ` (${it.discount_percent}% off)` : ''}
+                            </p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <span className="font-mono font-bold text-xs text-[var(--ink)] tabular-nums">{fmt(total)}</span>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
-              </>
-            )}
-
-            {mobileTab === 'document' && (
-              <section className="min-w-0 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2">
-                <div className="mb-2 flex items-center justify-between gap-2 px-1">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setModalMode(thermalMode)}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-md border transition ${
-                        modalMode === thermalMode
-                          ? 'bg-[#1E3A5F] border-[#1E3A5F] text-white'
-                          : 'border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink-secondary)]'
-                      }`}
-                    >
-                      Thermal Receipt
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setModalMode(sheetMode)}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-md border transition ${
-                        modalMode === sheetMode
-                          ? 'bg-[#1E3A5F] border-[#1E3A5F] text-white'
-                          : 'border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink-secondary)]'
-                      }`}
-                    >
-                      Sheet ({isHalfA4 ? 'Half-A4' : 'A4'})
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => openPdf(inv.id, modalMode)}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--primary)]"
-                  >
-                    <IconDownload size={13} />
-                    <span>PDF</span>
-                  </button>
-                </div>
-
-                <div className="flex max-w-full justify-center overflow-x-auto">
-                  <InvoiceDocument
-                    invoice={inv}
-                    settings={settings}
-                    mode={modalMode}
-                    onModeChange={setModalMode}
-                    showModePicker={false}
-                  />
-                </div>
-              </section>
-            )}
-
-            {mobileTab === 'history' && (
-              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-2xs">
-                <CommunicationHistory
-                  referenceType="invoice"
-                  referenceId={inv.id}
-                  initialLogs={inv.communication_history}
-                  key={historyKey}
-                />
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* DESKTOP VIEW (hidden sm:block): Full Document & History Stack */}
-          <div className="hidden sm:block space-y-5">
-            <section className="min-w-0 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-4">
-              <div className="mb-2 flex items-center justify-between gap-3 px-1">
-                <h3 className="text-xs font-bold text-[var(--ink)]">Invoice document</h3>
-                <span className="text-[10px] text-[var(--muted-light)]">Print preview and template layout</span>
+          {/* Tab 2: Document Preview */}
+          {mobileTab === 'preview' && (
+            <div className="p-2 space-y-2.5">
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setModalMode(thermalMode)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    modalMode === thermalMode
+                      ? 'bg-[#1E3A5F] text-white shadow-xs'
+                      : 'border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+                  }`}
+                >
+                  Thermal ({isThermal58 ? '58mm' : '80mm'})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalMode(sheetMode)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    modalMode === sheetMode
+                      ? 'bg-[#1E3A5F] text-white shadow-xs'
+                      : 'border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+                  }`}
+                >
+                  {isHalfA4 ? 'Half-A4' : 'A4 Sheet'}
+                </button>
               </div>
-              <div className="flex max-w-full justify-center overflow-x-auto">
+
+              <div className="overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2">
                 <InvoiceDocument
-                  invoice={inv}
+                  invoice={selected}
                   settings={settings}
                   mode={modalMode}
                   onModeChange={setModalMode}
-                  showModePicker={true}
+                  showModePicker={false}
                 />
               </div>
-            </section>
+            </div>
+          )}
 
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5 shadow-xs">
-              <CommunicationHistory
-                referenceType="invoice"
-                referenceId={inv.id}
-                initialLogs={inv.communication_history}
-                key={historyKey}
+          {/* Tab 3: Activity Logs */}
+          {mobileTab === 'activity' && (
+            <div className="p-3">
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-xs">
+                <CommunicationHistory
+                  referenceType="invoice"
+                  referenceId={selected.id}
+                  initialLogs={selected.communication_history}
+                  key={historyKey}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* =====================================================
+            DESKTOP BODY CONTAINER (hidden sm:block)
+        ====================================================== */}
+        <div className="hidden sm:block min-h-0 flex-1 overflow-y-auto bg-[var(--surface-elevated)] p-4 sm:p-5 space-y-5">
+          <section className="min-w-0 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-4">
+            <div className="mb-2 flex items-center justify-between gap-3 px-1">
+              <h3 className="text-xs font-bold text-[var(--ink)]">Invoice document</h3>
+              <span className="text-[10px] text-[var(--muted-light)]">Swipe horizontally to view the full page</span>
+            </div>
+            <div className="flex max-w-full justify-start overflow-x-auto sm:justify-center">
+              <InvoiceDocument
+                invoice={selected}
+                settings={settings}
+                mode={modalMode}
+                onModeChange={setModalMode}
+                showModePicker={true}
               />
             </div>
+          </section>
+
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5 shadow-xs">
+            <CommunicationHistory
+              referenceType="invoice"
+              referenceId={selected.id}
+              initialLogs={selected.communication_history}
+              key={historyKey}
+            />
           </div>
         </div>
 
@@ -1396,90 +1366,144 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
 
   return (
     <article
-      className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 space-y-2.5 shadow-2xs transition active:bg-[var(--surface-elevated)]"
+      className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none transition active:bg-[var(--surface-elevated)]"
       onClick={() => onView ? onView(bill) : navigate(`/invoice/${bill.id}`)}
     >
-      {/* Line 1: INV-1033 — ₹812 */}
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-mono text-sm font-bold text-[#1E3A5F] dark:text-sky-400">
-          {bill.invoice_number}
-        </span>
-        <span className="font-mono text-sm font-bold text-[var(--ink)]">
-          {fmt(bill.grand_total)}
-        </span>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <button
+            onClick={e => {
+              e.stopPropagation()
+              onView ? onView(bill) : navigate(`/invoice/${bill.id}`)
+            }}
+            className="font-mono text-xs font-bold text-[#1E3A5F] hover:underline"
+          >
+            {bill.invoice_number}
+          </button>
+
+          <p className="mt-1 truncate text-sm font-semibold text-[var(--ink)]">
+            {bill.customer_name || 'Walk-in customer'}
+          </p>
+
+          {bill.customer_phone && (
+            <p className="mt-1 flex items-center gap-1 text-[11px] text-[var(--muted-light)]">
+              <IconPhone size={10} />
+              {bill.customer_phone}
+            </p>
+          )}
+        </div>
+
+        <div className="shrink-0 text-right">
+          <p className="font-mono text-base font-semibold tabular-nums text-[#0F172A] dark:text-slate-100">
+            {fmt(bill.grand_total)}
+          </p>
+          {isDue && (
+            <p className="font-mono text-[11px] font-bold text-amber-600 dark:text-amber-400">
+              Due: {fmt(balance)}
+            </p>
+          )}
+          <div className="mt-1 flex justify-end">
+            <StatusPill bill={bill} />
+          </div>
+        </div>
       </div>
 
-      {/* Line 2: Customer · Status */}
-      <div className="flex items-center justify-between gap-2 text-xs">
-        <span className="font-semibold text-[var(--ink)] truncate flex-1">
-          {bill.customer_name || 'Walk-in customer'}
-        </span>
-        <StatusPill bill={bill} />
+      <div className="mt-3 grid grid-cols-2 gap-2 rounded-md bg-[var(--surface-elevated)] p-2.5">
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
+            Date
+          </p>
+          <p className="mt-1 text-[11px] font-semibold text-[var(--ink-secondary)]">
+            {formatDate(bill.created_at)}
+          </p>
+          <p className="text-[10px] text-[var(--muted-light)]">
+            {formatTime(bill.created_at)}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
+            Payment
+          </p>
+          <div className="mt-1">
+            <PaymentBadge method={bill.payment_method} />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
+            Paid
+          </p>
+          <p className="mt-1 font-mono text-[11px] font-semibold text-teal-600 dark:text-teal-400">
+            {fmt(paid)}
+          </p>
+        </div>
+
+        <div className="text-right">
+          <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
+            Balance Due
+          </p>
+          <p className={`mt-1 font-mono text-[11px] font-bold ${balance > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-[var(--ink-secondary)]'}`}>
+            {fmt(balance)}
+          </p>
+        </div>
       </div>
 
-      {/* Line 3: Date · Payment Method */}
-      <div className="flex items-center justify-between gap-2 text-xs text-[var(--muted)]">
-        <span>{formatDate(bill.created_at)}</span>
-        <PaymentBadge method={bill.payment_method} />
-      </div>
+      {Number(bill.discount_amount || 0) > 0 && (
+        <p className="mt-2 text-right text-[10px] font-medium text-red-500">
+          -{fmt(bill.discount_amount)} discount
+        </p>
+      )}
 
-      {/* Line 4: Paid · Due */}
-      <div className="flex items-center justify-between gap-2 text-xs font-mono">
-        <span className="text-teal-700 dark:text-teal-400 font-medium">
-          Paid {fmt(paid)}
-        </span>
-        <span className={balance > 0 ? 'text-amber-600 dark:text-amber-400 font-bold' : 'text-[var(--muted)]'}>
-          Due {fmt(balance)}
-        </span>
-      </div>
-
-      {/* Main Action Buttons: Eye (View) · Print · Collect/Share · ⋯ (More) */}
+      {/* 1-Tap Mobile Action Buttons */}
       <div
-        className="flex items-center gap-1.5 pt-2 border-t border-[var(--line-subtle)] relative"
+        className="mt-3 space-y-2 border-t border-[var(--line-subtle)] pt-2.5"
         onClick={e => e.stopPropagation()}
       >
-        <button
-          type="button"
-          onClick={() => onView ? onView(bill) : navigate(`/invoice/${bill.id}`)}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition shrink-0"
-          title="View Invoice"
-        >
-          <IconEye size={15} />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => openPdf(bill.id, sheetMode)}
-          className="flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-[#1E3A5F] text-xs font-semibold text-white hover:bg-[#162a45] active:scale-95 transition shadow-2xs"
-          title="Print Invoice"
-        >
-          <IconPrinter size={13} className="shrink-0" />
-          <span className="truncate">Print</span>
-        </button>
-
-        {isDue ? (
+        {isDue && (
           <button
             type="button"
             onClick={() => onCollect?.(bill)}
-            className="flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-emerald-600 text-xs font-semibold text-white hover:bg-emerald-700 active:scale-95 transition shadow-2xs"
+            className="btn-success flex min-h-[42px] w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold"
             title={`Collect payment (${fmt(balance)})`}
           >
-            <IconCurrencyRupee size={13} className="shrink-0" />
-            <span className="truncate">Collect</span>
+            <IconCurrencyRupee size={13} />
+            <span>Collect Due ({fmt(balance)})</span>
           </button>
-        ) : (
-          <div className="relative flex-1">
+        )}
+
+        <div className="grid grid-cols-4 gap-2">
+          <button
+            type="button"
+            onClick={() => onView ? onView(bill) : navigate(`/invoice/${bill.id}`)}
+            className="inline-flex min-h-[38px] items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-xs font-semibold text-[var(--ink)] shadow-xs transition hover:bg-[var(--surface-elevated)] active:scale-95"
+            title="View invoice"
+          >
+            <IconEye size={13} />
+            <span>View</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => openPdf(bill.id, sheetMode)}
+            className="inline-flex min-h-[38px] items-center justify-center gap-1 rounded-lg bg-[#1E3A5F] text-xs font-semibold text-white shadow-xs transition hover:bg-[#162a45] active:scale-95"
+            title={`Print bill (${isHalfA4 ? 'Half-A4' : 'A4'})`}
+          >
+            <IconPrinter size={13} />
+            <span>Print</span>
+          </button>
+
+          <div className="relative">
             <button
               type="button"
               onClick={() => {
                 setShareOpen(v => !v)
                 setMoreOpen(false)
               }}
-              className="w-full inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200 active:scale-95 transition shadow-2xs"
-              title="Share Invoice"
+              className="inline-flex min-h-[38px] w-full items-center justify-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 text-xs font-semibold text-emerald-800 shadow-xs transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200 active:scale-95"
             >
-              <IconShare size={13} className="shrink-0" />
-              <span className="truncate">Share</span>
+              <IconShare size={13} />
+              <span>Share</span>
             </button>
             {shareOpen && (
               <ShareMenu
@@ -1489,94 +1513,73 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
               />
             )}
           </div>
-        )}
 
-        <div className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              setMoreOpen(v => !v)
-              setShareOpen(false)
-            }}
-            className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition ${
-              moreOpen ? 'border-[var(--primary)] bg-[var(--surface-hover)]' : ''
-            }`}
-            aria-label="More actions"
-          >
-            <IconDots size={16} />
-          </button>
-          {moreOpen && (
-            <div className="absolute right-0 bottom-full mb-1 z-50 w-48 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl">
-              {isDue && (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setMoreOpen(v => !v)
+                setShareOpen(false)
+              }}
+              className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-xs font-semibold text-[var(--muted)] shadow-xs transition hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
+              title="More actions"
+            >
+              <IconDots size={16} />
+            </button>
+            {moreOpen && (
+              <div className="absolute right-0 bottom-11 z-50 w-48 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl">
+                {isDue && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreOpen(false)
+                      onCollect?.(bill)
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                  >
+                    <IconCurrencyRupee size={13} /> Collect Payment
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
                     setMoreOpen(false)
-                    setShareOpen(true)
+                    openPdf(bill.id, thermalMode)
                   }}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
                 >
-                  <IconShare size={14} />
-                  <span>Share Invoice</span>
+                  <IconPrinter size={13} /> Thermal ({isThermal58 ? '58mm' : '80mm'})
                 </button>
+              {(bill.status === 'completed' || bill.status === 'paid') && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreOpen(false)
+                      onRefresh('cancel', bill.id)
+                    }}
+                    className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
+                  >
+                    <IconBan size={13} /> Cancel Invoice
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoreOpen(false)
+                      onRefresh('refund', bill.id)
+                    }}
+                    className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-xs text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                  >
+                    <RefundIcon size={13} /> Refund Sale
+                  </button>
+                </>
               )}
-              <button
-                type="button"
-                onClick={() => {
-                  setMoreOpen(false)
-                  openPdf(bill.id, thermalMode)
-                }}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)]"
-              >
-                <IconPrinter size={14} />
-                <span>Thermal Print</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMoreOpen(false)
-                  navigate(`/billing/new?edit=${bill.id}`)
-                }}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)]"
-              >
-                <IconEdit size={14} />
-                <span>Edit Bill</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMoreOpen(false)
-                  navigate(`/billing/new?duplicate=${bill.id}`)
-                }}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)]"
-              >
-                <IconCopy size={14} />
-                <span>Duplicate</span>
-              </button>
-              <div className="my-1 border-t border-[var(--line-subtle)]" />
-              <button
-                type="button"
-                onClick={() => {
-                  setMoreOpen(false)
-                  onRefresh?.('cancel', bill.id)
-                }}
-                className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
-              >
-                <IconBan size={14} />
-                <span>Cancel Invoice</span>
-              </button>
             </div>
-          )}
-          {isDue && shareOpen && (
-            <ShareMenu
-              bill={bill}
-              shopName={shopName}
-              onClose={() => setShareOpen(false)}
-            />
           )}
         </div>
       </div>
-    </article>
+    </div>
+  </article>
   )
 }
 
@@ -2417,7 +2420,7 @@ export default function Bills() {
             <button
               type="button"
               onClick={() => navigate('/billing/new')}
-              className="btn-primary h-8 sm:h-8.5 px-3.5 text-xs font-semibold text-white hidden sm:inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 shadow-xs"
+              className="btn-primary h-8 sm:h-8.5 px-3.5 text-xs font-semibold text-white inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 shadow-xs"
             >
               <IconPlus size={14} />
               <span>New Bill</span>
@@ -2712,7 +2715,7 @@ export default function Bills() {
                   <option value="upi">UPI / QR</option>
                   <option value="card">Card / POS</option>
                   <option value="credit">Credit / Pay Later</option>
-                  <option value="razorpay">Razorpay Gateway</option>
+                  <option value="online">Online / Gateway</option>
                 </select>
               </div>
 
@@ -2799,7 +2802,7 @@ export default function Bills() {
           ) : (
             <>
               {/* Mobile cards view (sm:hidden) */}
-              <div className="sm:hidden space-y-3 px-4 pb-28">
+              <div className="sm:hidden divide-y divide-[var(--line-subtle)]">
                 {visibleBills.map(bill => (
                   <MobileInvoiceCard
                     key={bill.id}

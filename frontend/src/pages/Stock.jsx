@@ -840,45 +840,46 @@ export default function Stock() {
                       </div>
                     </div>
 
-                    {/* Action Bar: Eye (View History) · Barcode · Adjust · ⋯ (More) */}
-                    <div
-                      className="flex items-center gap-1.5 pt-2 border-t border-[var(--line-subtle)]"
-                      onClick={e => e.stopPropagation()}
-                    >
+                    {/* Action Bar — Mobile-Friendly Primary Buttons */}
+                    <div className="flex items-center gap-1.5 pt-2 border-t border-[var(--line-subtle)]">
+                      {/* View Eye Button */}
                       <button
                         type="button"
                         onClick={() => openHistory(p)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition shrink-0"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition shrink-0"
                         title="Movement History"
                       >
                         <IconEye size={15} />
                       </button>
 
+                      {/* Barcode Button */}
                       <button
                         type="button"
                         onClick={() => setBarcodeProduct(p)}
-                        className="flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] shadow-2xs transition active:scale-95"
+                        className="flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition shadow-2xs"
                         title="Print Barcode Labels"
                       >
                         <IconBarcode size={13} className="shrink-0" />
                         <span className="truncate">Barcode</span>
                       </button>
 
+                      {/* Adjust Button */}
                       <button
                         type="button"
                         onClick={() => openAdjust(p)}
-                        className="flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-[#1E3A5F] text-white px-1.5 text-xs font-semibold hover:bg-[#162F4D] shadow-2xs transition active:scale-95"
+                        className="flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-[#1E3A5F] text-white text-xs font-semibold hover:bg-[#162F4D] active:scale-95 transition shadow-2xs"
                         title="Adjust Stock"
                       >
                         <IconAdjustmentsHorizontal size={13} className="shrink-0" />
                         <span className="truncate">Adjust</span>
                       </button>
 
+                      {/* Three dot button */}
                       <div className="relative shrink-0">
                         <button
                           type="button"
                           onClick={() => setMobileMoreId(curr => curr === p.id ? null : p.id)}
-                          className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition ${
+                          className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition ${
                             mobileMoreId === p.id ? 'border-[var(--primary)] bg-[var(--surface-hover)]' : ''
                           }`}
                           aria-label="More actions"
@@ -896,8 +897,8 @@ export default function Stock() {
                               }}
                               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
                             >
-                              <IconHistory size={14} />
-                              <span>Movement History</span>
+                              <IconEye size={14} />
+                              <span>View History</span>
                             </button>
                             <button
                               type="button"
@@ -909,6 +910,17 @@ export default function Stock() {
                             >
                               <IconBarcode size={14} />
                               <span>Barcode Labels</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMobileMoreId(null)
+                                openAdjust(p)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+                            >
+                              <IconAdjustmentsHorizontal size={14} />
+                              <span>Adjust Stock</span>
                             </button>
                           </div>
                         )}

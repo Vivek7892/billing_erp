@@ -188,14 +188,14 @@ export function MobileFAB({ icon: Icon = IconPlus, label, onClick, to, className
   const content = (
     <>
       <Icon size={20} strokeWidth={2.4} />
-      {label && <span className="text-xs font-bold hidden xs:inline">{label}</span>}
+      {label && <span className="text-xs font-bold">{label}</span>}
     </>
   )
 
   const classes = [
     'fixed right-4 fab-bottom z-30 flex items-center justify-center gap-2 rounded-full shadow-lg shadow-[var(--primary)]/30 transition-all active:scale-95 md:hidden',
     'bg-[var(--primary)] text-white hover:brightness-105',
-    label ? 'h-12 w-12 xs:w-auto px-0 xs:px-4.5' : 'h-13 w-13',
+    label ? 'h-12 px-4.5' : 'h-13 w-13',
     className,
   ].join(' ')
 

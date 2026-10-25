@@ -1157,18 +1157,17 @@ export default function Products() {
       {/* =====================================================
           PRODUCT METRICS & STOCK ALERTS SUMMARY TABLE
       ====================================================== */}
-      
-      {/* Mobile KPI Grid (< 640px) */}
+      {/* Mobile KPI Grid with Top-Right Round Button for >4 KPIs */}
       <MobileKpiGrid
-        title="Product Metrics"
+        title="Catalog Metrics"
         primaryKpis={[
-          { label: 'Total Items', value: String(stats.total), sub: 'All catalog items', icon: IconPackages, onClick: () => resetFilters() },
-          { label: 'Active', value: String(stats.active), sub: 'Available for sale', icon: IconCircleCheck, onClick: () => setStatusFilter('active') },
-          { label: 'Low Stock', value: String(stats.low), sub: 'Threshold reached', icon: IconAlertTriangle, onClick: () => setStockFilter('low_stock') },
-          { label: 'Out of Stock', value: String(stats.out), sub: 'Zero balance', icon: IconCircleX, onClick: () => setStockFilter('out_of_stock') },
+          { label: 'Total Products', value: String(stats.total), sub: 'All catalog items', icon: IconPackages, onClick: () => setStockFilter('all') },
+          { label: 'Active Items', value: String(stats.active), sub: 'Available for sale', icon: IconCircleCheck, onClick: () => setStatusFilter(statusFilter === 'active' ? 'all' : 'active') },
+          { label: 'Low Stock Alert', value: String(stats.low), sub: 'Threshold reached', icon: IconAlertTriangle, onClick: () => setStockFilter(stockFilter === 'low_stock' ? 'all' : 'low_stock') },
+          { label: 'Out of Stock', value: String(stats.out), sub: 'Zero inventory', icon: IconCircleX, onClick: () => setStockFilter(stockFilter === 'out_of_stock' ? 'all' : 'out_of_stock') },
         ]}
         secondaryKpis={[
-          { label: 'Stock Value', value: formatCurrency(stats.stockValue), sub: `Retail: ${formatCurrency(stats.retailValue)}`, icon: IconTag },
+          { label: 'Stock Valuation', value: formatCurrency(stats.stockValue), sub: `Retail: ${formatCurrency(stats.retailValue)}`, icon: IconTag },
         ]}
       />
 
@@ -1481,58 +1480,49 @@ export default function Products() {
                 return (
                   <article
                     key={product.id}
-                    className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 space-y-2.5 shadow-2xs transition active:bg-[var(--surface-elevated)]"
+                    className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 space-y-2.5 shadow-2xs transition active:bg-[var(--surface-elevated)]"
                     onClick={() => openDetails(product)}
                   >
-                    {/* Line 1: Product Name & Stock Status Badge */}
+                    {/* Top line: Name & Stock status badge */}
                     <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-sm font-bold text-[var(--ink)] truncate flex-1">
-                        {product.name}
-                      </h3>
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold shrink-0 ${stockAlert.badgeClass}`}
-                      >
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-sm font-bold text-[var(--ink)] truncate">
+                          {product.name}
+                        </h3>
+                        <p className="text-xs text-[var(--muted)] truncate mt-0.5">
+                          {product.brand ? `${product.brand} · ` : ''}{product.category_name || 'Uncategorized'}
+                        </p>
+                      </div>
+                      <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold shrink-0 ${stockAlert.badgeClass}`}>
                         <StockIcon size={11} />
                         {stockAlert.label}
                       </span>
                     </div>
 
-                    {/* Line 2: Brand · Category */}
-                    <div className="flex items-center gap-1.5 text-xs text-[var(--muted)] truncate">
-                      {product.brand && (
-                        <>
-                          <span className="font-medium text-[var(--ink-secondary)]">{product.brand}</span>
-                          <span>·</span>
-                        </>
-                      )}
-                      <span>{product.category_name || 'Uncategorized'}</span>
-                    </div>
-
-                    {/* Line 3: Price · Stock */}
-                    <div className="flex items-center gap-2 text-xs font-mono">
-                      <span className="font-bold text-[var(--ink)] text-sm">
-                        {formatCurrency(product.selling_price)}
-                      </span>
-                      <span className="text-[var(--muted)]">·</span>
-                      <span className={`font-semibold ${stockAlert.textClass}`}>
+                    {/* Metrics line: Price & Stock */}
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="font-mono">
+                        <span className="font-bold text-sm text-[var(--ink)]">{formatCurrency(product.selling_price)}</span>
+                        <span className="text-[var(--muted)] text-[11px] ml-1.5">(Cost: {formatCurrency(product.purchase_price)})</span>
+                      </div>
+                      <div className={`font-mono text-xs font-semibold ${stockAlert.textClass}`}>
                         Stock: {product.current_stock ?? 0} {product.unit || 'pcs'}
-                      </span>
+                      </div>
                     </div>
 
-                    {/* Actions: Eye (View) · Barcode · Adjust · ⋯ (More) */}
-                    <div
-                      className="flex items-center gap-1.5 pt-2 border-t border-[var(--line-subtle)]"
-                      onClick={e => e.stopPropagation()}
-                    >
+                    {/* Action Bar: Eye (View) · Barcode · Adjust · Three dots */}
+                    <div className="flex items-center gap-1.5 pt-2 border-t border-[var(--line-subtle)]" onClick={e => e.stopPropagation()}>
+                      {/* View Eye Button */}
                       <button
                         type="button"
                         onClick={() => openDetails(product)}
                         className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition shrink-0"
-                        title="View Product"
+                        title="View Details"
                       >
                         <IconEye size={15} />
                       </button>
 
+                      {/* Barcode Button */}
                       <button
                         type="button"
                         onClick={() => openBarcode(product)}
@@ -1543,6 +1533,7 @@ export default function Products() {
                         <span className="truncate">Barcode</span>
                       </button>
 
+                      {/* Adjust Button */}
                       <button
                         type="button"
                         onClick={() => openAdjust(product)}
@@ -1553,10 +1544,11 @@ export default function Products() {
                         <span className="truncate">Adjust</span>
                       </button>
 
+                      {/* Three dot button */}
                       <div className="relative shrink-0">
                         <button
                           type="button"
-                          onClick={() => setMobileMoreId(current => current === product.id ? null : product.id)}
+                          onClick={() => setMobileMoreId(curr => curr === product.id ? null : product.id)}
                           className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition ${
                             mobileMoreId === product.id ? 'border-[var(--primary)] bg-[var(--surface-hover)]' : ''
                           }`}
