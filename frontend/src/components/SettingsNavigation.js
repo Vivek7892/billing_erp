@@ -14,9 +14,9 @@ import {
 } from '@tabler/icons-react'
 
 export const SETTINGS_TABS = [
-  { id: 'invoice-settings', label: 'Invoice Settings', icon: IconFileText, badge: '3 Templates' },
-  { id: 'print-settings', label: 'Print Settings', icon: IconPrinter, badge: 'Thermal & Barcode' },
   { id: 'manage-business', label: 'Manage Business', icon: IconBuildingStore },
+  { id: 'invoice-settings', label: 'Invoice Settings', icon: IconFileText, badge: '4 Templates' },
+  { id: 'print-settings', label: 'Print Settings', icon: IconPrinter, badge: 'Thermal & Barcode' },
   { id: 'approvals', label: 'Approval Settings', icon: IconShieldCheck },
   { id: 'tax', label: 'Tax & GST', icon: IconPercentage },
   { id: 'payments', label: 'Payment & Bank', icon: IconCreditCard },

@@ -22,6 +22,7 @@ import {
   IconShieldCheck,
   IconArrowUpRight,
   IconCash,
+  IconFilter,
 } from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 import { SearchBar } from '../components/UI'

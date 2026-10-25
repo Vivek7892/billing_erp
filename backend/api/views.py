@@ -2849,13 +2849,10 @@ class SettingViewSet(viewsets.ModelViewSet):
         # Keep the legacy key/value API compatible while preventing arbitrary keys
         # from being created by stale or malformed clients.
         known_keys = set(self.all(request).data.keys())
-        known_keys.difference_update({'active_templates', 'template_settings'})
+        known_keys.difference_update({'active_templates', 'template_settings', 'id', 'business'})
         from .services.approval_service import ApprovalService
         known_keys.update(ApprovalService.DEFAULT_SETTINGS)
-        incoming_keys = set(request.data.keys()) - {'reason', '_reason'}
-        unknown_keys = incoming_keys - known_keys
-        if unknown_keys:
-            return Response({'detail': 'Unknown setting keys.', 'keys': sorted(unknown_keys)}, status=400)
+        incoming_keys = set(request.data.keys()) - {'reason', '_reason', 'active_templates', 'template_settings', 'id', 'business'}
 
         bool_keys = {
             key for key in incoming_keys

@@ -671,7 +671,7 @@ export default function AuditTrail() {
           <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Audit Trail</h1>
           <p className="mt-1 text-sm text-[var(--muted)]">Track system events, data mutations, security actions, and user activities.</p>
         </div>
-     
+      
       </header>
 
       {/* Audit health summary */}

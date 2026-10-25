@@ -33,6 +33,7 @@ import {
   IconAdjustments,
   IconEye,
   IconArrowLeft,
+  IconArrowRight,
   IconCircleCheck,
   IconExternalLink,
   IconMessageCircle,
@@ -356,6 +357,7 @@ export default function Settings() {
   const [saving, setSaving] = useState(false)
   const [savingTemplateId, setSavingTemplateId] = useState(null)
   const [showAllTemplates, setShowAllTemplates] = useState(false)
+  const [templateFilter, setTemplateFilter] = useState('all')
   const [showCustomTheme, setShowCustomTheme] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [removingLogo, setRemovingLogo] = useState(false)
@@ -436,8 +438,11 @@ export default function Settings() {
     try {
       const payload = {}
       Object.keys(settings).forEach(key => {
-        if (key !== 'active_templates' && key !== 'template_settings') {
-          payload[key] = settings[key]
+        if (key !== 'active_templates' && key !== 'template_settings' && key !== 'id' && key !== 'business') {
+          const val = settings[key]
+          if (val !== null && val !== undefined) {
+            payload[key] = typeof val === 'boolean' ? String(val) : val
+          }
         }
       })
       payload.reason = reason
@@ -848,13 +853,30 @@ export default function Settings() {
     }
   }
 
-  const invoiceTemplates = settings.template_settings?.templates || []
+  const DEFAULT_CATALOG = [
+    { id: 'gst_a4', name: 'Standard GST', format: 'a4', size: '210 × 297 mm', badge: 'Vertical A4', desc: 'Full-page official GST tax invoice with detailed tax breakups, SAC/HSN codes & bank data.' },
+    { id: 'half_a4', name: 'Half-A4 (A5)', format: 'half_a4', size: '148 × 210 mm', badge: 'Half-A4 (A5)', desc: 'Compact A5 portrait bill with clean white background, minimal borders & grocery retail layout.' },
+    { id: 'stylish', name: 'Stylish A4', format: 'a4', size: '210 × 297 mm', badge: 'Stylish A4', desc: 'Modern corporate vertical design with clean header brand accents and balanced layout.' },
+    { id: 'thermal_80', name: 'Thermal (80mm)', format: 'thermal', size: '80mm Roll', badge: '80mm Roll', desc: 'High-speed roll receipt formatted for standard 80mm thermal POS receipt printers.' },
+    { id: 'thermal_58', name: 'Thermal (58mm)', format: 'thermal', size: '58mm Roll', badge: '58mm Roll', desc: 'Ultra-compact slip formatted for 58mm (2-inch) mini POS thermal printers.' },
+  ]
+  const invoiceTemplates = (settings.template_settings?.templates && settings.template_settings.templates.length > 0)
+    ? settings.template_settings.templates
+    : DEFAULT_CATALOG
+  const filteredInvoiceTemplates = useMemo(() => {
+    if (templateFilter === 'all') return invoiceTemplates
+    if (templateFilter === 'thermal') return invoiceTemplates.filter(t => t.format === 'thermal' || t.id.startsWith('thermal'))
+    if (templateFilter === 'half_a4') return invoiceTemplates.filter(t => t.format === 'half_a4' || t.id === 'half_a4')
+    if (templateFilter === 'a4') return invoiceTemplates.filter(t => t.format === 'a4' || (!t.format && !t.id.startsWith('thermal') && t.id !== 'half_a4'))
+    return invoiceTemplates
+  }, [invoiceTemplates, templateFilter])
   const featuredInvoiceTemplates = [
-    { id: 'advanced_gst_a5', baseId: 'half_a4', name: 'Advanced GST (A5)' },
-    { id: 'luxury', baseId: 'gst_a4', name: 'Luxury' },
-    { id: 'stylish', baseId: 'stylish', name: 'Stylish' },
+    { id: 'luxury', baseId: 'gst_a4', name: 'Standard GST' },
+    { id: 'advanced_gst_a5', baseId: 'half_a4', name: 'Half-A4 (A5)' },
+    { id: 'stylish', baseId: 'stylish', name: 'Stylish A4' },
+    { id: 'thermal_80', baseId: 'thermal_80', name: 'Thermal (80mm)' },
   ].map(featured => {
-    const baseTemplate = invoiceTemplates.find(template => template.id === featured.baseId)
+    const baseTemplate = invoiceTemplates.find(template => template.id === featured.baseId) || DEFAULT_CATALOG.find(d => d.id === featured.baseId)
     return baseTemplate ? { ...featured, baseTemplate, format: baseTemplate.format } : null
   }).filter(Boolean)
   const barcodeLabelSize = settings.barcode_label_size || '50x25'
@@ -1030,38 +1052,49 @@ export default function Settings() {
               {/* Theme settings panel */}
               <div className={`${mobileInvoiceView === 'settings' ? 'block' : 'hidden'} xl:block order-2 w-full min-w-0 space-y-3 xl:h-full xl:max-h-full xl:overflow-y-auto xl:overscroll-contain xl:pr-1`}>
                 <section className="overflow-hidden">
-                  <div className="flex items-center gap-2 pb-2">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-50 text-indigo-700"><IconReceipt size={16} /></span>
-                    <h2 className="text-sm font-semibold text-slate-900">ThemeStore</h2>
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-50 text-indigo-700">
+                        <IconReceipt size={16} />
+                      </span>
+                      <h2 className="text-sm font-bold text-slate-900">ThemeStore</h2>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowAllTemplates(true)}
+                      className="text-xs font-semibold text-indigo-700 hover:text-indigo-900 inline-flex items-center gap-1.5"
+                      title="View all invoice templates"
+                    >
+                      <span>See all </span>
+                      <IconArrowRight size={13} />
+                    </button>
                   </div>
 
                   <div className="py-1">
-                    <div className="mb-2.5 flex items-center justify-between gap-3">
-                      <h3 className="text-sm font-semibold text-slate-900">Themes</h3>
-                    </div>
+                    
 
-                  <div className="mb-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-[12px] leading-relaxed text-amber-950">
-                    <IconInfoCircle size={16} className="mt-0.5 shrink-0 text-amber-700" />
-                    <p>Thermal theme was used previously. To manage preferences, visit{' '}
-                      <button type="button" onClick={() => { setPrintSubTab('thermal'); setSearchParams({ tab: 'print-settings' }) }} className="font-semibold text-indigo-700 underline decoration-indigo-300 underline-offset-2 hover:text-indigo-900">Thermal Settings</button>
+                  <div className="mb-2.5 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50/80 px-2.5 py-1.5 text-[11px] leading-relaxed text-amber-950">
+                    <IconInfoCircle size={15} className="mt-0.5 shrink-0 text-amber-700" />
+                    <p>Select a template below to make it your active default bill format.{' '}
+                      <button type="button" onClick={() => { setPrintSubTab('thermal'); setSearchParams({ tab: 'print-settings' }) }} className="font-semibold text-indigo-700 underline decoration-indigo-300 underline-offset-2 hover:text-indigo-900">Configure Thermal</button>
                     </p>
                   </div>
 
+                  {/* 4 Templates in a Single Row (Both Mobile & Desktop) */}
                   <div className="pb-1">
-                    <div className="grid w-full grid-cols-2 sm:grid-cols-4 gap-2">
-                    <div role="radiogroup" aria-label="Invoice themes" className="contents">
+                    <div className="grid w-full grid-cols-4 gap-1.5 sm:gap-2.5" role="radiogroup" aria-label="Invoice themes">
                     {featuredInvoiceTemplates.map(template => {
                       const isDefault = selectedTemplateId === template.baseId
-                      const base = template.baseTemplate
+                      const base = template.baseTemplate || template
                       const isThermal = base.format === 'thermal'
                       const isThermal58 = base.id === 'thermal_58'
                       return (
                         <article
                           key={template.id}
-                          className={`relative min-w-0 overflow-hidden rounded-lg border p-2 transition-colors ${
+                          className={`relative min-w-0 overflow-hidden rounded-xl border p-1 sm:p-2 transition-all ${
                             isDefault
-                              ? 'border-indigo-600 bg-indigo-50/40'
-                              : 'border-slate-200 bg-white hover:border-indigo-300'
+                              ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/30 shadow-xs'
+                              : 'border-slate-200 bg-white hover:border-indigo-300 hover:shadow-2xs'
                           }`}
                         >
                           <button
@@ -1070,14 +1103,14 @@ export default function Settings() {
                             disabled={Boolean(savingTemplateId)}
                             role="radio"
                             aria-checked={isDefault}
-                            className="block w-full min-w-0 rounded-md text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-                            aria-label={`Preview and select ${template.name}`}
+                            className="block w-full min-w-0 rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                            aria-label={`Select ${template.name}`}
                           >
-                            <div className="settings-template-thumb-paper mx-auto flex h-[96px] w-full items-start justify-center overflow-hidden rounded bg-white sm:h-[108px]">
+                            <div className="settings-template-thumb-paper mx-auto flex h-[72px] sm:h-[105px] w-full items-start justify-center overflow-hidden rounded-lg bg-slate-50 border border-slate-100">
                               <div
                                 style={{
-                                  width: isThermal ? (isThermal58 ? 216 : 300) : template.format === 'half_a4' ? 560 : 794,
-                                  transform: `scale(${isThermal ? 0.2 : template.format === 'half_a4' ? 0.13 : 0.09})`,
+                                  width: isThermal ? (isThermal58 ? 216 : 300) : base.format === 'half_a4' ? 560 : 794,
+                                  transform: `scale(${isThermal ? 0.16 : base.format === 'half_a4' ? 0.10 : 0.075})`,
                                   transformOrigin: 'top center',
                                   pointerEvents: 'none',
                                 }}
@@ -1091,18 +1124,18 @@ export default function Settings() {
                                 />
                               </div>
                             </div>
-                            <div className="flex min-h-8 items-center justify-between gap-1 pt-1.5">
-                              <h3 className="min-w-0 line-clamp-2 text-[10px] font-semibold leading-tight text-slate-900" title={template.name}>{template.name}</h3>
-                              <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${isDefault ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-slate-300 bg-white'}`}>{isDefault && <IconCheck size={11} strokeWidth={3} />}</span>
+                            <div className="flex min-h-6 sm:min-h-7 items-center justify-between gap-1 pt-1 sm:pt-1.5">
+                              <h3 className="min-w-0 truncate text-[9px] sm:text-[11px] font-bold text-slate-800" title={template.name}>
+                                {template.name}
+                              </h3>
+                              <span className={`flex h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 items-center justify-center rounded-full border ${isDefault ? 'border-indigo-600 bg-indigo-600 text-white shadow-2xs' : 'border-slate-300 bg-white'}`}>
+                                {isDefault && <IconCheck size={10} strokeWidth={3} />}
+                              </span>
                             </div>
                           </button>
                         </article>
                       )
                     })}
-                    </div>
-                    <button type="button" onClick={() => setShowAllTemplates(true)} className="flex min-h-[156px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-2 text-xs font-semibold text-slate-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 sm:min-h-[156px]">
-                      See All
-                    </button>
                     </div>
                   </div>
                   </div>
@@ -3112,45 +3145,175 @@ export default function Settings() {
       </div>
 
       {/* ==============================================================
-          ALL INVOICE TEMPLATES DRAWER
+          ALL INVOICE TEMPLATES DRAWER (Mobile Friendly)
       ============================================================== */}
       {showAllTemplates && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/50 p-3 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="all-invoice-templates-title" onMouseDown={event => { if (event.target === event.currentTarget) setShowAllTemplates(false) }}>
-          <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 sm:px-6">
-              <div>
-                <h2 id="all-invoice-templates-title" className="text-base font-bold text-slate-900">All Invoice Templates</h2>
-                <p className="mt-0.5 text-xs text-slate-500">Choose a layout after previewing the actual invoice design.</p>
-              </div>
-              <button type="button" onClick={() => setShowAllTemplates(false)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800" aria-label="Close all templates"> <IconX size={18} /></button>
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/60 p-0 sm:p-4 md:p-6 backdrop-blur-xs transition-opacity"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="all-invoice-templates-title"
+          onMouseDown={event => {
+            if (event.target === event.currentTarget) setShowAllTemplates(false)
+          }}
+        >
+          <div className="flex h-[92dvh] sm:h-auto sm:max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl border-t sm:border border-slate-200 bg-white shadow-2xl">
+            {/* Mobile Drag Indicator */}
+            <div className="sm:hidden flex justify-center pt-2.5 pb-1 bg-white shrink-0">
+              <div className="w-10 h-1 bg-slate-300 rounded-full" />
             </div>
-            <div className="overflow-y-auto p-4 sm:p-6">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {invoiceTemplates.map(template => {
+
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 sm:px-6 sm:py-3.5 bg-white shrink-0">
+              <div className="min-w-0 pr-2">
+                <div className="flex items-center gap-2">
+                  <h2 id="all-invoice-templates-title" className="text-base sm:text-lg font-bold text-slate-900 truncate">
+                    All Invoice Templates
+                  </h2>
+                  <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] sm:text-xs font-semibold text-indigo-700 shrink-0">
+                    {filteredInvoiceTemplates.length} {filteredInvoiceTemplates.length === 1 ? 'template' : 'templates'}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-slate-500 truncate hidden xs:block">
+                  Preview design layouts and select your active invoice bill format.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAllTemplates(false)}
+                className="rounded-lg p-1.5 sm:p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors shrink-0"
+                aria-label="Close all templates"
+              >
+                <IconX size={20} />
+              </button>
+            </div>
+
+            {/* Category Filter Pills (Horizontally Scrollable on Mobile) */}
+            <div className="flex items-center gap-1.5 overflow-x-auto px-4 py-2 sm:px-6 bg-slate-50 border-b border-slate-100 scrollbar-none shrink-0">
+              {[
+                { id: 'all', label: 'All Templates' },
+                { id: 'a4', label: 'A4 GST Sheets' },
+                { id: 'half_a4', label: 'Half-A4 (A5)' },
+                { id: 'thermal', label: 'Thermal POS' },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setTemplateFilter(tab.id)}
+                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+                    templateFilter === tab.id
+                      ? 'bg-indigo-600 text-white shadow-2xs'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Templates Grid Container */}
+            <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-5 md:p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                {filteredInvoiceTemplates.map(template => {
                   const selected = selectedTemplateId === template.id
+                  const isThermal = template.format === 'thermal' || template.id.startsWith('thermal')
+                  const is58 = template.id === 'thermal_58'
+                  const docWidth = isThermal ? (is58 ? 216 : 300) : template.format === 'half_a4' ? 560 : 794
+                  const scale = isThermal ? (is58 ? 0.32 : 0.25) : template.format === 'half_a4' ? 0.18 : 0.13
+
                   return (
-                    <article key={template.id} className={`overflow-hidden rounded-xl border p-3 text-left transition ${selected ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200' : 'border-slate-200 hover:border-indigo-300 hover:shadow-md'}`}>
-                      <button type="button" onClick={() => { handleSelectInvoiceTemplate(template); setShowAllTemplates(false) }} aria-label={`Select ${template.name}`} className="block w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-                      <div className="flex h-[180px] justify-center overflow-hidden rounded-lg border border-slate-100 bg-slate-50 p-2">
-                        <div className="mx-auto" style={{ width: template.format === 'thermal' ? 302 : 560, transform: `scale(${template.format === 'thermal' ? 0.24 : 0.15})`, transformOrigin: 'top center', pointerEvents: 'none' }}>
-                          <InvoiceDocument invoice={sampleInvoice} settings={settings} templateConfig={getTemplatePreviewConfig(template)} mode={template.id} showModePicker={false} />
+                    <article
+                      key={template.id}
+                      className={`flex flex-col justify-between overflow-hidden rounded-xl border p-3 sm:p-4 text-left transition-all ${
+                        selected
+                          ? 'border-indigo-600 bg-indigo-50/40 ring-2 ring-indigo-500/20 shadow-xs'
+                          : 'border-slate-200 bg-white hover:border-indigo-300 hover:shadow-sm'
+                      }`}
+                    >
+                      <div>
+                        {/* Header info */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-sm font-bold text-slate-900 truncate" title={template.name}>
+                              {template.name}
+                            </h3>
+                            <span className="inline-block mt-0.5 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
+                              {template.badge || template.size || (isThermal ? 'Thermal Roll' : 'Sheet')}
+                            </span>
+                          </div>
+                          {selected ? (
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-2xs">
+                              <IconCheck size={11} strokeWidth={3} /> Active
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-medium shrink-0">
+                              {template.size || ''}
+                            </span>
+                          )}
                         </div>
-                      </div>
-                      <div className="mt-3 flex items-start justify-between gap-2">
-                        <div>
-                          <h3 className="text-sm font-bold text-slate-900">{template.name}</h3>
-                          <p className="mt-0.5 text-xs text-slate-500">{template.badge || template.size}</p>
-                        </div>
-                        {selected && <span className="inline-flex items-center gap-1 rounded-full bg-indigo-600 px-2 py-1 text-[10px] font-bold text-white"><IconCheck size={12} /> Selected</span>}
-                      </div>
-                      <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-slate-600">{template.desc}</p>
-                      </button>
-                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2">
-                        <button type="button" onClick={() => { handleSelectInvoiceTemplate(template); setShowAllTemplates(false) }} disabled={selected || Boolean(savingTemplateId)} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-default disabled:bg-indigo-100 disabled:text-indigo-700">
-                          <IconCheck size={13} />{selected ? 'Selected' : 'Use this template'}
+
+                        {/* Interactive Clickable Preview */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleSelectInvoiceTemplate(template)
+                            setShowAllTemplates(false)
+                          }}
+                          aria-label={`Select ${template.name}`}
+                          className="mt-2.5 block w-full rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 group"
+                        >
+                          <div className="flex h-[175px] sm:h-[185px] w-full items-start justify-center overflow-hidden rounded-lg border border-slate-100 bg-slate-50 p-2 group-hover:border-indigo-200 transition-colors">
+                            <div
+                              className="mx-auto"
+                              style={{
+                                width: docWidth,
+                                transform: `scale(${scale})`,
+                                transformOrigin: 'top center',
+                                pointerEvents: 'none',
+                              }}
+                            >
+                              <InvoiceDocument
+                                invoice={sampleInvoice}
+                                settings={settings}
+                                templateConfig={getTemplatePreviewConfig(template)}
+                                mode={template.id}
+                                showModePicker={false}
+                              />
+                            </div>
+                          </div>
                         </button>
-                        <button type="button" onClick={() => { setShowAllTemplates(false); setCustomizingTemplate(template) }} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700">
-                          <IconAdjustments size={13} /> Customize
+
+                        {/* Description */}
+                        <p className="mt-2 text-xs leading-relaxed text-slate-600 line-clamp-2">
+                          {template.desc || 'Optimized billing layout for clean and compliant tax invoice printing.'}
+                        </p>
+                      </div>
+
+                      {/* Action Buttons (Mobile-first responsive row) */}
+                      <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-2.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleSelectInvoiceTemplate(template)
+                            setShowAllTemplates(false)
+                          }}
+                          disabled={selected || Boolean(savingTemplateId)}
+                          className="flex-1 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-2xs hover:bg-indigo-700 active:scale-[0.98] transition-all disabled:cursor-default disabled:bg-indigo-100 disabled:text-indigo-700 disabled:shadow-none"
+                        >
+                          <IconCheck size={14} />
+                          <span>{selected ? 'Active Default' : 'Use this template'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowAllTemplates(false)
+                            setCustomizingTemplate(template)
+                          }}
+                          className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-slate-50 hover:text-indigo-700 active:scale-[0.98] transition-all"
+                          title={`Customize ${template.name}`}
+                        >
+                          <IconAdjustments size={14} />
+                          <span className="hidden xs:inline">Customize</span>
                         </button>
                       </div>
                     </article>
@@ -3163,36 +3326,141 @@ export default function Settings() {
       )}
 
       {/* ==============================================================
-          CREATE CUSTOM INVOICE THEME
+          CREATE CUSTOM INVOICE THEME (Mobile Friendly)
       ============================================================== */}
       {showCustomTheme && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/50 p-3 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="custom-invoice-theme-title" onMouseDown={event => { if (event.target === event.currentTarget) setShowCustomTheme(false) }}>
-          <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/60 p-0 sm:p-4 backdrop-blur-xs transition-opacity"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="custom-invoice-theme-title"
+          onMouseDown={event => {
+            if (event.target === event.currentTarget) setShowCustomTheme(false)
+          }}
+        >
+          <div className="flex h-[92dvh] sm:h-auto sm:max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl border-t sm:border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 sm:px-5 sm:py-4 shrink-0 bg-white">
               <div>
-                <h2 id="custom-invoice-theme-title" className="text-base font-bold text-slate-900">Create Custom Theme</h2>
-                <p className="mt-0.5 text-xs text-slate-500">Preview updates as you change these settings. Save with the Settings bar.</p>
+                <h2 id="custom-invoice-theme-title" className="text-base font-bold text-slate-900">
+                  Create Custom Theme
+                </h2>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Preview updates as you change these settings. Save with the Settings bar.
+                </p>
               </div>
-              <button type="button" onClick={() => setShowCustomTheme(false)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Close custom theme"><IconX size={18} /></button>
+              <button
+                type="button"
+                onClick={() => setShowCustomTheme(false)}
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+                aria-label="Close custom theme"
+              >
+                <IconX size={18} />
+              </button>
             </div>
-            <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
-              <label className="text-xs font-semibold text-slate-700">Primary color<input type="color" value={settings.invoice_theme_color || '#1e3a5f'} onChange={event => setField('invoice_theme_color', event.target.value)} className="mt-1 block h-10 w-full cursor-pointer rounded-lg border border-slate-200 bg-white p-1" /></label>
-              <label className="text-xs font-semibold text-slate-700">Secondary color<input type="color" value={settings.invoice_theme_secondary || settings.invoice_theme_color || '#64748b'} onChange={event => setField('invoice_theme_secondary', event.target.value)} className="mt-1 block h-10 w-full cursor-pointer rounded-lg border border-slate-200 bg-white p-1" /></label>
-              <label className="text-xs font-semibold text-slate-700">Font<select value={settings.invoice_font || 'inter'} onChange={event => setField('invoice_font', event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs"><option value="inter">Inter / Sans serif</option><option value="roboto">Roboto</option><option value="times">Times New Roman</option><option value="courier">Courier</option></select></label>
-              <label className="text-xs font-semibold text-slate-700">Border style<select value={settings.invoice_border_style || 'solid'} onChange={event => setField('invoice_border_style', event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs"><option value="solid">Solid</option><option value="dashed">Dashed</option><option value="double">Double</option></select></label>
-              <label className="text-xs font-semibold text-slate-700">Header style<select value={settings.invoice_header_layout || 'logo_left'} onChange={event => setField('invoice_header_layout', event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs"><option value="logo_left">Logo left</option><option value="split">Split</option><option value="center">Centered</option><option value="corporate_bar">Corporate accent</option><option value="name_only">Business name only</option></select></label>
-              <label className="text-xs font-semibold text-slate-700">Table style<select value={settings.invoice_table_style || 'clean'} onChange={event => setField('invoice_table_style', event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs"><option value="clean">Clean</option><option value="striped">Striped rows</option><option value="bold">Bold header</option></select></label>
-              <label className="text-xs font-semibold text-slate-700 sm:col-span-2">Invoice layout<select value={settings.invoice_layout || 'standard'} onChange={event => setField('invoice_layout', event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs"><option value="standard">Standard A4</option><option value="compact">Compact</option><option value="thermal">Thermal receipt</option></select></label>
-            </div>
-            <div className="mx-5 mb-4 overflow-hidden rounded-xl border border-slate-200 bg-slate-100 p-3">
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-500">Live theme preview</p>
-              <div className="h-[50vh] min-h-[280px] overflow-hidden rounded bg-white">
-                <div className="mx-auto origin-top scale-[0.64]" style={{ width: previewDocumentWidth }}>
-                  <InvoiceDocument invoice={sampleInvoice} settings={settings} templateConfig={previewTemplateConfig} mode={previewTemplateId} showModePicker={false} />
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="text-xs font-semibold text-slate-700">
+                  Primary color
+                  <input
+                    type="color"
+                    value={settings.invoice_theme_color || '#1e3a5f'}
+                    onChange={event => setField('invoice_theme_color', event.target.value)}
+                    className="mt-1 block h-10 w-full cursor-pointer rounded-lg border border-slate-200 bg-white p-1"
+                  />
+                </label>
+                <label className="text-xs font-semibold text-slate-700">
+                  Secondary color
+                  <input
+                    type="color"
+                    value={settings.invoice_theme_secondary || settings.invoice_theme_color || '#64748b'}
+                    onChange={event => setField('invoice_theme_secondary', event.target.value)}
+                    className="mt-1 block h-10 w-full cursor-pointer rounded-lg border border-slate-200 bg-white p-1"
+                  />
+                </label>
+                <label className="text-xs font-semibold text-slate-700">
+                  Font
+                  <select
+                    value={settings.invoice_font || 'inter'}
+                    onChange={event => setField('invoice_font', event.target.value)}
+                    className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs"
+                  >
+                    <option value="inter">Inter / Sans serif</option>
+                    <option value="roboto">Roboto</option>
+                    <option value="times">Times New Roman</option>
+                    <option value="courier">Courier</option>
+                  </select>
+                </label>
+                <label className="text-xs font-semibold text-slate-700">
+                  Border style
+                  <select
+                    value={settings.invoice_border_style || 'solid'}
+                    onChange={event => setField('invoice_border_style', event.target.value)}
+                    className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs"
+                  >
+                    <option value="solid">Solid</option>
+                    <option value="dashed">Dashed</option>
+                    <option value="double">Double</option>
+                  </select>
+                </label>
+                <label className="text-xs font-semibold text-slate-700">
+                  Header style
+                  <select
+                    value={settings.invoice_header_layout || 'logo_left'}
+                    onChange={event => setField('invoice_header_layout', event.target.value)}
+                    className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs"
+                  >
+                    <option value="logo_left">Logo left</option>
+                    <option value="split">Split</option>
+                    <option value="center">Centered</option>
+                    <option value="corporate_bar">Corporate accent</option>
+                    <option value="name_only">Business name only</option>
+                  </select>
+                </label>
+                <label className="text-xs font-semibold text-slate-700">
+                  Table style
+                  <select
+                    value={settings.invoice_table_style || 'clean'}
+                    onChange={event => setField('invoice_table_style', event.target.value)}
+                    className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs"
+                  >
+                    <option value="clean">Clean</option>
+                    <option value="striped">Striped rows</option>
+                    <option value="bold">Bold header</option>
+                  </select>
+                </label>
+                <label className="text-xs font-semibold text-slate-700 sm:col-span-2">
+                  Invoice layout
+                  <select
+                    value={settings.invoice_layout || 'standard'}
+                    onChange={event => setField('invoice_layout', event.target.value)}
+                    className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-xs"
+                  >
+                    <option value="standard">Standard A4</option>
+                    <option value="compact">Compact</option>
+                    <option value="thermal">Thermal receipt</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-100 p-3">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-500">Live theme preview</p>
+                <div className="h-[45vh] min-h-[240px] overflow-hidden rounded bg-white">
+                  <div className="mx-auto origin-top scale-[0.64]" style={{ width: previewDocumentWidth }}>
+                    <InvoiceDocument invoice={sampleInvoice} settings={settings} templateConfig={previewTemplateConfig} mode={previewTemplateId} showModePicker={false} />
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="flex justify-end border-t border-slate-200 px-5 py-3"><button type="button" onClick={() => setShowCustomTheme(false)} className="h-9 rounded-lg bg-slate-900 px-4 text-xs font-semibold text-white hover:bg-slate-700">Done</button></div>
+
+            <div className="flex justify-end border-t border-slate-200 px-4 py-3 sm:px-5 shrink-0 bg-white">
+              <button
+                type="button"
+                onClick={() => setShowCustomTheme(false)}
+                className="h-9 rounded-lg bg-slate-900 px-4 text-xs font-semibold text-white hover:bg-slate-700 transition-colors"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

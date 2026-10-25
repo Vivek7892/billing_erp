@@ -74,7 +74,7 @@ export default function Users() {
       first_name: u.first_name || '',
       last_name: u.last_name || '',
       phone: u.phone || '',
-      role: [ROLES.ADMIN, ROLES.OWNER, 'manager', 'accountant'].includes(u.role) ? ROLES.ADMIN : ROLES.CASHIER,
+      role: u.role || ROLES.CASHIER,
       password: '',
       is_active: Boolean(u.is_active),
     })
@@ -83,9 +83,37 @@ export default function Users() {
   }
 
   const save = async () => {
+    const username = (form.username || '').trim()
+    if (!username) {
+      toast.error('Username is required')
+      return
+    }
+    if (username.length < 3) {
+      toast.error('Username must be at least 3 characters')
+      return
+    }
+    if (!editId && (!form.password || form.password.length < 6)) {
+      toast.error('Password must be at least 6 characters for new users')
+      return
+    }
+    if (form.password && form.password.length < 6) {
+      toast.error('Password must be at least 6 characters')
+      return
+    }
+
     try {
-      const payload = { ...form }
-      if (!payload.password) delete payload.password
+      const payload = {
+        username,
+        first_name: (form.first_name || '').trim(),
+        last_name: (form.last_name || '').trim(),
+        email: (form.email || '').trim(),
+        phone: (form.phone || '').trim(),
+        role: form.role || ROLES.CASHIER,
+        is_active: Boolean(form.is_active),
+      }
+      if (form.password) {
+        payload.password = form.password
+      }
       if (editId) {
         const res = await api.patch(`/users/${editId}/`, payload)
         if (res?.status === 202 || res?.data?.requires_approval) {
@@ -100,7 +128,23 @@ export default function Users() {
       setModal(false)
       load()
     } catch (e) {
-      toast.error(e.response?.data?.error || JSON.stringify(e.response?.data) || 'Error saving user')
+      const errData = e.response?.data
+      let errMsg = 'Error saving user'
+      if (typeof errData === 'string') {
+        errMsg = errData
+      } else if (errData?.detail) {
+        errMsg = errData.detail
+      } else if (errData?.error) {
+        errMsg = errData.error
+      } else if (errData && typeof errData === 'object') {
+        const firstField = Object.keys(errData)[0]
+        if (firstField) {
+          const val = errData[firstField]
+          const fieldMsg = Array.isArray(val) ? val.join(' ') : String(val)
+          errMsg = `${firstField.replace(/_/g, ' ')}: ${fieldMsg}`
+        }
+      }
+      toast.error(errMsg)
     }
   }
 
@@ -388,7 +432,7 @@ export default function Users() {
             <label className="label">Role *</label>
             <select
               className="input font-semibold"
-              value={[ROLES.ADMIN, ROLES.OWNER, 'manager', 'accountant'].includes(form.role) ? ROLES.ADMIN : ROLES.CASHIER}
+              value={form.role}
               onChange={e => f('role', e.target.value)}
             >
               {ROLE_OPTIONS.map(opt => (

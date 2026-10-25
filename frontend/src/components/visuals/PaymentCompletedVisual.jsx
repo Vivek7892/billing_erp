@@ -78,7 +78,7 @@ export default function PaymentCompletedVisual({
       title="Payment Completed"
       uploadedSrc={uploadedSrc}
       className={`
-        p-4 sm:p-5
+        p-2.5 sm:p-4
         bg-gradient-to-b
         from-white
         to-[#F5F6F8]

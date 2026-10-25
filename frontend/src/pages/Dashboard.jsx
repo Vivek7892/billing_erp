@@ -250,14 +250,14 @@ export default function Dashboard() {
       sub: `Tax ${fmtCurrency(data.today_tax)}`,
     },
     {
+      label: "Gross Profit",
+      value: fmtCurrency(data.today_profit),
+      sub: `Margin ${Number(data.profit_margin || 0).toFixed(1)}%`,
+    },
+    {
       label: "Receivables",
       value: fmtCurrency(data.pending_credit),
       sub: `${creditDueCount} pending`,
-    },
-    {
-      label: "Today's Bills",
-      value: String(data.today_bills || 0),
-      sub: `Avg ${fmtCurrency(data.avg_bill_today)}`,
     },
   ], [data, creditDueCount])
 

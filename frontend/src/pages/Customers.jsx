@@ -90,6 +90,8 @@ const CustomerAvatar = ({ customer, size = 'md' }) => {
   ) : (
     <div className={`${dimensions} ${color} rounded-full flex items-center justify-center font-bold ring-2 ring-[var(--surface)] shadow-sm shrink-0`}>
       {initials || <IconUserCircle size={18} />}
+      {/* Mobile Floating Action Button */}
+      <MobileFAB icon={IconPlus} label="Add Customer" onClick={openAdd} />
     </div>
   )
 }

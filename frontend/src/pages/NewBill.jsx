@@ -1847,8 +1847,7 @@ export default function NewBill() {
             <span>New Sale</span>
           </div>
           <div className="pb-meta">
-            <span>Invoice: <span className="pb-badge-pill">Assigned on save</span></span>
-            <span>Date: <b>{fmtDate(now)} {fmtTime(now)}</b></span>
+           <span>Date: <b>{fmtDate(now)} {fmtTime(now)}</b></span>
             <span>Cashier: <b>{cashier}</b></span>
             {dashboard && dashboard.today_bills != null && (
               <span className="pb-hide-sm">Bills today: <b>{dashboard.today_bills}</b></span>
@@ -3459,46 +3458,34 @@ export default function NewBill() {
         </div>
       </Modal>
 
-      {/* ============================ DEDICATED SALE COMPLETED SCREEN ============================ */}
+      {/* ============================ DEDICATED SALE COMPLETED SCREEN (Mobile-First) ============================ */}
       <Modal open={showSuccess && Boolean(lastInvoice?.id)} onClose={() => setShowSuccess(false)} title="" size="sm">
-        <div className="pb-sale-success text-center py-2 px-1">
+        <div className="pb-sale-success text-center py-1 sm:py-2 px-0.5 sm:px-1 space-y-3">
+          {/* Visual Celebration */}
           <PaymentCompletedVisual
-            className="mb-3 border-0 shadow-none"
+            className="border-0 shadow-none p-1 sm:p-2"
             amount={Number(lastInvoice?.grand_total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             invoiceNo={lastInvoice?.invoice_number || `INV-${lastInvoice?.id || ''}`}
             customerName={lastInvoice?.customer_name || lastInvoice?.customer?.name || 'Walk-in Customer'}
           />
 
-          {/* Heading & Invoice / Customer details */}
-          <h2 className="text-xl font-bold tracking-tight text-[var(--ink)]">Sale Completed!</h2>
-          <div className="mt-1 flex items-center justify-center gap-2 text-xs text-[var(--muted)]">
-            <span className="font-mono font-semibold text-[var(--ink)]">#{lastInvoice?.invoice_number || 'INV'}</span>
-            <span>•</span>
-            <span className="truncate max-w-[200px]">
+          {/* Invoice & Customer details bar */}
+          <div className="flex items-center justify-between rounded-lg bg-[var(--surface-subtle)] px-3 py-2 text-xs">
+            <span className="font-mono font-bold text-[var(--ink)]">
+              #{lastInvoice?.invoice_number || 'INV'}
+            </span>
+            <span className="truncate max-w-[150px] text-[var(--muted)] font-medium">
               {lastInvoice?.customer_name || lastInvoice?.customer?.name || 'Walk-in Customer'}
             </span>
-          </div>
-
-          {/* Amount Paid Summary Card */}
-          <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">Total Amount Paid</p>
-            <p className="mt-1 font-mono text-2xl font-black text-emerald-600 dark:text-emerald-400">
-              {fmt(lastInvoice?.grand_total || 0)}
-            </p>
-            <div className="mt-2.5 flex items-center justify-center gap-2">
-              <span className="inline-flex items-center rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-0.5 text-[11px] font-semibold capitalize text-[var(--ink)]">
-                {String(lastInvoice?.payment_method || 'Cash').replace(/_/g, ' ')}
-              </span>
-              <span className="inline-flex items-center rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                {lastInvoice?.payment_status || 'PAID'}
-              </span>
-            </div>
+            <span className="inline-flex items-center rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+              {String(lastInvoice?.payment_method || 'Cash').toUpperCase()} · {lastInvoice?.payment_status || 'PAID'}
+            </span>
           </div>
 
           {/* Cash Change Banner if applicable */}
           {String(lastInvoice?.payment_method || '').toLowerCase() === 'cash' &&
             Number(lastInvoice?.amount_received || 0) > Number(lastInvoice?.grand_total || 0) && (
-              <div className="mt-3 flex items-center justify-between rounded-xl border border-amber-300/80 bg-amber-50 px-4 py-2.5 text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200">
+              <div className="flex items-center justify-between rounded-xl border border-amber-300/80 bg-amber-50 px-3.5 py-2 text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200">
                 <span className="text-xs font-semibold flex items-center gap-1.5">
                   <span>💵</span>
                   <span>Change to Return</span>
@@ -3509,12 +3496,12 @@ export default function NewBill() {
               </div>
             )}
 
-          {/* 4 Simple Uniform Action Buttons */}
-          <div className="mt-4 grid grid-cols-2 gap-2 text-left">
+          {/* 4 Touch-Friendly Uniform Action Buttons (2x2 Grid) */}
+          <div className="grid grid-cols-2 gap-2 text-left">
             <button
               type="button"
               onClick={() => printInvoiceDocument(lastInvoice?.id, false)}
-              className="flex h-10 items-center justify-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-[#1E3A5F]/40 hover:bg-[var(--surface-hover)] active:scale-[0.98]"
+              className="flex h-10 items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-[#1E3A5F]/40 hover:bg-[var(--surface-hover)] active:scale-[0.98] shadow-2xs"
             >
               <IconPrinter size={15} className="text-blue-600 dark:text-blue-400 shrink-0" />
               <span>Print A4</span>
@@ -3522,7 +3509,7 @@ export default function NewBill() {
             <button
               type="button"
               onClick={() => printInvoiceDocument(lastInvoice?.id, true)}
-              className="flex h-10 items-center justify-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-slate-400 hover:bg-[var(--surface-hover)] active:scale-[0.98]"
+              className="flex h-10 items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-slate-400 hover:bg-[var(--surface-hover)] active:scale-[0.98] shadow-2xs"
             >
               <IconReceipt size={15} className="text-slate-600 dark:text-slate-300 shrink-0" />
               <span>Thermal Slip</span>
@@ -3530,7 +3517,7 @@ export default function NewBill() {
             <button
               type="button"
               onClick={shareInvoice}
-              className="flex h-10 items-center justify-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-emerald-500/40 hover:bg-[var(--surface-hover)] active:scale-[0.98]"
+              className="flex h-10 items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-emerald-500/40 hover:bg-[var(--surface-hover)] active:scale-[0.98] shadow-2xs"
             >
               <IconShare size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>WhatsApp</span>
@@ -3538,7 +3525,7 @@ export default function NewBill() {
             <button
               type="button"
               onClick={() => downloadInvoiceDocument(lastInvoice?.id)}
-              className="flex h-10 items-center justify-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-indigo-500/40 hover:bg-[var(--surface-hover)] active:scale-[0.98]"
+              className="flex h-10 items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-semibold text-[var(--ink)] transition-colors hover:border-indigo-500/40 hover:bg-[var(--surface-hover)] active:scale-[0.98] shadow-2xs"
             >
               <IconDownload size={15} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span>Download PDF</span>
@@ -3552,7 +3539,7 @@ export default function NewBill() {
               setShowSuccess(false)
               startNewBill()
             }}
-            className="mt-3.5 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 font-bold text-white text-sm shadow-md shadow-emerald-600/20 transition-all hover:bg-emerald-700 active:scale-[0.99]"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 font-bold text-white text-sm shadow-md shadow-emerald-600/25 transition-all hover:bg-emerald-700 active:scale-[0.99]"
           >
             <IconPlus size={18} strokeWidth={2.5} />
             <span>+ Start New Sale (Enter)</span>

@@ -1356,7 +1356,7 @@ export default function Layout({ children }) {
                 {children}
               </PageLoadingContext.Provider>
             </div>
-            {!activePageLoaders.size && !location.pathname.startsWith('/billing/new') && <AppFooter shopName={shopName} />}
+            {!activePageLoaders.size && !location.pathname.startsWith('/billing/new') && !location.pathname.startsWith('/settings') && <AppFooter shopName={shopName} />}
           </main>
 
           {/* Mobile Bottom Navigation & Quick Action Sheet */}
