@@ -43,6 +43,9 @@ import {
   IconCheck,
   IconAlertCircle,
   IconFileText,
+  IconBuildingBank,
+  IconHistory,
+  IconQrcode,
 } from '@tabler/icons-react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -95,6 +98,20 @@ const formatDate = value => {
     month: 'short',
     year: 'numeric',
   })
+}
+
+const formatTime = value => {
+  if (!value) return ''
+  try {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return ''
+    return date.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return ''
+  }
 }
 
 const formatDateTime = value => {
@@ -396,6 +413,75 @@ export default function Payments() {
     setDateEnd(preset.end)
   }
 
+  // Payment Collection History State
+  const [collections, setCollections] = useState([])
+  const [loadingCollections, setLoadingCollections] = useState(false)
+  const [collectionSearchQuery, setCollectionSearchQuery] = useState('')
+  const [collectionMethodFilter, setCollectionMethodFilter] = useState('all')
+  const [copiedCollectionTxn, setCopiedCollectionTxn] = useState('')
+
+  const loadCollections = useCallback(async () => {
+    setLoadingCollections(true)
+    try {
+      const res = await customerService.getPaymentCollections({ page_size: 500 })
+      const data = Array.isArray(res?.results) ? res.results : (Array.isArray(res?.items) ? res.items : (Array.isArray(res) ? res : []))
+      setCollections(data)
+    } catch (err) {
+      console.error('Failed to load collections:', err)
+      setCollections([])
+    } finally {
+      setLoadingCollections(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadCollections()
+  }, [loadCollections])
+
+  const handleCopyTxnId = (txnId) => {
+    if (!txnId) return
+    navigator.clipboard.writeText(txnId)
+    setCopiedCollectionTxn(txnId)
+    toast.success('Transaction ID copied')
+    setTimeout(() => setCopiedCollectionTxn(''), 2000)
+  }
+
+  const filteredCollections = useMemo(() => {
+    const safeCollections = Array.isArray(collections) ? collections : []
+    return safeCollections.filter(item => {
+      if (collectionMethodFilter !== 'all') {
+        const m = (item.method || 'cash').toLowerCase()
+        if (collectionMethodFilter === 'card_bank') {
+          if (!['card', 'bank', 'online'].includes(m)) return false
+        } else if (m !== collectionMethodFilter.toLowerCase()) {
+          return false
+        }
+      }
+      if (collectionSearchQuery.trim()) {
+        const q = collectionSearchQuery.toLowerCase()
+        const name = (item.customer_name || '').toLowerCase()
+        const phone = (item.customer_mobile || '').toLowerCase()
+        const inv = (item.invoice_number || '').toLowerCase()
+        const ref = (item.reference || item.transaction_id || '').toLowerCase()
+        const notes = (item.notes || '').toLowerCase()
+        const pId = String(item.id || '')
+        if (!name.includes(q) && !phone.includes(q) && !inv.includes(q) && !ref.includes(q) && !notes.includes(q) && !pId.includes(q)) {
+          return false
+        }
+      }
+      return true
+    })
+  }, [collections, collectionMethodFilter, collectionSearchQuery])
+
+  const collectionTotals = useMemo(() => {
+    const safeCollections = Array.isArray(collections) ? collections : []
+    const total = safeCollections.reduce((acc, curr) => acc + Number(curr.amount || 0), 0)
+    const cash = safeCollections.filter(c => (c.method || 'cash').toLowerCase() === 'cash').reduce((acc, curr) => acc + Number(curr.amount || 0), 0)
+    const upi = safeCollections.filter(c => (c.method || '').toLowerCase() === 'upi').reduce((acc, curr) => acc + Number(curr.amount || 0), 0)
+    const cardBank = safeCollections.filter(c => ['card', 'bank', 'online'].includes((c.method || '').toLowerCase())).reduce((acc, curr) => acc + Number(curr.amount || 0), 0)
+    return { total, cash, upi, cardBank, count: safeCollections.length }
+  }, [collections])
+
   // Customer Credit Collection State
   const [customers, setCustomers] = useState([])
   const [loadingCustomers, setLoadingCustomers] = useState(false)
@@ -584,6 +670,16 @@ export default function Payments() {
   useEffect(() => {
     loadPayments()
   }, [loadPayments])
+
+  useEffect(() => {
+    const handleSync = () => {
+      loadCollections()
+      loadCustomers()
+      loadPayments()
+    }
+    window.addEventListener('pos:payment-collected', handleSync)
+    return () => window.removeEventListener('pos:payment-collected', handleSync)
+  }, [loadCollections, loadCustomers, loadPayments])
 
   const summary = useMemo(
     () =>
@@ -930,7 +1026,7 @@ export default function Payments() {
         </div>
       </header>
 
-      {/* View Switcher: Payment Transactions vs Customer Credit Collection */}
+      {/* View Switcher: Sales Transactions vs Collection History vs Customer Dues */}
       <div className="flex w-full max-w-full gap-1 overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] p-1 shadow-xs sm:inline-flex sm:w-auto">
         <button
           type="button"
@@ -942,7 +1038,27 @@ export default function Payments() {
           }`}
         >
           <IconReceipt size={14} />
-          <span>Payment Transactions ({bills.length})</span>
+          <span>Sales Transactions ({bills.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('collections')}
+          className={`flex items-center gap-2 whitespace-nowrap rounded-md px-3.5 py-2 text-xs font-semibold transition ${
+            activeTab === 'collections'
+              ? 'bg-[var(--primary)] text-white shadow-xs'
+              : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
+          }`}
+        >
+          <IconHistory size={14} />
+          <span>Payment Collection History</span>
+          <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
+            activeTab === 'collections'
+              ? 'bg-white/20 text-white'
+              : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+          }`}>
+            {collections.length}
+          </span>
         </button>
 
         <button
@@ -955,7 +1071,7 @@ export default function Payments() {
           }`}
         >
           <IconCurrencyRupee size={14} />
-          <span>Customer Credit Collection</span>
+          <span>Customer Credit Dues</span>
           {dueCustomers.length > 0 && (
             <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
               activeTab === 'collection'
@@ -1743,6 +1859,329 @@ export default function Payments() {
         </>
       )}
 
+      {activeTab === 'collections' && (
+        <div className="space-y-4">
+          {/* Payment Collection Summary Metrics Strip */}
+          <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
+            <div className="grid grid-cols-2 divide-y divide-[var(--line)] sm:grid-cols-4 sm:divide-y-0 sm:divide-x divide-[var(--line)]">
+              <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
+                  Total Collections
+                </span>
+                <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-emerald-600 dark:text-emerald-400 tabular-nums truncate">
+                  {formatCurrency(collectionTotals.total)}
+                </p>
+                <p className="text-[10px] text-[var(--muted)] truncate">{collectionTotals.count} payments recorded</p>
+              </div>
+
+              <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
+                  Cash Collections
+                </span>
+                <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-[var(--ink)] tabular-nums truncate">
+                  {formatCurrency(collectionTotals.cash)}
+                </p>
+                <p className="text-[10px] text-[var(--muted)] truncate">Physical cash receipts</p>
+              </div>
+
+              <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
+                  UPI / QR Collections
+                </span>
+                <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-sky-600 dark:text-sky-400 tabular-nums truncate">
+                  {formatCurrency(collectionTotals.upi)}
+                </p>
+                <p className="text-[10px] text-[var(--muted)] truncate">Direct QR &amp; VPA scans</p>
+              </div>
+
+              <div className="px-3.5 py-2 sm:px-4 sm:py-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] truncate block">
+                  Card &amp; Bank Collections
+                </span>
+                <p className="mt-0.5 font-mono text-base sm:text-lg font-bold text-violet-600 dark:text-violet-400 tabular-nums truncate">
+                  {formatCurrency(collectionTotals.cardBank)}
+                </p>
+                <p className="text-[10px] text-[var(--muted)] truncate">POS terminal &amp; NEFT/RTGS</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Collection Filter & Search Bar */}
+          <div className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3 space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="group relative flex min-w-0 flex-1 items-center min-h-[40px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-colors focus-within:border-[var(--primary)]">
+                <IconSearch size={14} className="text-[var(--muted)] shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search collections by Customer, Mobile, Transaction ID, Invoice #..."
+                  value={collectionSearchQuery}
+                  onChange={e => setCollectionSearchQuery(e.target.value)}
+                  className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
+                />
+                {collectionSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setCollectionSearchQuery('')}
+                    className="text-[var(--muted)] hover:text-[var(--ink)]"
+                  >
+                    <IconX size={13} />
+                  </button>
+                )}
+              </div>
+
+              {/* Method filter chips */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 sm:pb-0">
+                {[
+                  { id: 'all', label: 'All Methods' },
+                  { id: 'cash', label: 'Cash' },
+                  { id: 'upi', label: 'UPI / QR' },
+                  { id: 'card_bank', label: 'Card / Bank' },
+                ].map(m => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setCollectionMethodFilter(m.id)}
+                    className={`px-2.5 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition ${
+                      collectionMethodFilter === m.id
+                        ? 'bg-[#1E3A5F] text-white shadow-2xs'
+                        : 'border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--ink)]'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={loadCollections}
+                  disabled={loadingCollections}
+                  className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:bg-[var(--surface-elevated)] transition"
+                  title="Refresh collection history"
+                >
+                  <IconRefresh size={13} className={loadingCollections ? 'animate-spin' : ''} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Collection History Table / Cards */}
+          {loadingCollections ? (
+            <div className="flex min-h-60 items-center justify-center">
+              <Spinner />
+            </div>
+          ) : filteredCollections.length === 0 ? (
+            <div className="flex min-h-60 flex-col items-center justify-center p-6 text-center border border-[var(--line)] rounded-md bg-[var(--surface)]">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-[var(--muted)] mb-2">
+                <IconHistory size={24} className="text-[#1E3A5F] dark:text-sky-400" />
+              </div>
+              <h4 className="text-sm font-bold text-[var(--ink)]">No payment collections found</h4>
+              <p className="text-xs text-[var(--muted)] mt-0.5">
+                {collectionSearchQuery || collectionMethodFilter !== 'all'
+                  ? 'No collection matches your search/filter criteria.'
+                  : 'Collected payments with transaction IDs and receipts will appear here.'}
+              </p>
+              {dueCustomers.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('collection')}
+                  className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#1E3A5F] text-white text-xs font-bold shadow-xs hover:bg-[#162F4D] transition"
+                >
+                  <IconCurrencyRupee size={14} />
+                  <span>View Customer Dues to Collect</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+              {/* Desktop Table View */}
+              <div className="hidden sm:block overflow-x-auto min-h-[220px]">
+                <table className="erp-table w-full text-left text-xs min-w-[800px]">
+                  <colgroup>
+                    <col style={{ width: '13%' }} />
+                    <col style={{ width: '10%' }} />
+                    <col style={{ width: '18%' }} />
+                    <col style={{ width: '18%' }} />
+                    <col style={{ width: '12%' }} />
+                    <col style={{ width: '12%' }} />
+                    <col style={{ width: '15%' }} />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>Date &amp; Time</th>
+                      <th>Payment ID</th>
+                      <th>Transaction ID / Ref</th>
+                      <th>Customer</th>
+                      <th>Linked Invoice</th>
+                      <th>Method</th>
+                      <th className="text-right">Amount Collected</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredCollections.map((c, idx) => {
+                      const payMethod = (c.method || 'cash').toLowerCase()
+                      const MethodIcon = (payMethod === 'upi' ? IconQrcode : payMethod === 'card' ? IconCreditCard : payMethod === 'bank' ? IconBuildingBank : IconCurrencyRupee) || IconCurrencyRupee
+                      const methodColor = payMethod === 'upi' ? 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300' : payMethod === 'card' ? 'bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300' : payMethod === 'bank' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+                      const txnId = c.reference || c.transaction_id || `TXN-COL-${c.id}`
+
+                      return (
+                        <tr key={c.id || idx} className="hover:bg-[var(--surface-hover)] transition">
+                          <td>
+                            <div className="font-mono text-xs text-[var(--ink)] font-medium">
+                              {formatDate(c.created_at)}
+                            </div>
+                            <div className="font-mono text-[10px] text-[var(--muted)]">
+                              {formatTime(c.created_at)}
+                            </div>
+                          </td>
+                          <td>
+                            <span className="font-mono font-bold text-xs text-[var(--ink)]">
+                              #PAY-{c.id}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="flex items-center gap-1.5 font-mono text-xs">
+                              <span className="font-bold text-slate-800 dark:text-slate-200 select-all truncate max-w-[140px]">
+                                {txnId}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyTxnId(txnId)}
+                                className="inline-flex items-center text-sky-700 hover:text-sky-800 dark:text-sky-400"
+                                title="Copy Transaction ID"
+                              >
+                                {copiedCollectionTxn === txnId ? (
+                                  <span className="text-[10px] font-bold text-emerald-600">Copied</span>
+                                ) : (
+                                  <IconCopy size={12} />
+                                )}
+                              </button>
+                            </div>
+                            {c.notes && (
+                              <p className="text-[10px] text-[var(--muted)] truncate max-w-[160px]">{c.notes}</p>
+                            )}
+                          </td>
+                          <td>
+                            <div className="font-bold text-[var(--ink)] truncate">
+                              {c.customer_name || 'Walk-in Customer'}
+                            </div>
+                            {c.customer_mobile && (
+                              <a
+                                href={`tel:${c.customer_mobile}`}
+                                className="font-mono text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+                              >
+                                <IconPhone size={10} />
+                                <span>{c.customer_mobile}</span>
+                              </a>
+                            )}
+                          </td>
+                          <td>
+                            {c.invoice_number ? (
+                              <span className="inline-flex items-center gap-1 font-mono font-semibold text-xs text-[#1E3A5F] dark:text-sky-300">
+                                <IconReceipt size={12} />
+                                <span>{c.invoice_number}</span>
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-[var(--muted)]">Direct Account</span>
+                            )}
+                          </td>
+                          <td>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold uppercase ${methodColor}`}>
+                              <MethodIcon size={12} />
+                              <span>{c.method || 'Cash'}</span>
+                            </span>
+                          </td>
+                          <td className="text-right">
+                            <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400 tabular-nums">
+                              + {formatCurrency(c.amount)}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards View */}
+              <div className="sm:hidden divide-y divide-[var(--line-subtle)]">
+                {filteredCollections.map((c, idx) => {
+                  const payMethod = (c.method || 'cash').toLowerCase()
+                  const MethodIcon = (payMethod === 'upi' ? IconQrcode : payMethod === 'card' ? IconCreditCard : payMethod === 'bank' ? IconBuildingBank : IconCurrencyRupee) || IconCurrencyRupee
+                  const methodColor = payMethod === 'upi' ? 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300' : payMethod === 'card' ? 'bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300' : payMethod === 'bank' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
+                  const txnId = c.reference || c.transaction_id || `TXN-COL-${c.id}`
+
+                  return (
+                    <div key={c.id || idx} className="p-3.5 space-y-2 bg-[var(--surface)]">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-xs text-[var(--ink)]">
+                              #PAY-{c.id}
+                            </span>
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold uppercase ${methodColor}`}>
+                              <MethodIcon size={11} />
+                              <span>{c.method || 'Cash'}</span>
+                            </span>
+                          </div>
+                          <p className="font-bold text-sm text-[var(--ink)] mt-0.5">
+                            {c.customer_name || 'Walk-in Customer'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-mono font-bold text-base text-emerald-600 dark:text-emerald-400 tabular-nums">
+                            + {formatCurrency(c.amount)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg border border-[var(--line-subtle)] bg-[var(--surface-subtle)] p-2 text-xs space-y-1">
+                        <div className="flex items-center justify-between font-mono text-[11px]">
+                          <span className="text-[var(--muted)]">TXN ID:</span>
+                          <div className="flex items-center gap-1 font-bold text-slate-800 dark:text-slate-200">
+                            <span className="select-all break-all">{txnId}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyTxnId(txnId)}
+                              className="text-sky-700 dark:text-sky-400"
+                            >
+                              {copiedCollectionTxn === txnId ? (
+                                <span className="text-[10px] text-emerald-600">Copied</span>
+                              ) : (
+                                <IconCopy size={11} />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        {c.invoice_number && (
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="text-[var(--muted)]">Invoice:</span>
+                            <span className="font-mono font-semibold text-[#1E3A5F] dark:text-sky-300">
+                              #{c.invoice_number}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between text-[10px] text-[var(--muted)]">
+                          <span>Date &amp; Time:</span>
+                          <span>{formatDate(c.created_at)} &bull; {formatTime(c.created_at)}</span>
+                        </div>
+                      </div>
+
+                      {c.notes && (
+                        <p className="text-[11px] text-[var(--muted)] italic">
+                          Notes: {c.notes}
+                        </p>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {activeTab === 'collection' && (
         <div className="space-y-4">
           {/* Outstanding Receivables Metrics Strip */}
@@ -2387,6 +2826,7 @@ export default function Payments() {
           onSuccess={() => {
             loadCustomers()
             loadPayments()
+            loadCollections()
             setSelectedCustomerForPay(null)
           }}
         />

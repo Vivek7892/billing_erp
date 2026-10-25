@@ -249,3 +249,32 @@
     padding: 7px 10px;
   }
 }
+
+/* Mobile-first clean notification cards & light outer borders */
+@media (max-width: 767px) {
+  .notification-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 8px 10px;
+  }
+
+  .notification-card-list .notification-card {
+    border: 1px solid var(--line) !important;
+    border-radius: 12px;
+    padding: 12px 14px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    margin: 0;
+  }
+
+  .dark .notification-card-list .notification-card {
+    border-color: rgba(51, 65, 85, 0.75) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+
+  .notification-card-list .notification-card button {
+    min-height: 36px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}

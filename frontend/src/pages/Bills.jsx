@@ -1,3 +1,4 @@
+import WhatsAppShareModal from '../components/WhatsAppShareModal'
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getAccessToken } from '../services/tokenStorage'
@@ -15,6 +16,7 @@ import { MobileKpiGrid, MobileFAB } from '../components/MobileUI'
 
 import { QRCodeSVG } from 'qrcode.react'
 import {
+  IconBrandWhatsapp,
   IconEye,
   IconPrinter,
   IconDownload,
@@ -52,6 +54,8 @@ import {
   IconCopy,
   IconQrcode,
   IconCheck,
+  IconHistory,
+  IconBuildingBank,
 } from '@tabler/icons-react'
 
 /* =========================================================
@@ -115,21 +119,31 @@ function getStatus(bill) {
 
 function formatDate(date) {
   if (!date) return '—'
-
-  return new Date(date).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
+  try {
+    const d = new Date(date)
+    if (isNaN(d.getTime())) return String(date).slice(0, 10) || '—'
+    return d.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
+  } catch {
+    return String(date).slice(0, 10) || '—'
+  }
 }
 
 function formatTime(date) {
   if (!date) return ''
-
-  return new Date(date).toLocaleTimeString('en-IN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  try {
+    const d = new Date(date)
+    if (isNaN(d.getTime())) return ''
+    return d.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return ''
+  }
 }
 
 /* =========================================================
@@ -171,7 +185,7 @@ async function getShortUrl(billId) {
   return link.short_url
 }
 
-function ShareMenu({ bill, shopName, onClose }) {
+function ShareMenu({ bill, shopName, onClose, onShareWhatsApp }) {
   const text = buildShareText(bill, shopName)
   const phone = bill.customer_phone || ''
 
@@ -185,29 +199,13 @@ function ShareMenu({ bill, shopName, onClose }) {
 
   const actions = [
     {
-      label: 'WhatsApp',
-      icon: <IconMessageCircle size={16} className="text-[#25D366]" />,
+      label: 'Review & Send (WhatsApp)',
+      icon: <IconBrandWhatsapp size={16} className="text-[#25D366]" />,
       hover: 'hover:bg-emerald-50 dark:hover:bg-emerald-950/40',
-      action: async () => {
-        const cleanPhone = phone.replace(/\D/g, '')
-        const popup = window.open('', '_blank')
-        try {
-          const res = await invoiceService.sendWhatsApp(bill.id, cleanPhone)
-          if (res?.whatsapp_url) {
-            if (popup) popup.location.href = res.whatsapp_url
-            else window.location.href = res.whatsapp_url
-            toast.success('WhatsApp opened & logged!')
-            return
-          }
-          const { text: message } = await shareTextWithLink()
-          const url = cleanPhone
-            ? `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(message)}`
-            : `https://wa.me/?text=${encodeURIComponent(message)}`
-          if (popup) popup.location.href = url
-          else window.location.href = url
-        } catch {
-          popup?.close()
-          toast.error('Could not create a share link')
+      action: () => {
+        onClose?.()
+        if (onShareWhatsApp) {
+          onShareWhatsApp(bill)
         }
       },
     },
@@ -230,18 +228,22 @@ function ShareMenu({ bill, shopName, onClose }) {
       },
     },
     {
-      label: 'Email',
-      icon: <IconMail size={16} className="text-[#475569]" />,
+      label: 'Email (SMTP)',
+      icon: <IconMail size={16} className="text-[#1E3A5F] dark:text-sky-400" />,
       hover: 'hover:bg-[var(--surface-hover)]',
       action: async () => {
+        const customerEmail = bill.customer?.email || bill.customer_email || ''
+        let emailToSend = customerEmail
+        if (!emailToSend) {
+          emailToSend = window.prompt(`Enter customer email address for Invoice #${bill.invoice_number}:`, '')
+          if (!emailToSend || !emailToSend.trim()) return
+        }
+        const loadingToast = toast.loading(`Sending invoice #${bill.invoice_number} to ${emailToSend.trim()}...`)
         try {
-          const { text: message } = await shareTextWithLink()
-          const subject = encodeURIComponent(
-            `Invoice ${bill.invoice_number} from ${shopName || 'Dreamwithtech'}`
-          )
-          window.location.href = `mailto:?subject=${subject}&body=${encodeURIComponent(message)}`
-        } catch {
-          toast.error('Could not create a share link')
+          await invoiceService.sendEmail(bill.id, emailToSend.trim())
+          toast.success(`Invoice #${bill.invoice_number} emailed successfully!`, { id: loadingToast })
+        } catch (err) {
+          toast.error(err.response?.data?.detail || 'Failed to send email. Check SMTP settings.', { id: loadingToast })
         }
       },
     },
@@ -471,6 +473,7 @@ function InvoiceActions({
   onView,
   onCollect,
   onRefresh,
+  onOpenWhatsApp,
   isLastRows = false,
 }) {
   const navigate = useNavigate()
@@ -590,32 +593,16 @@ function InvoiceActions({
 
             <button
               type="button"
-              onClick={async () => {
+              onClick={() => {
                 setMenuOpen(false)
-                const phone = (bill.customer_phone || '').replace(/\D/g, '')
-                const popup = window.open('', '_blank')
-                try {
-                  const res = await invoiceService.sendWhatsApp(bill.id, phone)
-                  if (res?.whatsapp_url) {
-                    if (popup) popup.location.href = res.whatsapp_url
-                    else window.location.href = res.whatsapp_url
-                    toast.success('WhatsApp opened & logged!')
-                    return
-                  }
-                  const shortUrl = bill.short_url || await getShortUrl(bill.id)
-                  const message = `${buildShareText(bill, shopName)}\n\nView bill: ${shortUrl}`
-                  const url = phone ? `https://wa.me/91${phone}?text=${encodeURIComponent(message)}` : `https://wa.me/?text=${encodeURIComponent(message)}`
-                  if (popup) popup.location.href = url
-                  else window.location.href = url
-                } catch {
-                  popup?.close()
-                  toast.error('Could not open WhatsApp')
+                if (onOpenWhatsApp) {
+                  onOpenWhatsApp(bill)
                 }
               }}
               className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
             >
-              <IconMessageCircle size={13} />
-              <span>Send WhatsApp</span>
+              <IconBrandWhatsapp size={14} className="text-[#25D366]" />
+              <span>Review &amp; Send WhatsApp</span>
             </button>
 
             <button
@@ -700,6 +687,7 @@ function InvoiceModal({
   onCollect,
   onClose,
   onReloadSettings,
+  onOpenWhatsApp,
 }) {
   const modalRef = useRef(null)
   const [shareOpen, setShareOpen] = useState(false)
@@ -708,6 +696,36 @@ function InvoiceModal({
   const [historyKey, setHistoryKey] = useState(0)
   const [mobileTab, setMobileTab] = useState('summary') // 'summary' | 'preview' | 'activity'
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [invoicePayments, setInvoicePayments] = useState([])
+  const [loadingInvoicePayments, setLoadingInvoicePayments] = useState(false)
+  const [copiedInvoiceTxn, setCopiedInvoiceTxn] = useState('')
+  const [sendingEmail, setSendingEmail] = useState(false)
+
+  useEffect(() => {
+    if (selected?.id) {
+      if (Array.isArray(selected.payments) && selected.payments.length > 0) {
+        setInvoicePayments(selected.payments)
+      } else {
+        setLoadingInvoicePayments(true)
+        invoiceService.getInvoicePayments(selected.id)
+          .then(data => {
+            if (Array.isArray(data)) setInvoicePayments(data)
+          })
+          .catch(() => {})
+          .finally(() => setLoadingInvoicePayments(false))
+      }
+    } else {
+      setInvoicePayments([])
+    }
+  }, [selected?.id, selected?.payments])
+
+  const handleCopyInvoiceTxn = (txn) => {
+    if (!txn) return
+    navigator.clipboard.writeText(txn)
+    setCopiedInvoiceTxn(txn)
+    toast.success('Transaction ID copied')
+    setTimeout(() => setCopiedInvoiceTxn(''), 2000)
+  }
 
   const isHalfA4 = settings?.invoice_template === 'half_a4' || settings?.printer_type === 'half_a4' || settings?.invoice_template === 'advanced_gst_a5'
   const isThermal58 = settings?.printer_type === 'thermal_58' || settings?.invoice_template === 'thermal_58'
@@ -734,26 +752,28 @@ function InvoiceModal({
     ? new Date(selected.created_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
     : (selected.date || '—')
 
-  const handleSendWhatsApp = async () => {
-    setSendingWhatsApp(true)
-    const cleanPhone = (selected.customer_phone || '').replace(/\D/g, '')
-    const popup = window.open('', '_blank')
+  const handleSendWhatsApp = () => {
+    if (onOpenWhatsApp) {
+      onOpenWhatsApp(selected)
+    }
+  }
+
+  const handleSendEmail = async () => {
+    const customerEmail = selected.customer?.email || selected.customer_email || ''
+    let emailToSend = customerEmail
+    if (!emailToSend) {
+      emailToSend = window.prompt(`Enter customer email address for Invoice #${selected.invoice_number}:`, '')
+      if (!emailToSend || !emailToSend.trim()) return
+    }
+    setSendingEmail(true)
+    const loadingToast = toast.loading(`Sending invoice #${selected.invoice_number} to ${emailToSend.trim()}...`)
     try {
-      const res = await invoiceService.sendWhatsApp(selected.id, cleanPhone)
-      if (res?.whatsapp_url) {
-        if (popup) popup.location.href = res.whatsapp_url
-        else window.location.href = res.whatsapp_url
-        toast.success('WhatsApp opened & communication logged!')
-        setHistoryKey(k => k + 1)
-      } else {
-        popup?.close()
-        toast.error('Could not prepare WhatsApp link')
-      }
-    } catch {
-      popup?.close()
-      toast.error('Failed to send WhatsApp')
+      await invoiceService.sendEmail(selected.id, emailToSend.trim())
+      toast.success(`Invoice #${selected.invoice_number} emailed successfully!`, { id: loadingToast })
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to send email. Check SMTP settings.', { id: loadingToast })
     } finally {
-      setSendingWhatsApp(false)
+      setSendingEmail(false)
     }
   }
 
@@ -810,12 +830,23 @@ function InvoiceModal({
             <button
               type="button"
               onClick={handleSendWhatsApp}
-              disabled={sendingWhatsApp}
-              className="flex-1 inline-flex h-8.5 items-center justify-center gap-1.5 rounded-lg bg-[#25D366] hover:bg-[#1EBE5D] text-xs font-bold text-white transition active:scale-95 shadow-2xs disabled:opacity-50 min-w-0 px-2"
-              title="Send invoice via WhatsApp"
+              className="flex-1 inline-flex h-8.5 items-center justify-center gap-1.5 rounded-lg bg-[#25D366] hover:bg-[#1EBE5D] text-xs font-bold text-white transition active:scale-95 shadow-2xs min-w-0 px-2"
+              title="Review & Send via WhatsApp"
             >
-              <IconMessageCircle size={14} className="shrink-0" />
-              <span className="truncate">{sendingWhatsApp ? 'Sending…' : 'WhatsApp'}</span>
+              <IconBrandWhatsapp size={14} className="shrink-0" />
+              <span className="truncate">Review &amp; Send</span>
+            </button>
+
+            {/* Email Direct */}
+            <button
+              type="button"
+              onClick={handleSendEmail}
+              disabled={sendingEmail}
+              className="inline-flex h-8.5 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition shadow-2xs min-w-0 px-2.5"
+              title="Email Invoice"
+            >
+              <IconMail size={13} className="text-[#1E3A5F] dark:text-sky-400 shrink-0" />
+              <span>Email</span>
             </button>
 
             {/* Print Direct */}
@@ -1006,12 +1037,22 @@ function InvoiceModal({
               <button
                 type="button"
                 onClick={handleSendWhatsApp}
-                disabled={sendingWhatsApp}
-                className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-transparent bg-[#25D366] hover:bg-[#1EBE5D] px-4 py-1.5 text-xs font-bold text-white transition hover:shadow-xs active:scale-95 shadow-2xs disabled:opacity-50"
-                title="Send invoice via WhatsApp"
+                className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-transparent bg-[#25D366] hover:bg-[#1EBE5D] px-4 py-1.5 text-xs font-bold text-white transition hover:shadow-xs active:scale-95 shadow-2xs"
+                title="Review & Send via WhatsApp"
               >
-                <IconMessageCircle size={15} />
-                <span>{sendingWhatsApp ? 'Sending…' : 'Send WhatsApp'}</span>
+                <IconBrandWhatsapp size={15} />
+                <span>Review &amp; Send (WhatsApp)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSendEmail}
+                disabled={sendingEmail}
+                className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] hover:bg-[var(--surface-hover)] px-3.5 py-1.5 text-xs font-bold text-[var(--ink)] transition hover:shadow-xs active:scale-95 shadow-2xs"
+                title="Email Invoice to Customer via SMTP"
+              >
+                <IconMail size={15} className="text-[#1E3A5F] dark:text-sky-400" />
+                <span>{sendingEmail ? 'Sending…' : 'Email Bill'}</span>
               </button>
 
               {Number(selected.balance_due || 0) > 0 && selected.status !== 'cancelled' && selected.status !== 'refunded' && (
@@ -1138,6 +1179,7 @@ function InvoiceModal({
                     bill={selected}
                     shopName={shopName}
                     onClose={() => setShareOpen(false)}
+                    onShareWhatsApp={handleOpenWhatsApp}
                   />
                 )}
               </div>
@@ -1200,6 +1242,97 @@ function InvoiceModal({
                     </p>
                   </div>
                 </div>
+              </div>
+
+              {/* Payment Received History Section */}
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 space-y-2.5 shadow-2xs">
+                <div className="flex items-center justify-between pb-2 border-b border-[var(--line-subtle)]">
+                  <div className="flex items-center gap-1.5">
+                    <IconHistory size={16} className="text-[#1E3A5F] dark:text-sky-400" />
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+                      Payment History ({invoicePayments.length})
+                    </h4>
+                  </div>
+                  {Number(selected.balance_due || 0) > 0 && selected.status !== 'cancelled' && selected.status !== 'refunded' ? (
+                    <button
+                      type="button"
+                      onClick={() => onCollect?.(selected)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[11px] font-bold shadow-xs transition"
+                    >
+                      <IconCurrencyRupee size={12} />
+                      <span>Collect Balance ({fmt(selected.balance_due)})</span>
+                    </button>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      <IconCheck size={12} />
+                      <span>Paid in Full</span>
+                    </span>
+                  )}
+                </div>
+
+                {loadingInvoicePayments ? (
+                  <div className="py-3 text-center text-xs text-[var(--muted)] flex items-center justify-center gap-2">
+                    <Spinner size={14} />
+                    <span>Loading payment history…</span>
+                  </div>
+                ) : invoicePayments.length === 0 ? (
+                  <div className="py-3 text-center text-xs text-[var(--muted)]">
+                    No payment collections recorded for this invoice yet.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-[var(--line-subtle)]">
+                    {invoicePayments.map((p, idx) => {
+                      const payMethod = (p.method || 'cash').toLowerCase()
+                      const MethodIcon = (payMethod === 'upi' ? IconQrcode : payMethod === 'card' ? IconCreditCard : payMethod === 'bank' ? IconBuildingBank : IconCurrencyRupee) || IconCurrencyRupee
+                      const txnId = p.reference || p.transaction_id || `TXN-INV-${p.id}`
+
+                      return (
+                        <div key={p.id || idx} className="py-2.5 flex items-center justify-between gap-3 text-xs">
+                          <div className="flex items-start gap-2.5 min-w-0">
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                              <MethodIcon size={14} />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-mono font-bold text-[var(--ink)]">#PAY-{p.id || idx + 1}</span>
+                                <span className="inline-flex items-center rounded px-1.5 py-0.2 text-[10px] font-semibold uppercase bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                  {p.method || 'Cash'}
+                                </span>
+                              </div>
+                              <div className="mt-0.5 flex items-center gap-1.5 font-mono text-[11px] text-[var(--muted)]">
+                                <span>TXN: <strong className="text-[var(--ink)] select-all">{txnId}</strong></span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyInvoiceTxn(txnId)}
+                                  className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-sky-700 hover:underline dark:text-sky-400"
+                                  title="Copy Transaction ID"
+                                >
+                                  {copiedInvoiceTxn === txnId ? (
+                                    <span className="text-emerald-600 font-bold">Copied</span>
+                                  ) : (
+                                    <>
+                                      <IconCopy size={11} />
+                                      <span>Copy</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                              <p className="text-[10px] text-[var(--muted)] mt-0.5">
+                                {formatDate(p.created_at)} • {formatTime(p.created_at)}
+                                {p.notes ? ` • ${p.notes}` : ''}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <span className="font-mono font-bold text-sm text-emerald-700 dark:text-emerald-400 tabular-nums">
+                              + {fmt(p.amount)}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Line Items List */}
@@ -1315,6 +1448,102 @@ function InvoiceModal({
             </div>
           </section>
 
+          {/* Desktop Payment History Section */}
+          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5 shadow-xs space-y-3">
+            <div className="flex items-center justify-between pb-2.5 border-b border-[var(--line-subtle)]">
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                  <IconHistory size={16} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-[var(--ink)]">
+                    Payment Collection History ({invoicePayments.length})
+                  </h4>
+                  <p className="text-[11px] text-[var(--muted)]">Recorded collections and transaction IDs for this invoice</p>
+                </div>
+              </div>
+              {Number(selected.balance_due || 0) > 0 && selected.status !== 'cancelled' && selected.status !== 'refunded' ? (
+                <button
+                  type="button"
+                  onClick={() => onCollect?.(selected)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-xs transition"
+                >
+                  <IconCurrencyRupee size={14} />
+                  <span>Collect Outstanding ({fmt(selected.balance_due)})</span>
+                </button>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  <IconCheck size={14} />
+                  <span>Invoice Settled in Full</span>
+                </span>
+              )}
+            </div>
+
+            {loadingInvoicePayments ? (
+              <div className="py-4 text-center text-xs text-[var(--muted)] flex items-center justify-center gap-2">
+                <Spinner size={16} />
+                <span>Loading payments…</span>
+              </div>
+            ) : invoicePayments.length === 0 ? (
+              <div className="py-4 text-center text-xs text-[var(--muted)]">
+                No payment transactions recorded for this invoice yet.
+              </div>
+            ) : (
+              <div className="divide-y divide-[var(--line-subtle)]">
+                {invoicePayments.map((p, idx) => {
+                  const payMethod = (p.method || 'cash').toLowerCase()
+                  const MethodIcon = (payMethod === 'upi' ? IconQrcode : payMethod === 'card' ? IconCreditCard : payMethod === 'bank' ? IconBuildingBank : IconCurrencyRupee) || IconCurrencyRupee
+                  const txnId = p.reference || p.transaction_id || `TXN-INV-${p.id}`
+
+                  return (
+                    <div key={p.id || idx} className="py-2.5 flex items-center justify-between gap-4 text-xs">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                          <MethodIcon size={16} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono font-bold text-[var(--ink)]">#PAY-{p.id || idx + 1}</span>
+                            <span className="inline-flex items-center rounded px-2 py-0.5 text-[10px] font-semibold uppercase bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                              {p.method || 'Cash'}
+                            </span>
+                            <span className="text-[11px] text-[var(--muted)]">
+                              {formatDate(p.created_at)} • {formatTime(p.created_at)}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex items-center gap-2 font-mono text-[11px] text-[var(--muted)]">
+                            <span>Transaction ID: <strong className="text-[var(--ink)] select-all">{txnId}</strong></span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyInvoiceTxn(txnId)}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-sky-700 hover:underline dark:text-sky-400"
+                              title="Copy Transaction ID"
+                            >
+                              {copiedInvoiceTxn === txnId ? (
+                                <span className="text-emerald-600 font-bold">Copied</span>
+                              ) : (
+                                <>
+                                  <IconCopy size={12} />
+                                  <span>Copy</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          {p.notes && <p className="text-[11px] text-[var(--muted)] mt-0.5">{p.notes}</p>}
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className="font-mono font-bold text-base text-emerald-700 dark:text-emerald-400 tabular-nums">
+                          + {fmt(p.amount)}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5 shadow-xs">
             <CommunicationHistory
               referenceType="invoice"
@@ -1351,7 +1580,7 @@ function InvoiceModal({
    MOBILE INVOICE CARD
 ========================================================= */
 
-function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefresh }) {
+function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefresh, onShareWhatsApp }) {
   const navigate = useNavigate()
   const [shareOpen, setShareOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
@@ -1366,154 +1595,120 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
 
   return (
     <article
-      className="rounded-md border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-none transition active:bg-[var(--surface-elevated)]"
+      className="p-3 transition hover:bg-[var(--surface-hover)] active:bg-[var(--surface-elevated)]"
       onClick={() => onView ? onView(bill) : navigate(`/invoice/${bill.id}`)}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+      {/* Row 1: Invoice # + Date/Time + Status Badge */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
           <button
+            type="button"
             onClick={e => {
               e.stopPropagation()
               onView ? onView(bill) : navigate(`/invoice/${bill.id}`)
             }}
-            className="font-mono text-xs font-bold text-[#1E3A5F] hover:underline"
+            className="font-mono text-xs font-bold text-[#1E3A5F] hover:underline dark:text-sky-400 shrink-0"
           >
             {bill.invoice_number}
           </button>
+          <span className="text-[10px] text-[var(--muted-light)]">&bull;</span>
+          <span className="truncate text-[11px] text-[var(--muted)]">
+            {formatDate(bill.created_at)} {formatTime(bill.created_at)}
+          </span>
+        </div>
+        <div className="shrink-0">
+          <StatusPill bill={bill} />
+        </div>
+      </div>
 
-          <p className="mt-1 truncate text-sm font-semibold text-[var(--ink)]">
-            {bill.customer_name || 'Walk-in customer'}
+      {/* Row 2: Customer Name/Phone & Grand Total + Due */}
+      <div className="mt-1.5 flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-bold text-[var(--ink)]">
+            {bill.customer_name || 'Walk-in Customer'}
           </p>
-
-          {bill.customer_phone && (
-            <p className="mt-1 flex items-center gap-1 text-[11px] text-[var(--muted-light)]">
-              <IconPhone size={10} />
-              {bill.customer_phone}
-            </p>
-          )}
+          <div className="mt-0.5 flex items-center gap-2 text-[10px] text-[var(--muted)]">
+            {bill.customer_phone ? (
+              <span className="inline-flex items-center gap-0.5">
+                <IconPhone size={10} className="shrink-0" />
+                <span>{bill.customer_phone}</span>
+              </span>
+            ) : null}
+            <span className="inline-flex items-center">
+              <PaymentBadge method={bill.payment_method} />
+            </span>
+          </div>
         </div>
 
         <div className="shrink-0 text-right">
-          <p className="font-mono text-base font-semibold tabular-nums text-[#0F172A] dark:text-slate-100">
+          <div className="font-mono text-sm font-extrabold tabular-nums text-[var(--ink)]">
             {fmt(bill.grand_total)}
-          </p>
-          {isDue && (
-            <p className="font-mono text-[11px] font-bold text-amber-600 dark:text-amber-400">
+          </div>
+          {isDue ? (
+            <div className="inline-block mt-0.5 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold font-mono text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
               Due: {fmt(balance)}
-            </p>
-          )}
-          <div className="mt-1 flex justify-end">
-            <StatusPill bill={bill} />
-          </div>
+            </div>
+          ) : Number(bill.discount_amount || 0) > 0 ? (
+            <span className="text-[10px] text-rose-500 font-medium">-{fmt(bill.discount_amount)} disc</span>
+          ) : null}
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2 rounded-md bg-[var(--surface-elevated)] p-2.5">
-        <div>
-          <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
-            Date
-          </p>
-          <p className="mt-1 text-[11px] font-semibold text-[var(--ink-secondary)]">
-            {formatDate(bill.created_at)}
-          </p>
-          <p className="text-[10px] text-[var(--muted-light)]">
-            {formatTime(bill.created_at)}
-          </p>
-        </div>
-
-        <div>
-          <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
-            Payment
-          </p>
-          <div className="mt-1">
-            <PaymentBadge method={bill.payment_method} />
-          </div>
-        </div>
-
-        <div>
-          <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
-            Paid
-          </p>
-          <p className="mt-1 font-mono text-[11px] font-semibold text-teal-600 dark:text-teal-400">
-            {fmt(paid)}
-          </p>
-        </div>
-
-        <div className="text-right">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-[var(--muted-light)]">
-            Balance Due
-          </p>
-          <p className={`mt-1 font-mono text-[11px] font-bold ${balance > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-[var(--ink-secondary)]'}`}>
-            {fmt(balance)}
-          </p>
-        </div>
-      </div>
-
-      {Number(bill.discount_amount || 0) > 0 && (
-        <p className="mt-2 text-right text-[10px] font-medium text-red-500">
-          -{fmt(bill.discount_amount)} discount
-        </p>
-      )}
-
-      {/* 1-Tap Mobile Action Buttons */}
+      {/* Row 3: Action Buttons (Touch-friendly, sleek, informative) */}
       <div
-        className="mt-3 space-y-2 border-t border-[var(--line-subtle)] pt-2.5"
+        className="mt-2.5 flex items-center justify-between gap-1.5 pt-2 border-t border-[var(--line-subtle)]"
         onClick={e => e.stopPropagation()}
       >
-        {isDue && (
-          <button
-            type="button"
-            onClick={() => onCollect?.(bill)}
-            className="btn-success flex min-h-[42px] w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold"
-            title={`Collect payment (${fmt(balance)})`}
-          >
-            <IconCurrencyRupee size={13} />
-            <span>Collect Due ({fmt(balance)})</span>
-          </button>
-        )}
-
-        <div className="grid grid-cols-4 gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          {/* View Button */}
           <button
             type="button"
             onClick={() => onView ? onView(bill) : navigate(`/invoice/${bill.id}`)}
-            className="inline-flex min-h-[38px] items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-xs font-semibold text-[var(--ink)] shadow-xs transition hover:bg-[var(--surface-elevated)] active:scale-95"
+            className="inline-flex h-8 items-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-[11px] font-semibold text-[var(--ink)] transition hover:bg-[var(--surface-hover)] shadow-2xs"
             title="View invoice"
           >
             <IconEye size={13} />
             <span>View</span>
           </button>
 
+          {/* Print Button */}
           <button
             type="button"
             onClick={() => openPdf(bill.id, sheetMode)}
-            className="inline-flex min-h-[38px] items-center justify-center gap-1 rounded-lg bg-[#1E3A5F] text-xs font-semibold text-white shadow-xs transition hover:bg-[#162a45] active:scale-95"
-            title={`Print bill (${isHalfA4 ? 'Half-A4' : 'A4'})`}
+            className="inline-flex h-8 items-center gap-1 rounded-lg bg-[#1E3A5F] px-2.5 text-[11px] font-semibold text-white transition hover:bg-[#162A45] shadow-2xs"
+            title="Print bill"
           >
             <IconPrinter size={13} />
             <span>Print</span>
           </button>
 
-          <div className="relative">
+          {/* Share WhatsApp Button */}
+          <button
+            type="button"
+            onClick={() => onShareWhatsApp ? onShareWhatsApp(bill) : setShareOpen(v => !v)}
+            className="inline-flex h-8 items-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 px-2.5 text-[11px] font-semibold text-emerald-800 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200 shadow-2xs"
+            title="Share via WhatsApp"
+          >
+            <IconBrandWhatsapp size={13} />
+            <span>Share</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Collect Due Button (Only when balance is due) */}
+          {isDue && (
             <button
               type="button"
-              onClick={() => {
-                setShareOpen(v => !v)
-                setMoreOpen(false)
-              }}
-              className="inline-flex min-h-[38px] w-full items-center justify-center gap-1 rounded-lg border border-emerald-300 bg-emerald-50 text-xs font-semibold text-emerald-800 shadow-xs transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200 active:scale-95"
+              onClick={() => onCollect?.(bill)}
+              className="inline-flex h-8 items-center gap-1 rounded-lg bg-emerald-600 px-2.5 text-[11px] font-bold text-white transition hover:bg-emerald-700 shadow-2xs"
+              title={`Collect due ${fmt(balance)}`}
             >
-              <IconShare size={13} />
-              <span>Share</span>
+              <IconCurrencyRupee size={12} />
+              <span>Collect</span>
             </button>
-            {shareOpen && (
-              <ShareMenu
-                bill={bill}
-                shopName={shopName}
-                onClose={() => setShareOpen(false)}
-              />
-            )}
-          </div>
+          )}
 
+          {/* More Actions Menu */}
           <div className="relative">
             <button
               type="button"
@@ -1521,65 +1716,64 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
                 setMoreOpen(v => !v)
                 setShareOpen(false)
               }}
-              className="inline-flex min-h-[38px] w-full items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-xs font-semibold text-[var(--muted)] shadow-xs transition hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--ink)] transition hover:bg-[var(--surface-hover)] shadow-2xs"
               title="More actions"
             >
-              <IconDots size={16} />
+              <IconDots size={15} />
             </button>
             {moreOpen && (
-              <div className="absolute right-0 bottom-11 z-50 w-48 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl">
-                {isDue && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMoreOpen(false)
-                      onCollect?.(bill)
-                    }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                  >
-                    <IconCurrencyRupee size={13} /> Collect Payment
-                  </button>
-                )}
+              <div className="absolute right-0 bottom-9 z-50 w-44 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl">
                 <button
                   type="button"
                   onClick={() => {
                     setMoreOpen(false)
                     openPdf(bill.id, thermalMode)
                   }}
-                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-[var(--ink)] hover:bg-[var(--surface-elevated)]"
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-[var(--ink)] hover:bg-[var(--surface-hover)]"
                 >
                   <IconPrinter size={13} /> Thermal ({isThermal58 ? '58mm' : '80mm'})
                 </button>
-              {(bill.status === 'completed' || bill.status === 'paid') && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMoreOpen(false)
-                      onRefresh('cancel', bill.id)
-                    }}
-                    className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40"
-                  >
-                    <IconBan size={13} /> Cancel Invoice
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMoreOpen(false)
-                      onRefresh('refund', bill.id)
-                    }}
-                    className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-xs text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40"
-                  >
-                    <RefundIcon size={13} /> Refund Sale
-                  </button>
-                </>
-              )}
-            </div>
-          )}
+                {(bill.status === 'completed' || bill.status === 'paid') && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMoreOpen(false)
+                        onRefresh('cancel', bill.id)
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                    >
+                      <IconBan size={13} /> Cancel Invoice
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMoreOpen(false)
+                        onRefresh('refund', bill.id)
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                    >
+                      <RefundIcon size={13} /> Refund Sale
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  </article>
+
+      {shareOpen && (
+        <div className="mt-2" onClick={e => e.stopPropagation()}>
+          <ShareMenu
+            bill={bill}
+            shopName={shopName}
+            onClose={() => setShareOpen(false)}
+            onShareWhatsApp={onShareWhatsApp}
+          />
+        </div>
+      )}
+    </article>
   )
 }
 
@@ -1589,26 +1783,64 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
 
 function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess }) {
   const modalRef = useRef(null)
-  const balanceDue = Number(bill?.balance_due || 0)
-  const grandTotal = Number(bill?.grand_total || 0)
-  const paidAmount = Number(bill?.paid_amount || 0)
+  const [currentBill, setCurrentBill] = useState(bill)
+  const [activeTab, setActiveTab] = useState('collect') // 'collect' | 'history'
+  const [paymentsList, setPaymentsList] = useState(bill?.payments || [])
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [recordedPayment, setRecordedPayment] = useState(null)
+
+  const balanceDue = Number(currentBill?.balance_due || 0)
+  const grandTotal = Number(currentBill?.grand_total || 0)
+  const paidAmount = Number(currentBill?.paid_amount || 0)
+  const percentPaid = grandTotal > 0 ? Math.min(100, Math.max(0, Math.round((paidAmount / grandTotal) * 100))) : 100
+
+  // Helper to generate a friendly transaction ID
+  const generateTxnId = () => {
+    const d = new Date()
+    const yy = String(d.getFullYear()).slice(-2)
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    const hh = String(d.getHours()).padStart(2, '0')
+    const min = String(d.getMinutes()).padStart(2, '0')
+    const rand = Math.random().toString(36).substring(2, 6).toUpperCase()
+    return `TXN-${yy}${mm}${dd}${hh}${min}-${rand}`
+  }
 
   const [amount, setAmount] = useState(balanceDue > 0 ? String(balanceDue) : '')
   const [method, setMethod] = useState('cash')
-  const [reference, setReference] = useState('')
+  const [reference, setReference] = useState(() => generateTxnId())
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [copiedUpi, setCopiedUpi] = useState(false)
+  const [copiedTxn, setCopiedTxn] = useState('')
 
+  // Sync when bill prop changes
   useEffect(() => {
-    if (bill && balanceDue > 0) {
-      setAmount(String(balanceDue))
+    if (bill) {
+      setCurrentBill(bill)
+      const due = Number(bill?.balance_due || 0)
+      setAmount(due > 0 ? String(due) : '')
       setError('')
-      setReference('')
+      setReference(generateTxnId())
       setNotes('')
+      setRecordedPayment(null)
+      setActiveTab(due > 0 ? 'collect' : 'history')
+      setPaymentsList(Array.isArray(bill?.payments) ? bill.payments : [])
+
+      if (bill.id) {
+        setLoadingHistory(true)
+        invoiceService.getInvoicePayments(bill.id)
+          .then(data => {
+            if (Array.isArray(data)) {
+              setPaymentsList(data)
+            }
+          })
+          .catch(() => {})
+          .finally(() => setLoadingHistory(false))
+      }
     }
-  }, [bill, balanceDue])
+  }, [bill])
 
   useModalA11y(Boolean(bill), onClose, modalRef)
 
@@ -1623,6 +1855,17 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
     } else if (num > balanceDue) {
       setError(`Amount cannot exceed balance due (${fmt(balanceDue)})`)
     }
+  }
+
+  const handleQuickAmount = (val) => {
+    setAmount(String(val))
+    setError('')
+  }
+
+  const handleRegenerateTxnId = () => {
+    const nextTxn = generateTxnId()
+    setReference(nextTxn)
+    toast.success('Generated new Transaction ID')
   }
 
   const handleSubmit = async (e) => {
@@ -1640,16 +1883,40 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
     setSubmitting(true)
     setError('')
     try {
-      const res = await invoiceService.collectPayment(bill.id, {
+      const txnRef = reference.trim() || generateTxnId()
+      const res = await invoiceService.collectPayment(currentBill.id, {
         amount: num,
         method,
-        reference: reference.trim(),
+        reference: txnRef,
         notes: notes.trim(),
       })
-      toast.success(`Payment of ${fmt(num)} recorded for ${bill.invoice_number}!`)
+
+      const newLatest = res?.latest_payment || {
+        id: (paymentsList[0]?.id || 0) + 1,
+        amount: num,
+        method,
+        reference: txnRef,
+        transaction_id: txnRef,
+        created_at: new Date().toISOString(),
+      }
+
+      setRecordedPayment(newLatest)
+      setCurrentBill(res)
+      if (Array.isArray(res?.payments)) {
+        setPaymentsList(res.payments)
+      } else {
+        setPaymentsList(prev => [newLatest, ...prev])
+      }
+
+      toast.success(`Payment of ${fmt(num)} recorded for ${currentBill.invoice_number}!`)
       window.dispatchEvent(new CustomEvent('pos:payment-collected', { detail: res }))
       onSuccess?.(res)
-      onClose()
+
+      // Reset for any subsequent collections
+      const newDue = Number(res?.balance_due ?? Math.max(0, balanceDue - num))
+      setAmount(newDue > 0 ? String(newDue) : '')
+      setReference(generateTxnId())
+      setNotes('')
     } catch (err) {
       const msg = err?.response?.data?.detail || err?.response?.data?.amount || err?.message || 'Failed to collect payment'
       setError(typeof msg === 'string' ? msg : JSON.stringify(msg))
@@ -1659,31 +1926,41 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
     }
   }
 
-  // Payment methods — ONLY Cash, UPI, and Card. Online/Bank is removed!
+  const handleCopyText = (text, type = 'generic') => {
+    if (!text) return
+    navigator.clipboard.writeText(text)
+    if (type === 'upi') {
+      setCopiedUpi(true)
+      toast.success('UPI ID copied')
+      setTimeout(() => setCopiedUpi(false), 2000)
+    } else {
+      setCopiedTxn(text)
+      toast.success('Transaction ID copied')
+      setTimeout(() => setCopiedTxn(''), 2000)
+    }
+  }
+
+  // Payment methods with tactile icons & descriptions
   const METHODS = [
-    { id: 'cash', label: 'Cash', icon: IconCurrencyRupee },
-    { id: 'upi', label: 'UPI / QR', icon: IconQrcode },
-    { id: 'card', label: 'Card / POS', icon: IconCreditCard },
+    { id: 'cash', label: 'Cash', icon: IconCurrencyRupee, badge: 'Counter Cash' },
+    { id: 'upi', label: 'UPI / QR', icon: IconQrcode, badge: 'Instant Scan' },
+    { id: 'card', label: 'Card / POS', icon: IconCreditCard, badge: 'Terminal / Tap' },
+    { id: 'bank', label: 'Bank', icon: IconBuildingBank, badge: 'NEFT / RTGS' },
   ]
 
   const upiId = shopSettings?.shop_upi_id || ''
   const merchantName = shopSettings?.upi_merchant_name || shopName || 'Sri Balaji Store'
   const amountNum = parseFloat(amount) || 0
-  const note = `Invoice ${bill.invoice_number}`
+  const note = `Invoice ${currentBill.invoice_number}`
   const effectiveUpiId = upiId || 'merchant@upi'
   const upiUri = `upi://pay?pa=${encodeURIComponent(effectiveUpiId)}&pn=${encodeURIComponent(merchantName)}&am=${amountNum > 0 ? amountNum.toFixed(2) : '1.00'}&cu=INR&tn=${encodeURIComponent(note)}`
 
-  const handleCopyUpi = () => {
-    if (!effectiveUpiId) return
-    navigator.clipboard.writeText(effectiveUpiId)
-    setCopiedUpi(true)
-    toast.success('UPI ID copied')
-    setTimeout(() => setCopiedUpi(false), 2000)
-  }
+  const remainingAfterPayment = Math.max(0, balanceDue - (amountNum || 0))
+  const isSettlingInFull = amountNum > 0 && Math.abs(balanceDue - amountNum) < 0.01
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 p-3 backdrop-blur-xs sm:p-5"
+      className="fixed inset-0 z-[120] flex items-end justify-center bg-black/60 p-0 backdrop-blur-xs sm:items-center sm:p-4 animate-in fade-in duration-150"
       role="presentation"
       onClick={onClose}
     >
@@ -1692,269 +1969,650 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
         role="dialog"
         aria-modal="true"
         aria-labelledby="collect-payment-title"
-        className="flex max-h-[calc(100dvh-24px)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-2xl outline-none"
+        className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border-t border-slate-200 bg-[var(--surface)] text-[var(--ink)] shadow-2xl outline-none dark:border-slate-800 sm:max-h-[calc(100dvh-40px)] sm:rounded-2xl sm:border"
         onClick={e => e.stopPropagation()}
       >
+        {/* Mobile touch indicator */}
+        <div className="flex justify-center pt-2 sm:hidden">
+          <div className="h-1 w-10 rounded-full bg-slate-300 dark:bg-slate-700" />
+        </div>
+
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#1E3A5F] text-white shadow-sm">
-              <IconCoin size={18} />
+        <div className="flex items-center justify-between border-b border-slate-100 bg-[var(--surface)] px-4 py-3 dark:border-slate-800/80 sm:px-5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+              <IconCoin size={20} />
             </div>
             <div className="min-w-0">
-              <h2 id="collect-payment-title" className="text-base font-bold text-[var(--ink)]">
-                Collect Payment
-              </h2>
-              <p className="truncate text-xs text-[var(--muted)]">
-                {bill.invoice_number} &bull; {bill.customer_name || 'Walk-in customer'}
+              <div className="flex items-center gap-2">
+                <h2 id="collect-payment-title" className="text-base font-bold text-[var(--ink)] leading-tight">
+                  Collect Payment
+                </h2>
+                <span className="inline-flex items-center rounded-md border border-slate-200/80 bg-slate-50 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+                  {currentBill.invoice_number}
+                </span>
+              </div>
+              <p className="truncate text-xs text-[var(--muted)] mt-0.5">
+                {currentBill.customer_name || 'Walk-in Customer'} {currentBill.customer_phone ? `• ${currentBill.customer_phone}` : ''}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--line-strong)] transition sm:h-9 sm:w-9"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300 dark:border-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition"
             aria-label="Close"
           >
             <IconX size={16} />
           </button>
         </div>
 
-        {/* Content */}
-        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:space-y-5 sm:p-6">
-          {/* Summary Strip */}
-          <div className="grid grid-cols-3 gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-2.5 text-center sm:gap-3 sm:p-3">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                Total Bill
+        {/* Tab Switcher: Collect vs History */}
+        <div className="flex border-b border-slate-100 bg-slate-50/70 px-4 py-1.5 dark:border-slate-800 dark:bg-slate-900/50 sm:px-5">
+          <div className="grid w-full grid-cols-2 gap-1 rounded-lg border border-slate-200/80 bg-white/80 p-0.5 dark:border-slate-800 dark:bg-slate-900">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('collect')
+                setRecordedPayment(null)
+              }}
+              className={`flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition ${
+                activeTab === 'collect' && !recordedPayment
+                  ? 'bg-[#1E3A5F] text-white shadow-xs'
+                  : 'text-[var(--ink-secondary)] hover:text-[var(--ink)]'
+              }`}
+            >
+              <IconCurrencyRupee size={15} />
+              <span>Collect Payment</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('history')
+                setRecordedPayment(null)
+              }}
+              className={`flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition ${
+                activeTab === 'history'
+                  ? 'bg-[#1E3A5F] text-white shadow-xs'
+                  : 'text-[var(--ink-secondary)] hover:text-[var(--ink)]'
+              }`}
+            >
+              <IconHistory size={15} />
+              <span>Payment History</span>
+              <span className={`inline-flex items-center rounded-full px-1.5 text-[10px] font-bold ${
+                activeTab === 'history' ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+              }`}>
+                {paymentsList.length}
               </span>
-              <p className="mt-0.5 font-mono text-sm font-semibold text-[var(--ink)]">
-                {fmt(grandTotal)}
-              </p>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                Paid
-              </span>
-              <p className="mt-0.5 font-mono text-sm font-semibold text-teal-600 dark:text-teal-400">
-                {fmt(paidAmount)}
-              </p>
-            </div>
-            <div className="rounded-lg border border-amber-300 bg-amber-50/70 p-1 dark:border-amber-700 dark:bg-amber-950/25">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
-                Balance Due
-              </span>
-              <p className="mt-0.5 font-mono text-sm font-bold text-amber-600 dark:text-amber-400">
-                {fmt(balanceDue)}
-              </p>
-            </div>
+            </button>
           </div>
+        </div>
 
-          {/* Amount Input */}
-          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4">
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-sm font-bold text-[var(--ink)]">
-                Amount to Collect (₹) <span className="text-rose-500">*</span>
-              </label>
-              <div className="flex items-center gap-1.5">
+        {/* Content Area */}
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+          {/* SUCCESS RECEIPT CARD (When a payment was just recorded) */}
+          {recordedPayment ? (
+            <div className="space-y-4 py-2">
+              <div className="flex flex-col items-center justify-center text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 shadow-inner dark:bg-emerald-950/60 dark:text-emerald-400">
+                  <IconCircleCheck size={36} />
+                </div>
+                <h3 className="mt-3 text-base font-bold text-[var(--ink)]">
+                  Payment Recorded Successfully!
+                </h3>
+                <p className="text-xs text-[var(--muted)]">
+                  Payment record created and ledger synchronized
+                </p>
+              </div>
+
+              {/* Receipt Summary Card */}
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20 space-y-3">
+                <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2.5 dark:border-emerald-900/40">
+                  <span className="text-xs font-medium text-emerald-800 dark:text-emerald-300">Amount Received</span>
+                  <span className="font-mono text-xl font-bold text-emerald-700 dark:text-emerald-300">
+                    {fmt(recordedPayment.amount)}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="block text-[11px] text-[var(--muted)]">Payment ID</span>
+                    <span className="font-mono font-semibold text-[var(--ink)]">#PAY-{recordedPayment.id}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[11px] text-[var(--muted)]">Method</span>
+                    <span className="font-semibold uppercase text-[var(--ink)]">{recordedPayment.method || method}</span>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-slate-200/80 bg-white/90 p-2.5 dark:border-slate-800 dark:bg-slate-900/80">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider">Transaction ID</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyText(recordedPayment.reference || recordedPayment.transaction_id, 'txn')}
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-[#1E3A5F] hover:underline dark:text-sky-400"
+                    >
+                      {copiedTxn === (recordedPayment.reference || recordedPayment.transaction_id) ? (
+                        <>
+                          <IconCheck size={12} className="text-emerald-600" />
+                          <span className="text-emerald-600 font-semibold">Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <IconCopy size={12} />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="mt-1 font-mono text-xs font-bold text-slate-800 dark:text-slate-200 break-all select-all">
+                    {recordedPayment.reference || recordedPayment.transaction_id || 'N/A'}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 text-xs">
+                  <span className="text-[var(--muted)]">Updated Balance Due:</span>
+                  <span className={`font-mono font-bold ${balanceDue <= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                    {balanceDue <= 0 ? '✓ Paid in Full' : fmt(balanceDue)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col gap-2 pt-2 sm:flex-row">
                 <button
                   type="button"
-                  onClick={() => handleAmountChange(String(balanceDue))}
-                  className="min-h-8 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-950/70"
+                  onClick={() => {
+                    setRecordedPayment(null)
+                    setActiveTab('history')
+                  }}
+                  className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-[var(--surface)] text-xs font-semibold text-[var(--ink-secondary)] transition hover:border-slate-300 hover:text-[var(--ink)] dark:border-slate-800"
                 >
-                  Pay Full ({fmt(balanceDue)})
+                  <IconHistory size={16} />
+                  <span>View All Payments ({paymentsList.length})</span>
                 </button>
-                {balanceDue > 100 && (
+                {balanceDue > 0 && (
                   <button
                     type="button"
-                    onClick={() => handleAmountChange(String((balanceDue / 2).toFixed(2)))}
-                    className="rounded-md border border-sky-200 bg-sky-50 px-2 py-1 text-[10px] font-semibold text-sky-700 transition hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300 dark:hover:bg-sky-950/70"
+                    onClick={() => {
+                      setRecordedPayment(null)
+                      setActiveTab('collect')
+                    }}
+                    className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 text-xs font-semibold text-amber-800 transition hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
                   >
-                    50%
+                    <IconPlus size={16} />
+                    <span>Collect Remaining ({fmt(balanceDue)})</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex h-10 items-center justify-center rounded-lg bg-[#1E3A5F] px-5 text-xs font-bold text-white transition hover:bg-[#162F4D]"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          ) : activeTab === 'collect' ? (
+            /* ===================================================
+               TAB 1: COLLECT PAYMENT FORM
+               =================================================== */
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Balance Due KPI with Progress Bar */}
+              <div className="rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50/70 via-white/80 to-amber-50/30 p-3.5 dark:border-amber-900/50 dark:from-amber-950/20 dark:via-slate-900/60 dark:to-amber-950/10">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400">
+                      Balance Due
+                    </span>
+                    <div className="mt-0.5 font-mono text-2xl font-extrabold text-amber-700 dark:text-amber-400 sm:text-3xl">
+                      {fmt(balanceDue)}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 text-right">
+                    <div className="inline-flex items-center gap-1 rounded-md border border-slate-200/80 bg-white/90 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300">
+                      <span className="text-[10px] text-[var(--muted)] uppercase">Invoice Total:</span>
+                      <span className="font-mono font-semibold">{fmt(grandTotal)}</span>
+                    </div>
+                    <div className="inline-flex items-center gap-1 rounded-md border border-emerald-200/70 bg-emerald-50/90 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+                      <span className="text-[10px] uppercase">Already Paid:</span>
+                      <span className="font-mono font-semibold">{fmt(paidAmount)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Micro progress bar */}
+                <div className="mt-2.5">
+                  <div className="flex items-center justify-between text-[10px] font-medium text-[var(--muted)] mb-1">
+                    <span>Payment Progress</span>
+                    <span>{percentPaid}% Settled</span>
+                  </div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                    <div
+                      className="h-full bg-emerald-500 transition-all duration-300 rounded-full"
+                      style={{ width: `${percentPaid}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {balanceDue <= 0 ? (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 text-center dark:border-emerald-900/60 dark:bg-emerald-950/20">
+                  <IconCircleCheck size={28} className="mx-auto text-emerald-600 dark:text-emerald-400" />
+                  <h4 className="mt-1.5 text-sm font-bold text-emerald-900 dark:text-emerald-300">
+                    Invoice Settled in Full
+                  </h4>
+                  <p className="mt-0.5 text-xs text-emerald-700/80 dark:text-emerald-400/80">
+                    No balance remaining on this bill. You can view past payments in the History tab.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('history')}
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 transition"
+                  >
+                    <IconHistory size={14} />
+                    <span>View Payment History</span>
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Amount to Collect Input & Chips */}
+                  <div className="rounded-xl border border-slate-200/90 bg-[var(--surface)] p-3.5 dark:border-slate-800">
+                    <div className="mb-2 flex items-center justify-between">
+                      <label className="text-xs font-bold uppercase tracking-wider text-[var(--ink-secondary)]">
+                        Amount to Collect <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleQuickAmount(balanceDue)}
+                          className="rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 transition hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
+                        >
+                          Full Due ({fmt(balanceDue)})
+                        </button>
+                        {balanceDue > 50 && (
+                          <button
+                            type="button"
+                            onClick={() => handleQuickAmount((balanceDue / 2).toFixed(2))}
+                            className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                          >
+                            50%
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleQuickAmount('')}
+                          className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-500 transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="relative">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                        <IconCurrencyRupee size={18} />
+                      </div>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        max={balanceDue}
+                        required
+                        value={amount}
+                        onChange={e => handleAmountChange(e.target.value)}
+                        placeholder="0.00"
+                        className={`h-11 w-full rounded-lg border bg-[var(--surface)] pl-9 pr-3 text-lg font-mono font-bold text-[var(--ink)] outline-none transition focus:border-[#1E3A5F] focus:ring-2 focus:ring-[#1E3A5F]/15 ${
+                          error ? 'border-rose-400' : 'border-slate-200 dark:border-slate-800'
+                        }`}
+                        aria-invalid={Boolean(error)}
+                      />
+                    </div>
+
+                    {/* Live remaining calculation */}
+                    {amountNum > 0 && !error && (
+                      <div className="mt-2 flex items-center justify-between text-xs font-medium">
+                        <span className="text-[var(--muted)]">Remaining after this payment:</span>
+                        {isSettlingInFull ? (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                            <IconCheck size={12} />
+                            Will settle bill in full
+                          </span>
+                        ) : (
+                          <span className="font-mono font-semibold text-amber-700 dark:text-amber-400">
+                            {fmt(remainingAfterPayment)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {error && (
+                      <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300" role="alert">
+                        <IconAlertCircle size={14} className="mt-0.5 shrink-0" />
+                        <span>{error}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Payment Method Selector */}
+                  <div>
+                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--ink-secondary)]">
+                      Payment Method
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {METHODS.map(m => {
+                        const Icon = m.icon
+                        const selected = method === m.id
+                        return (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => setMethod(m.id)}
+                            aria-pressed={selected}
+                            className={`flex min-h-[58px] flex-col items-center justify-center rounded-xl border p-2 text-xs font-semibold transition ${
+                              selected
+                                ? m.id === 'cash'
+                                  ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
+                                  : m.id === 'upi'
+                                    ? 'border-sky-600 bg-sky-600 text-white shadow-sm shadow-sky-600/20'
+                                    : m.id === 'card'
+                                      ? 'border-violet-600 bg-violet-600 text-white shadow-sm shadow-violet-600/20'
+                                      : 'border-indigo-600 bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
+                                : 'border-slate-200 bg-[var(--surface)] text-[var(--ink-secondary)] hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700'
+                            }`}
+                          >
+                            <Icon size={18} className="mb-1" />
+                            <span>{m.label}</span>
+                            <span className={`text-[10px] font-normal ${selected ? 'text-white/80' : 'text-[var(--muted)]'}`}>
+                              {m.badge}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Contextual Visual Panel (UPI QR / Card / Cash / Bank) */}
+                  {method === 'upi' ? (
+                    <div className="grid grid-cols-1 items-center gap-3 rounded-xl border border-sky-200/80 bg-sky-50/50 p-3 dark:border-sky-900/60 dark:bg-sky-950/20 sm:grid-cols-[116px_1fr]">
+                      <div className="mx-auto flex w-fit items-center justify-center rounded-xl border border-slate-200 bg-white p-2 shadow-xs dark:border-slate-700">
+                        <QRCodeSVG value={upiUri} size={100} level="M" includeMargin={false} />
+                      </div>
+
+                      <div className="min-w-0 text-center sm:text-left">
+                        <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-sky-700 dark:text-sky-400 sm:justify-start">
+                          <IconQrcode size={15} />
+                          <span>Dynamic UPI QR Code</span>
+                        </div>
+                        <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+                          {fmt(amountNum)}
+                        </p>
+                        <div className="mt-1 flex flex-wrap items-center justify-center gap-1.5 text-xs text-[var(--muted)] sm:justify-start">
+                          <span className="break-all font-mono text-[11px] font-medium">{effectiveUpiId}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyText(effectiveUpiId, 'upi')}
+                            className="inline-flex items-center gap-1 rounded bg-white/80 px-1.5 py-0.5 text-[11px] font-semibold text-sky-700 hover:underline dark:bg-slate-900 dark:text-sky-400"
+                            title="Copy UPI ID"
+                          >
+                            {copiedUpi ? <IconCheck size={12} className="text-emerald-500" /> : <IconCopy size={12} />}
+                            <span>{copiedUpi ? 'Copied' : 'Copy'}</span>
+                          </button>
+                        </div>
+                        <p className="mt-1 text-[10px] text-[var(--muted-light)]">
+                          Scan with Google Pay &bull; PhonePe &bull; Paytm &bull; BHIM
+                        </p>
+                      </div>
+                    </div>
+                  ) : method === 'card' ? (
+                    <div className="flex items-start gap-2.5 rounded-xl border border-violet-200/80 bg-violet-50/40 p-3 dark:border-violet-900/40 dark:bg-violet-950/20">
+                      <IconCreditCard size={18} className="mt-0.5 shrink-0 text-violet-600 dark:text-violet-400" />
+                      <div>
+                        <p className="text-xs font-semibold text-[var(--ink)]">
+                          Card / POS Terminal Collection
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-[var(--muted)]">
+                          Tap or swipe customer's Debit/Credit card for {fmt(amountNum)}. Enter auth code or card reference below.
+                        </p>
+                      </div>
+                    </div>
+                  ) : method === 'bank' ? (
+                    <div className="flex items-start gap-2.5 rounded-xl border border-indigo-200/80 bg-indigo-50/40 p-3 dark:border-indigo-900/40 dark:bg-indigo-950/20">
+                      <IconBuildingBank size={18} className="mt-0.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                      <div>
+                        <p className="text-xs font-semibold text-[var(--ink)]">
+                          Bank Transfer / Net Banking (NEFT/RTGS/IMPS)
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-[var(--muted)]">
+                          Record direct bank transfer of {fmt(amountNum)}. Bank UTR can be recorded below.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-start gap-2.5 rounded-xl border border-emerald-200/80 bg-emerald-50/40 p-3 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                      <IconCurrencyRupee size={18} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                      <div>
+                        <p className="text-xs font-semibold text-[var(--ink)]">
+                          Physical Cash Collection
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-[var(--muted)]">
+                          Collect {fmt(amountNum)} in currency at the counter. Receipt is generated with unique Transaction ID.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Transaction ID & Notes Fields */}
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                    <div>
+                      <div className="mb-1 flex items-center justify-between">
+                        <label className="text-xs font-medium text-[var(--ink-secondary)]">
+                          Transaction ID / Ref
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleRegenerateTxnId}
+                          className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-slate-500 hover:text-[#1E3A5F] dark:hover:text-sky-400"
+                          title="Generate new ID"
+                        >
+                          <IconRefresh size={11} />
+                          <span>Generate New</span>
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        value={reference}
+                        onChange={e => setReference(e.target.value)}
+                        placeholder="e.g. TXN-... or UTR"
+                        className="h-9 w-full rounded-lg border border-slate-200 bg-[var(--surface)] px-3 font-mono text-xs font-medium text-[var(--ink)] placeholder:text-slate-400 outline-none transition focus:border-[#1E3A5F] dark:border-slate-800 dark:placeholder:text-slate-600"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-[var(--ink-secondary)]">
+                        Payment Notes (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={notes}
+                        onChange={e => setNotes(e.target.value)}
+                        placeholder="e.g. Counter payment"
+                        className="h-9 w-full rounded-lg border border-slate-200 bg-[var(--surface)] px-3 text-xs font-medium text-[var(--ink)] placeholder:text-slate-400 outline-none transition focus:border-[#1E3A5F] dark:border-slate-800 dark:placeholder:text-slate-600"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={submitting || Boolean(error) || !amount || amountNum <= 0}
+                      className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#1E3A5F] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#162F4D] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {submitting ? (
+                        <>
+                          <Spinner size={16} />
+                          <span>Recording Payment…</span>
+                        </>
+                      ) : (
+                        <>
+                          <IconCheck size={18} />
+                          <span>Record Payment &bull; {fmt(amountNum)}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </form>
+          ) : (
+            /* ===================================================
+               TAB 2: PAYMENT HISTORY LIST
+               =================================================== */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--ink-secondary)]">
+                    Payment History ({paymentsList.length})
+                  </h4>
+                  <p className="text-[11px] text-[var(--muted)]">
+                    All payments received and recorded for this bill
+                  </p>
+                </div>
+                {balanceDue > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('collect')}
+                    className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                  >
+                    <IconPlus size={13} />
+                    <span>Collect More</span>
                   </button>
                 )}
               </div>
-            </div>
 
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[var(--muted)]">
-                <IconCurrencyRupee size={16} />
-              </div>
-              <input
-                type="number"
-                step="0.01"
-                min="0.01"
-                max={balanceDue}
-                required
-                value={amount}
-                onChange={e => handleAmountChange(e.target.value)}
-                placeholder="0.00"
-                className={`h-12 w-full rounded-lg border bg-[var(--surface)] pl-9 pr-3 text-lg font-mono font-bold text-[var(--ink)] outline-none transition focus:border-[#1E3A5F] focus:ring-2 focus:ring-[#1E3A5F]/15 ${error ? 'border-rose-400' : 'border-[var(--line)]'}`}
-                aria-invalid={Boolean(error)}
-              />
-            </div>
-            {error && (
-              <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-xs font-medium text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300" role="alert">
-                <IconAlertCircle size={13} />
-                {error}
-              </p>
-            )}
-          </div>
-
-          {/* Payment Method Selector — Cash, UPI, Card */}
-          <div>
-            <label className="mb-2 block text-sm font-bold text-[var(--ink)]">
-              Payment Method
-            </label>
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              {METHODS.map(m => {
-                const Icon = m.icon
-                const selected = method === m.id
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setMethod(m.id)}
-                    aria-pressed={selected}
-                    className={`flex min-h-16 flex-col items-center justify-center rounded-xl border p-2 text-[11px] font-semibold transition ${
-                      selected
-                        ? m.id === 'cash'
-                          ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
-                          : m.id === 'upi'
-                            ? 'border-sky-600 bg-sky-600 text-white shadow-sm shadow-sky-600/20'
-                            : 'border-violet-600 bg-violet-600 text-white shadow-sm shadow-violet-600/20'
-                        : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:border-[var(--line-strong)]'
-                    }`}
-                  >
-                    <Icon size={18} className="mb-1" />
-                    <span>{m.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Dynamic Content Based on Method */}
-          {method === 'upi' ? (
-            <div className="grid grid-cols-1 items-center gap-3 rounded-xl border border-sky-200 bg-sky-50/60 p-3 dark:border-sky-900 dark:bg-sky-950/20 sm:grid-cols-[132px_1fr] sm:p-4">
-              <div className="mx-auto flex w-fit items-center justify-center rounded-xl border border-slate-200 bg-white p-2 shadow-xs">
-                <QRCodeSVG value={upiUri} size={112} level="M" includeMargin={false} />
-              </div>
-
-              <div className="min-w-0 text-center sm:text-left">
-                <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-[#1E3A5F] dark:text-sky-400 sm:justify-start">
-                  <IconQrcode size={16} />
-                  <span>Scan QR with Any UPI App</span>
+              {loadingHistory ? (
+                <div className="flex items-center justify-center py-10">
+                  <Spinner size={22} />
+                  <span className="ml-2 text-xs text-[var(--muted)]">Loading payments…</span>
                 </div>
-                <p className="mt-2 font-mono text-xl font-bold text-[var(--ink)]">
-                  {fmt(amountNum)}
-                </p>
-                <div className="mt-1 flex flex-wrap items-center justify-center gap-1.5 text-xs text-[var(--muted)] sm:justify-start">
-                  <span className="break-all font-mono">{effectiveUpiId}</span>
-                  <button
-                    type="button"
-                    onClick={handleCopyUpi}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#1E3A5F] dark:text-sky-400 hover:underline"
-                    title="Copy UPI ID"
-                  >
-                    {copiedUpi ? <IconCheck size={12} className="text-emerald-500" /> : <IconCopy size={12} />}
-                    <span>{copiedUpi ? 'Copied' : 'Copy'}</span>
-                  </button>
+              ) : paymentsList.length === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 py-10 text-center dark:border-slate-800">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800">
+                    <IconHistory size={20} />
+                  </div>
+                  <p className="mt-2 text-xs font-medium text-[var(--ink)]">No payments recorded yet</p>
+                  <p className="mt-0.5 text-[11px] text-[var(--muted)]">
+                    Payments collected against this bill will appear here with Transaction IDs.
+                  </p>
+                  {balanceDue > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('collect')}
+                      className="mt-3 inline-flex items-center gap-1 rounded-lg bg-[#1E3A5F] px-3 py-1.5 text-xs font-semibold text-white shadow-xs"
+                    >
+                      <IconCurrencyRupee size={14} />
+                      <span>Collect First Payment</span>
+                    </button>
+                  )}
                 </div>
-                <p className="mt-1 text-[11px] text-[var(--muted-light)]">
-                  GPay • PhonePe • Paytm • BHIM • Any Bank App
-                </p>
-              </div>
-            </div>
-          ) : method === 'card' ? (
-            <div className="flex items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3.5">
-              <IconCreditCard size={18} className="mt-0.5 shrink-0 text-[#1E3A5F] dark:text-sky-400" />
-              <div>
-              <p className="text-xs font-semibold text-[var(--ink)]">
-                Card / POS Terminal Collection
-              </p>
-              <p className="mt-1 text-[11px] text-[var(--muted)]">
-                Swipe or tap customer card on your card machine for {fmt(amountNum)}. Enter auth code or card details below.
-              </p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-start gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3.5">
-              <IconCurrencyRupee size={18} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-              <div>
-              <p className="text-xs font-semibold text-[var(--ink)]">
-                Cash Collection
-              </p>
-              <p className="mt-1 text-[11px] text-[var(--muted)]">
-                Collect {fmt(amountNum)} in physical cash from customer. Provide receipt if requested.
-              </p>
+              ) : (
+                <div className="space-y-2">
+                  {paymentsList.map((p, idx) => {
+                    const payMethod = (p.method || 'cash').toLowerCase()
+                    const MethodIcon = (payMethod === 'upi' ? IconQrcode : payMethod === 'card' ? IconCreditCard : payMethod === 'bank' ? IconBuildingBank : IconCurrencyRupee) || IconCurrencyRupee
+                    const methodColor = payMethod === 'upi' ? 'text-sky-600 bg-sky-50 dark:bg-sky-950/50 dark:text-sky-400' : payMethod === 'card' ? 'text-violet-600 bg-violet-50 dark:bg-violet-950/50 dark:text-violet-400' : payMethod === 'bank' ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50 dark:text-indigo-400' : 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-400'
+
+                    const txnId = p.reference || p.transaction_id || `TXN-INV-${p.id}`
+
+                    return (
+                      <div
+                        key={p.id || idx}
+                        className="flex flex-col gap-2 rounded-xl border border-slate-200/80 bg-[var(--surface)] p-3 text-xs transition hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="flex items-start gap-2.5 min-w-0">
+                          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${methodColor}`}>
+                            <MethodIcon size={16} />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="font-mono font-bold text-[var(--ink)]">
+                                #PAY-{p.id || idx + 1}
+                              </span>
+                              <span className="inline-flex items-center rounded-md border border-slate-200/70 bg-slate-50 px-1.5 py-0.2 text-[10px] font-semibold uppercase text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                                {p.method || 'Cash'}
+                              </span>
+                            </div>
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                              <span className="font-mono text-[11px] text-[var(--muted)]">
+                                TXN: <strong className="text-[var(--ink)] select-all">{txnId}</strong>
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyText(txnId, 'txn')}
+                                className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-sky-700 hover:underline dark:text-sky-400"
+                                title="Copy Transaction ID"
+                              >
+                                {copiedTxn === txnId ? (
+                                  <span className="text-emerald-600">Copied</span>
+                                ) : (
+                                  <>
+                                    <IconCopy size={11} />
+                                    <span>Copy</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                            <div className="mt-0.5 text-[10px] text-[var(--muted)]">
+                              {formatDate(p.created_at)} &bull; {formatTime(p.created_at)}
+                              {p.notes ? ` • ${p.notes}` : ''}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between border-t border-slate-100 pt-1.5 sm:border-0 sm:pt-0 sm:text-right">
+                          <span className="text-[11px] text-[var(--muted)] sm:hidden">Received:</span>
+                          <span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                            + {fmt(p.amount)}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* History Summary Footer */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-900/40">
+                <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                  <div>
+                    <span className="block text-[10px] font-semibold uppercase text-[var(--muted)]">Invoiced</span>
+                    <span className="font-mono font-bold text-[var(--ink)]">{fmt(grandTotal)}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-semibold uppercase text-emerald-700 dark:text-emerald-400">Collected</span>
+                    <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">{fmt(paidAmount)}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-400">Pending</span>
+                    <span className="font-mono font-bold text-amber-700 dark:text-amber-400">{fmt(balanceDue)}</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
+        </div>
 
-          {/* Reference / Transaction ID */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <label className="text-xs font-medium text-[var(--ink-secondary)] mb-1 block">
-              {method === 'upi' ? 'UPI UTR / Reference No. (Optional)' : method === 'card' ? 'Card Auth Code / Last 4 Digits (Optional)' : 'Receipt / Cash Ref (Optional)'}
-            </label>
-            <input
-              type="text"
-              value={reference}
-              onChange={e => setReference(e.target.value)}
-              placeholder={method === 'upi' ? 'e.g. 12-digit UTR from customer app' : method === 'card' ? 'e.g. 4321 or Auth #9872' : 'e.g. Counter Cash'}
-              className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] focus:border-[#1E3A5F] outline-none transition"
-            />
-          </div>
-
-          {/* Notes */}
-          <div>
-            <label className="text-xs font-medium text-[var(--ink-secondary)] mb-1 block">
-              Notes (Optional)
-            </label>
-            <input
-              type="text"
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="e.g. Partial balance collected"
-              className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] focus:border-[#1E3A5F] outline-none transition"
-            />
-          </div>
-          </div>
-
-          {/* Actions */}
-          </div>
-          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-[var(--line)] bg-[var(--surface)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <p className="hidden text-[11px] text-[var(--muted)] sm:block">Payment will appear in this invoice’s history.</p>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:gap-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={submitting}
-              className="min-h-10 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-4 py-2 text-xs font-semibold text-[var(--ink-secondary)] transition hover:border-[var(--line-strong)] hover:text-[var(--ink)] sm:w-auto"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || Boolean(error) || !amount}
-              className="flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#1E3A5F] px-5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#162F4D] disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-48 sm:w-auto"
-            >
-              {submitting ? (
-                <>
-                  <Spinner size={14} />
-                  <span role="status" aria-live="polite">Recording payment…</span>
-                </>
-              ) : (
-                <>
-                  <IconCurrencyRupee size={14} />
-                  <span>Record payment · {fmt(parseFloat(amount) || 0)}</span>
-                </>
-              )}
-            </button>
-            </div>
-          </div>
-        </form>
+        {/* Modal Footer */}
+        <div className="flex shrink-0 items-center justify-end border-t border-slate-100 bg-[var(--surface)] p-3 dark:border-slate-800 sm:px-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-9 w-full rounded-lg border border-slate-200 bg-[var(--surface)] px-4 text-xs font-semibold text-[var(--ink-secondary)] transition hover:border-slate-300 hover:text-[var(--ink)] dark:border-slate-800 dark:hover:border-slate-700 sm:w-auto"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -1983,6 +2641,13 @@ export default function Bills() {
 
   const [search, setSearch] = useState(() => new URLSearchParams(window.location.search).get('search') || '')
   const [selected, setSelected] = useState(null)
+  const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false)
+  const [whatsAppInvoice, setWhatsAppInvoice] = useState(null)
+
+  const handleOpenWhatsApp = (billToShare) => {
+    setWhatsAppInvoice(billToShare || selected)
+    setWhatsAppModalOpen(true)
+  }
   const [payTarget, setPayTarget] = useState(null)
   const [confirm, setConfirm] = useState(null)
   const [cancelReason, setCancelReason] = useState('Customer requested cancellation')
@@ -2811,6 +3476,7 @@ export default function Bills() {
                     settings={shopSettings}
                     onView={setSelected}
                     onCollect={setPayTarget}
+                    onShareWhatsApp={handleOpenWhatsApp}
                     onRefresh={(type, id) =>
                       setConfirm({
                         type,
@@ -3048,6 +3714,7 @@ export default function Bills() {
                               settings={shopSettings}
                               onView={setSelected}
                               onCollect={setPayTarget}
+                              onOpenWhatsApp={handleOpenWhatsApp}
                               isLastRows={isLastRows}
                               onRefresh={(type, id) =>
                                 setConfirm({
@@ -3213,6 +3880,15 @@ export default function Bills() {
         onCollect={setPayTarget}
         onClose={() => setSelected(null)}
         onReloadSettings={reloadSettings}
+        onOpenWhatsApp={handleOpenWhatsApp}
+      />
+
+      <WhatsAppShareModal
+        open={whatsAppModalOpen}
+        onClose={() => setWhatsAppModalOpen(false)}
+        invoice={whatsAppInvoice}
+        shopName={shopName}
+        onConfirmed={() => reloadBills()}
       />
 
       {/* ===================================================

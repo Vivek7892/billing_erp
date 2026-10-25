@@ -567,29 +567,79 @@ export default function Dashboard() {
       </section>
       </div>
 
-      {/* ATTENTION REQUIRED */}
-  
-      <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 sm:px-4">
+      {/* ATTENTION REQUIRED — HIGH IMPORTANCE COLOR & CONTRAST */}
+      <section className="rounded-xl border border-amber-300/80 bg-amber-50/20 dark:border-amber-700/60 dark:bg-amber-950/15 p-3.5 sm:p-4 shadow-2xs">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-base font-semibold text-[var(--ink)]">Attention Required</h2>
-          <span className="shrink-0 rounded-full bg-[var(--surface-elevated)] px-2 py-1 text-xs font-semibold text-[var(--muted)]">{attentionItems.length} items</span>
-        </div>
-        {attentionItems.length ? (
-          <div className="mt-3 grid grid-cols-1 gap-2 border-t border-[var(--line-subtle)] pt-3 sm:grid-cols-2 lg:grid-cols-3">
-            {attentionItems.map(item => (
-              <div key={item.key} className="min-w-0 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-3 py-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="truncate text-sm font-semibold capitalize text-[var(--ink)]">{item.title}</span>
-                  <span className="shrink-0 rounded bg-[var(--surface)] px-1.5 py-0.5 font-mono text-xs font-bold text-[var(--ink)]">{item.count}</span>
-                </div>
-                <div className="mt-1.5 flex items-center justify-between gap-2">
-                  <span className="min-w-0 truncate text-xs text-[var(--muted)]">{item.detail}</span>
-                  <button type="button" onClick={() => navigate(item.route)} className="shrink-0 text-xs font-semibold text-[var(--primary)] hover:underline">{item.action}</button>
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-600 dark:bg-amber-400/20 dark:text-amber-400">
+              <IconAlertTriangle size={16} strokeWidth={2.4} />
+            </span>
+            <h2 className="text-sm sm:text-base font-bold text-[var(--ink)]">
+              Attention Required
+            </h2>
           </div>
-        ) : <p className="mt-2 border-t border-[var(--line-subtle)] pt-3 text-sm text-[var(--muted)]">No operational issues require attention.</p>}
+          {attentionItems.length > 0 ? (
+            <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-rose-100 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 px-2.5 py-0.5 text-xs font-bold text-rose-700 dark:text-rose-300 shadow-2xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
+              {attentionItems.length} Urgent Action{attentionItems.length === 1 ? '' : 's'}
+            </span>
+          ) : (
+            <span className="shrink-0 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+              All clear
+            </span>
+          )}
+        </div>
+
+        {attentionItems.length ? (
+          <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+            {attentionItems.map(item => {
+              const isHigh = item.key === 'credit' || item.key === 'out-of-stock'
+              return (
+                <div
+                  key={item.key}
+                  className={`min-w-0 rounded-xl border p-3 transition-all ${
+                    isHigh
+                      ? 'border-rose-200 bg-rose-50/50 hover:bg-rose-50 dark:border-rose-900/50 dark:bg-rose-950/30 dark:hover:bg-rose-950/50'
+                      : 'border-amber-200 bg-amber-50/50 hover:bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 dark:hover:bg-amber-950/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-xs font-bold capitalize text-[var(--ink)]">
+                      {item.title}
+                    </span>
+                    <span
+                      className={`shrink-0 rounded-md px-1.5 py-0.5 font-mono text-xs font-extrabold ${
+                        isHigh
+                          ? 'bg-rose-600 text-white dark:bg-rose-500'
+                          : 'bg-amber-600 text-white dark:bg-amber-500'
+                      }`}
+                    >
+                      {item.count}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate text-xs text-[var(--muted)] font-medium">
+                      {item.detail}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => navigate(item.route)}
+                      className={`shrink-0 text-xs font-bold px-2 py-1 rounded-md transition shadow-2xs ${
+                        isHigh
+                          ? 'bg-rose-600/10 text-rose-700 hover:bg-rose-600/20 dark:text-rose-300'
+                          : 'bg-amber-600/10 text-amber-800 hover:bg-amber-600/20 dark:text-amber-300'
+                      }`}
+                    >
+                      {item.action} &rarr;
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="mt-2.5 text-xs text-[var(--muted)]">No operational issues require attention.</p>
+        )}
       </section>
 
       {/* -------------------------------------------------------------

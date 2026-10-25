@@ -440,8 +440,8 @@ export default function Settings() {
       Object.keys(settings).forEach(key => {
         if (key !== 'active_templates' && key !== 'template_settings' && key !== 'id' && key !== 'business') {
           const val = settings[key]
-          if (val !== null && val !== undefined) {
-            payload[key] = typeof val === 'boolean' ? String(val) : val
+          if (val !== null && val !== undefined && typeof val !== 'object') {
+            payload[key] = typeof val === 'boolean' ? String(val) : String(val)
           }
         }
       })
@@ -590,8 +590,13 @@ export default function Settings() {
           product_name: 'India Gate Basmati Rice 5kg',
           description: 'Premium aged long-grain basmati rice',
           sku: 'RICE-001',
+          barcode: '890123456789',
           hsn_code: '100630',
           unit: 'kg',
+          batch_number: 'B-101',
+          manufacturing_date: '2025-01-10',
+          expiry_date: '2026-12-31',
+          mrp: 290,
           quantity: 2,
           unit_price: 260,
           discount_percent: 5,
@@ -602,8 +607,13 @@ export default function Settings() {
           product_name: 'Fortune Sunflower Oil 1L Pouch',
           description: 'Refined sunflower cooking oil',
           sku: 'OIL-001',
+          barcode: '890987654321',
           hsn_code: '151219',
           unit: 'L',
+          batch_number: 'B-202',
+          manufacturing_date: '2025-02-15',
+          expiry_date: '2026-08-20',
+          mrp: 160,
           quantity: 3,
           unit_price: 145,
           discount_percent: 0,
@@ -614,8 +624,13 @@ export default function Settings() {
           product_name: 'Amul Pasteurised Butter 500g',
           description: 'Pure salted dairy butter pack',
           sku: 'DAIRY-001',
+          barcode: '890456123789',
           hsn_code: '040510',
           unit: 'pack',
+          batch_number: 'B-303',
+          manufacturing_date: '2025-03-01',
+          expiry_date: '2026-06-30',
+          mrp: 295,
           quantity: 2,
           unit_price: 275,
           discount_percent: 0,
@@ -892,7 +907,6 @@ export default function Settings() {
     || selectedInvoiceTemplate
   const getTemplatePreviewConfig = template => {
     const config = template?.config || {}
-    if (!isTrue(settings.custom_theme_enabled, false)) return config
     return {
       ...config,
       business_info: {
@@ -1106,11 +1120,11 @@ export default function Settings() {
                             className="block w-full min-w-0 rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                             aria-label={`Select ${template.name}`}
                           >
-                            <div className="settings-template-thumb-paper mx-auto flex h-[72px] sm:h-[105px] w-full items-start justify-center overflow-hidden rounded-lg bg-slate-50 border border-slate-100">
+                            <div className="settings-template-thumb-paper mx-auto flex h-[85px] sm:h-[118px] w-full items-start justify-center overflow-hidden rounded-lg bg-slate-100/70 border border-slate-200/80 shadow-2xs">
                               <div
                                 style={{
                                   width: isThermal ? (isThermal58 ? 216 : 300) : base.format === 'half_a4' ? 560 : 794,
-                                  transform: `scale(${isThermal ? 0.16 : base.format === 'half_a4' ? 0.10 : 0.075})`,
+                                  transform: `scale(${isThermal ? 0.30 : base.format === 'half_a4' ? 0.20 : 0.15})`,
                                   transformOrigin: 'top center',
                                   pointerEvents: 'none',
                                 }}
@@ -1475,6 +1489,12 @@ export default function Settings() {
                     onChange={v => setField('enable_invoice_qr', String(v))}
                     label="Digital Bill / Verification QR Code"
                     description="Print invoice verification & digital bill download QR code."
+                  />
+                  <CheckboxField
+                    checked={isTrue(settings.auto_email_invoice, true)}
+                    onChange={v => setField('auto_email_invoice', String(v))}
+                    label="Auto-Email Invoice to Customer (SMTP)"
+                    description="Automatically send email with PDF invoice attached to customers with an email on file when checkout completes."
                   />
                   <CheckboxField
                     checked={isTrue(settings.show_signature_area, true)}
@@ -3219,7 +3239,7 @@ export default function Settings() {
                   const isThermal = template.format === 'thermal' || template.id.startsWith('thermal')
                   const is58 = template.id === 'thermal_58'
                   const docWidth = isThermal ? (is58 ? 216 : 300) : template.format === 'half_a4' ? 560 : 794
-                  const scale = isThermal ? (is58 ? 0.32 : 0.25) : template.format === 'half_a4' ? 0.18 : 0.13
+                  const scale = isThermal ? (is58 ? 0.52 : 0.44) : template.format === 'half_a4' ? 0.30 : 0.24
 
                   return (
                     <article
@@ -3262,7 +3282,7 @@ export default function Settings() {
                           aria-label={`Select ${template.name}`}
                           className="mt-2.5 block w-full rounded-lg text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 group"
                         >
-                          <div className="flex h-[175px] sm:h-[185px] w-full items-start justify-center overflow-hidden rounded-lg border border-slate-100 bg-slate-50 p-2 group-hover:border-indigo-200 transition-colors">
+                          <div className="flex h-[195px] sm:h-[210px] w-full items-start justify-center overflow-hidden rounded-lg border border-slate-200/80 bg-slate-100/70 p-2 group-hover:border-indigo-200 transition-colors">
                             <div
                               className="mx-auto"
                               style={{

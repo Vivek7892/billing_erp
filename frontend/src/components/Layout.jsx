@@ -789,8 +789,8 @@ function NotificationBell() {
               ))}
             </div>
 
-            {/* Notification Items List */}
-            <div className="min-h-0 flex-1 divide-y divide-[var(--line-subtle)] overflow-y-auto">
+            {/* Notification Items List (Simple, Informative & Mobile-Friendly Cards) */}
+            <div className="min-h-0 flex-1 overflow-y-auto p-2.5 sm:p-3 space-y-2.5">
               {filteredDrawerNotifications.length ? (
                 filteredDrawerNotifications.map(n => {
                   const sev = SEVERITY_ICON_MAP[n.severity] || SEVERITY_ICON_MAP.info
@@ -817,65 +817,61 @@ function NotificationBell() {
                   return (
                     <div
                       key={n.id}
-                      className={`border-l-2 px-3 py-2.5 text-left transition-colors hover:bg-[var(--surface-hover)] ${
-                        n.severity === 'danger' ? 'border-l-rose-500' :
-                        n.severity === 'warning' ? 'border-l-amber-500' :
-                        n.severity === 'success' ? 'border-l-emerald-500' :
-                        'border-l-blue-500'
-                      } ${!n.is_read ? 'bg-blue-50/20 dark:bg-blue-950/20' : ''}`}
+                      className={`rounded-xl border p-3 text-left transition-all shadow-2xs ${
+                        !n.is_read
+                          ? 'border-blue-300/80 bg-blue-50/40 dark:border-blue-900/60 dark:bg-blue-950/25'
+                          : 'border-slate-200/90 dark:border-slate-800/90 bg-[var(--surface)] hover:border-slate-300 dark:hover:border-slate-700'
+                      }`}
                     >
-                      {/* Quick scan: severity, category and recency */}
-                      <div className="flex items-start justify-between gap-2">
+                      {/* Header: Severity pill, category tag, timestamp */}
+                      <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span
-                            className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.2 font-bold"
+                            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold"
                             style={{ background: sev.bg, color: sev.color, border: `1px solid ${sev.border}` }}
                           >
                             <SevIcon size={10} />
                             <span>{sev.label}</span>
                           </span>
-                          <span className="inline-flex items-center rounded-full border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--ink-secondary)]">
+                          <span className="inline-flex items-center rounded-md border border-slate-200 dark:border-slate-800 bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--ink-secondary)]">
                             {notificationTypeLabel(n.notification_type)}
                           </span>
                           {isApproval && (
-                            <span className={`px-1.5 py-0.2 rounded-full font-bold uppercase ${
+                            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${
                               n.status === 'approved' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300' :
                               n.status === 'rejected' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300' :
                               'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300'
                             }`}>
-                              {n.status === 'active' ? 'Approval Required' : n.status}
+                              {n.status === 'active' ? 'Action Required' : n.status}
                             </span>
                           )}
                         </div>
-                        <span className="shrink-0 text-right text-[10px] text-[var(--muted)]" title={notificationDateTime(n.created_at)}>
+                        <span className="shrink-0 text-right text-[10px] text-[var(--muted)] font-medium" title={notificationDateTime(n.created_at)}>
                           {relativeTime(n.created_at)}
                         </span>
                       </div>
 
-                      {/* Title & message preview */}
-                      <div
-                        onClick={() => handleNotificationClick(n)}
-                        className="cursor-pointer group"
-                      >
-                        <p className={`text-xs leading-snug group-hover:text-[var(--primary)] transition-colors ${!n.is_read ? 'font-bold text-[var(--ink)]' : 'font-medium text-[var(--ink-secondary)]'}`}>
+                      {/* Title & Preview */}
+                      <div onClick={() => handleNotificationClick(n)} className="cursor-pointer group mt-2">
+                        <p className={`text-xs leading-snug group-hover:text-[var(--primary)] transition-colors ${!n.is_read ? 'font-bold text-[var(--ink)]' : 'font-semibold text-[var(--ink)]'}`}>
                           {n.title}
                         </p>
-                        <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[var(--muted)]">
+                        <p className="mt-0.5 line-clamp-2 text-[11px] leading-relaxed text-[var(--muted)]">
                           {n.message}
                         </p>
                       </div>
 
-                      <div className="flex min-w-0 items-center justify-between gap-2 text-[10px]">
-                        <span className="min-w-0 truncate text-[var(--muted)]" title={referenceDetails.slice(0, 2).join(' · ')}>
-                          {referenceDetails.length > 0 ? referenceDetails.slice(0, 2).join(' · ') : notificationTypeLabel(n.notification_type)}
-                        </span>
-                        <span className={`shrink-0 font-medium ${n.is_read ? 'text-[var(--muted)]' : 'text-[var(--primary)]'}`}>
-                          {n.is_read ? 'Read' : 'Unread'}
-                        </span>
-                      </div>
+                      {/* Informative Reference Metadata Chip */}
+                      {referenceDetails.length > 0 && (
+                        <div className="mt-2 flex items-center gap-1.5 overflow-hidden">
+                          <span className="inline-flex items-center gap-1 rounded-md border border-slate-200/80 dark:border-slate-800/80 bg-[var(--surface-elevated)] px-2 py-0.5 text-[10.5px] font-medium text-[var(--ink-secondary)] truncate">
+                            {referenceDetails.slice(0, 2).join(' • ')}
+                          </span>
+                        </div>
+                      )}
 
-                      {/* Direct Inline Action Buttons */}
-                      <div className="mt-2 flex items-center justify-between gap-2 border-t border-[var(--line-subtle)] pt-1.5">
+                      {/* Action Buttons */}
+                      <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-[var(--line-subtle)] pt-2">
                         {isApproval && n.status === 'active' ? (
                           <div className="flex items-center gap-1.5">
                             {canManageApprovals ? (
@@ -884,7 +880,7 @@ function NotificationBell() {
                                   type="button"
                                   onClick={e => handleQuickApproval(e, n, 'approve')}
                                   disabled={isActing}
-                                  className="min-h-9 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold inline-flex items-center gap-1 shadow-2xs transition"
+                                  className="min-h-[34px] px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold inline-flex items-center gap-1 shadow-2xs transition active:scale-95"
                                   title="Approve & execute request"
                                 >
                                   <IconCircleCheck size={12} />
@@ -894,7 +890,7 @@ function NotificationBell() {
                                   type="button"
                                   onClick={e => handleQuickApproval(e, n, 'reject')}
                                   disabled={isActing}
-                                  className="min-h-9 px-2.5 rounded-md border border-rose-300 dark:border-rose-800 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-[11px] font-semibold inline-flex items-center gap-1 shadow-2xs transition"
+                                  className="min-h-[34px] px-3 rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-[11px] font-bold inline-flex items-center gap-1 shadow-2xs transition active:scale-95"
                                   title="Reject request"
                                 >
                                   <IconCircleX size={12} />
@@ -911,7 +907,7 @@ function NotificationBell() {
                           <button
                             type="button"
                             onClick={() => handleNotificationClick(n)}
-                            className="min-h-9 px-2.5 rounded-md bg-[var(--primary)] text-white text-[11px] font-semibold inline-flex items-center gap-1 shadow-2xs hover:brightness-110 transition"
+                            className="min-h-[34px] px-3 rounded-lg bg-[var(--primary)] text-white text-[11px] font-bold inline-flex items-center gap-1 shadow-2xs hover:brightness-110 transition active:scale-95"
                           >
                             <span>Review PO</span>
                             <IconArrowRight size={11} />
@@ -920,7 +916,7 @@ function NotificationBell() {
                           <button
                             type="button"
                             onClick={() => handleNotificationClick(n)}
-                            className="min-h-9 px-2.5 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] hover:bg-[var(--surface-hover)] text-[var(--ink)] text-[11px] font-semibold inline-flex items-center gap-1 shadow-2xs transition"
+                            className="min-h-[34px] px-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-[var(--surface-elevated)] hover:bg-[var(--surface-hover)] text-[var(--ink)] text-[11px] font-semibold inline-flex items-center gap-1 shadow-2xs transition active:scale-95"
                           >
                             <span>Open Details</span>
                             <IconArrowRight size={11} />
@@ -938,11 +934,11 @@ function NotificationBell() {
                                 setUnreadCount(c => Math.max(0, c - 1))
                               } catch {}
                             }}
-                            className="min-h-9 px-2 rounded-md text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-elevated)] text-[11px] font-medium inline-flex items-center gap-1"
+                            className="min-h-[34px] px-2.5 rounded-lg border border-slate-200/80 dark:border-slate-800/80 text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-elevated)] text-[11px] font-medium inline-flex items-center gap-1"
                             title="Mark as read"
                           >
-                            <IconCheck size={11} />
-                            <span>Read</span>
+                            <IconCheck size={12} />
+                            <span>Mark read</span>
                           </button>
                         )}
                       </div>
@@ -958,8 +954,8 @@ function NotificationBell() {
               )}
             </div>
 
-            {/* Footer */}
-            <div className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t border-[var(--line)] bg-[var(--surface)] px-4 py-2.5">
+            {/* Footer with Mobile Safe Area */}
+            <div className="mt-auto flex shrink-0 items-center justify-between gap-2 border-t border-[var(--line)] bg-[var(--surface)] px-4 py-3 pb-[max(0.85rem,env(safe-area-inset-bottom))]">
               <button
                 type="button"
                 onClick={loadNotifications}

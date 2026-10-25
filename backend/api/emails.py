@@ -634,3 +634,261 @@ def async_send_otp_verification_email(
         display_name,
         purpose,
     )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# AUTOMATIC INVOICE EMAIL DELIVERY (WITH ATTACHED PDF)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _send_invoice_email_worker(invoice_id, recipient_email=None, display_name=None, custom_notes=None):
+    """Send a simple invoice email with the PDF attached."""
+    from api.models import Invoice, Setting, CommunicationLog
+
+    try:
+        invoice = (
+            Invoice.objects.select_related("customer", "business", "created_by")
+            .prefetch_related("items")
+            .get(pk=invoice_id)
+        )
+    except Invoice.DoesNotExist:
+        logger.warning("Invoice %s not found for email delivery. Aborting.", invoice_id)
+        return 0
+
+    to_email = recipient_email or (invoice.customer.email if invoice.customer else "")
+    to_email = str(to_email or "").strip()
+
+    if not to_email or "@" not in to_email:
+        logger.info(
+            "Invoice %s has no recipient email address. Skipping email delivery.",
+            invoice.invoice_number,
+        )
+        return 0
+
+    biz = invoice.business
+
+    def get_setting(key, default=""):
+        setting = Setting.objects.filter(business=biz, key=key).first() if biz else None
+        return getattr(setting, "value", None) or default
+
+    shop_name = get_setting("shop_name", getattr(biz, "name", "") or "Store")
+    shop_phone = get_setting("shop_phone", getattr(biz, "mobile", "") or "")
+    shop_email = get_setting("shop_email", getattr(biz, "email", "") or "")
+    shop_address = get_setting("shop_address", getattr(biz, "address", "") or "")
+    shop_gstin = getattr(biz, "gstin", "") or ""
+
+    customer_name = (
+        display_name
+        or (invoice.customer.name if invoice.customer else invoice.customer_name)
+        or "Valued Customer"
+    )
+
+    inv_date = invoice.created_at.strftime("%d %b %Y") if invoice.created_at else ""
+    inv_num = invoice.invoice_number or f"INV-{invoice.pk}"
+    short_url = invoice.get_short_url()
+
+    total = f"Rs. {invoice.grand_total:,.2f}"
+    paid = f"Rs. {invoice.paid_amount:,.2f}"
+    due = f"Rs. {invoice.balance_due:,.2f}"
+
+    # Generate PDF attachment.
+    pdf_bytes = None
+    try:
+        from api.pdf_utils import generate_invoice_pdf
+
+        pdf_buf = generate_invoice_pdf(invoice)
+        if pdf_buf:
+            pdf_bytes = pdf_buf.getvalue()
+    except Exception as pdf_err:
+        logger.warning(
+            "Could not generate PDF attachment for invoice %s: %s",
+            inv_num,
+            pdf_err,
+        )
+
+    # Simple item list for the email.
+    items = list(invoice.items.all())
+    item_lines = []
+
+    for idx, item in enumerate(items, 1):
+        name = item.product_name or "Item"
+        qty = item.quantity or 0
+        rate = f"Rs. {item.unit_price:,.2f}"
+        line_total = f"Rs. {item.total:,.2f}"
+        item_lines.append(f"{idx}. {name} - {qty} x {rate} = {line_total}")
+
+    items_text = "\n".join(item_lines) if item_lines else "See attached PDF for item details."
+
+    payment_method = str(invoice.payment_method or "").upper()
+    payment_status = str(invoice.payment_status or "").upper()
+
+    # Plain, easy-to-read email.
+    text_content = (
+        f"Hello {customer_name},\n\n"
+        f"Thank you for your purchase from {shop_name}.\n\n"
+        f"INVOICE\n"
+        f"Invoice No.: {inv_num}\n"
+        f"Date: {inv_date}\n"
+        f"Payment: {payment_method}\n"
+        f"Status: {payment_status}\n\n"
+        f"ITEMS\n"
+        f"{items_text}\n\n"
+        f"TOTAL: {total}\n"
+        f"PAID: {paid}\n"
+        f"BALANCE DUE: {due}\n\n"
+        f"View your bill online:\n"
+        f"{short_url}\n\n"
+        f"Your invoice PDF is attached.\n\n"
+        f"{shop_name}\n"
+        f"{('Phone: ' + shop_phone) if shop_phone else ''}\n"
+        f"{('Email: ' + shop_email) if shop_email else ''}\n"
+        f"{shop_address}\n"
+        f"{('GSTIN: ' + shop_gstin) if shop_gstin else ''}\n\n"
+        f"Thank you!"
+    )
+
+    # Simple HTML email — no large banner, cards, shadows, or unnecessary styling.
+    safe_shop = escape(shop_name)
+    safe_customer = escape(customer_name)
+    safe_url = escape(short_url, quote=True)
+    safe_items = "<br>".join(escape(line) for line in item_lines)
+
+    if not safe_items:
+        safe_items = "See attached PDF for item details."
+
+    html_content = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice #{escape(inv_num)}</title>
+</head>
+<body style="margin:0; padding:20px; font-family:Arial,sans-serif; color:#222; background:#fff;">
+    <div style="max-width:600px; margin:auto;">
+        <h2 style="margin-bottom:4px;">{safe_shop}</h2>
+        <p style="margin-top:0;">Tax Invoice</p>
+
+        <p>Hello <strong>{safe_customer}</strong>,</p>
+        <p>Thank you for your purchase. Here is your bill:</p>
+
+        <table width="100%" cellpadding="6" cellspacing="0" style="border-collapse:collapse;">
+            <tr>
+                <td><strong>Invoice No.</strong></td>
+                <td>{escape(inv_num)}</td>
+            </tr>
+            <tr>
+                <td><strong>Date</strong></td>
+                <td>{escape(inv_date)}</td>
+            </tr>
+            <tr>
+                <td><strong>Payment</strong></td>
+                <td>{escape(payment_method)}</td>
+            </tr>
+            <tr>
+                <td><strong>Status</strong></td>
+                <td>{escape(payment_status)}</td>
+            </tr>
+        </table>
+
+        <h3>Items</h3>
+        <div style="line-height:1.7;">{safe_items}</div>
+
+        <hr style="border:0; border-top:1px solid #ddd; margin:20px 0;">
+
+        <p><strong>Total: {escape(total)}</strong></p>
+        <p>Paid: {escape(paid)}</p>
+        <p>Balance Due: {escape(due)}</p>
+
+        <p>
+            <a href="{safe_url}">View Digital Bill</a>
+        </p>
+
+        <p>Your invoice PDF is attached to this email.</p>
+
+        <hr style="border:0; border-top:1px solid #ddd; margin:20px 0;">
+
+        <p style="font-size:13px; color:#666;">
+            <strong>{safe_shop}</strong><br>
+            {escape(shop_address) if shop_address else ""}
+            {f"<br>Phone: {escape(shop_phone)}" if shop_phone else ""}
+            {f"<br>Email: {escape(shop_email)}" if shop_email else ""}
+            {f"<br>GSTIN: {escape(shop_gstin)}" if shop_gstin else ""}
+        </p>
+
+        <p>Thank you!</p>
+    </div>
+</body>
+</html>
+"""
+
+    subject = f"Invoice #{inv_num} from {shop_name}"
+
+    message = EmailMultiAlternatives(
+        subject=subject,
+        body=text_content,
+        from_email=get_from_email(),
+        to=[to_email],
+    )
+    message.attach_alternative(html_content, "text/html")
+
+    if pdf_bytes:
+        message.attach(
+            f"Invoice_{inv_num}.pdf",
+            pdf_bytes,
+            "application/pdf",
+        )
+
+    sent = message.send(fail_silently=False)
+
+    if sent > 0:
+        logger.info(
+            "Successfully delivered invoice email for %s to %s",
+            inv_num,
+            mask_email(to_email),
+        )
+
+        try:
+            CommunicationLog.objects.create(
+                business=invoice.business,
+                channel="email",
+                message_type="invoice",
+                recipient_name=customer_name,
+                recipient_phone=to_email,
+                reference_type="invoice",
+                reference_id=str(invoice.pk),
+                short_url=short_url,
+                content=f"Tax invoice #{inv_num} emailed to {to_email}. Total: {total}",
+                status="sent",
+                sent_by=invoice.created_by,
+            )
+        except Exception as log_err:
+            logger.warning(
+                "Could not record CommunicationLog for invoice %s email: %s",
+                inv_num,
+                log_err,
+            )
+    else:
+        raise TransientEmailError(
+            f"Email delivery returned 0 for invoice {inv_num} "
+            f"to {mask_email(to_email)}"
+        )
+
+    return sent
+
+
+def async_send_invoice_email(
+    invoice_or_id,
+    recipient_email=None,
+    recipient_name=None,
+    custom_notes=None,
+):
+    """Asynchronously enqueue sending an invoice email with PDF attached."""
+    inv_id = invoice_or_id.pk if hasattr(invoice_or_id, "pk") else int(invoice_or_id)
+
+    enqueue_email_task(
+        _send_invoice_email_worker,
+        inv_id,
+        recipient_email=recipient_email,
+        display_name=recipient_name,
+        custom_notes=custom_notes,
+    )

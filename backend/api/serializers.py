@@ -240,10 +240,10 @@ class ProductSerializer(serializers.ModelSerializer):
         if mrp is not None and selling is not None and mrp > 0 and mrp < selling:
             raise serializers.ValidationError({'mrp': 'MRP cannot be lower than the selling price.'})
         for field in ('category', 'supplier'):
-            related = attrs.get(field, getattr(self.instance, f'{field}_id', None))
-            if related and hasattr(related, 'business_id'):
+            related = attrs.get(field, getattr(self.instance, field, None))
+            if related and hasattr(related, 'business_id') and related.business_id is not None:
                 request = self.context.get('request')
-                if request and related.business_id != request.user.business_id:
+                if request and getattr(request.user, 'business_id', None) and related.business_id != request.user.business_id:
                     raise serializers.ValidationError({field: f'{field.title()} does not belong to this business.'})
         return attrs
 
@@ -345,9 +345,11 @@ class InvoiceItemSerializer(serializers.ModelSerializer):
 
 
 class PaymentSerializer(serializers.ModelSerializer):
+    transaction_id = serializers.CharField(source='reference', read_only=True)
+
     class Meta:
         model = Payment
-        fields = '__all__'
+        fields = ['id', 'invoice', 'customer_payment', 'method', 'amount', 'reference', 'transaction_id', 'created_at']
 
 
 class InvoiceSerializer(serializers.ModelSerializer):
@@ -399,11 +401,11 @@ class InvoiceCreateSerializer(serializers.ModelSerializer):
     items = serializers.ListField(child=serializers.DictField(), write_only=True)
     payments = serializers.ListField(child=serializers.DictField(), write_only=True)
     bill_discount = serializers.DecimalField(max_digits=10, decimal_places=2, default=0, write_only=True)
+    customer_email = serializers.EmailField(required=False, allow_blank=True, write_only=True)
 
     class Meta:
         model = Invoice
-        fields = ['customer', 'customer_name', 'customer_phone', 'notes', 'items', 'payments']
-        fields = ['customer', 'customer_name', 'customer_phone', 'notes', 'place_of_supply', 'items', 'payments',
+        fields = ['customer', 'customer_name', 'customer_phone', 'customer_email', 'notes', 'place_of_supply', 'items', 'payments',
                   'payment_method', 'payment_status', 'bill_discount']
 
     def validate(self, attrs):
@@ -476,12 +478,21 @@ class ExpenseSerializer(serializers.ModelSerializer):
 
 
 class CustomerPaymentSerializer(serializers.ModelSerializer):
+    transaction_id = serializers.CharField(source='reference', read_only=True)
     customer_name = serializers.CharField(source='customer.name', read_only=True)
-    invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True)
+    customer_mobile = serializers.CharField(source='customer.mobile', read_only=True, default='')
+    invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True, default='')
+    created_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomerPayment
         fields = '__all__'
+        read_only_fields = ['business', 'created_by']
+
+    def get_created_by_name(self, obj):
+        if not obj.created_by:
+            return ''
+        return obj.created_by.get_full_name() or obj.created_by.username
         read_only_fields = ['business', 'created_by']
 
     def validate(self, attrs):

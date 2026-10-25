@@ -23,7 +23,11 @@ class PaymentService:
             raise ValueError('Payment amount must be greater than zero.')
 
         method = attributes.get('method', 'cash')
-        reference = attributes.get('reference', '') or ''
+        reference = (attributes.get('reference', '') or '').strip()
+        if not reference:
+            import uuid
+            from django.utils import timezone
+            reference = f"TXN-{timezone.now().strftime('%y%m%d%H%M')}-{uuid.uuid4().hex[:4].upper()}"
         notes = attributes.get('notes', '') or ''
 
         invoice = attributes.get('invoice')

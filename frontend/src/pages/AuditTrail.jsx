@@ -1564,30 +1564,52 @@ export default function AuditTrail() {
               </div>
 
               {getStructuredChanges(selectedLog).length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="erp-table w-full text-xs text-left">
-                    <thead className="bg-[var(--surface)] text-[10px] font-bold uppercase text-[var(--muted)] border-b border-[var(--line-subtle)]">
-                      <tr>
-                        <th className="py-2 px-3 w-1/3">Business Attribute</th>
-                        <th className="py-2 px-3 w-1/3">Previous Recorded Value</th>
-                        <th className="py-2 px-3 w-1/3">Updated Recorded Value</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[var(--line-subtle)]">
-                      {getStructuredChanges(selectedLog).map(change => (
-                        <tr key={change.key} className="hover:bg-[var(--surface-elevated)]/50">
-                          <td className="py-2.5 px-3 font-semibold text-[var(--ink)]">{change.label}</td>
-                          <td className="py-2.5 px-3 font-mono text-[var(--muted)] line-through break-all">
-                            {change.before}
-                          </td>
-                          <td className="py-2.5 px-3 font-mono font-bold text-teal-700 dark:text-teal-400 break-all">
-                            {change.after}
-                          </td>
+                <>
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="erp-table w-full text-xs text-left">
+                      <thead className="bg-[var(--surface)] text-[10px] font-bold uppercase text-[var(--muted)] border-b border-[var(--line-subtle)]">
+                        <tr>
+                          <th className="py-2 px-3 w-1/3">Business Attribute</th>
+                          <th className="py-2 px-3 w-1/3">Previous Recorded Value</th>
+                          <th className="py-2 px-3 w-1/3">Updated Recorded Value</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-[var(--line-subtle)]">
+                        {getStructuredChanges(selectedLog).map(change => (
+                          <tr key={change.key} className="hover:bg-[var(--surface-elevated)]/50">
+                            <td className="py-2.5 px-3 font-semibold text-[var(--ink)]">{change.label}</td>
+                            <td className="py-2.5 px-3 font-mono text-[var(--muted)] line-through break-all">
+                              {change.before}
+                            </td>
+                            <td className="py-2.5 px-3 font-mono font-bold text-teal-700 dark:text-teal-400 break-all">
+                              {change.after}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Stacked Card View */}
+                  <div className="md:hidden divide-y divide-[var(--line-subtle)] text-xs">
+                    {getStructuredChanges(selectedLog).map(change => (
+                      <div key={change.key} className="p-3 space-y-2">
+                        <div className="font-semibold text-[var(--ink)] text-xs">{change.label}</div>
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          <div className="bg-[var(--surface)] p-2 rounded border border-[var(--line-subtle)]">
+                            <span className="block text-[9px] font-bold uppercase text-[var(--muted)]">Previous</span>
+                            <span className="font-mono text-[var(--muted)] line-through break-all">{change.before}</span>
+                          </div>
+                          <div className="bg-teal-50/50 dark:bg-teal-950/20 p-2 rounded border border-teal-200 dark:border-teal-800">
+                            <span className="block text-[9px] font-bold uppercase text-teal-700 dark:text-teal-300">Updated</span>
+                            <span className="font-mono font-bold text-teal-700 dark:text-teal-400 break-all">{change.after}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               ) : selectedLog.new_value && selectedLog.action.endsWith('_CREATED') ? (
                 <div className="p-3.5 space-y-2">
                   <p className="text-[11px] text-[var(--muted)]">Initial state captured upon record creation:</p>

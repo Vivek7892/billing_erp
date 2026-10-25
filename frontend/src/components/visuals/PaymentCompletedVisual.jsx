@@ -53,8 +53,10 @@ export default function PaymentCompletedVisual({
   invoiceNo = 'INV-2026-104',
   customerName = 'Rahul Sharma',
   uploadedSrc,
+  initialStep = 3,
+  hideBadge = false,
 }) {
-  const [currentStep, setCurrentStep] = useState(0)
+  const [currentStep, setCurrentStep] = useState(initialStep)
 
   useEffect(() => {
     if (currentStep >= PAYMENT_STEPS.length - 1) return
@@ -77,6 +79,7 @@ export default function PaymentCompletedVisual({
       slotKey="payment-completed"
       title="Payment Completed"
       uploadedSrc={uploadedSrc}
+      hideBadge={hideBadge}
       className={`
         p-2.5 sm:p-4
         bg-gradient-to-b

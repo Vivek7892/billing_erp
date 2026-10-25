@@ -90,8 +90,6 @@ const CustomerAvatar = ({ customer, size = 'md' }) => {
   ) : (
     <div className={`${dimensions} ${color} rounded-full flex items-center justify-center font-bold ring-2 ring-[var(--surface)] shadow-sm shrink-0`}>
       {initials || <IconUserCircle size={18} />}
-      {/* Mobile Floating Action Button */}
-      <MobileFAB icon={IconPlus} label="Add Customer" onClick={openAdd} />
     </div>
   )
 }
@@ -1038,13 +1036,15 @@ export default function Customers() {
         title="Customers & Parties"
         subtitle={`Directory of ${customers.length} registered customer${customers.length === 1 ? '' : 's'} — track ledgers, credit limits, outstanding balances, and billing statements.`}
         action={
-          <button
-            onClick={openAdd}
-            className="btn-primary h-8.5 px-3.5 hidden sm:inline-flex items-center justify-center gap-1.5 rounded-lg font-bold text-xs shadow-xs"
-          >
-            <IconPlus size={15} />
-            <span>Add Customer</span>
-          </button>
+          <div className="hidden sm:block">
+            <button
+              onClick={openAdd}
+              className="btn-primary h-8.5 px-3.5 inline-flex items-center justify-center gap-1.5 rounded-lg font-bold text-xs shadow-xs"
+            >
+              <IconPlus size={15} />
+              <span>Add Customer</span>
+            </button>
+          </div>
         }
       />
 
@@ -2106,9 +2106,8 @@ export default function Customers() {
         danger
       />
 
-    
-      
-      
+      {/* Fixed Floating Action Button on Mobile */}
+      <MobileFAB icon={IconPlus} label="Add Customer" onClick={openAdd} />
     </div>
   )
 }

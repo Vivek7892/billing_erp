@@ -1,4 +1,5 @@
 import React from 'react'
+import { IconAlertTriangle, IconRotate2, IconHome, IconRefresh } from '@tabler/icons-react'
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -14,6 +15,7 @@ export class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
+    // Keep error logged to console for debugging, never expose raw stack to end users
     console.error('Unhandled UI Error caught by ErrorBoundary:', error, errorInfo)
   }
 
@@ -23,6 +25,12 @@ export class ErrorBoundary extends React.Component {
 
   handleReset = () => {
     this.setState({ hasError: false, error: null })
+  }
+
+  handleGoHome = () => {
+    this.setState({ hasError: false, error: null }, () => {
+      window.location.href = '/'
+    })
   }
 
   render() {
@@ -39,32 +47,46 @@ export class ErrorBoundary extends React.Component {
       }
 
       return (
-        <main className="flex min-h-screen items-center justify-center bg-[var(--app-bg,#F5F6F8)] px-4 py-10 text-center text-[var(--ink,#0f172a)]">
-          <section className="w-full max-w-md">
-            <h1 className="text-xl font-semibold tracking-tight">Something went wrong</h1>
-            <p className="mt-2 text-sm leading-6 text-[var(--muted,#64748b)]">
-              We couldn’t load this page. Please try again.
+        <main className="flex min-h-screen items-center justify-center bg-[var(--app-bg,#F5F6F8)] px-4 py-12 text-center text-[var(--ink,#0f172a)] antialiased">
+          <section className="w-full max-w-md rounded-2xl border border-[var(--line,#e2e8f0)] bg-[var(--surface,#ffffff)] p-7 sm:p-9 shadow-sm">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400">
+              <IconAlertTriangle size={28} strokeWidth={2} />
+            </div>
+
+            <h1 className="mt-5 text-xl font-bold tracking-tight text-[var(--ink,#0f172a)]">
+              Unable to load this page
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--muted,#64748b)]">
+              Something unexpected happened while preparing this screen. Please try again or return to the main dashboard.
             </p>
-            {this.state.error && (
-              <details className="mt-3 text-left bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 p-2.5 rounded-lg text-xs font-mono text-rose-700 dark:text-rose-300">
-                <summary className="cursor-pointer font-bold">Error details: {this.state.error.message || String(this.state.error)}</summary>
-                <pre className="mt-2 whitespace-pre-wrap text-[11px] overflow-x-auto">{this.state.error.stack}</pre>
-              </details>
-            )}
-            <div className="mt-5 flex items-center justify-center gap-4">
+
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-2.5">
               <button
                 type="button"
                 onClick={this.handleReset}
-                className="text-sm font-medium text-[var(--primary,#1E3A5F)] underline underline-offset-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary,#1E3A5F)]/30"
+                className="inline-flex min-h-[42px] w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-[#1E3A5F] px-4 text-xs font-semibold text-white shadow-xs transition hover:bg-[#162F4D] active:scale-[0.98] dark:bg-sky-700 dark:hover:bg-sky-600"
               >
-                Try again
+                <IconRotate2 size={15} />
+                <span>Try again</span>
               </button>
+
+              <button
+                type="button"
+                onClick={this.handleGoHome}
+                className="text-[var(--ink,#0f172a)] inline-flex min-h-[42px] w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl border border-[var(--line,#e2e8f0)] px-3 text-xs font-medium hover:bg-[var(--surface,#ffffff)] hover:text-[var(--ink,#0f172a)] dark:border-slate-700 dark:hover:bg-slate-800"
+              >
+                <IconHome size={15} />
+                <span>Go to Dashboard</span>
+              </button>
+
               <button
                 type="button"
                 onClick={this.handleReload}
-                className="text-sm font-medium text-[var(--primary,#1E3A5F)] underline underline-offset-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary,#1E3A5F)]/30"
+                className="inline-flex min-h-[42px] w-full sm:w-auto items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-medium text-[var(--muted,#64748b)] hover:text-[var(--ink,#0f172a)]"
+                title="Reload browser page"
               >
-                Reload page
+                <IconRefresh size={14} />
+                <span>Reload</span>
               </button>
             </div>
           </section>

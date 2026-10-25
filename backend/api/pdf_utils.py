@@ -442,7 +442,13 @@ def item_tax_breakup(item, interstate):
 
 
 def any_item_has(invoice, attr):
-    return any(has_val(getattr(item, attr, None)) for item in invoice.items.all())
+    for item in invoice.items.all():
+        if has_val(getattr(item, attr, None)):
+            return True
+        batch = getattr(item, "batch", None)
+        if batch and has_val(getattr(batch, attr, None)):
+            return True
+    return False
 
 
 def any_item_gst(invoice):
@@ -837,39 +843,39 @@ def build_items_table(s, invoice, show_tax, interstate):
 
     columns = []
     if s.flag("show_sr_no", True):
-        columns.append(("sl", "S.No", 8, TA_CENTER, lambda i, idx: cell(str(idx), 6.8, TA_CENTER)))
+        columns.append(("sl", "S.No", 12, TA_CENTER, lambda i, idx: cell(str(idx), 6.8, TA_CENTER)))
     if show_sku:
-        columns.append(("sku", "Item Code", 13, TA_CENTER, lambda i, idx: cell(_fmt_value(getattr(i, "sku", "")), 6.5, TA_CENTER)))
+        columns.append(("sku", "Item Code", 15, TA_CENTER, lambda i, idx: cell(_fmt_value(getattr(i, "sku", "")), 6.5, TA_CENTER)))
     if show_barcode:
         columns.append(("barcode", "Barcode", 18, TA_CENTER, lambda i, idx: cell(_fmt_value(getattr(i, "barcode", "")), 6.0, TA_CENTER)))
     if s.flag("show_item_name", True):
-        columns.append(("item", "Item Description", 50, TA_LEFT, lambda i, idx: cell(_fmt_value(i.product_name), 7.2, TA_LEFT)))
+        columns.append(("item", "Item Description", 52, TA_LEFT, lambda i, idx: cell(_fmt_value(i.product_name), 7.2, TA_LEFT)))
     if show_hsn:
-        columns.append(("hsn", "HSN/SAC", 12, TA_CENTER, lambda i, idx: cell(_fmt_value(i.hsn_code), 6.5, TA_CENTER)))
+        columns.append(("hsn", "HSN/AC", 17, TA_CENTER, lambda i, idx: cell(_fmt_value(i.hsn_code), 6.5, TA_CENTER)))
     if show_unit:
-        columns.append(("unit", "Unit", 9, TA_CENTER, lambda i, idx: cell(_fmt_value(getattr(i, "unit", "")), 6.5, TA_CENTER)))
+        columns.append(("unit", "Unit", 10, TA_CENTER, lambda i, idx: cell(_fmt_value(getattr(i, "unit", "")), 6.5, TA_CENTER)))
     if show_batch:
-        columns.append(("batch", "Batch", 10, TA_CENTER, lambda i, idx: cell(_fmt_value(getattr(i, "batch_number", "")), 6.2, TA_CENTER)))
+        columns.append(("batch", "Batch", 12, TA_CENTER, lambda i, idx: cell(_fmt_value(getattr(i, "batch_number", "") or (i.batch.batch_number if getattr(i, "batch", None) else "")), 6.2, TA_CENTER)))
     if show_mfg:
-        columns.append(("mfg", "MFG", 9, TA_CENTER, lambda i, idx: cell(short_date(getattr(i, "manufacturing_date", None)), 6.1, TA_CENTER)))
+        columns.append(("mfg", "MFG", 10, TA_CENTER, lambda i, idx: cell(short_date(getattr(i, "manufacturing_date", None) or (i.batch.manufacturing_date if getattr(i, "batch", None) else None)), 6.1, TA_CENTER)))
     if show_exp:
-        columns.append(("exp", "EXP", 9, TA_CENTER, lambda i, idx: cell(short_date(getattr(i, "expiry_date", None)), 6.1, TA_CENTER)))
+        columns.append(("exp", "EXP", 10, TA_CENTER, lambda i, idx: cell(short_date(getattr(i, "expiry_date", None) or (i.batch.expiry_date if getattr(i, "batch", None) else None)), 6.1, TA_CENTER)))
     if show_mrp:
-        columns.append(("mrp", "MRP", 12, TA_RIGHT, lambda i, idx: cell(currency(getattr(i, "mrp", 0)), 6.5, TA_RIGHT)))
+        columns.append(("mrp", "MRP", 15, TA_RIGHT, lambda i, idx: cell(currency(getattr(i, "mrp", 0) or (i.batch.mrp if getattr(i, "batch", None) else 0)), 6.5, TA_RIGHT)))
     if s.flag("show_qty_col", True):
-        columns.append(("qty", "Qty", 10, TA_CENTER, lambda i, idx: cell(qty_text(i), 7.0, TA_CENTER)))
+        columns.append(("qty", "Qty", 12, TA_CENTER, lambda i, idx: cell(qty_text(i), 7.0, TA_CENTER)))
     if s.flag("show_rate_col", True):
         columns.append(("rate", "Rate", 16, TA_RIGHT, lambda i, idx: cell(currency(i.unit_price), 6.8, TA_RIGHT)))
     if show_discount:
-        columns.append(("disc", "Disc.", 10, TA_RIGHT, lambda i, idx: cell(f"{dec(getattr(i, 'discount_percent', 0))}%", 6.5, TA_RIGHT)))
+        columns.append(("disc", "Disc.", 12, TA_RIGHT, lambda i, idx: cell(f"{dec(getattr(i, 'discount_percent', 0))}%", 6.5, TA_RIGHT)))
     if show_gst_cols:
         if interstate:
-            columns.append(("igst", "IGST", 14, TA_RIGHT, lambda i, idx: tax_cell(i, "igst")))
+            columns.append(("igst", "IGST", 15, TA_RIGHT, lambda i, idx: tax_cell(i, "igst")))
         else:
             columns.append(("sgst", "SGST", 14, TA_RIGHT, lambda i, idx: tax_cell(i, "sgst")))
             columns.append(("cgst", "CGST", 14, TA_RIGHT, lambda i, idx: tax_cell(i, "cgst")))
     if show_cess:
-        columns.append(("cess", "CESS", 10, TA_RIGHT, lambda i, idx: cell(currency(getattr(i, "cess_amount", 0)), 6.2, TA_RIGHT)))
+        columns.append(("cess", "CESS", 12, TA_RIGHT, lambda i, idx: cell(currency(getattr(i, "cess_amount", 0)), 6.2, TA_RIGHT)))
     if s.flag("show_total_col", True):
         columns.append(("total", "Amount", 20, TA_RIGHT, lambda i, idx: cell(currency(i.total), 7.2, TA_RIGHT, True)))
 
@@ -882,7 +888,7 @@ def build_items_table(s, invoice, show_tax, interstate):
     ratios = [c[2] for c in columns]
     scale = BODY_W / (sum(ratios) * mm)
     widths = [r * mm * scale for r in ratios]
-    rows = [[para(c[1], size=6.8, bold=True, align=c[3], color=ACCENT) for c in columns]]
+    rows = [[c[1] for c in columns]]
     for idx, item in enumerate(items, start=1):
         rows.append([c[4](item, idx) for c in columns])
 
@@ -894,6 +900,9 @@ def build_items_table(s, invoice, show_tax, interstate):
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F8FAFC")),
         ("LINEABOVE", (0, 0), (-1, 0), 0.75, ACCENT),
         ("LINEBELOW", (0, 0), (-1, 0), 0.75, ACCENT),
+        ("FONTNAME", (0, 0), (-1, 0), FONT_B),
+        ("FONTSIZE", (0, 0), (-1, 0), 6.8),
+        ("TEXTCOLOR", (0, 0), (-1, 0), ACCENT),
         ("TOPPADDING", (0, 0), (-1, 0), 3.5),
         ("BOTTOMPADDING", (0, 0), (-1, 0), 3.5),
         ("TOPPADDING", (0, 1), (-1, -1), 3.0),
@@ -902,13 +911,16 @@ def build_items_table(s, invoice, show_tax, interstate):
         ("RIGHTPADDING", (0, 0), (-1, -1), 2.5),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
     ]
+    for c_idx, c in enumerate(columns):
+        c_align = "CENTER" if c[3] == TA_CENTER else ("RIGHT" if c[3] == TA_RIGHT else "LEFT")
+        table_commands.append(("ALIGN", (c_idx, 0), (c_idx, 0), c_align))
     row_rule = ("LINEBELOW", (0, 1), (-1, -1), item_rule_width, item_rule_color)
     if border_style == "dashed":
         row_rule = (*row_rule, 1, [2, 2])
     table_commands.append(row_rule)
     if table_style == "bold":
         table_commands.append(("BACKGROUND", (0, 0), (-1, 0), ACCENT))
-        rows[0] = [para(c[1], size=6.8, bold=True, align=c[3], color=colors.white) for c in columns]
+        table_commands.append(("TEXTCOLOR", (0, 0), (-1, 0), colors.white))
     elif table_style == "striped":
         for row_index in range(2, len(rows), 2):
             table_commands.append(("BACKGROUND", (0, row_index), (-1, row_index), colors.HexColor("#F1F5F9")))
@@ -935,16 +947,16 @@ def build_hsn_summary(invoice, show_tax, interstate):
         return para(text, align=align, size=size, bold=bold, color=colors.HexColor("#0F172A"))
 
     if interstate:
-        rows = [[c("HSN/SAC", TA_LEFT, bold=True), c("Taxable Value", bold=True), c("IGST Rate", bold=True), c("IGST Amount", bold=True)]]
+        rows = [[c("HSN/AC", TA_LEFT, bold=True), c("Taxable Value", bold=True), c("IGST Rate", bold=True), c("IGST Amount", bold=True)]]
         for (hsn, rate), b in sorted(buckets.items()):
             rows.append([c(hsn, TA_LEFT), c(currency(b["taxable"])), c(f"{rate}%"), c(currency(b["igst"]))])
     else:
-        rows = [[c("HSN/SAC", TA_LEFT, bold=True), c("Taxable Value", bold=True), c("SGST", bold=True), c("CGST", bold=True)]]
+        rows = [[c("HSN/AC", TA_LEFT, bold=True), c("Taxable Value", bold=True), c("SGST", bold=True), c("CGST", bold=True)]]
         for (hsn, rate), b in sorted(buckets.items()):
             rows.append([c(hsn, TA_LEFT), c(currency(b["taxable"])), c(currency(b["sgst"])), c(currency(b["cgst"]))])
 
     return [
-        para("HSN/SAC SUMMARY", size=7.4, bold=True, color=colors.HexColor("#475569")),
+        para("HSN/AC SUMMARY", size=7.4, bold=True, color=colors.HexColor("#475569")),
         Spacer(1, 0.8 * mm),
         _tbl(rows, [BODY_W / 4] * 4, [
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F8FAFC")),

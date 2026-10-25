@@ -152,11 +152,10 @@ export default function InvoiceDocument({
   const tTax = activeTplConfig?.tax || {}
   const tPayment = activeTplConfig?.payment || {}
   const tPage = activeTplConfig?.page || {}
-  const useGlobalTheme = isTrue(s.custom_theme_enabled, false)
-  const accentColor = (useGlobalTheme ? s.invoice_theme_color : tLayout.accent_color) || s.invoice_theme_color || '#1E3A5F'
-  const secondaryColor = (useGlobalTheme ? s.invoice_theme_secondary : tLayout.secondary_color) || s.invoice_theme_secondary || accentColor
-  const invoiceBorderStyle = (useGlobalTheme && s.invoice_border_style && s.invoice_border_style !== 'solid' ? s.invoice_border_style : tLayout.border_style) || s.invoice_border_style || 'solid'
-  const invoiceTableStyle = (useGlobalTheme && s.invoice_table_style && s.invoice_table_style !== 'clean' ? s.invoice_table_style : tLayout.table_style) || s.invoice_table_style || 'clean'
+  const accentColor = tLayout.accent_color || s.invoice_theme_color || '#1E3A5F'
+  const secondaryColor = tLayout.secondary_color || s.invoice_theme_secondary || accentColor
+  const invoiceBorderStyle = tLayout.border_style || s.invoice_border_style || 'solid'
+  const invoiceTableStyle = tLayout.table_style || s.invoice_table_style || 'clean'
 
   // Currency formatter
   const fmt = val => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -264,14 +263,15 @@ export default function InvoiceDocument({
         const total = Number(i.total ?? (basic + gstAmt))
         return {
           ...i,
-          name: i.product_name || i.name || 'Item',
-          sku: i.sku || '',
-          barcode: i.barcode || '',
-          hsn: i.hsn_code || i.hsn || '',
-          unit: i.unit || '',
-          batch: i.batch_number || i.batch_no || i.batch || '',
-          manufacturing: i.manufacturing_date || i.mfg_date || '',
-          expiry: i.expiry_date || i.exp_date || '',
+          name: i.product_name || i.name || i.product?.name || 'Item',
+          sku: i.sku || i.product?.sku || '',
+          barcode: i.barcode || i.product?.barcode || '',
+          hsn: i.hsn_code || i.hsn || i.product?.hsn_code || '',
+          unit: i.unit || i.product?.unit || '',
+          batch: i.batch_number || i.batch_no || (typeof i.batch === 'string' ? i.batch : i.batch?.batch_number) || '',
+          manufacturing: i.manufacturing_date || i.mfg_date || i.batch?.manufacturing_date || '',
+          expiry: i.expiry_date || i.exp_date || i.batch?.expiry_date || '',
+          mrp: Number(i.mrp ?? i.batch?.mrp ?? i.product?.mrp ?? 0),
           qty,
           rate,
           disc,
@@ -283,8 +283,8 @@ export default function InvoiceDocument({
     }
     // Demo item fallback for empty previews
     return [
-      { name: 'Demo Product 1', sku: 'SKU-001', hsn: '1905', unit: 'pcs', qty: 2, rate: 250, disc: 5, gst: 18, gstAmt: 85.5, total: 560.5 },
-      { name: 'Demo Product 2', sku: 'SKU-002', hsn: '2106', unit: 'box', qty: 1, rate: 450, disc: 0, gst: 12, gstAmt: 54.0, total: 504.0 },
+      { name: 'Demo Product 1', sku: 'SKU-001', barcode: '890123456789', hsn: '1905', unit: 'pcs', batch: 'B-101', manufacturing: '2025-01-10', expiry: '2026-12-31', mrp: 280, qty: 2, rate: 250, disc: 5, gst: 18, gstAmt: 85.5, total: 560.5 },
+      { name: 'Demo Product 2', sku: 'SKU-002', barcode: '890987654321', hsn: '2106', unit: 'box', batch: 'B-202', manufacturing: '2025-03-15', expiry: '2027-04-30', mrp: 500, qty: 1, rate: 450, disc: 0, gst: 12, gstAmt: 54.0, total: 504.0 },
     ]
   }, [inv.items])
 
@@ -410,11 +410,39 @@ export default function InvoiceDocument({
   if (effectiveMode === 'half_a4') {
     return (
       <div className={`invoice-document-root ${className}`}>
+        <style>{`
+          @media print {
+            @page {
+              size: 148mm 210mm;
+              margin: 4mm 5mm;
+            }
+            .invoice-document-root {
+              width: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: white !important;
+            }
+            .invoice-sheet-half-a4 {
+              width: 100% !important;
+              max-width: 100% !important;
+              min-height: auto !important;
+              margin: 0 !important;
+              padding: 4mm 5mm !important;
+              box-shadow: none !important;
+              border: none !important;
+              box-sizing: border-box !important;
+            }
+            .invoice-sheet-half-a4 * {
+              word-break: break-word !important;
+              overflow-wrap: break-word !important;
+            }
+          }
+        `}</style>
         {showModePicker && <InvoiceModePicker mode={mode} onModeChange={onModeChange} settings={s} />}
 
         <div className="overflow-x-auto print:overflow-visible flex justify-center">
           <div
-            className="bg-white text-[#0F172A] border shadow-sm print:shadow-none print:border-none rounded-sm print:m-0"
+            className="invoice-sheet-half-a4 bg-white text-[#0F172A] border shadow-sm print:shadow-none print:border-none rounded-sm print:m-0"
             style={{
               width: 560,
               maxWidth: '100%',
@@ -535,55 +563,57 @@ export default function InvoiceDocument({
             </div>
 
             {/* Items Table */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 8.5, marginTop: 2, overflowWrap: 'anywhere' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 8.5, marginTop: 2, tableLayout: 'fixed' }}>
               <thead>
                 <tr style={{ background: invoiceTableStyle === 'bold' ? `${accentColor}18` : `${secondaryColor}10`, borderTop: `1px ${invoiceBorderStyle === 'dashed' ? 'dashed' : 'solid'} ${accentColor}`, borderBottom: `1px ${invoiceBorderStyle === 'dashed' ? 'dashed' : 'solid'} ${accentColor}` }}>
-                  {showSerialCol && <th style={{ textAlign: 'center', padding: '4px 3px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 26 }}>#</th>}
-                  {showItemName && <th style={{ textAlign: 'left', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155' }}>Item</th>}
+                  {showSerialCol && <th style={{ textAlign: 'center', padding: '4px 3px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 34, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>S.No</th>}
+                  {showItemName && <th style={{ textAlign: 'left', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>Item Description</th>}
                   {showHsnCol && (
-                    <th style={{ textAlign: 'center', padding: '4px 3px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 50 }}>HSN</th>
+                    <th style={{ textAlign: 'center', padding: '4px 3px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 54, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>HSN/AC</th>
                   )}
-                  {showQtyCol && <th style={{ textAlign: 'center', padding: '4px 3px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 34 }}>Qty</th>}
-                  {showRateCol && <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 56 }}>Rate</th>}
+                  {showQtyCol && <th style={{ textAlign: 'center', padding: '4px 3px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 36, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>Qty</th>}
+                  {showRateCol && <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 56, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>Rate</th>}
                   {showDiscCol && (
-                    <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 42 }}>Disc</th>
+                    <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 42, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>Disc</th>
                   )}
                   {showTaxCols && (
-                    <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 44 }}>GST</th>
+                    <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 48, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>GST</th>
                   )}
-                  {showTotalCol && <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 64 }}>Amount</th>}
+                  {showTotalCol && <th style={{ textAlign: 'right', padding: '4px 4px', fontSize: 8.5, fontWeight: '700', color: '#334155', width: 66, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>Amount</th>}
                 </tr>
               </thead>
               <tbody>
                 {items.map((item, idx) => (
                   <tr key={idx} style={{ borderBottom: `1px ${invoiceBorderStyle === 'dashed' ? 'dashed' : 'solid'} #E2E8F0`, background: invoiceTableStyle === 'striped' && idx % 2 === 1 ? `${secondaryColor}0A` : '#FFFFFF' }}>
-                    {showSerialCol && <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 8.5, color: '#64748B' }}>{idx + 1}</td>}
-                    {showItemName && <td style={{ padding: '4px 4px', fontSize: 8.5, color: '#0F172A', fontWeight: '500', wordBreak: 'break-word' }}>
-                      <div>{item.name}</div>
-                      {item.sku && showSkuCol && <span style={{ fontSize: 7.5, color: '#64748B' }}>SKU: {item.sku} </span>}
-                      {item.barcode && showBarcodeCol && <span style={{ fontSize: 7.5, color: '#64748B' }}>Barcode: {item.barcode} </span>}
-                      {item.unit && showUnitCol && <span style={{ fontSize: 7.5, color: '#64748B' }}>({item.unit})</span>}
-                      {showBatchCol && item.batch && <span style={{ fontSize: 7.5, color: '#64748B' }}> Batch: {item.batch}</span>}
-                      {showExpiryCol && item.expiry && <span style={{ fontSize: 7.5, color: '#64748B' }}> Expiry: {item.expiry}</span>}
-                      {showMfgCol && item.manufacturing && <span style={{ fontSize: 7.5, color: '#64748B' }}> Mfg: {item.manufacturing}</span>}
-                      {showMrpCol && Number(item.mrp) > 0 && <span style={{ fontSize: 7.5, color: '#64748B' }}> MRP: {fmt(item.mrp)}</span>}
+                    {showSerialCol && <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 8.5, color: '#64748B', whiteSpace: 'nowrap' }}>{idx + 1}</td>}
+                    {showItemName && <td style={{ padding: '4px 4px', fontSize: 8.5, color: '#0F172A', fontWeight: '500', wordBreak: 'break-word', whiteSpace: 'normal', overflowWrap: 'break-word' }}>
+                      <div style={{ wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: 1.25 }}>{item.name}</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 6px', marginTop: 2, fontSize: 7.5, color: '#64748B' }}>
+                        {item.sku && showSkuCol && <span>SKU: {item.sku}</span>}
+                        {item.barcode && showBarcodeCol && <span>Bar: {item.barcode}</span>}
+                        {item.unit && showUnitCol && <span>({item.unit})</span>}
+                        {showBatchCol && item.batch && <span style={{ fontWeight: '600', color: '#0F172A' }}>Batch: {item.batch}</span>}
+                        {showExpiryCol && item.expiry && <span>Exp: {item.expiry}</span>}
+                        {showMfgCol && item.manufacturing && <span>Mfg: {item.manufacturing}</span>}
+                        {showMrpCol && Number(item.mrp) > 0 && <span>MRP: {fmt(item.mrp)}</span>}
+                      </div>
                     </td>}
                     {showHsnCol && (
-                      <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 8.5, color: '#64748B' }}>{item.hsn || '—'}</td>
+                      <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 8.5, color: '#64748B', whiteSpace: 'nowrap' }}>{item.hsn || '—'}</td>
                     )}
-                    {showQtyCol && <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 8.5, color: '#0F172A' }}>{item.qty}</td>}
-                    {showRateCol && <td style={{ padding: '4px 4px', textAlign: 'right', fontSize: 8.5, color: '#0F172A', overflowWrap: 'anywhere' }}>{fmt(item.rate)}</td>}
+                    {showQtyCol && <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 8.5, color: '#0F172A', whiteSpace: 'nowrap' }}>{item.qty}</td>}
+                    {showRateCol && <td style={{ padding: '4px 4px', textAlign: 'right', fontSize: 8.5, color: '#0F172A', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{fmt(item.rate)}</td>}
                     {showDiscCol && (
-                      <td style={{ padding: '4px 4px', textAlign: 'right', fontSize: 8.5, color: '#64748B' }}>
+                      <td style={{ padding: '4px 4px', textAlign: 'right', fontSize: 8.5, color: '#64748B', whiteSpace: 'nowrap' }}>
                         {item.disc ? `${item.disc}%` : '—'}
                       </td>
                     )}
                     {showTaxCols && (
-                      <td style={{ padding: '4px 4px', textAlign: 'right', fontSize: 8.5, color: '#334155' }}>
+                      <td style={{ padding: '4px 4px', textAlign: 'right', fontSize: 8.5, color: '#334155', whiteSpace: 'nowrap' }}>
                         {item.gst ? `${item.gst}%` : '—'}
                       </td>
                     )}
-                    {showTotalCol && <td style={{ padding: '4px 4px', textAlign: 'right', fontWeight: '700', fontSize: 8.5, color: '#0F172A', overflowWrap: 'anywhere' }}>
+                    {showTotalCol && <td style={{ padding: '4px 4px', textAlign: 'right', fontWeight: '700', fontSize: 8.5, color: '#0F172A', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                       {fmt(item.total)}
                     </td>}
                   </tr>
@@ -790,15 +820,52 @@ export default function InvoiceDocument({
   // --------------------------------------------------------------------------
   // A4 TAX INVOICE MODE
   // --------------------------------------------------------------------------
+  const a4ColCount = [
+    showSerialCol, showSkuCol, showBarcodeCol, showItemName, showHsnCol,
+    showUnitCol, showBatchCol, showExpiryCol, showMfgCol, showMrpCol,
+    showQtyCol, showRateCol, showDiscCol, showTaxCols, showTaxCols, showCessCol, showTotalCol
+  ].filter(Boolean).length
+  const a4FontSize = a4ColCount > 10 ? 8 : a4ColCount > 8 ? 8.5 : 9.5
+  const a4PadY = a4ColCount > 10 ? 4 : 5.5
+
   return (
     <div className={`invoice-document-root ${className}`}>
+      <style>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 4mm 6mm;
+          }
+          .invoice-document-root {
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+          }
+          .invoice-sheet-a4 {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-height: auto !important;
+            margin: 0 !important;
+            padding: 4mm 6mm !important;
+            box-shadow: none !important;
+            border: none !important;
+            box-sizing: border-box !important;
+          }
+          .invoice-sheet-a4 * {
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+          }
+        }
+      `}</style>
       {showModePicker && <InvoiceModePicker mode={mode} onModeChange={onModeChange} settings={s} />}
 
       <div className="overflow-x-auto print:overflow-visible">
         <div
-          className="bg-white text-[#0F172A] border border-slate-200 shadow-sm print:shadow-none print:border-none mx-auto rounded-sm print:m-0"
+          className="invoice-sheet-a4 bg-white text-[#0F172A] border border-slate-200 shadow-sm print:shadow-none print:border-none mx-auto rounded-sm print:m-0"
           style={{
-            width: 794,
+            width: '100%',
+            maxWidth: 794,
             minHeight: 1123,
             fontFamily,
             fontSize: 11,
@@ -928,82 +995,82 @@ export default function InvoiceDocument({
           </div>
 
           {/* 3. DYNAMIC ITEM TABLE WITH LIGHT SHADED HEADER */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 9.5, marginTop: 4, overflowWrap: 'anywhere' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: a4FontSize, marginTop: 4, tableLayout: 'fixed' }}>
             <thead>
               <tr style={{ background: invoiceTableStyle === 'bold' ? accentColor : '#F8FAFC', borderTop: `1px solid ${accentColor}`, borderBottom: `1px solid ${accentColor}` }}>
-                {showSerialCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 34 }}>S.No</th>}
+                {showSerialCol && <th style={{ textAlign: 'center', padding: `${a4PadY}px 4px`, fontSize: a4FontSize, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 38, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>S.No</th>}
                 {showSkuCol && (
-                  <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 70 }}>Item Code</th>
+                  <th style={{ textAlign: 'center', padding: `${a4PadY}px 4px`, fontSize: a4FontSize, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 66, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>Item Code</th>
                 )}
-                {showBarcodeCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 75 }}>Barcode</th>}
-                {showItemName && <th style={{ textAlign: 'left', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor }}>Item Description</th>}
+                {showBarcodeCol && <th style={{ textAlign: 'center', padding: `${a4PadY}px 4px`, fontSize: a4FontSize, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 72, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>Barcode</th>}
+                {showItemName && <th style={{ textAlign: 'left', padding: `${a4PadY}px 6px`, fontSize: a4FontSize, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>Item Description</th>}
                 {showHsnCol && (
-                  <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 65 }}>HSN/SAC</th>
+                  <th style={{ textAlign: 'center', padding: `${a4PadY}px 4px`, fontSize: a4FontSize, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 64, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>HSN/AC</th>
                 )}
                 {showUnitCol && (
-                  <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 45 }}>Unit</th>
+                  <th style={{ textAlign: 'center', padding: `${a4PadY}px 4px`, fontSize: a4FontSize, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 44, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>Unit</th>
                 )}
                 {showBatchCol && (
-                  <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 55 }}>Batch</th>
+                  <th style={{ textAlign: 'center', padding: `${a4PadY}px 4px`, fontSize: a4FontSize, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 56, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>Batch</th>
                 )}
-                {showExpiryCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 58 }}>Expiry</th>}
-                {showMfgCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 58 }}>Mfg.</th>}
-                {showMrpCol && <th style={{ textAlign: 'right', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 58 }}>MRP</th>}
-                {showQtyCol && <th style={{ textAlign: 'center', padding: '6px 4px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 42 }}>Qty</th>}
-                {showRateCol && <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 72 }}>Rate</th>}
+                {showExpiryCol && <th style={{ textAlign: 'center', padding: `${a4PadY}px 4px`, fontSize: a4FontSize, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 56, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>Expiry</th>}
+                {showMfgCol && <th style={{ textAlign: 'center', padding: `${a4PadY}px 4px`, fontSize: a4FontSize, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 56, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>Mfg.</th>}
+                {showMrpCol && <th style={{ textAlign: 'right', padding: `${a4PadY}px 4px`, fontSize: a4FontSize, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 58, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>MRP</th>}
+                {showQtyCol && <th style={{ textAlign: 'center', padding: `${a4PadY}px 4px`, fontSize: a4FontSize, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 42, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>Qty</th>}
+                {showRateCol && <th style={{ textAlign: 'right', padding: `${a4PadY}px 6px`, fontSize: a4FontSize, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 68, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>Rate</th>}
                 {showDiscCol && (
-                  <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 52 }}>Disc.</th>
+                  <th style={{ textAlign: 'right', padding: `${a4PadY}px 5px`, fontSize: a4FontSize, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 48, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>Disc.</th>
                 )}
                 {showTaxCols && (
                   <>
-                    <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 62 }}>SGST</th>
-                    <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 62 }}>CGST</th>
+                    <th style={{ textAlign: 'right', padding: `${a4PadY}px 5px`, fontSize: a4FontSize, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 58, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>SGST</th>
+                    <th style={{ textAlign: 'right', padding: `${a4PadY}px 5px`, fontSize: a4FontSize, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 58, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>CGST</th>
                   </>
                 )}
                 {showCessCol && (
-                  <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 54 }}>CESS</th>
+                  <th style={{ textAlign: 'right', padding: `${a4PadY}px 5px`, fontSize: a4FontSize, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 52, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>CESS</th>
                 )}
-                {showTotalCol && <th style={{ textAlign: 'right', padding: '6px 6px', fontSize: 9, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 84 }}>Amount</th>}
+                {showTotalCol && <th style={{ textAlign: 'right', padding: `${a4PadY}px 6px`, fontSize: a4FontSize, fontWeight: '700', color: invoiceTableStyle === 'bold' ? '#FFFFFF' : accentColor, width: 78, whiteSpace: 'nowrap', wordBreak: 'keep-all', overflowWrap: 'normal' }}>Amount</th>}
               </tr>
             </thead>
             <tbody>
               {items.map((item, idx) => (
                 <tr key={idx} style={{ borderBottom: `${invoiceBorderStyle === 'double' ? 3 : 1}px ${invoiceBorderStyle} ${secondaryColor}`, background: invoiceTableStyle === 'striped' && idx % 2 === 1 ? '#F1F5F9' : '#FFFFFF' }}>
-                  {showSerialCol && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#64748B' }}>{idx + 1}</td>}
+                  {showSerialCol && <td style={{ padding: `${a4PadY}px 4px`, textAlign: 'center', fontSize: a4FontSize, color: '#64748B', whiteSpace: 'nowrap' }}>{idx + 1}</td>}
                   {showSkuCol && (
-                    <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#475569' }}>{item.sku || '—'}</td>
+                    <td style={{ padding: `${a4PadY}px 4px`, textAlign: 'center', fontSize: a4FontSize, color: '#475569', whiteSpace: 'nowrap' }}>{item.sku || '—'}</td>
                   )}
-                  {showBarcodeCol && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9, color: '#64748B' }}>{item.barcode || '—'}</td>}
-                  {showItemName && <td style={{ padding: '6px 6px', fontSize: 9.5, color: '#0F172A', fontWeight: '500', overflowWrap: 'anywhere' }}>{item.name}</td>}
+                  {showBarcodeCol && <td style={{ padding: `${a4PadY}px 4px`, textAlign: 'center', fontSize: a4FontSize, color: '#64748B', whiteSpace: 'nowrap' }}>{item.barcode || '—'}</td>}
+                  {showItemName && <td style={{ padding: `${a4PadY}px 6px`, fontSize: a4FontSize, color: '#0F172A', fontWeight: '500', wordBreak: 'break-word', whiteSpace: 'normal', overflowWrap: 'break-word', lineHeight: 1.3 }}>{item.name}</td>}
                   {showHsnCol && (
-                    <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#64748B' }}>{item.hsn || '—'}</td>
+                    <td style={{ padding: `${a4PadY}px 4px`, textAlign: 'center', fontSize: a4FontSize, color: '#64748B', whiteSpace: 'nowrap' }}>{item.hsn || '—'}</td>
                   )}
                   {showUnitCol && (
-                    <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#64748B' }}>{item.unit || '—'}</td>
+                    <td style={{ padding: `${a4PadY}px 4px`, textAlign: 'center', fontSize: a4FontSize, color: '#64748B', whiteSpace: 'nowrap' }}>{item.unit || '—'}</td>
                   )}
                   {showBatchCol && (
-                    <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#64748B' }}>{item.batch || '—'}</td>
+                    <td style={{ padding: `${a4PadY}px 4px`, textAlign: 'center', fontSize: a4FontSize, color: '#0F172A', fontWeight: '500', whiteSpace: 'nowrap' }}>{item.batch || '—'}</td>
                   )}
-                  {showExpiryCol && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#64748B' }}>{item.expiry || '—'}</td>}
-                  {showMfgCol && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#64748B' }}>{item.manufacturing || '—'}</td>}
-                  {showMrpCol && <td style={{ padding: '6px 4px', textAlign: 'right', fontSize: 9.5, color: '#64748B' }}>{Number(item.mrp) > 0 ? fmt(item.mrp) : '—'}</td>}
-                  {showQtyCol && <td style={{ padding: '6px 4px', textAlign: 'center', fontSize: 9.5, color: '#0F172A', overflowWrap: 'anywhere' }}>{item.qty}</td>}
-                  {showRateCol && <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 9.5, color: '#0F172A', overflowWrap: 'anywhere' }}>{fmt(item.rate)}</td>}
+                  {showExpiryCol && <td style={{ padding: `${a4PadY}px 4px`, textAlign: 'center', fontSize: a4FontSize, color: '#64748B', whiteSpace: 'nowrap' }}>{item.expiry || '—'}</td>}
+                  {showMfgCol && <td style={{ padding: `${a4PadY}px 4px`, textAlign: 'center', fontSize: a4FontSize, color: '#64748B', whiteSpace: 'nowrap' }}>{item.manufacturing || '—'}</td>}
+                  {showMrpCol && <td style={{ padding: `${a4PadY}px 4px`, textAlign: 'right', fontSize: a4FontSize, color: '#64748B', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{Number(item.mrp) > 0 ? fmt(item.mrp) : '—'}</td>}
+                  {showQtyCol && <td style={{ padding: `${a4PadY}px 4px`, textAlign: 'center', fontSize: a4FontSize, color: '#0F172A', whiteSpace: 'nowrap' }}>{item.qty}</td>}
+                  {showRateCol && <td style={{ padding: `${a4PadY}px 6px`, textAlign: 'right', fontSize: a4FontSize, color: '#0F172A', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{fmt(item.rate)}</td>}
                   {showDiscCol && (
-                    <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 9.5, color: '#64748B' }}>
+                    <td style={{ padding: `${a4PadY}px 5px`, textAlign: 'right', fontSize: a4FontSize, color: '#64748B', whiteSpace: 'nowrap' }}>
                       {item.disc ? `${item.disc}%` : '—'}
                     </td>
                   )}
                   {showTaxCols && (
                     <>
-                      <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 10, color: '#334155' }}>{fmt(item.gstAmt / 2)}</td>
-                      <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 10, color: '#334155' }}>{fmt(item.gstAmt / 2)}</td>
+                      <td style={{ padding: `${a4PadY}px 5px`, textAlign: 'right', fontSize: a4FontSize, color: '#334155', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{fmt(item.gstAmt / 2)}</td>
+                      <td style={{ padding: `${a4PadY}px 5px`, textAlign: 'right', fontSize: a4FontSize, color: '#334155', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{fmt(item.gstAmt / 2)}</td>
                     </>
                   )}
                   {showCessCol && (
-                    <td style={{ padding: '6px 6px', textAlign: 'right', fontSize: 9.5, color: '#64748B' }}>{fmt(0)}</td>
+                    <td style={{ padding: `${a4PadY}px 5px`, textAlign: 'right', fontSize: a4FontSize, color: '#64748B', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{fmt(0)}</td>
                   )}
-                  {showTotalCol && <td style={{ padding: '6px 6px', textAlign: 'right', fontWeight: '700', fontSize: 9.5, color: '#0F172A', overflowWrap: 'anywhere' }}>
+                  {showTotalCol && <td style={{ padding: `${a4PadY}px 6px`, textAlign: 'right', fontWeight: '700', fontSize: a4FontSize, color: '#0F172A', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                     {fmt(item.total)}
                   </td>}
                 </tr>

@@ -785,15 +785,83 @@ export default function TransactionLedger() {
                 })}</tbody>
               </table>
             </div>
-            <div className="divide-y divide-[var(--line-subtle)] md:hidden">{visibleRows.map((row, index) => {
-              const orderId = getOrderId(row); const paymentId = getPaymentId(row)
-              return <article key={row.id || paymentId || orderId || index} className="space-y-2.5 p-3.5">
-                <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-xs font-semibold">{getInvoiceNumber(row) || 'Needs review'}</p><p className="font-mono text-[10px] text-[var(--muted)]">DB #{row.id || '—'} <span className="px-1">·</span>{getCustomerName(row) || 'Walk-in / Guest'}</p></div><div className="shrink-0 text-right"><p className="font-mono text-sm font-bold tabular-nums">{fmt(getAmount(row), getCurrency(row))}</p><StatusBadge status={getStatus(row)} /></div></div>
-                <div className="flex items-center justify-between gap-2 text-xs"><MethodBadge method={getPaymentMethod(row)} /><span className="text-[10px] text-[var(--muted)]">{fmtDateOnly(getCreatedAt(row))}</span></div>
-                <div className="space-y-1 border-t border-[var(--line-subtle)] pt-2"><div className="flex items-center gap-1 text-[10px]"><span className="text-[var(--muted)]">Order</span><span className="min-w-0 truncate font-mono">{orderId || '—'}</span><CopyButton value={orderId} label="Order ID" /></div><div className="flex items-center gap-1 text-[10px]"><span className="text-[var(--muted)]">Payment</span><span className="min-w-0 truncate font-mono">{paymentId || '—'}</span><CopyButton value={paymentId} label="Payment ID" /></div></div>
-                <div className="flex items-center justify-between gap-2"><span className="truncate text-[10px] text-[var(--muted)]">{getCustomerEmail(row) || getCustomerPhone(row) || ''}</span><button type="button" onClick={() => setSelectedRow(row)} className="min-h-9 shrink-0 rounded-md border border-[var(--line)] px-3 text-xs font-semibold">View Details</button></div>
-              </article>
-            })}</div>
+            <div className="divide-y divide-[var(--line-subtle)] md:hidden">
+              {visibleRows.map((row, index) => {
+                const orderId = getOrderId(row)
+                const paymentId = getPaymentId(row)
+                return (
+                  <article
+                    key={row.id || paymentId || orderId || index}
+                    className="p-3.5 space-y-2.5 transition active:bg-[var(--surface-elevated)]"
+                    onClick={() => setSelectedRow(row)}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-bold text-[#1E3A5F] dark:text-sky-400">
+                          {getInvoiceNumber(row) || 'Needs Review'}
+                        </p>
+                        <p className="truncate text-xs font-semibold text-[var(--ink)] mt-0.5">
+                          {getCustomerName(row) || 'Walk-in / Guest'}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="font-mono text-sm font-extrabold tabular-nums text-[var(--ink)]">
+                          {fmt(getAmount(row), getCurrency(row))}
+                        </p>
+                        <div className="mt-1 flex justify-end">
+                          <StatusBadge status={getStatus(row)} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 text-xs pt-1 border-t border-[var(--line-subtle)]">
+                      <MethodBadge method={getPaymentMethod(row)} />
+                      <span className="text-[11px] font-mono text-[var(--muted)]">
+                        {fmtDateOnly(getCreatedAt(row))}
+                      </span>
+                    </div>
+
+                    {(orderId || paymentId) && (
+                      <div className="rounded-lg bg-[var(--surface-elevated)] p-2 space-y-1 text-[11px] font-mono">
+                        {orderId && (
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[var(--muted)] text-[10px] uppercase font-sans">Order</span>
+                            <div className="flex items-center gap-1 min-w-0">
+                              <span className="truncate text-[10px]">{orderId}</span>
+                              <CopyButton value={orderId} label="Order ID" />
+                            </div>
+                          </div>
+                        )}
+                        {paymentId && (
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[var(--muted)] text-[10px] uppercase font-sans">Payment</span>
+                            <div className="flex items-center gap-1 min-w-0">
+                              <span className="truncate text-[10px]">{paymentId}</span>
+                              <CopyButton value={paymentId} label="Payment ID" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-2 pt-1">
+                      <span className="truncate text-[11px] text-[var(--muted)]">
+                        {getCustomerPhone(row) || getCustomerEmail(row) || `DB #${row.id || '—'}`}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedRow(row)
+                        }}
+                        className="inline-flex h-8 items-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-semibold text-[var(--ink)] shadow-2xs hover:bg-[var(--surface-hover)] active:scale-95"
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  </article>
+                )
+              })}</div>
             <footer className="border-t border-[var(--line)] px-4 py-2.5 text-xs text-[var(--muted)]">Showing {visibleRows.length} transaction{visibleRows.length === 1 ? '' : 's'} <span className="px-1">·</span>{summary.hasEstimatedFees ? 'Estimated gateway fee uses a 2% planning rate where no provider fee is available.' : 'Gateway fee reflects reported provider fees.'}</footer>
           </>}
         </section>

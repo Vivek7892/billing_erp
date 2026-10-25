@@ -237,99 +237,127 @@
   flex-shrink: 0;
 }
 
-.pb-last-bill-strip {
-  overflow: hidden;
-  border: 1px solid rgba(15, 118, 110, 0.28);
+/* Top Last Bill Banner (Mobile-Friendly & Clean) */
+.pb-last-bill-banner {
+  margin: 6px 10px 0;
   border-radius: var(--pb-r-lg);
-  background: linear-gradient(110deg, rgba(240, 253, 250, 0.96), var(--pb-surface) 72%);
-  animation: pb-last-bill-in 320ms ease-out both;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  background: linear-gradient(110deg, rgba(236, 253, 245, 0.95), var(--pb-surface) 60%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  animation: pb-last-bill-in 250ms ease-out both;
 }
 
-.dark .pb-last-bill-strip {
-  border-color: rgba(45, 212, 191, 0.3);
-  background: linear-gradient(110deg, rgba(15, 118, 110, 0.18), var(--pb-surface) 72%);
+.dark .pb-last-bill-banner {
+  border-color: rgba(5, 150, 105, 0.35);
+  background: linear-gradient(110deg, rgba(6, 78, 59, 0.25), var(--pb-surface) 60%);
 }
 
-.pb-last-bill-track {
+.pb-last-bill-content {
   display: flex;
-  min-width: max-content;
   align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
   gap: 8px;
-  padding: 7px 9px;
+  flex-wrap: wrap;
 }
 
-.pb-last-bill-icon {
+.pb-last-bill-lead {
   display: flex;
-  height: 28px;
-  width: 28px;
-  flex-shrink: 0;
   align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  background: var(--pb-success);
-  color: #fff;
-}
-
-.pb-last-bill-info {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  align-items: baseline;
   gap: 6px;
-  white-space: nowrap;
+  flex-wrap: wrap;
+  min-width: 0;
+  font-size: 11.5px;
 }
 
-.pb-last-bill-label {
-  color: var(--pb-muted);
-  font-size: 9px;
+.pb-last-bill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #059669;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
-.pb-last-bill-info strong {
-  color: var(--pb-text);
+.dark .pb-last-bill-badge {
+  color: #34d399;
+}
+
+.pb-last-bill-num {
   font-family: monospace;
+  font-weight: 700;
+  color: var(--pb-text);
+}
+
+.pb-last-bill-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--pb-text-secondary);
   font-size: 11px;
 }
 
-.pb-last-bill-info > span:last-child {
-  color: var(--pb-text-secondary);
-  font-size: 10px;
-}
-
-.pb-last-bill-actions {
+.pb-last-bill-btns {
   display: flex;
-  flex-shrink: 0;
   align-items: center;
-  gap: 3px;
+  gap: 5px;
+  margin-left: auto;
 }
 
-.pb-last-bill-actions button {
+.pb-last-bill-btn {
   display: inline-flex;
-  height: 27px;
   align-items: center;
-  justify-content: center;
   gap: 3px;
-  padding: 0 7px;
-  border: 1px solid var(--pb-border);
+  height: 28px;
+  padding: 0 8px;
   border-radius: var(--pb-r);
+  border: 1px solid var(--pb-border);
   background: var(--pb-surface);
-  color: var(--pb-primary);
-  font-size: 10px;
-  font-weight: 700;
+  color: var(--pb-text);
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
-  white-space: nowrap;
+  transition: all 0.12s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
-.pb-last-bill-actions button:hover {
+.pb-last-bill-btn:hover {
   border-color: var(--pb-primary);
   background: var(--pb-primary-light);
+  color: var(--pb-primary);
+}
+
+.pb-last-bill-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--pb-muted);
+  cursor: pointer;
+  transition: color 0.12s;
+}
+
+.pb-last-bill-close:hover {
+  color: var(--pb-text);
+  background: var(--pb-surface-alt);
+}
+
+/* Legacy strip fallback */
+.pb-last-bill-strip {
+  display: none;
 }
 
 @keyframes pb-last-bill-in {
-  from { opacity: 0; transform: translateX(-12px); }
-  to { opacity: 1; transform: translateX(0); }
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .pb-search-field {
@@ -337,6 +365,16 @@
   display: flex;
   align-items: center;
   width: 100%;
+  border: 1px solid var(--pb-border);
+  border-radius: var(--pb-r-lg);
+  background: var(--pb-surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.pb-search-field:focus-within {
+  border-color: var(--pb-primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
 }
 
 .pb-search-field .pb-field-icon {
@@ -348,16 +386,15 @@
 
 .pb-search-input {
   width: 100%;
-  height: 44px;
+  height: 42px;
   padding: 0 85px 0 38px;
   border: 0;
-  border-radius: 0;
+  border-radius: var(--pb-r-lg);
   background: transparent;
   color: var(--pb-text);
   font-size: 13.5px;
   font-weight: 500;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .pb-search-input:focus {
@@ -2874,7 +2911,7 @@
   }
 
   .pb-mobile-floating-dock {
-    bottom: calc(8px + env(safe-area-inset-bottom));
+    bottom: calc(64px + env(safe-area-inset-bottom));
     left: 8px;
     right: 8px;
     padding: 9px 10px;
@@ -3113,7 +3150,7 @@
   .pb-workspace {
     display: flex;
     flex-direction: column;
-    padding: 6px 6px calc(92px + env(safe-area-inset-bottom));
+    padding: 6px 6px calc(130px + env(safe-area-inset-bottom));
     gap: 8px;
     flex: 1;
     height: auto;
@@ -3586,7 +3623,7 @@
   /* 9. Floating Mobile Cart Dock in Catalog View */
   .pb-mobile-floating-dock {
     position: fixed;
-    bottom: calc(10px + env(safe-area-inset-bottom));
+    bottom: calc(64px + env(safe-area-inset-bottom));
     left: 10px;
     right: 10px;
     z-index: 45;

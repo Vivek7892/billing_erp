@@ -540,11 +540,22 @@ export default function Products() {
       setModal(null)
       await load(search, catFilter)
     } catch (error) {
-      const detail =
-        error.response?.data?.detail ||
-        error.response?.data?.name?.[0] ||
-        error.response?.data?.sku?.[0] ||
-        'Failed to save product'
+      const errData = error.response?.data
+      let detail = 'Failed to save product'
+      if (typeof errData === 'string') {
+        detail = errData
+      } else if (errData?.detail) {
+        detail = errData.detail
+      } else if (errData?.error) {
+        detail = errData.error
+      } else if (errData && typeof errData === 'object') {
+        const firstKey = Object.keys(errData)[0]
+        if (firstKey) {
+          const val = errData[firstKey]
+          const msg = Array.isArray(val) ? val.join(' ') : String(val)
+          detail = `${firstKey.replace(/_/g, ' ')}: ${msg}`
+        }
+      }
       toast.error(detail)
     } finally {
       setSaving(false)

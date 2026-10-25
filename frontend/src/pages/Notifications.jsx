@@ -1061,52 +1061,6 @@ export default function Notifications() {
           </div>
         </div>
       </header>
-
-      {/* ── Role Scope & Context Banner ── */}
-      <div className="notification-role-banner flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 px-3 sm:px-4 py-2 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-xs">
-        <div className="flex items-center gap-2 flex-wrap min-w-0">
-          <span className="inline-flex items-center gap-1.5 font-bold text-[var(--ink)]">
-            <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
-            <span>Role Queue:</span>
-            <span className="capitalize px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 font-bold">
-              {user?.role || 'Staff'}
-            </span>
-          </span>
-          <span className="text-[var(--muted)] hidden md:inline">·</span>
-          <span className="text-[11px] text-[var(--muted)] hidden md:inline">
-            {user?.role === 'cashier'
-              ? 'Showing counter payments, stock alerts, and your submitted approval requests.'
-              : 'Showing all operational queues, compliance alerts, and administrator authorizations.'}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto">
-          <span className="text-[10px] text-[var(--muted)] font-semibold">Scope:</span>
-          <button
-            type="button"
-            onClick={() => setScopeFilter('role')}
-            className={`h-6 px-2 rounded-md text-[11px] font-semibold transition ${
-              scopeFilter === 'role'
-                ? 'bg-[var(--primary)] text-white shadow-2xs'
-                : 'bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--ink)] border border-[var(--line)]'
-            }`}
-          >
-            My Role
-          </button>
-          <button
-            type="button"
-            onClick={() => setScopeFilter('all')}
-            className={`h-6 px-2 rounded-md text-[11px] font-semibold transition ${
-              scopeFilter === 'all'
-                ? 'bg-[var(--primary)] text-white shadow-2xs'
-                : 'bg-[var(--surface)] text-[var(--muted)] hover:text-[var(--ink)] border border-[var(--line)]'
-            }`}
-          >
-            All Alerts
-          </button>
-        </div>
-      </div>
-
       {/* ── 2. Clickable Summary Cards ── */}
       <section className="notification-kpi-grid grid grid-cols-2 gap-2 sm:gap-2.5 sm:grid-cols-4" aria-label="Notification summary">
         <ActionMetricCard

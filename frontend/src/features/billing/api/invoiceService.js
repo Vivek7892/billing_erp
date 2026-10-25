@@ -35,6 +35,11 @@ export const invoiceService = {
     return unwrapResponse(response)
   },
 
+  async getInvoicePayments(invoiceId) {
+    const response = await http.get(`/invoices/${invoiceId}/payments/`)
+    return unwrapResponse(response)
+  },
+
   async getPdf(invoiceId, params = {}, config = {}) {
     return http.get(`/invoices/${invoiceId}/pdf/`, {
       ...config,
@@ -49,6 +54,11 @@ export const invoiceService = {
 
   async sendWhatsApp(invoiceId, phone = '') {
     const response = await http.post(`/invoices/${invoiceId}/send-whatsapp/`, { phone })
+    return unwrapResponse(response)
+  },
+
+  async sendEmail(invoiceId, email = '') {
+    const response = await http.post(`/invoices/${invoiceId}/send-email/`, { email })
     return unwrapResponse(response)
   },
 

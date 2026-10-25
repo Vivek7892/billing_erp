@@ -53,6 +53,16 @@ export const customerService = {
     const response = await http.post(`/customers/${id}/payments/`, payload)
     return unwrapResponse(response)
   },
+
+  async getPaymentCollections(params = {}) {
+    const response = await http.get('/customer-payments/', { params })
+    const payload = unwrapResponse(response)
+    const items = listData(response)
+    items.items = items
+    items.count = payload?.count ?? items.length
+    items.raw = payload
+    return items
+  },
 }
 
 export default customerService

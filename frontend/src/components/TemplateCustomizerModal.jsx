@@ -166,8 +166,11 @@ export default function TemplateCustomizerModal({
         {
           product_name: 'India Gate Basmati Rice 5kg',
           sku: 'RICE-001',
+          barcode: '890123456789',
           hsn_code: '100630',
           unit: 'bag',
+          batch_number: 'B-101',
+          mrp: 550.0,
           quantity: 1,
           unit_price: 520.0,
           discount_percent: 5,
@@ -178,8 +181,11 @@ export default function TemplateCustomizerModal({
         {
           product_name: 'Fortune Sunflower Oil 1L Pouch',
           sku: 'OIL-002',
+          barcode: '890987654321',
           hsn_code: '151219',
           unit: 'ltr',
+          batch_number: 'B-202',
+          mrp: 160.0,
           quantity: 2,
           unit_price: 145.0,
           discount_percent: 0,
@@ -190,8 +196,11 @@ export default function TemplateCustomizerModal({
         {
           product_name: 'Tata Salt Iodized 1kg',
           sku: 'SALT-001',
+          barcode: '890456123789',
           hsn_code: '250100',
           unit: 'pkt',
+          batch_number: 'B-303',
+          mrp: 30.0,
           quantity: 2,
           unit_price: 28.0,
           discount_percent: 0,
@@ -228,39 +237,39 @@ export default function TemplateCustomizerModal({
   const targetPreviewMode = isThermalTpl ? (is58mmRoll ? 'thermal_58' : 'thermal_80') : templateId
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 print:hidden">
-      <div className="relative h-[calc(100dvh-1rem)] max-h-[96dvh] w-full max-w-[96vw] flex flex-col bg-white border border-[#DCE3EC] rounded-xl shadow-2xl overflow-hidden transition-colors lg:h-[94dvh]">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-0 sm:p-3 print:hidden">
+      <div className="relative h-full sm:h-[calc(100dvh-1.5rem)] max-h-[100dvh] sm:max-h-[96dvh] w-full max-w-[98vw] flex flex-col bg-[var(--surface)] text-[var(--ink)] border-0 sm:border border-[var(--line)] rounded-none sm:rounded-2xl shadow-2xl overflow-hidden transition-colors lg:h-[94dvh]">
         {/* Modal Header */}
-        <div className="px-4 py-3 sm:px-6 sm:py-3.5 border-b border-[#DCE3EC]  flex items-center justify-between bg-slate-50  shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#1E3A5F]/10  text-[#1E3A5F]  flex items-center justify-center font-bold">
+        <div className="px-3.5 py-2.5 sm:px-6 sm:py-3.5 border-b border-[var(--line)] flex items-center justify-between bg-[var(--surface)] shrink-0 gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center font-bold shrink-0">
               <IconAdjustments size={17} />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-slate-900 ">
-                  Customize: {templateMeta?.name || templateId}
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h3 className="text-sm sm:text-base font-bold text-[var(--ink)] truncate">
+                  {templateMeta?.name || templateId}
                 </h3>
-                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-200/80 text-slate-700">
-                  {templateMeta?.paper || templateMeta?.size || templateMeta?.dimensions || 'Invoice Template'}
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--surface-elevated)] border border-[var(--line)] text-[var(--muted)] shrink-0">
+                  {templateMeta?.paper || templateMeta?.size || templateMeta?.dimensions || 'Invoice'}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 ">
+              <p className="text-[11px] text-[var(--muted)] hidden sm:block truncate">
                 {templateId === 'gst_a4'
                   ? 'Full GST invoice layout, tax fields, payment details, and A4 printing.'
                   : templateId === 'stylish'
-                    ? 'Modern corporate GST layout with its own typography, colors, and A4 print settings.'
+                    ? 'Modern corporate GST layout with typography, colors, and A4 print settings.'
                     : 'Configure this invoice layout and its print settings.'}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
               onClick={handleReset}
               disabled={resetting || loading}
-              className="min-h-11 px-2.5 sm:px-3 rounded-lg border border-[#DCE3EC] bg-white text-slate-700 hover:bg-slate-100 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
+              className="h-8.5 sm:h-9 px-2.5 sm:px-3 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors disabled:opacity-50"
               title="Reset this template to factory defaults"
             >
               <IconRotate2 size={13} className={resetting ? 'animate-spin' : ''} />
@@ -271,31 +280,32 @@ export default function TemplateCustomizerModal({
               type="button"
               onClick={handleSave}
               disabled={saving || loading}
-              className="min-h-11 px-3.5 sm:px-4 rounded-lg bg-[#1E3A5F] hover:bg-[#162C46] text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition-colors disabled:opacity-50"
+              className="h-8.5 sm:h-9 px-3 sm:px-4 rounded-lg bg-[#1E3A5F] hover:bg-[#162C46] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs transition-colors disabled:opacity-50 active:scale-95"
             >
-              <IconDeviceFloppy size={13} />
-              <span>{saving ? 'Saving...' : 'Save Settings'}</span>
+              <IconDeviceFloppy size={14} />
+              <span>{saving ? 'Saving…' : 'Save'}</span>
             </button>
 
             <button
               type="button"
               onClick={onClose}
-              className="min-h-11 min-w-11 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200 flex items-center justify-center transition-colors ml-1"
+              className="h-8.5 w-8.5 sm:h-9 sm:w-9 rounded-lg border border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] flex items-center justify-center transition-colors"
+              aria-label="Close modal"
             >
-              <IconX size={18} />
+              <IconX size={17} />
             </button>
           </div>
         </div>
 
         {/* Mobile Preview/Editor Switcher */}
-        <div className="lg:hidden flex border-b border-[#DCE3EC] bg-white shrink-0">
+        <div className="lg:hidden flex border-b border-[var(--line)] bg-[var(--surface-subtle)] p-1 shrink-0 gap-1">
           <button
             type="button"
             onClick={() => setPreviewTab('editor')}
-            className={`min-h-11 flex-1 py-2 text-xs font-bold text-center border-b-2 ${
+            className={`h-9 flex-1 text-xs font-bold text-center rounded-lg transition-all ${
               previewTab === 'editor'
-                ? 'border-[#1E3A5F]  text-[#1E3A5F] '
-                : 'border-transparent text-slate-500'
+                ? 'bg-[var(--surface)] text-[var(--primary)] shadow-2xs font-extrabold border border-[var(--line)]'
+                : 'text-[var(--muted)] hover:text-[var(--ink)]'
             }`}
           >
             Customizer Controls
@@ -303,10 +313,10 @@ export default function TemplateCustomizerModal({
           <button
             type="button"
             onClick={() => setPreviewTab('preview')}
-            className={`min-h-11 flex-1 py-2 text-xs font-bold text-center border-b-2 ${
+            className={`h-9 flex-1 text-xs font-bold text-center rounded-lg transition-all ${
               previewTab === 'preview'
-                ? 'border-[#1E3A5F]  text-[#1E3A5F] '
-                : 'border-transparent text-slate-500'
+                ? 'bg-[var(--surface)] text-[var(--primary)] shadow-2xs font-extrabold border border-[var(--line)]'
+                : 'text-[var(--muted)] hover:text-[var(--ink)]'
             }`}
           >
             Live Preview
@@ -315,7 +325,7 @@ export default function TemplateCustomizerModal({
 
         {/* Modal Body */}
         {loading ? (
-          <div className="flex-1 flex items-center justify-center py-20 text-slate-500">
+          <div className="flex-1 flex items-center justify-center py-20 text-[var(--muted)]">
             <div className="animate-spin mr-2">
               <IconRotate2 size={18} />
             </div>
@@ -325,12 +335,12 @@ export default function TemplateCustomizerModal({
           <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
             {/* Left Column: Form & Category Tabs */}
             <div
-              className={`w-full lg:w-[42%] flex flex-col border-r border-[#DCE3EC] bg-white min-h-0 ${
+              className={`w-full lg:w-[42%] flex flex-col border-r border-[var(--line)] bg-[var(--surface)] min-h-0 ${
                 previewTab === 'preview' ? 'hidden lg:flex' : 'flex'
               }`}
             >
               {/* Category Sub-tabs */}
-              <div className="px-3 pt-2.5 pb-2 border-b border-[#DCE3EC] bg-slate-50/70 overflow-x-auto shrink-0 flex gap-1.5 scrollbar-thin">
+              <div className="px-2.5 py-2 border-b border-[var(--line)] bg-[var(--surface-subtle)] overflow-x-auto shrink-0 flex gap-1.5 scrollbar-thin">
                 {TABS.map(tab => {
                   const Icon = tab.icon
                   const isCur = activeTab === tab.id
@@ -339,13 +349,13 @@ export default function TemplateCustomizerModal({
                       key={tab.id}
                       type="button"
                       onClick={() => setActiveTab(tab.id)}
-                      className={`min-h-10 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap inline-flex items-center gap-2 transition-all ${
+                      className={`h-8 sm:h-8.5 px-2.5 sm:px-3 rounded-lg text-xs font-semibold whitespace-nowrap inline-flex items-center gap-1.5 transition-all ${
                         isCur
-                          ? 'bg-[#1E3A5F] text-white shadow-xs '
-                          : 'text-slate-600  hover:bg-slate-200/70 '
+                          ? 'bg-[#1E3A5F] text-white shadow-2xs'
+                          : 'text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)]'
                       }`}
                     >
-                      <Icon size={14} />
+                      <Icon size={13} />
                       <span>{tab.label}</span>
                     </button>
                   )
@@ -965,12 +975,12 @@ export default function TemplateCustomizerModal({
         )}
 
         {/* Mobile Sticky Bottom Action Bar */}
-        <div className="lg:hidden shrink-0 border-t border-[#DCE3EC] bg-white p-2.5 flex items-center gap-2 z-10 shadow-md">
+        <div className="lg:hidden shrink-0 border-t border-[var(--line)] bg-[var(--surface)] p-2.5 flex items-center gap-2 z-10 shadow-lg">
           <button
             type="button"
             onClick={handleReset}
             disabled={resetting || loading}
-            className="min-h-11 px-3 flex-1 rounded-lg border border-[#DCE3EC] bg-white text-slate-700 hover:bg-slate-100 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+            className="h-10 px-3 flex-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
           >
             <IconRotate2 size={14} className={resetting ? 'animate-spin' : ''} />
             <span>Reset Defaults</span>
@@ -979,10 +989,10 @@ export default function TemplateCustomizerModal({
             type="button"
             onClick={handleSave}
             disabled={saving || loading}
-            className="min-h-11 px-4 flex-1 rounded-lg bg-[#1E3A5F] hover:bg-[#162C46] text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 shadow-xs transition-colors disabled:opacity-50"
+            className="h-10 px-4 flex-1 rounded-xl bg-[#1E3A5F] hover:bg-[#162C46] text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 shadow-xs transition-colors disabled:opacity-50 active:scale-95"
           >
             <IconDeviceFloppy size={14} />
-            <span>{saving ? 'Saving...' : 'Save Settings'}</span>
+            <span>{saving ? 'Saving…' : 'Save Settings'}</span>
           </button>
         </div>
       </div>

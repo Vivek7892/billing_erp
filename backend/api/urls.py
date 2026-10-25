@@ -78,6 +78,7 @@ urlpatterns = [
     path('recycle-bin/<str:entity_type>/<int:pk>/restore/', views.RecycleBinRestoreView.as_view(), name='recycle-bin-restore'),
     path('recycle-bin/product/<int:pk>/delete/', views.RecycleBinProductDeleteView.as_view(), name='recycle-bin-product-delete'),
     path('invoices/<int:pk>/send-whatsapp/', views.InvoiceSendWhatsAppView.as_view(), name='invoice-send-whatsapp'),
+    path('invoices/<int:pk>/send-email/', views.InvoiceSendEmailView.as_view(), name='invoice-send-email'),
     path('customers/<int:pk>/send-reminder/', views.CustomerSendReminderView.as_view(), name='customer-send-reminder'),
     path('customers/<int:pk>/send-statement/', views.CustomerSendStatementView.as_view(), name='customer-send-statement'),
     path('purchases/<int:pk>/send-confirmation/', views.PurchaseSendConfirmationView.as_view(), name='purchase-send-confirmation'),

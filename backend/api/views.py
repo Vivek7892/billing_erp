@@ -1261,10 +1261,18 @@ class CategoryViewSet(viewsets.ModelViewSet):
     search_fields = ['name']
 
     def get_queryset(self):
-        return Category.objects.filter(business=self.request.user.business)
+        user = getattr(self.request, 'user', None)
+        if not user or not user.is_authenticated:
+            return Category.objects.none()
+        business = getattr(user, 'business', None)
+        if business:
+            return Category.objects.filter(Q(business=business) | Q(business__isnull=True)).order_by('name')
+        return Category.objects.all().order_by('name')
 
     def perform_create(self, serializer):
-        serializer.save(business=self.request.user.business)
+        user = getattr(self.request, 'user', None)
+        business = getattr(user, 'business', None) if user else None
+        serializer.save(business=business)
 
 
 class SupplierViewSet(viewsets.ModelViewSet):
@@ -2781,8 +2789,14 @@ class InvoiceViewSet(viewsets.ModelViewSet):
                 notes=notes,
                 request=request,
             )
+            updated_invoice.refresh_from_db()
+            from .models import Payment
+            latest_payment = Payment.objects.filter(invoice=updated_invoice).order_by('-created_at').first()
+            resp_data = InvoiceSerializer(updated_invoice, context=self.get_serializer_context()).data
+            if latest_payment:
+                resp_data['latest_payment'] = PaymentSerializer(latest_payment).data
             return Response(
-                InvoiceSerializer(updated_invoice, context=self.get_serializer_context()).data,
+                resp_data,
                 status=status.HTTP_200_OK,
             )
         except ValueError as exc:
@@ -2862,11 +2876,11 @@ class SettingViewSet(viewsets.ModelViewSet):
                 '_address', '_phone', '_email', '_gstin', '_pan', '_summary',
                 '_words', '_status', '_mode', '_due', '_terms', '_footer',
                 '_business_name', '_customer_address', '_place_of_supply',
-                '_stock', '_expiry', '_charge'
+                '_stock', '_expiry', '_charge', '_date'
             ))
         }
         bool_keys.update({
-            'prevent_expired_batch_sale', 'barcode_bold', 'round_off', 'reverse_charge',
+            'auto_email_invoice', 'prevent_expired_batch_sale', 'barcode_bold', 'round_off', 'reverse_charge',
             'hsn_summary_on_invoice', 'cess_enabled', 'upi_qr_enabled', 'advance_payment_enabled',
             'open_cash_drawer', 'print_duplicate', 'einvoice_enabled', 'approval_admin_bypass', 'custom_theme_enabled',
             'approval_refund_enabled', 'approval_stock_adjustment_enabled', 'approval_price_change_enabled',
@@ -2879,8 +2893,10 @@ class SettingViewSet(viewsets.ModelViewSet):
         }
         bool_keys.difference_update(non_bool_keys)
         for key in bool_keys:
-            if key in request.data and str(request.data[key]).lower() not in ('true', 'false', '1', '0', 'yes', 'no'):
-                return Response({'detail': f'{key} must be a boolean.'}, status=400)
+            if key in request.data:
+                val_str = str(request.data[key]).strip().lower()
+                if val_str and val_str not in ('true', 'false', '1', '0', 'yes', 'no'):
+                    return Response({'detail': f'{key} must be a boolean.'}, status=400)
         numeric_rules = {
             'invoice_start_number': (1, None), 'invoice_due_days': (0, 3650),
             'default_gst_rate': (0, 100), 'approval_price_change_pct': (0, 100),
@@ -2890,8 +2906,11 @@ class SettingViewSet(viewsets.ModelViewSet):
         }
         for key, (minimum, maximum) in numeric_rules.items():
             if key in request.data:
+                val_str = str(request.data[key]).strip()
+                if not val_str:
+                    continue
                 try:
-                    number = Decimal(str(request.data[key]))
+                    number = Decimal(val_str)
                     if not number.is_finite() or number < minimum or (maximum is not None and number > maximum):
                         raise ValueError
                     if key in ('invoice_start_number', 'invoice_due_days', 'copies_per_bill', 'reminder_due_days', 'barcode_width', 'barcode_height') and number != number.to_integral_value():
@@ -2908,8 +2927,10 @@ class SettingViewSet(viewsets.ModelViewSet):
             'thermal_paper_width': {'58', '80', '2', '3', '58mm', '80mm'},
         }
         for key, choices in enum_rules.items():
-            if key in request.data and str(request.data[key]).lower() not in choices:
-                return Response({'detail': f'{key} must be one of: {", ".join(sorted(choices))}.'}, status=400)
+            if key in request.data:
+                val_str = str(request.data[key]).strip().lower()
+                if val_str and val_str not in choices:
+                    return Response({'detail': f'{key} must be one of: {", ".join(sorted(choices))}.'}, status=400)
 
         previous = {
             setting.key: setting.value
@@ -3072,6 +3093,7 @@ class SettingViewSet(viewsets.ModelViewSet):
             'show_discount_col': 'true', 'show_hsn_col': 'true',
             'show_sku_col': 'false', 'show_unit_col': 'false',
             'show_batch_col': 'false', 'show_expiry_col': 'false',
+            'show_mfg_date': 'false',
             'show_mrp_col': 'false',
             'show_barcode_col': 'false',
             'show_tax_cols': 'true', 'show_signature_area': 'false',
@@ -3125,7 +3147,7 @@ class SettingViewSet(viewsets.ModelViewSet):
         # Keep every key exposed by the current Settings UI in the server schema,
         # including legacy renderer and print options that have no dedicated model column.
         defaults.update({
-            'invoice_title': 'TAX INVOICE', 'invoice_theme_secondary': '#64748B',
+            'auto_email_invoice': 'true', 'invoice_title': 'TAX INVOICE', 'invoice_theme_secondary': '#64748B',
             'custom_theme_enabled': 'false',
             'invoice_border_style': 'solid', 'invoice_layout': 'standard',
             'invoice_table_style': 'clean', 'invoice_theme_color': '#1e3a5f',
@@ -4621,12 +4643,13 @@ class StockImportTemplateView(APIView):
 class CustomerPaymentViewSet(viewsets.ModelViewSet):
     serializer_class = CustomerPaymentSerializer
     permission_classes = [IsCashierOrAdmin]
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['customer', 'method']
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filterset_fields = ['customer', 'method', 'invoice']
+    search_fields = ['reference', 'customer__name', 'customer__mobile', 'notes', 'invoice__invoice_number']
     ordering = ['-created_at']
 
     def get_queryset(self):
-        return CustomerPayment.objects.select_related('customer').filter(
+        return CustomerPayment.objects.select_related('customer', 'invoice', 'created_by').filter(
             business=self.request.user.business
         )
 
@@ -6174,6 +6197,108 @@ class InvoiceSendWhatsAppView(APIView):
         })
 
 
+class InvoiceSendEmailView(APIView):
+    """
+    Send digital tax invoice with PDF attachment to customer via existing SMTP/Transactional email backend.
+    """
+    permission_classes = [IsCashierOrAdmin]
+
+    def post(self, request, pk):
+        try:
+            invoice = Invoice.objects.select_related('customer', 'business').prefetch_related('items').get(
+                pk=pk, business=request.user.business
+            )
+        except Invoice.DoesNotExist:
+            raise Http404('Invoice not found')
+
+        email = request.data.get('email') or (invoice.customer.email if invoice.customer else '')
+        email = str(email or '').strip()
+        if not email or '@' not in email:
+            return Response(
+                {'detail': 'Customer does not have a valid email address. Please specify one.', 'error': 'email_required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        customer_name = (invoice.customer.name if invoice.customer else invoice.customer_name) or 'Valued Customer'
+        custom_notes = request.data.get('notes')
+
+        from api.emails import async_send_invoice_email
+        async_send_invoice_email(
+            invoice.pk,
+            recipient_email=email,
+            recipient_name=customer_name,
+            custom_notes=custom_notes,
+        )
+
+        audit_event(
+            request,
+            'COMMUNICATION_SENT',
+            'Invoice',
+            invoice.id,
+            entity_name=invoice.invoice_number,
+            after={'channel': 'email', 'recipient': email, 'invoice_number': invoice.invoice_number},
+            reason=f'Tax invoice #{invoice.invoice_number} emailed to {email}',
+        )
+
+        return Response({
+            'status': 'sent',
+            'recipient': email,
+            'invoice_number': invoice.invoice_number,
+            'message': f'Invoice #{invoice.invoice_number} is being emailed to {email}.',
+        })
+
+
+class InvoiceSendEmailView(APIView):
+    """
+    Send digital tax invoice with PDF attachment to customer via existing SMTP/Transactional email backend.
+    """
+    permission_classes = [IsCashierOrAdmin]
+
+    def post(self, request, pk):
+        try:
+            invoice = Invoice.objects.select_related('customer', 'business').prefetch_related('items').get(
+                pk=pk, business=request.user.business
+            )
+        except Invoice.DoesNotExist:
+            raise Http404('Invoice not found')
+
+        email = request.data.get('email') or (invoice.customer.email if invoice.customer else '')
+        email = str(email or '').strip()
+        if not email or '@' not in email:
+            return Response(
+                {'detail': 'Customer does not have a valid email address. Please specify one.', 'error': 'email_required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        customer_name = (invoice.customer.name if invoice.customer else invoice.customer_name) or 'Valued Customer'
+        custom_notes = request.data.get('notes')
+
+        from api.emails import async_send_invoice_email
+        async_send_invoice_email(
+            invoice.pk,
+            recipient_email=email,
+            recipient_name=customer_name,
+            custom_notes=custom_notes,
+        )
+
+        audit_event(
+            request,
+            'COMMUNICATION_SENT',
+            'Invoice',
+            invoice.id,
+            entity_name=invoice.invoice_number,
+            after={'channel': 'email', 'recipient': email, 'invoice_number': invoice.invoice_number},
+            reason=f'Tax invoice #{invoice.invoice_number} emailed to {email}',
+        )
+
+        return Response({
+            'status': 'sent',
+            'recipient': email,
+            'invoice_number': invoice.invoice_number,
+            'message': f'Invoice #{invoice.invoice_number} is being emailed to {email}.',
+        })
+
+
 class CustomerSendReminderView(APIView):
     """
     Send payment reminder to customer with outstanding balance and short bill link.
@@ -6253,6 +6378,57 @@ class CustomerSendReminderView(APIView):
             'whatsapp_url': whatsapp_url,
             'message': body,
             'log': CommunicationLogSerializer(log).data,
+        })
+
+
+class InvoiceSendEmailView(APIView):
+    """
+    Send digital tax invoice with PDF attachment to customer via existing SMTP/Transactional email backend.
+    """
+    permission_classes = [IsCashierOrAdmin]
+
+    def post(self, request, pk):
+        try:
+            invoice = Invoice.objects.select_related('customer', 'business').prefetch_related('items').get(
+                pk=pk, business=request.user.business
+            )
+        except Invoice.DoesNotExist:
+            raise Http404('Invoice not found')
+
+        email = request.data.get('email') or (invoice.customer.email if invoice.customer else '')
+        email = str(email or '').strip()
+        if not email or '@' not in email:
+            return Response(
+                {'detail': 'Customer does not have a valid email address. Please specify one.', 'error': 'email_required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        customer_name = (invoice.customer.name if invoice.customer else invoice.customer_name) or 'Valued Customer'
+        custom_notes = request.data.get('notes')
+
+        from api.emails import async_send_invoice_email
+        async_send_invoice_email(
+            invoice.pk,
+            recipient_email=email,
+            recipient_name=customer_name,
+            custom_notes=custom_notes,
+        )
+
+        audit_event(
+            request,
+            'COMMUNICATION_SENT',
+            'Invoice',
+            invoice.id,
+            entity_name=invoice.invoice_number,
+            after={'channel': 'email', 'recipient': email, 'invoice_number': invoice.invoice_number},
+            reason=f'Tax invoice #{invoice.invoice_number} emailed to {email}',
+        )
+
+        return Response({
+            'status': 'sent',
+            'recipient': email,
+            'invoice_number': invoice.invoice_number,
+            'message': f'Invoice #{invoice.invoice_number} is being emailed to {email}.',
         })
 
 
@@ -6343,6 +6519,57 @@ class CustomerSendStatementView(APIView):
             'whatsapp_url': whatsapp_url,
             'message': body,
             'log': CommunicationLogSerializer(log).data,
+        })
+
+
+class InvoiceSendEmailView(APIView):
+    """
+    Send digital tax invoice with PDF attachment to customer via existing SMTP/Transactional email backend.
+    """
+    permission_classes = [IsCashierOrAdmin]
+
+    def post(self, request, pk):
+        try:
+            invoice = Invoice.objects.select_related('customer', 'business').prefetch_related('items').get(
+                pk=pk, business=request.user.business
+            )
+        except Invoice.DoesNotExist:
+            raise Http404('Invoice not found')
+
+        email = request.data.get('email') or (invoice.customer.email if invoice.customer else '')
+        email = str(email or '').strip()
+        if not email or '@' not in email:
+            return Response(
+                {'detail': 'Customer does not have a valid email address. Please specify one.', 'error': 'email_required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        customer_name = (invoice.customer.name if invoice.customer else invoice.customer_name) or 'Valued Customer'
+        custom_notes = request.data.get('notes')
+
+        from api.emails import async_send_invoice_email
+        async_send_invoice_email(
+            invoice.pk,
+            recipient_email=email,
+            recipient_name=customer_name,
+            custom_notes=custom_notes,
+        )
+
+        audit_event(
+            request,
+            'COMMUNICATION_SENT',
+            'Invoice',
+            invoice.id,
+            entity_name=invoice.invoice_number,
+            after={'channel': 'email', 'recipient': email, 'invoice_number': invoice.invoice_number},
+            reason=f'Tax invoice #{invoice.invoice_number} emailed to {email}',
+        )
+
+        return Response({
+            'status': 'sent',
+            'recipient': email,
+            'invoice_number': invoice.invoice_number,
+            'message': f'Invoice #{invoice.invoice_number} is being emailed to {email}.',
         })
 
 

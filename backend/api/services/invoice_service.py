@@ -1,4 +1,7 @@
+import logging
 from decimal import Decimal
+
+logger = logging.getLogger(__name__)
 
 from django.db import transaction
 from django.db.models import Sum
@@ -147,10 +150,10 @@ class InvoiceService:
                     barcode=product.barcode,
                     unit=product.unit,
                     hsn_code=item_data.get('hsn_code', product.hsn_code),
-                    batch_number=batch.batch_number if batch else '',
-                    manufacturing_date=batch.manufacturing_date if batch else None,
-                    expiry_date=batch.expiry_date if batch else None,
-                    mrp=batch.mrp if batch else product.mrp,
+                    batch_number=batch.batch_number if batch else (item_data.get('batch_number') or ''),
+                    manufacturing_date=batch.manufacturing_date if batch else item_data.get('manufacturing_date'),
+                    expiry_date=batch.expiry_date if batch else item_data.get('expiry_date'),
+                    mrp=batch.mrp if batch else (item_data.get('mrp') or product.mrp),
                     quantity=line.quantity,
                     unit_price=line.unit_price,
                     cost_price=product.purchase_price,
@@ -232,6 +235,31 @@ class InvoiceService:
                     invoice.id,
                     after={'invoice_number': invoice.invoice_number, 'grand_total': invoice.grand_total},
                 )
+
+            # Automatic Email Delivery to Customer using existing SMTP
+            try:
+                target_customer = customer or invoice.customer
+                target_email = ""
+                if target_customer and getattr(target_customer, 'email', None):
+                    target_email = str(target_customer.email).strip()
+                if not target_email and attributes.get('customer_email'):
+                    target_email = str(attributes.get('customer_email')).strip()
+
+                if target_email and '@' in target_email:
+                    auto_email_setting = Setting.objects.filter(
+                        business=business,
+                        key='auto_email_invoice',
+                    ).first()
+                    is_auto_email_enabled = not auto_email_setting or auto_email_setting.value.lower() in ('true', '1', 'yes')
+                    if is_auto_email_enabled:
+                        from api.emails import async_send_invoice_email
+                        async_send_invoice_email(
+                            invoice.pk,
+                            recipient_email=target_email,
+                            recipient_name=invoice.customer_name or (target_customer.name if target_customer else None),
+                        )
+            except Exception as email_err:
+                logger.warning("Could not schedule automatic invoice email for %s: %s", invoice.invoice_number, email_err)
 
         return invoice
 
@@ -368,6 +396,12 @@ class InvoiceService:
             valid_methods = {choice[0] for choice in Payment.METHOD_CHOICES}
             pay_method = method if method in valid_methods else 'cash'
 
+            clean_reference = (reference or '').strip()
+            if not clean_reference:
+                import uuid
+                from django.utils import timezone
+                clean_reference = f"TXN-{timezone.now().strftime('%y%m%d%H%M')}-{uuid.uuid4().hex[:4].upper()}"
+
             if invoice.customer_id:
                 from .payment_service import PaymentService
                 PaymentService.record_customer_payment(
@@ -375,8 +409,8 @@ class InvoiceService:
                         'customer': invoice.customer,
                         'invoice': invoice,
                         'amount': amount,
-                        'method': method,
-                        'reference': reference,
+                        'method': pay_method,
+                        'reference': clean_reference,
                         'notes': notes,
                     },
                     business=business,
@@ -390,7 +424,7 @@ class InvoiceService:
                     customer_payment=None,
                     method=pay_method,
                     amount=amount,
-                    reference=reference,
+                    reference=clean_reference,
                 )
                 invoice.paid_amount += amount
                 invoice.balance_due = max(Decimal('0'), invoice.grand_total - invoice.paid_amount)

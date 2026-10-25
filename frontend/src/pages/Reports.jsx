@@ -33,6 +33,7 @@ import {
   CartesianGrid,
 } from 'recharts'
 import toast from 'react-hot-toast'
+import { MobileKpiGrid } from '../components/MobileUI'
 
 /* ============================================================
    FORMATTING UTILITIES
@@ -700,8 +701,25 @@ function SalesReportView({ data }) {
 
   return (
     <div className="space-y-4">
-      {/* Executive Summary Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+      {/* Mobile KPI Grid */}
+      <MobileKpiGrid
+        title="Sales Overview"
+        primaryKpis={[
+          { label: 'Net Sales', value: fmtCurrency(summary.net_sales || totalSales), tone: 'text-teal-700 dark:text-teal-400' },
+          { label: 'Collections', value: fmtCurrency(summary.collection), tone: 'text-emerald-700 dark:text-emerald-400' },
+          { label: 'Total Invoices', value: fmtNumber(totalInvoices), tone: 'text-[var(--ink)]' },
+          { label: 'Outstanding', value: fmtCurrency(summary.outstanding), tone: Number(summary.outstanding || 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-[var(--muted)]' },
+        ]}
+        secondaryKpis={[
+          { label: 'Gross Sales', value: fmtCurrency(totalSales), tone: 'text-[var(--ink)]' },
+          { label: 'Output GST', value: fmtCurrency(summary.total_tax), tone: 'text-[var(--ink-secondary)]' },
+          { label: 'Total Discounts', value: fmtCurrency(summary.total_discount), tone: 'text-rose-600 dark:text-rose-400' },
+          { label: 'Returns', value: fmtCurrency(summary.returns), tone: 'text-[var(--muted)]' },
+        ]}
+      />
+
+      {/* Desktop Executive Summary Table */}
+      <div className="hidden md:block overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
         <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--surface-subtle)] flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
             Sales Performance Overview
@@ -883,8 +901,18 @@ function ProductReportView({ data }) {
 
   return (
     <div className="space-y-4">
+      {/* Mobile KPI Grid */}
+      <MobileKpiGrid
+        title="Products Overview"
+        primaryKpis={[
+          { label: 'Unique Items', value: fmtNumber(rows.length), tone: 'text-[var(--ink)]' },
+          { label: 'Units Sold', value: fmtNumber(totalQty), tone: 'text-indigo-600 dark:text-indigo-400' },
+          { label: 'Total Revenue', value: fmtCurrency(totalRevenue), tone: 'text-teal-700 dark:text-teal-400' },
+        ]}
+      />
+
       {/* Product Summary Overview */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+      <div className="hidden md:block overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
         <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--surface-subtle)] flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
             Product Sales Performance Summary
@@ -1002,8 +1030,25 @@ function ProfitReportView({ data }) {
 
   return (
     <div className="space-y-4">
-      {/* Executive Financial Statement Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+      {/* Mobile KPI Grid */}
+      <MobileKpiGrid
+        title="Financial Overview"
+        primaryKpis={[
+          { label: 'Net Profit', value: fmtCurrency(netProfit), tone: 'text-teal-700 dark:text-teal-400' },
+          { label: 'Net Revenue', value: fmtCurrency(netRevenue), tone: 'text-[var(--ink)]' },
+          { label: 'Gross Profit', value: fmtCurrency(grossProfit), tone: 'text-emerald-700 dark:text-emerald-400' },
+          { label: 'Expenses', value: fmtCurrency(expenses), tone: 'text-rose-700 dark:text-rose-400' },
+        ]}
+        secondaryKpis={[
+          { label: 'COGS', value: fmtCurrency(cogs), tone: 'text-[var(--muted)]' },
+          { label: 'Gross Margin', value: `${grossMargin}%`, tone: 'text-teal-700 dark:text-teal-400' },
+          { label: 'Net Margin', value: `${netMargin}%`, tone: 'text-teal-700 dark:text-teal-400' },
+          { label: 'Returns', value: fmtCurrency(returns), tone: 'text-[var(--muted)]' },
+        ]}
+      />
+
+      {/* Desktop Executive Financial Statement Table */}
+      <div className="hidden md:block overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
         <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--surface-subtle)] flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
             Profit &amp; Loss Statement Overview
@@ -1179,8 +1224,19 @@ function GSTReportView({ data }) {
 
   return (
     <div className="space-y-4">
-      {/* GST Executive Liability Overview */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+      {/* Mobile KPI Grid */}
+      <MobileKpiGrid
+        title="GST Overview"
+        primaryKpis={[
+          { label: 'Total Output GST', value: fmtCurrency(totalTax), tone: 'text-teal-700 dark:text-teal-400' },
+          { label: 'Taxable Turnover', value: fmtCurrency(totalTaxable), tone: 'text-[var(--ink)]' },
+          { label: 'CGST', value: fmtCurrency(totalCgst), tone: 'text-[var(--ink-secondary)]' },
+          { label: 'SGST', value: fmtCurrency(totalSgst), tone: 'text-[var(--ink-secondary)]' },
+        ]}
+      />
+
+      {/* Desktop GST Executive Liability Overview */}
+      <div className="hidden md:block overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
         <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--surface-subtle)] flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
             GST Output Tax Liability (GSTR-1 Format)
@@ -1323,8 +1379,17 @@ function CustomerReportView({ data }) {
 
   return (
     <div className="space-y-4">
-      {/* Executive Receivables Summary */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+      {/* Mobile KPI Grid */}
+      <MobileKpiGrid
+        title="Credit Overview"
+        primaryKpis={[
+          { label: 'Outstanding Due', value: fmtCurrency(totalOutstanding), tone: 'text-rose-700 dark:text-rose-400' },
+          { label: 'Customers with Due', value: fmtNumber(rows.length), tone: 'text-amber-700 dark:text-amber-400' },
+        ]}
+      />
+
+      {/* Desktop Executive Receivables Summary */}
+      <div className="hidden md:block overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
         <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--surface-subtle)] flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
             Receivables Summary
@@ -1433,8 +1498,17 @@ function PaymentReportView({ data }) {
 
   return (
     <div className="space-y-4">
-      {/* Executive Payment Summary */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+      {/* Mobile KPI Grid */}
+      <MobileKpiGrid
+        title="Collections Overview"
+        primaryKpis={[
+          { label: 'Total Collections', value: fmtCurrency(totalAmount), tone: 'text-teal-700 dark:text-teal-400' },
+          { label: 'Transactions', value: fmtNumber(totalCount), tone: 'text-[var(--ink)]' },
+        ]}
+      />
+
+      {/* Desktop Executive Payment Summary */}
+      <div className="hidden md:block overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
         <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--surface-subtle)] flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
             Total Collections Summary
@@ -1560,8 +1634,18 @@ function ExpenseReportView({ data }) {
 
   return (
     <div className="space-y-4">
-      {/* Executive Summary Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+      {/* Mobile KPI Grid */}
+      <MobileKpiGrid
+        title="Expenses Overview"
+        primaryKpis={[
+          { label: 'Total Expenses', value: fmtCurrency(totalExpenses), tone: 'text-rose-700 dark:text-rose-400' },
+          { label: 'Entries', value: fmtNumber(totalCount), tone: 'text-[var(--ink)]' },
+          { label: 'Avg per Entry', value: fmtCurrency(avgAmount), tone: 'text-[var(--ink-secondary)]' },
+        ]}
+      />
+
+      {/* Desktop Executive Summary Table */}
+      <div className="hidden md:block overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
         <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--surface-subtle)] flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
             Operating Expenses Summary
