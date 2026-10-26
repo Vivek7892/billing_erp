@@ -24,7 +24,8 @@ def default_short_link_expiry():
 
 
 def generate_public_token():
-    return secrets.token_urlsafe(24)
+    chars = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(chars) for _ in range(8))
 
 
 class Business(models.Model):
@@ -371,40 +372,34 @@ class Invoice(models.Model):
         return self.get_short_url(request=request)
 
     def get_short_url(self, request=None):
-        """Return the canonical 6-character short link URL for this invoice (e.g. /s/x3gIro/)."""
-        link = self.short_links.filter(expires_at__gt=timezone.now()).first()
-        if not link:
+        """Return the canonical short and simple public bill URL for this invoice."""
+        if not self.public_token:
+            self.public_token = generate_public_token()
+            self.save(update_fields=['public_token'])
+
+        # Ensure ShortLink record exists for backward compatibility with /s/ codes
+        if not self.short_links.filter(expires_at__gt=timezone.now()).exists():
             for _ in range(5):
                 try:
-                    link = ShortLink.objects.create(invoice=self)
+                    ShortLink.objects.create(invoice=self)
                     break
                 except IntegrityError:
-                    link = None
-        if not link:
-            raise RuntimeError('Could not create a public short link for the invoice.')
+                    pass
+
         from decouple import config as env
         from django.conf import settings
 
+        # 1. Configured public share domain (e.g. https://share.dreamwithtech.dev)
         public_share_url = getattr(settings, 'PUBLIC_SHARE_URL', None) or env('PUBLIC_SHARE_URL', default='').strip().rstrip('/')
         if public_share_url:
-            return f"{public_share_url}/bill/{self.public_token}"
+            return f"{public_share_url}/b/{self.public_token}"
 
-        if request:
-            try:
-                from django.urls import reverse
-                return request.build_absolute_uri(reverse('invoice-short-link', kwargs={'code': link.code}))
-            except Exception:
-                pass
+        # 2. Local development fallback
+        if getattr(settings, 'DEBUG', False):
+            return f"http://localhost:3000/b/{self.public_token}"
 
-        backend_url = getattr(settings, 'BACKEND_URL', None) or env('BACKEND_URL', default='').strip().rstrip('/')
-        if backend_url:
-            return f"{backend_url}/s/{link.code}/"
-
-        frontend_url = getattr(settings, 'FRONTEND_URL', None) or env(
-            'FRONTEND_URL',
-            default='http://localhost:3000' if getattr(settings, 'DEBUG', False) else 'https://app.dreamwithtech.dev'
-        ).rstrip('/')
-        return f"{frontend_url}/bill/{self.public_token}"
+        # 3. Production fallback to share domain
+        return f"https://share.dreamwithtech.dev/b/{self.public_token}"
 
     def __str__(self):
         return self.invoice_number

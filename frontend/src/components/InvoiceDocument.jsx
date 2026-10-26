@@ -359,7 +359,7 @@ export default function InvoiceDocument({
     : isTrue(tPayment.show_digital_bill_qr !== undefined ? tPayment.show_digital_bill_qr : s.enable_invoice_qr, true)
   const shareDomain = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PUBLIC_SHARE_URL) || (typeof window !== 'undefined' ? window.location.origin : '')
   const digitalBillUrl = inv.short_url
-    || (inv.public_token && shareDomain ? `${shareDomain}/bill/${inv.public_token}` : (shareDomain ? `${shareDomain}/bill/${inv.id || 'preview'}` : ''))
+    || (inv.public_token && shareDomain ? `${shareDomain}/b/${inv.public_token}` : (shareDomain ? `${shareDomain}/b/${inv.id || 'preview'}` : ''))
 
   // Notes, Terms & Footer
   const notesText = inv.notes || s.invoice_notes || ''

@@ -106,9 +106,9 @@ export function normalizeThermalSettings(rawSettings = {}, invoice = null) {
   if (inv.short_url) {
     digitalBillUrl = inv.short_url
   } else if (inv.public_token && shareDomain) {
-    digitalBillUrl = `${shareDomain}/bill/${inv.public_token}`
+    digitalBillUrl = `${shareDomain}/b/${inv.public_token}`
   } else if (inv.id && shareDomain && !String(inv.id).includes('preview')) {
-    digitalBillUrl = `${shareDomain}/bill/${inv.id}`
+    digitalBillUrl = `${shareDomain}/b/${inv.id}`
   }
 
   // Terms & Footer

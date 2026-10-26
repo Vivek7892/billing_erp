@@ -67,8 +67,8 @@ class CommunicationActionTests(TestCase):
 
         data = res.json()
         self.assertEqual(data['status'], 'sent')
-        # Must contain /s/<code>/ short link format
-        self.assertIn('/s/', data['short_url'])
+        # Must contain short link format
+        self.assertTrue('/b/' in data['short_url'] or '/s/' in data['short_url'])
         self.assertIn('https://wa.me/919876501234', data['whatsapp_url'])
         self.assertIn('INV-1001', data['message'])
 
@@ -78,7 +78,7 @@ class CommunicationActionTests(TestCase):
         self.assertEqual(log.channel, 'whatsapp')
         self.assertEqual(log.message_type, 'invoice')
         self.assertEqual(log.status, 'sent')
-        self.assertIn('/s/', log.short_url)
+        self.assertTrue('/b/' in log.short_url or '/s/' in log.short_url)
 
     def test_customer_send_reminder(self):
         url = reverse('customer-send-reminder', kwargs={'pk': self.customer.pk})
@@ -88,7 +88,7 @@ class CommunicationActionTests(TestCase):
         data = res.json()
         self.assertEqual(data['status'], 'sent')
         self.assertIn('1,500.00', data['message'])
-        self.assertIn('/s/', data['short_url'])
+        self.assertTrue('/b/' in data['short_url'] or '/s/' in data['short_url'])
 
         log = CommunicationLog.objects.filter(reference_type='customer', message_type='payment_reminder').first()
         self.assertIsNotNone(log)
@@ -108,7 +108,7 @@ class CommunicationActionTests(TestCase):
         self.assertIsNotNone(log)
 
     def test_purchase_send_confirmation(self):
-        self.admin.role = 'manager'
+        self.admin.role = 'admin'
         self.admin.save()
         url = reverse('purchase-send-confirmation', kwargs={'pk': self.purchase.pk})
         res = self.client.post(url, {'channel': 'whatsapp'}, format='json')

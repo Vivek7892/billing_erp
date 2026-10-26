@@ -1,14 +1,14 @@
 {
   "id": "/",
-  "name": "Sri Balaji Store Billing",
-  "short_name": "Sri Balaji",
-  "description": "Billing, inventory, and business management for Sri Balaji Store.",
+  "name": "Dreamwithtech Billing ERP",
+  "short_name": "Dreamwithtech",
+  "description": "Billing, inventory, and business management ERP.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#f8fafc",
-  "theme_color": "#ef303a",
+  "theme_color": "#1597d4",
   "icons": [
     {
       "src": "/pwa-192.png",

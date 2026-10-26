@@ -148,8 +148,8 @@ function AppRoutes() {
       {/* Authentication & Public Pages */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/verify-otp" element={<VerifyOTP />} />
-      <Route path="/verify-email" element={<VerifyOTP />} />
+      <Route path="/verify-otp" element={<Navigate to="/login" replace />} />
+      <Route path="/verify-email" element={<Navigate to="/login" replace />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
@@ -405,6 +405,10 @@ function AppRoutes() {
       />
 
       {/* Public Digital Bill Route (Customer Scanning QR Code / Share Link) */}
+      <Route
+        path="/b/:token"
+        element={<PublicBill />}
+      />
       <Route
         path="/bill/:token"
         element={<PublicBill />}

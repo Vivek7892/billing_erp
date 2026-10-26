@@ -152,15 +152,9 @@ export default function Register() {
         terms_accepted: true,
       }
 
-      const res = await register(payload)
-
-      if (res?.require_verification) {
-        toast.success('Account created! Please verify your email.')
-        navigate(`/verify-otp?identifier=${encodeURIComponent(res.identifier)}&purpose=signup`)
-      } else {
-        toast.success('Account created! Welcome to Dreamwithtech.')
-        navigate('/onboarding', { replace: true })
-      }
+      await register(payload)
+      toast.success('Account created! Welcome to Dreamwithtech.')
+      navigate('/onboarding', { replace: true })
     } catch (error) {
       const data = error?.response?.data
       if (data && typeof data === 'object') {

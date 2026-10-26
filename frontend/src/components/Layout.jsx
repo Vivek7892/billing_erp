@@ -1194,7 +1194,7 @@ export default function Layout({ children }) {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const [quickActionOpen, setQuickActionOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
-  const [shopName, setShopName] = useState('Dreamwithtech')
+  const [shopName, setShopName] = useState(() => user?.business_name || 'Dreamwithtech')
   const [shopPhone, setShopPhone] = useState('')
   const [shopLogo, setShopLogo] = useState('')
   const [activePageLoaders, setActivePageLoaders] = useState(() => new Set())
@@ -1209,20 +1209,47 @@ export default function Layout({ children }) {
   }, [])
 
   useEffect(() => {
+    if (user?.business_name) {
+      setShopName(prev => (!prev || prev === 'Dreamwithtech' ? user.business_name : prev))
+    }
+  }, [user?.business_name])
+
+  useEffect(() => {
     api.get('/settings/all/').then(response => {
-      if (response.data?.shop_name) setShopName(response.data.shop_name)
+      const name = response.data?.shop_name || user?.business_name
+      if (name) setShopName(name)
       if (response.data?.shop_phone) setShopPhone(response.data.shop_phone)
       if (response.data?.shop_logo) setShopLogo(response.data.shop_logo)
     }).catch(() => {})
 
     const onUpdate = e => {
-      if (e.detail?.shop_logo) setShopLogo(e.detail.shop_logo)
-      if (e.detail?.shop_name) setShopName(e.detail.shop_name)
-      if (e.detail?.shop_phone) setShopPhone(e.detail.shop_phone)
+      if (e?.detail?.shop_logo) setShopLogo(e.detail.shop_logo)
+      if (e?.detail?.shop_name) setShopName(e.detail.shop_name)
+      if (e?.detail?.shop_phone) setShopPhone(e.detail.shop_phone)
+      if (!e?.detail) {
+        api.get('/settings/all/').then(res => {
+          const name = res.data?.shop_name || user?.business_name
+          if (name) setShopName(name)
+          if (res.data?.shop_phone) setShopPhone(res.data.shop_phone)
+          if (res.data?.shop_logo) setShopLogo(res.data.shop_logo)
+        }).catch(() => {})
+      }
     }
     window.addEventListener('shop-settings-updated', onUpdate)
     return () => window.removeEventListener('shop-settings-updated', onUpdate)
-  }, [])
+  }, [user?.business_name])
+
+  // Dynamically sync browser document title to user's updated store/company name
+  useEffect(() => {
+    const meta = getPageMeta(location.pathname)
+    const pageTitle = meta?.label || ''
+    const currentStore = shopName || user?.business_name || 'Dreamwithtech'
+    if (pageTitle && pageTitle !== 'Dashboard') {
+      document.title = `${pageTitle} • ${currentStore}`
+    } else {
+      document.title = `${currentStore} • POS & Retail ERP`
+    }
+  }, [shopName, location.pathname, user?.business_name])
 
   useEffect(() => {
     if (mainRef.current) mainRef.current.scrollTop = 0

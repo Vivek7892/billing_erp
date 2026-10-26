@@ -581,40 +581,6 @@ class RegisterView(APIView):
                 user=user
             )
 
-        require_verification = getattr(settings, 'REQUIRE_OTP_VERIFICATION', False) or getattr(settings, 'REQUIRE_EMAIL_VERIFICATION', False)
-
-        if require_verification:
-            otp = f"{secrets.randbelow(900000) + 100000}"
-            now = timezone.now()
-            expires_at = now + timedelta(minutes=10)
-
-            # Invalidate any old unused signup OTPs for this email to prevent race conditions
-            OTPRecord.objects.filter(
-                identifier=user.email.lower(),
-                purpose='signup',
-                is_used=False
-            ).update(is_used=True)
-
-            OTPRecord.objects.create(
-                identifier=user.email.lower(),
-                purpose='signup',
-                otp_hash=OTPRecord.hash_otp(otp),
-                expires_at=expires_at,
-                last_resend_at=now,
-                resend_count=0
-            )
-
-            # Asynchronously send registration alert to admin and OTP code to user
-            from api.emails import async_send_otp_verification_email
-            _send_registration_notification_email(user, request)
-            async_send_otp_verification_email(user, otp, purpose='signup')
-
-            return Response({
-                'require_verification': True,
-                'identifier': user.email,
-                'message': 'Account created. Please verify your email with the code sent.'
-            }, status=status.HTTP_201_CREATED)
-
         user.is_verified = True
         user.save(update_fields=['is_verified'])
         _send_registration_notification_email(user, request)
@@ -1011,36 +977,25 @@ class PasswordResetRequestView(APIView):
 
         user = User.objects.filter(email__iexact=email, is_active=True).first()
         if user:
-            now = timezone.now()
-            recent = OTPRecord.objects.filter(
-                identifier=user.email.lower(),
-                purpose='reset'
-            ).order_by('-created_at').first()
+            from django.utils.http import urlsafe_base64_encode
+            from django.utils.encoding import force_bytes
+            from django.contrib.auth.tokens import default_token_generator
+            from api.emails import async_send_password_reset_email
 
-            last_sent = (recent.last_resend_at or recent.created_at) if recent else None
-            # Enforce 60-second cooldown on reset requests
-            if not last_sent or (now - last_sent).total_seconds() >= 60:
-                otp = f"{secrets.randbelow(900000) + 100000}"
-                with transaction.atomic():
-                    OTPRecord.objects.filter(
-                        identifier=user.email.lower(),
-                        purpose='reset',
-                        is_used=False
-                    ).update(is_used=True)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
 
-                    OTPRecord.objects.create(
-                        identifier=user.email.lower(),
-                        purpose='reset',
-                        otp_hash=OTPRecord.hash_otp(otp),
-                        expires_at=now + timedelta(minutes=10),
-                        last_resend_at=now
-                    )
+            frontend_url = getattr(
+                settings,
+                'FRONTEND_URL',
+                'http://localhost:3000' if getattr(settings, 'DEBUG', False) else 'https://app.dreamwithtech.dev'
+            ).rstrip('/')
 
-                    from api.emails import async_send_otp_verification_email
-                    async_send_otp_verification_email(user, otp, purpose='reset')
+            reset_link = f"{frontend_url}/reset-password?uid={uid}&token={token}"
+            async_send_password_reset_email(user, reset_link)
 
         return Response({
-            'detail': 'If an account exists with that email, a password reset code has been sent.'
+            'detail': 'If an account exists with that email, a password reset link has been sent.'
         })
 
 
@@ -1059,13 +1014,27 @@ class PasswordResetConfirmView(APIView):
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             return Response({'error': 'Password reset verification is invalid or has expired.'}, status=400)
 
-        try:
-            reset_grant = signing.loads(v['token'], salt='password-reset-otp', max_age=600)
-        except signing.BadSignature:
-            return Response({'error': 'Password reset verification is invalid or has expired.'}, status=400)
+        from django.contrib.auth.tokens import default_token_generator
+        token_valid = default_token_generator.check_token(user, v['token'])
 
-        if str(reset_grant.get('user_id')) != str(user.pk) or reset_grant.get('password') != user.password:
-            return Response({'error': 'Password reset verification is invalid or has expired.'}, status=400)
+        if not token_valid:
+            try:
+                reset_grant = signing.loads(v['token'], salt='password-reset-otp', max_age=1800)
+                if str(reset_grant.get('user_id')) == str(user.pk) and reset_grant.get('password') == user.password:
+                    token_valid = True
+            except (signing.BadSignature, Exception):
+                pass
+
+        if not token_valid:
+            try:
+                reset_grant = signing.loads(v['token'], salt='password-reset-token', max_age=1800)
+                if str(reset_grant.get('user_id')) == str(user.pk) and reset_grant.get('password') == user.password:
+                    token_valid = True
+            except (signing.BadSignature, Exception):
+                pass
+
+        if not token_valid:
+            return Response({'error': 'Password reset link is invalid or has expired. Please request a new link.'}, status=400)
 
         user.set_password(v['new_password'])
         user.save()
@@ -1076,7 +1045,7 @@ class PasswordResetConfirmView(APIView):
             'User',
             entity_id=user.id,
             entity_name=user.username,
-            reason='Password reset after email OTP verification',
+            reason='Password reset with token verification',
             result='success',
             user=user
         )
@@ -4135,7 +4104,7 @@ class PublicInvoiceShortLinkView(APIView):
                 default='http://localhost:3000' if getattr(settings, 'DEBUG', False) else 'https://share.dreamwithtech.dev'
             )
         ).rstrip('/')
-        return HttpResponseRedirect(f"{share_url}/bill/{link.invoice.public_token}")
+        return HttpResponseRedirect(f"{share_url}/b/{link.invoice.public_token}")
 
 
 class PublicBillDetailView(APIView):
@@ -4145,11 +4114,10 @@ class PublicBillDetailView(APIView):
     throttle_classes = [AnonRateThrottle]
 
     def get(self, request, token):
-        try:
-            invoice = Invoice.objects.select_related('customer', 'business', 'created_by').prefetch_related(
-                'items__product', 'payments'
-            ).get(public_token=token)
-        except Invoice.DoesNotExist:
+        invoice = Invoice.objects.select_related('customer', 'business', 'created_by').prefetch_related(
+            'items__product', 'payments'
+        ).filter(Q(public_token=token) | Q(short_links__code=token)).distinct().first()
+        if not invoice:
             raise Http404('This digital bill was not found or the link is invalid.')
 
         # Fetch business public settings
@@ -4284,11 +4252,10 @@ class PublicBillDocumentView(APIView):
     throttle_classes = [AnonRateThrottle]
 
     def get(self, request, token):
-        try:
-            invoice = Invoice.objects.select_related('customer', 'business').prefetch_related(
-                'items', 'payments'
-            ).get(public_token=token)
-        except Invoice.DoesNotExist:
+        invoice = Invoice.objects.select_related('customer', 'business').prefetch_related(
+            'items', 'payments'
+        ).filter(Q(public_token=token) | Q(short_links__code=token)).distinct().first()
+        if not invoice:
             raise Http404('This digital bill was not found or the link is invalid.')
 
         return _invoice_pdf_response(

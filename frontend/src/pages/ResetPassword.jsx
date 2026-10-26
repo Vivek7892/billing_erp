@@ -48,7 +48,7 @@ export default function ResetPassword() {
     e.preventDefault()
 
     if (!uid || !token) {
-      setErrors({ form: 'Password reset verification is missing or expired. Request a new code to continue.' })
+      setErrors({ form: 'Password reset link is invalid or has expired. Please request a new link.' })
       return
     }
 
@@ -254,7 +254,7 @@ export default function ResetPassword() {
 
             <div className="login-security-note">
               <IconShieldCheck size={15} aria-hidden="true" />
-              <span>Password reset is available only after email OTP verification.</span>
+              <span>Password reset link is valid for 15 minutes.</span>
             </div>
           </div>
 

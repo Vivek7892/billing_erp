@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import {
   IconMail,
   IconShieldCheck,
+  IconCircleCheck,
 } from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 import http from '../api'
@@ -13,6 +14,7 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [submitted, setSubmitted] = useState(false)
   const navigate = useNavigate()
 
   const handleSubmit = async e => {
@@ -62,6 +64,40 @@ export default function ForgotPassword() {
               <p>Enter the email address registered with your business account.</p>
             </div>
 
+            {submitted ? (
+              <div className="login-form space-y-4">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 text-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-200">
+                  <div className="flex items-center gap-2 font-bold text-sm text-emerald-800 dark:text-emerald-300">
+                    <IconCircleCheck size={18} className="shrink-0" />
+                    <span>Password Reset Link Sent</span>
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-emerald-700 dark:text-emerald-300/90">
+                    If an account is associated with <strong>{email}</strong>, you will receive an email containing a secure link to reset your password.
+                  </p>
+                  <p className="mt-2 text-[11px] text-emerald-600 dark:text-emerald-400">
+                    The link will expire in 15 minutes. Check your inbox and spam folder.
+                  </p>
+                </div>
+
+                <Link
+                  to="/login"
+                  className="login-submit text-center flex items-center justify-center gap-2"
+                >
+                  Return to Sign In
+                </Link>
+
+                <div className="login-switch-action">
+                  <span>Didn't receive the email?</span>{' '}
+                  <button
+                    type="button"
+                    onClick={() => { setSubmitted(false); setError('') }}
+                    className="login-switch-link text-xs underline font-semibold"
+                  >
+                    Try another email address
+                  </button>
+                </div>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} noValidate className="login-form">
                 {error && <div className="login-form-error" role="alert">{error}</div>}
 
@@ -87,10 +123,10 @@ export default function ForgotPassword() {
                   {loading ? (
                     <>
                       <span className="login-spinner" aria-hidden="true" />
-                      Sending verification code...
+                      Sending reset link...
                     </>
                   ) : (
-                    'Send Verification Code'
+                    'Send Password Reset Link'
                   )}
                 </button>
 
@@ -101,10 +137,11 @@ export default function ForgotPassword() {
                   </Link>
                 </div>
             </form>
+            )}
 
             <div className="login-security-note">
               <IconShieldCheck size={15} aria-hidden="true" />
-              <span>Your verification code expires in 10 minutes.</span>
+              <span>Password reset links expire in 15 minutes.</span>
             </div>
           </div>
 
@@ -123,7 +160,7 @@ export default function ForgotPassword() {
           <span>ACCOUNT RECOVERY</span>
           <h2>Get back into your workspace securely.</h2>
           <p>
-            We will send a one-time code to your registered email. Verify it to choose a new password.
+            We will send a secure reset link to your registered email. Click the link to choose a new password.
           </p>
           <small>Dreamwithtech Enterprise Technologies &copy; {new Date().getFullYear()}</small>
         </div>
