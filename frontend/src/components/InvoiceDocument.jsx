@@ -357,9 +357,9 @@ export default function InvoiceDocument({
   const showDigitalBillQr = effectiveMode === 'thermal'
     ? isTrue(s.thermal_show_bill_qr, false)
     : isTrue(tPayment.show_digital_bill_qr !== undefined ? tPayment.show_digital_bill_qr : s.enable_invoice_qr, true)
+  const shareDomain = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PUBLIC_SHARE_URL) || (typeof window !== 'undefined' ? window.location.origin : '')
   const digitalBillUrl = inv.short_url
-    || (inv.public_token ? `${window.location.origin}/bill/${inv.public_token}` : `${window.location.origin}/bill/${inv.id || 'preview'}`)
-    || (inv.id ? `http://127.0.0.1:8000/s/${inv.public_token ? inv.public_token.slice(0, 6) : inv.id}/` : '')
+    || (inv.public_token && shareDomain ? `${shareDomain}/bill/${inv.public_token}` : (shareDomain ? `${shareDomain}/bill/${inv.id || 'preview'}` : ''))
 
   // Notes, Terms & Footer
   const notesText = inv.notes || s.invoice_notes || ''

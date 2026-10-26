@@ -56,7 +56,11 @@ ALLOWED_HOSTS = [
             'localhost,'
             '127.0.0.1,'
             'testserver,'
-            'billing-erp-7ga7.onrender.com'
+            'app.dreamwithtech.dev,'
+            'share.dreamwithtech.dev,'
+            'api.dreamwithtech.dev,'
+            '.dreamwithtech.dev,'
+            '.onrender.com'
         )
     ).split(',')
     if host.strip()
@@ -416,58 +420,52 @@ SIMPLE_JWT = {
 
 
 # ============================================================
-# CORS CONFIGURATION
+# CORS / CSRF CONFIGURATION
 # ============================================================
 
-CORS_ALLOWED_ORIGINS = origin_list(
-    config(
-        'CORS_ALLOWED_ORIGINS',
-        default=(
-            'http://localhost:3000,'
-            'http://127.0.0.1:3000,'
-            'https://billing-erp-7ga7.onrender.com'
-        )
-    )
-)
+DEFAULT_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'https://app.dreamwithtech.dev',
+    'https://share.dreamwithtech.dev',
+    'https://dreamwithtech.dev',
+]
 
+cors_env = config('CORS_ALLOWED_ORIGINS', default='').strip()
+CORS_ALLOWED_ORIGINS = list(DEFAULT_ALLOWED_ORIGINS)
+if cors_env:
+    for origin in origin_list(cors_env):
+        if origin not in CORS_ALLOWED_ORIGINS:
+            CORS_ALLOWED_ORIGINS.append(origin)
 
 CORS_ALLOW_CREDENTIALS = True
 
+csrf_env = config('CSRF_TRUSTED_ORIGINS', default='').strip()
+CSRF_TRUSTED_ORIGINS = list(DEFAULT_ALLOWED_ORIGINS)
+if csrf_env:
+    for origin in origin_list(csrf_env):
+        if origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(origin)
 
-# ============================================================
-# CSRF CONFIGURATION
-# ============================================================
+RENDER_URL = config(
+    'RENDER_URL',
+    default=f'https://{RENDER_EXTERNAL_HOSTNAME}' if RENDER_EXTERNAL_HOSTNAME else ''
+).strip().rstrip('/')
 
-CSRF_TRUSTED_ORIGINS = origin_list(
-    config(
-        'CSRF_TRUSTED_ORIGINS',
-        default=(
-            'https://billing-erp-7ga7.onrender.com'
-        )
-    )
-)
-
-
-# ============================================================
-# RENDER URL
-# ============================================================
-
-RENDER_URL = 'https://billing-erp-7ga7.onrender.com'
-
-
-# Add Render URL to CORS if not already present.
-if RENDER_URL not in CORS_ALLOWED_ORIGINS:
-    CORS_ALLOWED_ORIGINS.append(RENDER_URL)
-
-
-# Add Render URL to CSRF trusted origins if not already present.
-if RENDER_URL not in CSRF_TRUSTED_ORIGINS:
-    CSRF_TRUSTED_ORIGINS.append(RENDER_URL)
+if RENDER_URL:
+    if RENDER_URL not in CORS_ALLOWED_ORIGINS:
+        CORS_ALLOWED_ORIGINS.append(RENDER_URL)
+    if RENDER_URL not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(RENDER_URL)
 
 
 # ============================================================
 # HTTPS / SECURITY
 # ============================================================
+
+USE_X_FORWARDED_HOST = True
 
 SECURE_PROXY_SSL_HEADER = (
     'HTTP_X_FORWARDED_PROTO',
@@ -506,7 +504,32 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = (
 SECURE_HSTS_PRELOAD = False
 
 # Frontend public URL for digital bills and redirects
-FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000').rstrip('/')
+FRONTEND_URL = config(
+    'FRONTEND_URL',
+    default='http://localhost:3000' if DEBUG else 'https://app.dreamwithtech.dev'
+).rstrip('/')
+
+# Public bill dedicated share link domain
+PUBLIC_SHARE_URL = config(
+    'PUBLIC_SHARE_URL',
+    default='http://localhost:3000' if DEBUG else 'https://share.dreamwithtech.dev'
+).rstrip('/')
+
+# Backend API URL
+BACKEND_URL = config(
+    'BACKEND_URL',
+    default=RENDER_URL if RENDER_URL else ('http://127.0.0.1:8000' if DEBUG else 'https://api.dreamwithtech.dev')
+).rstrip('/')
+
+if FRONTEND_URL and FRONTEND_URL not in CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS.append(FRONTEND_URL)
+if FRONTEND_URL and FRONTEND_URL not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(FRONTEND_URL)
+
+if PUBLIC_SHARE_URL and PUBLIC_SHARE_URL not in CORS_ALLOWED_ORIGINS:
+    CORS_ALLOWED_ORIGINS.append(PUBLIC_SHARE_URL)
+if PUBLIC_SHARE_URL and PUBLIC_SHARE_URL not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(PUBLIC_SHARE_URL)
 
 # ============================================================
 # EMAIL CONFIGURATION

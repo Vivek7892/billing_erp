@@ -134,6 +134,15 @@ function ErrorPageLayout({ children }) {
 ------------------------------------------------------- */
 
 function AppRoutes() {
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hostname === 'share.dreamwithtech.dev' &&
+    (window.location.pathname === '/' || window.location.pathname === '')
+  ) {
+    window.location.replace('https://app.dreamwithtech.dev')
+    return null
+  }
+
   return (
     <Routes>
       {/* Authentication & Public Pages */}
@@ -395,9 +404,13 @@ function AppRoutes() {
         }
       />
 
-      {/* Public Digital Bill Route (Customer Scanning QR Code) */}
+      {/* Public Digital Bill Route (Customer Scanning QR Code / Share Link) */}
       <Route
         path="/bill/:token"
+        element={<PublicBill />}
+      />
+      <Route
+        path="/s/:token"
         element={<PublicBill />}
       />
 

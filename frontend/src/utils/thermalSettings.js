@@ -101,13 +101,14 @@ export function normalizeThermalSettings(rawSettings = {}, invoice = null) {
 
   // Digital Bill QR
   const showBillQr = parseBooleanSetting(s.thermal_show_bill_qr, false)
+  const shareDomain = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PUBLIC_SHARE_URL) || (typeof window !== 'undefined' ? window.location.origin : '')
   let digitalBillUrl = ''
   if (inv.short_url) {
     digitalBillUrl = inv.short_url
-  } else if (inv.public_token && typeof window !== 'undefined') {
-    digitalBillUrl = `${window.location.origin}/bill/${inv.public_token}`
-  } else if (inv.id && typeof window !== 'undefined' && !String(inv.id).includes('preview')) {
-    digitalBillUrl = `${window.location.origin}/bill/${inv.id}`
+  } else if (inv.public_token && shareDomain) {
+    digitalBillUrl = `${shareDomain}/bill/${inv.public_token}`
+  } else if (inv.id && shareDomain && !String(inv.id).includes('preview')) {
+    digitalBillUrl = `${shareDomain}/bill/${inv.id}`
   }
 
   // Terms & Footer

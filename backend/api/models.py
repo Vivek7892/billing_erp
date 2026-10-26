@@ -382,15 +382,29 @@ class Invoice(models.Model):
                     link = None
         if not link:
             raise RuntimeError('Could not create a public short link for the invoice.')
+        from decouple import config as env
+        from django.conf import settings
+
+        public_share_url = getattr(settings, 'PUBLIC_SHARE_URL', None) or env('PUBLIC_SHARE_URL', default='').strip().rstrip('/')
+        if public_share_url:
+            return f"{public_share_url}/bill/{self.public_token}"
+
         if request:
             try:
                 from django.urls import reverse
                 return request.build_absolute_uri(reverse('invoice-short-link', kwargs={'code': link.code}))
             except Exception:
                 pass
-        from decouple import config as env
-        base_url = env('BACKEND_URL', default='https://billing-erp-7ga7.onrender.com').rstrip('/')
-        return f"{base_url}/s/{link.code}/"
+
+        backend_url = getattr(settings, 'BACKEND_URL', None) or env('BACKEND_URL', default='').strip().rstrip('/')
+        if backend_url:
+            return f"{backend_url}/s/{link.code}/"
+
+        frontend_url = getattr(settings, 'FRONTEND_URL', None) or env(
+            'FRONTEND_URL',
+            default='http://localhost:3000' if getattr(settings, 'DEBUG', False) else 'https://app.dreamwithtech.dev'
+        ).rstrip('/')
+        return f"{frontend_url}/bill/{self.public_token}"
 
     def __str__(self):
         return self.invoice_number

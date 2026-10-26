@@ -4126,9 +4126,16 @@ class PublicInvoiceShortLinkView(APIView):
             raise Http404('This invoice link is invalid or has expired.')
 
         from django.http import HttpResponseRedirect
+        from django.conf import settings
         from decouple import config as env
-        frontend_url = env('FRONTEND_URL', default='http://localhost:3000').rstrip('/')
-        return HttpResponseRedirect(f"{frontend_url}/bill/{link.invoice.public_token}")
+        share_url = getattr(settings, 'PUBLIC_SHARE_URL', None) or env(
+            'PUBLIC_SHARE_URL',
+            default=getattr(settings, 'FRONTEND_URL', None) or env(
+                'FRONTEND_URL',
+                default='http://localhost:3000' if getattr(settings, 'DEBUG', False) else 'https://share.dreamwithtech.dev'
+            )
+        ).rstrip('/')
+        return HttpResponseRedirect(f"{share_url}/bill/{link.invoice.public_token}")
 
 
 class PublicBillDetailView(APIView):

@@ -140,8 +140,9 @@ export default function WhatsAppShareModal({
       lines.push(`*Notes:* ${invoice.notes}`)
     }
 
-    if (shortUrl) {
-      lines.push('', 'View your digital bill online:', shortUrl)
+    const effectiveBillUrl = shortUrl || (invoice?.public_token ? `${(typeof import.meta !== 'undefined' && import.meta.env?.VITE_PUBLIC_SHARE_URL) || (typeof window !== 'undefined' ? window.location.origin : '')}/bill/${invoice.public_token}` : '')
+    if (effectiveBillUrl) {
+      lines.push('', 'View your digital bill online:', effectiveBillUrl)
     }
 
     lines.push('', 'Thank you for shopping with us! 🙏')

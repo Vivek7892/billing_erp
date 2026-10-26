@@ -18,11 +18,11 @@ def healthcheck(request):
 # Until that point, maintaining a duplicate prefix that routes to identical
 # code is misleading and adds no value.
 urlpatterns = [
-    path('', RedirectView.as_view(url=config('FRONTEND_URL', default='http://localhost:3000/'), permanent=False)),
+    path('', RedirectView.as_view(url=config('FRONTEND_URL', default='http://localhost:3000' if settings.DEBUG else 'https://app.dreamwithtech.dev').rstrip('/') + '/', permanent=False)),
     path('health/', healthcheck, name='healthcheck'),
     path('admin/', admin.site.urls),
     path('s/<str:code>/', PublicInvoiceShortLinkView.as_view(), name='invoice-short-link'),
-    path('bill/<str:token>/', RedirectView.as_view(url=config('FRONTEND_URL', default='http://localhost:3000').rstrip('/') + '/bill/%(token)s', permanent=False)),
+    path('bill/<str:token>/', RedirectView.as_view(url=config('PUBLIC_SHARE_URL', default=config('FRONTEND_URL', default='http://localhost:3000' if settings.DEBUG else 'https://share.dreamwithtech.dev')).rstrip('/') + '/bill/%(token)s', permanent=False)),
     path('api/', include('api.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
