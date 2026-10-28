@@ -47,9 +47,11 @@ class PaymentService:
                 if locked_invoice.status in ('cancelled', 'refunded'):
                     raise ValueError(f'Cannot collect payment on a {locked_invoice.status} invoice.')
                 if amount > locked_invoice.balance_due:
-                    raise ValueError(
-                        f'Payment amount ({amount:.2f}) exceeds invoice balance due ({locked_invoice.balance_due:.2f}).'
-                    )
+                    if (amount - locked_invoice.balance_due) > Decimal('0.01'):
+                        raise ValueError(
+                            f'Payment amount ({amount:.2f}) exceeds invoice balance due ({locked_invoice.balance_due:.2f}).'
+                        )
+                    amount = locked_invoice.balance_due
 
                 payment = CustomerPayment.objects.create(
                     business=business,
@@ -80,6 +82,8 @@ class PaymentService:
                     method=pay_method,
                     amount=amount,
                     reference=reference,
+                    notes=notes,
+                    created_by=created_by,
                 )
 
                 locked_invoice.paid_amount += amount

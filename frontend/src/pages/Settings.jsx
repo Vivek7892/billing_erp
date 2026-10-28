@@ -543,8 +543,9 @@ export default function Settings() {
       setField('shop_logo', logoUrl)
       setInitialSettings(prev => ({ ...prev, shop_logo: logoUrl }))
       toast.success('Logo uploaded successfully')
-    } catch {
-      toast.error('Failed to upload business logo')
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Failed to upload business logo'
+      toast.error(msg)
     } finally {
       setUploadingLogo(false)
       if (logoInputRef.current) logoInputRef.current.value = ''

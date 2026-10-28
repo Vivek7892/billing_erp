@@ -247,90 +247,93 @@
 .dark {
   color-scheme: dark;
 
-  --app-bg: #0B1220;
-  --surface: #111827;
-  --surface-subtle: #172033;
-  --surface-hover: #1E293B;
-  --surface-active: #1E293B;
+  /* App Surfaces — Neutral Dark Grey */
+  --app-bg: #121316;
+  --surface: #1A1B1E;
+  --surface-subtle: #202125;
+  --surface-hover: #26282D;
+  --surface-active: #2E3036;
 
-  --line: #334155;
-  --line-subtle: #263449;
-  --line-strong: #475569;
-  --table-header-bg: #172033;
-  --table-selected-bg: rgba(143, 183, 232, 0.14);
+  --line: #2E3035;
+  --line-subtle: #24252A;
+  --line-strong: #3E4149;
+  --table-header-bg: #18191C;
+  --table-selected-bg: rgba(255, 255, 255, 0.05);
 
-  --background: #0B1220;
-  --bg-subtle: #111827;
-  --surface-elevated: #172033;
+  --background: #121316;
+  --bg-subtle: #1A1B1E;
+  --surface-elevated: #222328;
 
-  --ink: #F1F5F9;
-  --ink-secondary: #CBD5E1;
-  --muted: #A3B0C2;
-  --muted-light: #64748B;
-  --placeholder: #64748B;
+  /* Typography */
+  --ink: #F3F4F6;
+  --ink-secondary: #9CA3AF;
+  --muted: #6B7280;
+  --muted-light: #4B5563;
+  --placeholder: #6B7280;
 
-  --primary: #8FB7E8;
-  --primary-hover: #B4D0F2;
-  --primary-active: #7A9ECB;
-  --primary-contrast: #0B1220;
-  --primary-light: rgba(143, 183, 232, 0.15);
-  --primary-border: #334155;
-  --primary-text: #8FB7E8;
+  /* Primary Accent in Dark Mode */
+  --primary: #6366F1;
+  --primary-hover: #818CF8;
+  --primary-active: #4F46E5;
+  --primary-contrast: #FFFFFF;
+  --primary-light: rgba(99, 102, 241, 0.15);
+  --primary-border: #3E4149;
+  --primary-text: #818CF8;
 
-  --accent: #5EEAD4;
+  --accent: #14B8A6;
   --accent-hover: #2DD4BF;
-  --accent-light: rgba(94, 234, 212, 0.15);
+  --accent-light: rgba(20, 184, 166, 0.15);
   --accent-border: #134E4A;
-  --accent-text: #5EEAD4;
+  --accent-text: #2DD4BF;
 
-  --secondary: #172033;
-  --secondary-hover: #1E293B;
-  --secondary-light: #1E293B;
-  --secondary-border: #334155;
-  --secondary-text: #CBD5E1;
+  --secondary: #222328;
+  --secondary-hover: #2A2B31;
+  --secondary-light: #26282D;
+  --secondary-border: #33353B;
+  --secondary-text: #D1D5DB;
 
-  --sidebar-bg: #0B1220;
-  --sidebar-hover: #172033;
-  --sidebar-active: #1E3A5F;
+  --sidebar-bg: #141518;
+  --sidebar-hover: #1F2024;
+  --sidebar-active: #282A30;
   --sidebar-active-text: #FFFFFF;
 
-  --focus: #93C5FD;
-  --success: #4ADE80;
-  --success-hover: #22C55E;
-  --success-light: rgba(74, 222, 128, 0.15);
-  --success-border: rgba(74, 222, 128, 0.3);
-  --success-text: #4ADE80;
+  --focus: #6366F1;
+  --success: #10B981;
+  --success-hover: #059669;
+  --success-light: rgba(16, 185, 129, 0.15);
+  --success-border: rgba(16, 185, 129, 0.3);
+  --success-text: #34D399;
 
-  --warning: #FBBF24;
-  --warning-hover: #F59E0B;
-  --warning-light: rgba(251, 191, 36, 0.15);
-  --warning-border: rgba(251, 191, 36, 0.3);
+  --warning: #F59E0B;
+  --warning-hover: #D97706;
+  --warning-light: rgba(245, 158, 11, 0.15);
+  --warning-border: rgba(245, 158, 11, 0.3);
   --warning-text: #FBBF24;
 
-  --danger: #F87171;
-  --danger-hover: #EF4444;
-  --danger-light: rgba(248, 113, 113, 0.15);
-  --danger-border: rgba(248, 113, 113, 0.3);
+  --danger: #EF4444;
+  --danger-hover: #DC2626;
+  --danger-light: rgba(239, 68, 68, 0.15);
+  --danger-border: rgba(239, 68, 68, 0.3);
   --danger-text: #F87171;
 
-  --info: #93C5FD;
-  --info-hover: #60A5FA;
-  --info-light: rgba(147, 197, 253, 0.15);
-  --info-border: rgba(147, 197, 253, 0.3);
-  --info-text: #93C5FD;
+  --info: #3B82F6;
+  --info-hover: #2563EB;
+  --info-light: rgba(59, 130, 246, 0.15);
+  --info-border: rgba(59, 130, 246, 0.3);
+  --info-text: #60A5FA;
 
-  --refund: #FDBA74;
-  --refund-hover: #FB923C;
-  --refund-light: rgba(253, 186, 116, 0.15);
-  --refund-border: rgba(253, 186, 116, 0.3);
-  --refund-text: #FDBA74;
+  --refund: #F97316;
+  --refund-hover: #EA580C;
+  --refund-light: rgba(249, 115, 22, 0.15);
+  --refund-border: rgba(249, 115, 22, 0.3);
+  --refund-text: #FB923C;
 
-  --neutral: #64748B;
-  --neutral-light: #172033;
-  --neutral-border: #334155;
-  --neutral-text: #A3B0C2;
+  --neutral: #6B7280;
+  --neutral-light: #222328;
+  --neutral-border: #2E3035;
+  --neutral-text: #9CA3AF;
 
-  --overlay: rgba(0, 0, 0, 0.68);
+  --overlay: rgba(0, 0, 0, 0.72);
   --danger-bg: var(--danger-light);
   --danger-line: var(--danger-border);
   --primary-bg: var(--primary-light);
@@ -340,23 +343,23 @@
   --warning-bg: var(--warning-light);
   --warning-line: var(--warning-border);
 
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.22);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
   --shadow-card: none;
-  --shadow-md: 0 2px 5px rgba(0, 0, 0, 0.2);
-  --shadow-lg: 0 5px 12px rgba(0, 0, 0, 0.25);
-  --shadow-modal: 0 20px 50px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 2px 5px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 5px 12px rgba(0, 0, 0, 0.35);
+  --shadow-modal: 0 20px 50px rgba(0, 0, 0, 0.6);
   --shadow-primary: none;
 
-  --num-color: #F1F5F9;
-  --num-positive: #4ADE80;
+  --num-color: #F3F4F6;
+  --num-positive: #34D399;
   --num-negative: #F87171;
-  --num-neutral: #A3B0C2;
-  --amount-sales: #8FB7E8;
+  --num-neutral: #9CA3AF;
+  --amount-sales: #818CF8;
   --amount-expense: #F87171;
-  --amount-profit: #4ADE80;
+  --amount-profit: #34D399;
   --amount-due: #FBBF24;
-  --amount-refund: #FDBA74;
+  --amount-refund: #FB923C;
 }
 
 /* ============================================================
@@ -713,8 +716,8 @@ select option {
 
 .dark select option,
 [data-theme="dark"] select option {
-  background-color: #111827;
-  color: #F1F5F9;
+  background-color: #1A1B1E;
+  color: #F3F4F6;
 }
 
 /* ============================================================
@@ -2404,7 +2407,7 @@ div[data-hot-toast],
 }
 
 .dark .loading-overlay {
-  background: rgba(16, 20, 24, 0.82);
+  background: rgba(18, 19, 22, 0.85);
 }
 
 /* ============================================================
@@ -2732,10 +2735,37 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type=
   --tw-ring-width: 0px !important;
 }
 
+/* Dark mode input background, focus & highlights - clean dark grey, borderless */
 .dark input.input,
 .dark .erp-control,
 .dark input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]) {
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
+  background-color: #222328 !important;
+  color: #F3F4F6 !important;
+}
+
+.dark input.input:focus,
+.dark .erp-control:focus,
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):focus {
+  background-color: #2D2F36 !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.dark div:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"])):focus-within,
+.dark div:has(> select):focus-within,
+.dark div:has(> textarea):focus-within,
+.dark label:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"])):focus-within,
+.dark .group:has(> input:not([type="checkbox"]):not([type="radio"])):focus-within,
+.dark [class*="focus-within"]:has(> input:not([type="checkbox"]):not([type="radio"])):focus-within,
+.dark .pb-search-field:focus-within,
+.dark .notifications-search:focus-within {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: #2D2F36 !important;
 }

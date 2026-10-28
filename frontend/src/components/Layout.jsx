@@ -259,16 +259,16 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
   return (
     <div
       className={`flex flex-col h-full overflow-hidden transition-all duration-300 ease-in-out select-none ${
-        mobile ? `w-64 rounded-r-2xl ${settingsMode ? 'border-r border-slate-200 shadow-xl' : ''}` : `${collapsed ? 'w-[62px]' : 'w-[220px]'} rounded-2xl ${settingsMode ? 'border border-slate-200 shadow-sm' : ''}`
+        mobile ? `w-64 rounded-r-2xl ${settingsMode ? 'border-r border-[var(--line)] shadow-xl' : ''}` : `${collapsed ? 'w-[62px]' : 'w-[220px]'} rounded-2xl ${settingsMode ? 'border border-[var(--line)] shadow-sm' : ''}`
       }`}
-      style={{ background: settingsMode ? '#FFFFFF' : 'var(--sidebar-bg)' }}
+      style={{ background: settingsMode ? 'var(--surface)' : 'var(--sidebar-bg)' }}
     >
       {/* Brand Header */}
       <div
         onMouseEnter={() => setHeaderHovered(true)}
         onMouseLeave={() => setHeaderHovered(false)}
         onClick={collapsed && !mobile ? onToggle : undefined}
-        className={`flex items-center flex-shrink-0 border-b transition-all duration-300 cursor-pointer ${settingsMode ? 'border-slate-200' : 'border-white/10'} ${
+        className={`flex items-center flex-shrink-0 border-b transition-all duration-300 cursor-pointer ${settingsMode ? 'border-[var(--line)]' : 'border-white/10'} ${
           collapsed && !mobile ? 'justify-center px-2 py-4' : 'gap-3 px-4 py-3.5'
         }`}
       >
@@ -286,19 +286,19 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
           </div>
         ) : (
           <>
-            <div className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 p-1 ${settingsMode ? 'bg-slate-50 border-slate-200' : 'bg-white/[0.06] border-white/[0.1]'}`}>
+            <div className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 p-1 ${settingsMode ? 'bg-[var(--surface-subtle)] border-[var(--line)]' : 'bg-white/[0.06] border-white/[0.1]'}`}>
               <img src={logoSrc} alt={shopName} className="w-full h-full object-contain rounded" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className={`text-[11px] font-bold whitespace-nowrap leading-tight tracking-tight ${settingsMode ? 'text-slate-900' : 'text-white'}`}>{shopName}</div>
-              {shopPhone && <div className={`mt-1 whitespace-normal break-words text-[10px] font-medium ${settingsMode ? 'text-slate-500' : 'text-slate-400'}`}>{shopPhone}</div>}
+              <div className={`text-[11px] font-bold whitespace-nowrap leading-tight tracking-tight ${settingsMode ? 'text-[var(--ink)]' : 'text-white'}`}>{shopName}</div>
+              {shopPhone && <div className={`mt-1 whitespace-normal break-words text-[10px] font-medium ${settingsMode ? 'text-[var(--muted)]' : 'text-slate-400'}`}>{shopPhone}</div>}
             </div>
             {!mobile && (
               <button
                 onClick={onToggle}
                 title="Collapse sidebar"
                 aria-label="Collapse sidebar"
-                className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-150 flex-shrink-0 ${settingsMode ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-white/[0.1]'}`}
+                className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-150 flex-shrink-0 ${settingsMode ? 'text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)]' : 'text-slate-400 hover:text-white hover:bg-white/[0.1]'}`}
               >
                 <MenuIcon size={18} />
               </button>
@@ -308,7 +308,7 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
                 onClick={onClose}
                 title="Close menu"
                 aria-label="Close menu"
-                className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all flex-shrink-0 ${settingsMode ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-white/[0.1]'}`}
+                className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all flex-shrink-0 ${settingsMode ? 'text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)]' : 'text-slate-400 hover:text-white hover:bg-white/[0.1]'}`}
               >
                 <IconX size={17} />
               </button>
@@ -394,7 +394,7 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
       </nav>
 
       {settingsMode && (
-        <div className="shrink-0 border-t border-slate-200 px-3 py-2">
+        <div className="shrink-0 border-t border-[var(--line)] px-3 py-2">
           <button
             type="button"
             onClick={onLogout}
@@ -403,11 +403,11 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
             <IconLogout size={15} />
             <span>Logout</span>
           </button>
-          <div className="my-2 border-t border-slate-100" />
+          <div className="my-2 border-t border-[var(--line-subtle)]" />
           <div className="flex min-w-0 items-center gap-2.5">
             <img src="/logo.png" alt="Dreamwithtech logo" className="h-8 w-8 shrink-0 rounded object-contain" />
             <div className="min-w-0">
-              <p className="truncate text-[11px] font-semibold text-slate-800">Dreamwithtech</p>
+              <p className="truncate text-[11px] font-semibold text-[var(--ink)]">Dreamwithtech</p>
               <a
                 href="https://dreamwithtech.dev"
                 target="_blank"

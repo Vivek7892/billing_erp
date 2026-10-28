@@ -2090,7 +2090,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
         entries = CustomerLedger.objects.filter(
             customer=customer,
             business=request.user.business,
-        ).order_by('-created_at')[:50]
+        ).select_related('created_by').order_by('-created_at')[:50]
         data = [
             {
                 'id': entry.id,
@@ -2101,6 +2101,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 'reference_id': entry.reference_id,
                 'description': entry.description,
                 'created_at': entry.created_at,
+                'collected_by': entry.created_by.get_full_name() or entry.created_by.username if entry.created_by else 'Staff',
+                'customer_name': customer.name,
+                'customer_mobile': customer.mobile or '',
             }
             for entry in entries
         ]
@@ -2716,22 +2719,32 @@ class InvoiceViewSet(viewsets.ModelViewSet):
 
         return Response(InvoiceSerializer(invoice, context=self.get_serializer_context()).data)
 
+    def _get_invoice_for_payment(self, pk):
+        """Fetch invoice by PK scoped to business only (not cashier-filtered) for payment actions."""
+        try:
+            return Invoice.objects.select_related('customer', 'created_by').prefetch_related(
+                'items', 'payments'
+            ).get(pk=pk, business=self.request.user.business)
+        except Invoice.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound('Invoice not found.')
+
     @action(detail=True, methods=['post'], url_path='collect-payment')
     def collect_payment(self, request, pk=None):
-        return self._do_collect_payment(request)
+        return self._do_collect_payment(request, pk)
 
     @action(detail=True, methods=['get', 'post'], url_path='payments')
     def payments(self, request, pk=None):
-        invoice = self.get_object()
+        invoice = self._get_invoice_for_payment(pk)
         if request.method == 'GET':
             from .models import Payment
             payments = Payment.objects.filter(invoice=invoice).order_by('-created_at')
             return Response(PaymentSerializer(payments, many=True).data)
-        return self._do_collect_payment(request)
+        return self._do_collect_payment(request, pk)
 
-    def _do_collect_payment(self, request):
+    def _do_collect_payment(self, request, pk=None):
         from .services.invoice_service import InvoiceService
-        invoice = self.get_object()
+        invoice = self._get_invoice_for_payment(pk or self.kwargs.get('pk'))
         raw_amount = request.data.get('amount')
         if raw_amount is None or raw_amount == '':
             return Response({'amount': 'Payment amount is required.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -3014,8 +3027,8 @@ class SettingViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Choose a logo image first.'}, status=status.HTTP_400_BAD_REQUEST)
         if logo.size > 2 * 1024 * 1024:
             return Response({'detail': 'Logo must be smaller than 2 MB.'}, status=status.HTTP_400_BAD_REQUEST)
-        if logo.content_type not in ('image/png', 'image/jpeg', 'image/webp'):
-            return Response({'detail': 'Use a PNG, JPG, or WEBP logo image.'}, status=status.HTTP_400_BAD_REQUEST)
+        if logo.content_type not in ('image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'):
+            return Response({'detail': 'Use a PNG, JPG, WEBP, or SVG logo image.'}, status=status.HTTP_400_BAD_REQUEST)
         biz_id = str(request.user.business_id or 'default')
         try:
             url = upload_shop_logo(logo, biz_id)
@@ -3834,6 +3847,20 @@ class ExpenseReportView(APIView):
 
     def get(self, request):
         return _serve_report(request, 'expenses')
+
+
+class CancelledRefundedReportView(APIView):
+    permission_classes = [IsFinanceStaff]
+
+    def get(self, request):
+        return _serve_report(request, 'cancelled_refunded')
+
+
+class ReconciliationReportView(APIView):
+    permission_classes = [IsFinanceStaff]
+
+    def get(self, request):
+        return _serve_report(request, 'reconciliation')
 
 
 class SalesReturnViewSet(viewsets.ModelViewSet):

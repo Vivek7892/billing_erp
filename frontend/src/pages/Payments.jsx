@@ -1997,20 +1997,22 @@ export default function Payments() {
               <div className="hidden sm:block overflow-x-auto min-h-[220px]">
                 <table className="erp-table w-full text-left text-xs min-w-[800px]">
                   <colgroup>
-                    <col style={{ width: '13%' }} />
-                    <col style={{ width: '10%' }} />
-                    <col style={{ width: '18%' }} />
-                    <col style={{ width: '18%' }} />
                     <col style={{ width: '12%' }} />
-                    <col style={{ width: '12%' }} />
+                    <col style={{ width: '9%' }} />
                     <col style={{ width: '15%' }} />
+                    <col style={{ width: '15%' }} />
+                    <col style={{ width: '14%' }} />
+                    <col style={{ width: '11%' }} />
+                    <col style={{ width: '10%' }} />
+                    <col style={{ width: '14%' }} />
                   </colgroup>
                   <thead>
                     <tr>
-                      <th>Date &amp; Time</th>
+                      <th>Date &amp; Time (When)</th>
                       <th>Payment ID</th>
                       <th>Transaction ID / Ref</th>
-                      <th>Customer</th>
+                      <th>Who Gave (Customer)</th>
+                      <th>Who Collected</th>
                       <th>Linked Invoice</th>
                       <th>Method</th>
                       <th className="text-right">Amount Collected</th>
@@ -2073,6 +2075,12 @@ export default function Payments() {
                                 <span>{c.customer_mobile}</span>
                               </a>
                             )}
+                          </td>
+                          <td>
+                            <div className="font-semibold text-xs text-[var(--ink)]">
+                              {c.created_by_name || c.collected_by_name || 'Staff / Cashier'}
+                            </div>
+                            <span className="text-[10px] text-[var(--muted)]">Receiver</span>
                           </td>
                           <td>
                             {c.invoice_number ? (
@@ -2162,8 +2170,15 @@ export default function Payments() {
                           </div>
                         )}
 
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-[var(--muted)]">Who Collected:</span>
+                          <span className="font-semibold text-[var(--ink)]">
+                            {c.created_by_name || c.collected_by_name || 'Staff / Cashier'}
+                          </span>
+                        </div>
+
                         <div className="flex items-center justify-between text-[10px] text-[var(--muted)]">
-                          <span>Date &amp; Time:</span>
+                          <span>When Collected:</span>
                           <span>{formatDate(c.created_at)} &bull; {formatTime(c.created_at)}</span>
                         </div>
                       </div>

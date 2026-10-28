@@ -1179,7 +1179,7 @@ function InvoiceModal({
                     bill={selected}
                     shopName={shopName}
                     onClose={() => setShareOpen(false)}
-                    onShareWhatsApp={handleOpenWhatsApp}
+                    onShareWhatsApp={onOpenWhatsApp}
                   />
                 )}
               </div>
@@ -1789,9 +1789,11 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [recordedPayment, setRecordedPayment] = useState(null)
 
-  const balanceDue = Number(currentBill?.balance_due || 0)
-  const grandTotal = Number(currentBill?.grand_total || 0)
-  const paidAmount = Number(currentBill?.paid_amount || 0)
+  const activeBill = currentBill || bill
+  const targetId = activeBill?.id || bill?.id
+  const balanceDue = Number(activeBill?.balance_due ?? bill?.balance_due ?? 0)
+  const grandTotal = Number(activeBill?.grand_total ?? bill?.grand_total ?? 0)
+  const paidAmount = Number(activeBill?.paid_amount ?? bill?.paid_amount ?? 0)
   const percentPaid = grandTotal > 0 ? Math.min(100, Math.max(0, Math.round((paidAmount / grandTotal) * 100))) : 100
 
   // Helper to generate a friendly transaction ID
@@ -1852,7 +1854,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
     const num = parseFloat(val)
     if (isNaN(num) || num <= 0) {
       setError('Amount must be greater than zero')
-    } else if (num > balanceDue) {
+    } else if (num > balanceDue + 0.005) {
       setError(`Amount cannot exceed balance due (${fmt(balanceDue)})`)
     }
   }
@@ -1875,7 +1877,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
       setError('Please enter a valid amount greater than zero.')
       return
     }
-    if (num > balanceDue) {
+    if (num > balanceDue + 0.005) {
       setError(`Amount cannot exceed balance due (${fmt(balanceDue)}).`)
       return
     }
@@ -1884,7 +1886,8 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
     setError('')
     try {
       const txnRef = reference.trim() || generateTxnId()
-      const res = await invoiceService.collectPayment(currentBill.id, {
+      const invId = targetId || currentBill?.id || bill?.id
+      const res = await invoiceService.collectPayment(invId, {
         amount: num,
         method,
         reference: txnRef,
@@ -2081,6 +2084,17 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                   <div>
                     <span className="block text-[11px] text-[var(--muted)]">Method</span>
                     <span className="font-semibold uppercase text-[var(--ink)]">{recordedPayment.method || method}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs border-t border-emerald-200/50 pt-2 dark:border-emerald-900/40">
+                  <div>
+                    <span className="block text-[11px] text-[var(--muted)]">Who Gave</span>
+                    <span className="font-semibold text-[var(--ink)] truncate block">{activeBill?.customer_name || 'Walk-in Customer'}</span>
+                  </div>
+                  <div>
+                    <span className="block text-[11px] text-[var(--muted)]">Who Collected</span>
+                    <span className="font-semibold text-[var(--ink)] truncate block">{recordedPayment.collected_by_name || 'Staff / Cashier'}</span>
                   </div>
                 </div>
 
@@ -2563,9 +2577,13 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                                 )}
                               </button>
                             </div>
-                            <div className="mt-0.5 text-[10px] text-[var(--muted)]">
-                              {formatDate(p.created_at)} &bull; {formatTime(p.created_at)}
-                              {p.notes ? ` • ${p.notes}` : ''}
+                            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-[var(--muted)]">
+                              <span><strong className="text-[var(--ink)] font-medium">Who gave:</strong> {p.customer_name || activeBill?.customer_name || 'Walk-in Customer'}</span>
+                              <span>&bull;</span>
+                              <span><strong className="text-[var(--ink)] font-medium">Collected by:</strong> {p.collected_by_name || 'Staff'}</span>
+                              <span>&bull;</span>
+                              <span>{formatDate(p.created_at)} &bull; {formatTime(p.created_at)}</span>
+                              {p.notes ? <span>&bull; {p.notes}</span> : null}
                             </div>
                           </div>
                         </div>
@@ -3452,7 +3470,7 @@ export default function Bills() {
         {/* =================================================
             INVOICE TABLE CONTAINER
         ================================================= */}
-        <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
+        <div className=" rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs overflow-hidden">
           {/* Table content / loading / empty */}
           {loading ? (
             <TableSkeleton rows={10} cols={11} label="Loading bills" />
@@ -3856,18 +3874,21 @@ export default function Bills() {
           COLLECT PAYMENT MODAL
       =================================================== */}
 
-      <CollectPaymentModal
-        bill={payTarget}
-        shopSettings={shopSettings}
-        shopName={shopName}
-        onClose={() => setPayTarget(null)}
-        onSuccess={(updated) => {
-          load(page)
-          if (selected && (selected.id === updated.id || selected.invoice_number === updated.invoice_number)) {
-            setSelected(updated)
-          }
-        }}
-      />
+      {payTarget && (
+        <CollectPaymentModal
+          key={payTarget.id || payTarget.invoice_number}
+          bill={payTarget}
+          shopSettings={shopSettings}
+          shopName={shopName}
+          onClose={() => setPayTarget(null)}
+          onSuccess={(updated) => {
+            load(page)
+            if (selected && (selected.id === updated.id || selected.invoice_number === updated.invoice_number)) {
+              setSelected(updated)
+            }
+          }}
+        />
+      )}
 
       {/* ===================================================
           INVOICE PREVIEW
@@ -3888,7 +3909,7 @@ export default function Bills() {
         onClose={() => setWhatsAppModalOpen(false)}
         invoice={whatsAppInvoice}
         shopName={shopName}
-        onConfirmed={() => reloadBills()}
+        onConfirmed={() => load(page)}
       />
 
       {/* ===================================================

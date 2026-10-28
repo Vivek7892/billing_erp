@@ -12,38 +12,57 @@ class SupabaseStorageError(Exception):
 
 
 def upload_shop_logo(uploaded_file, business_id):
-    if not settings.SUPABASE_URL or not settings.SUPABASE_SECRET_KEY:
-        raise SupabaseStorageError('Logo storage is not configured. Contact your administrator.')
+    """Upload shop logo to Supabase Storage and return its public URL."""
+    url = getattr(settings, 'SUPABASE_URL', '').strip()
+    key = getattr(settings, 'SUPABASE_SECRET_KEY', '').strip()
+    bucket_name = getattr(settings, 'SUPABASE_SHOP_LOGO_BUCKET', 'shop-logos').strip()
+
+    if not url or not key:
+        raise SupabaseStorageError(
+            'Supabase is not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY in your .env file.'
+        )
+
+    extension = Path(uploaded_file.name).suffix.lower() or '.png'
+    object_name = f"businesses/{business_id}/{uuid4().hex}{extension}"
+    base_url = url.rstrip('/')
+    bucket = quote(bucket_name, safe='')
+    object_path = quote(object_name, safe='/')
+
+    headers = {
+        'Authorization': f'Bearer {key}',
+        'apikey': key,
+        'Content-Type': uploaded_file.content_type or 'image/png',
+        'x-upsert': 'true',
+    }
+
     try:
-        extension = Path(uploaded_file.name).suffix.lower() or '.png'
-        object_name = f"businesses/{business_id}/{uuid4().hex}{extension}"
-        base_url = settings.SUPABASE_URL.rstrip('/')
-        bucket = quote(settings.SUPABASE_SHOP_LOGO_BUCKET, safe='')
-        object_path = quote(object_name, safe='/')
-        headers = {
-            'Authorization': f'Bearer {settings.SUPABASE_SECRET_KEY}',
-            'apikey': settings.SUPABASE_SECRET_KEY,
-            'Content-Type': uploaded_file.content_type or 'image/png',
-            'x-upsert': 'false',
-        }
         response = httpx.post(
             f'{base_url}/storage/v1/object/{bucket}/{object_path}',
             headers=headers,
             content=uploaded_file.read(),
             timeout=30,
         )
-        if response.status_code in (401, 403):
-            raise SupabaseStorageError(
-                'Logo storage credentials are invalid or not authorized for this bucket.'
-            )
-        response.raise_for_status()
-        return f'{base_url}/storage/v1/object/public/{bucket}/{object_path}'
-    except SupabaseStorageError:
-        raise
     except Exception as exc:
-        if 'invalid api key' in str(exc).lower():
-            raise SupabaseStorageError(
-                'Logo storage credentials are invalid. Configure a valid '
-                'Supabase service-role key on the backend.'
-            ) from exc
-        raise SupabaseStorageError('Could not upload the logo. Please try again.') from exc
+        raise SupabaseStorageError(f'Network error uploading logo: {exc}') from exc
+
+    if response.status_code == 401:
+        raise SupabaseStorageError(
+            'Invalid Supabase key (401). Go to Supabase Dashboard → Settings → API '
+            'and copy the service_role secret key into SUPABASE_SECRET_KEY in your .env.'
+        )
+    if response.status_code == 403:
+        raise SupabaseStorageError(
+            f'Bucket "{bucket_name}" access denied (403). Make sure the bucket exists '
+            'and the service_role key has storage permissions.'
+        )
+    if response.status_code == 404:
+        raise SupabaseStorageError(
+            f'Bucket "{bucket_name}" not found (404). Create it in Supabase Dashboard → Storage.'
+        )
+
+    if not response.is_success:
+        raise SupabaseStorageError(
+            f'Supabase upload failed ({response.status_code}): {response.text[:200]}'
+        )
+
+    return f'{base_url}/storage/v1/object/public/{bucket}/{object_path}'

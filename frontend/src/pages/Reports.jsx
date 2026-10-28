@@ -12,6 +12,7 @@ import {
   IconCreditCard,
   IconReceipt,
   IconCalendar,
+  IconFilter,
   IconRefresh,
   IconFileText,
   IconFileSpreadsheet,
@@ -53,104 +54,6 @@ const formatDateInput = value => {
   return year && month && day ? `${day}/${month}/${year}` : value
 }
 
-const parseDateInput = value => {
-  const digits = value.replace(/\D/g, '').slice(0, 8)
-  if (digits.length !== 8) return null
-  const day = digits.slice(0, 2)
-  const month = digits.slice(2, 4)
-  const year = digits.slice(4, 8)
-  const date = new Date(Number(year), Number(month) - 1, Number(day))
-  if (
-    date.getFullYear() !== Number(year) ||
-    date.getMonth() !== Number(month) - 1 ||
-    date.getDate() !== Number(day)
-  ) {
-    return null
-  }
-  return `${year}-${month}-${day}`
-}
-
-function ReportDateField({ label, value, min, max, onChange, id }) {
-  const [draft, setDraft] = useState(formatDateInput(value))
-  const dateInputRef = useRef(null)
-
-  useEffect(() => {
-    setDraft(formatDateInput(value))
-  }, [value])
-
-  const commit = nextValue => {
-    const formatted = nextValue.replace(/\D/g, '').slice(0, 8)
-    const display =
-      formatted.length > 4
-        ? `${formatted.slice(0, 2)}/${formatted.slice(2, 4)}/${formatted.slice(4)}`
-        : formatted.length > 2
-          ? `${formatted.slice(0, 2)}/${formatted.slice(2)}`
-          : formatted
-    setDraft(display)
-    if (formatted.length === 8) {
-      const parsed = parseDateInput(display)
-      if (parsed && (!min || parsed >= min) && (!max || parsed <= max)) {
-        onChange(parsed)
-      }
-    }
-  }
-
-  const triggerCalendar = () => {
-    if (dateInputRef.current) {
-      if (typeof dateInputRef.current.showPicker === 'function') {
-        dateInputRef.current.showPicker()
-      } else {
-        dateInputRef.current.focus()
-      }
-    }
-  }
-
-  return (
-    <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-none">
-      <label
-        htmlFor={id}
-        className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]"
-      >
-        {label}
-      </label>
-      <div className="relative">
-        <input
-          id={id}
-          type="text"
-          inputMode="numeric"
-          value={draft}
-          onChange={event => commit(event.target.value)}
-          onBlur={() => setDraft(formatDateInput(value))}
-          placeholder="DD/MM/YYYY"
-          aria-label={`${label} date in DD/MM/YYYY format`}
-          className="input h-8 min-h-8 w-full min-w-0 pr-7 text-xs font-mono font-semibold tracking-wide sm:w-28"
-        />
-        <input
-          ref={dateInputRef}
-          type="date"
-          value={value || ''}
-          min={min}
-          max={max}
-          onChange={e => {
-            if (e.target.value) onChange(e.target.value)
-          }}
-          className="sr-only"
-          tabIndex={-1}
-          aria-hidden="true"
-        />
-        <button
-          type="button"
-          onClick={triggerCalendar}
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[var(--muted)] hover:text-[#1E3A5F] dark:hover:text-slate-200"
-          title="Open calendar picker"
-          aria-label="Open calendar picker"
-        >
-          <IconCalendar size={14} />
-        </button>
-      </div>
-    </div>
-  )
-}
 
 /* ============================================================
    CONFIG & TABS
@@ -162,9 +65,28 @@ const toLocalDateInput = date => {
   return `${year}-${month}-${day}`
 }
 const getToday = () => toLocalDateInput(new Date())
+const getYesterday = () => toLocalDateInput(new Date(Date.now() - 86400000))
+const getWeekStart = () => {
+  const d = new Date()
+  const day = d.getDay()
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+  const monday = new Date(d.setDate(diff))
+  return toLocalDateInput(monday)
+}
 const getMonthStart = () => toLocalDateInput(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
 const getLast30Days = () => toLocalDateInput(new Date(Date.now() - 29 * 86400000))
 const getLast90Days = () => toLocalDateInput(new Date(Date.now() - 89 * 86400000))
+const getYearStart = () => toLocalDateInput(new Date(new Date().getFullYear(), 0, 1))
+
+const DATE_PRESETS = [
+  { key: 'today', label: 'Today', getStart: getToday, getEnd: getToday },
+  { key: 'yesterday', label: 'Yesterday', getStart: getYesterday, getEnd: getYesterday },
+  { key: 'week', label: 'This Week', getStart: getWeekStart, getEnd: getToday },
+  { key: 'month', label: 'This Month', getStart: getMonthStart, getEnd: getToday },
+  { key: 'last30', label: 'Last 30 Days', getStart: getLast30Days, getEnd: getToday },
+  { key: 'last90', label: 'Last 90 Days', getStart: getLast90Days, getEnd: getToday },
+  { key: 'year', label: 'This Year', getStart: getYearStart, getEnd: getToday },
+]
 
 const TABS = [
   { key: 'sales', label: 'Sales Summary', icon: IconTrendingUp },
@@ -198,6 +120,7 @@ const REPORT_FILENAMES = {
 
 export default function Reports() {
   const [tab, setTab] = useState('sales')
+  const [datePreset, setDatePreset] = useState('month')
   const [startDate, setStartDate] = useState(getMonthStart())
   const [endDate, setEndDate] = useState(getToday())
   const [appliedDates, setAppliedDates] = useState({
@@ -289,15 +212,19 @@ export default function Reports() {
     setAppliedDates({ start: startDate, end: endDate })
   }
 
-  const handleResetFilters = () => {
-    const s = getMonthStart()
-    const e = getToday()
+  const applyPreset = preset => {
+    setDatePreset(preset.key)
+    const s = preset.getStart()
+    const e = preset.getEnd()
     setStartDate(s)
     setEndDate(e)
     setAppliedDates({ start: s, end: e })
   }
 
-  const handlePreset = (s, e) => {
+  const handleResetFilters = () => {
+    setDatePreset('month')
+    const s = getMonthStart()
+    const e = getToday()
     setStartDate(s)
     setEndDate(e)
     setAppliedDates({ start: s, end: e })
@@ -495,146 +422,163 @@ export default function Reports() {
       </div>
 
       {/* =====================================================
-          DATE RANGE & FILTER CONTROLS
+          DATE FILTER BAR (HIGH-VISIBILITY & MOBILE-FRIENDLY)
       ====================================================== */}
-      {tab !== 'customers' ? (
-  <>
-    {/* Compact Mobile Date Bar + Simple Excel/PDF Symbol Buttons */}
-    <div className="flex sm:hidden items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-2xs">
-      <button
-        type="button"
-        onClick={() => setMobileDateFilterOpen(v => !v)}
-        className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs font-semibold text-[var(--ink)]"
-      >
-        <IconCalendar size={14} className="text-[#1E3A5F] dark:text-sky-400 shrink-0" />
-        <span className="truncate">{appliedDates.start} → {appliedDates.end}</span>
-        <IconChevronDown size={14} className={`shrink-0 text-[var(--muted)] transition-transform ${mobileDateFilterOpen ? 'rotate-180' : ''}`} />
-      </button>
-      <div className="flex items-center gap-1 shrink-0">
-        <button
-          type="button"
-          onClick={() => handleExport('xlsx')}
-          disabled={Boolean(exporting) || loading}
-          title="Export Excel"
-          aria-label="Export Excel"
-          className="btn-secondary h-8 w-8 inline-flex items-center justify-center rounded-lg p-0"
-        >
-          <IconFileTypeXls size={16} className="text-emerald-600 dark:text-emerald-400" />
-        </button>
-        <button
-          type="button"
-          onClick={() => handleExport('pdf')}
-          disabled={Boolean(exporting) || loading}
-          title="Export PDF"
-          aria-label="Export PDF"
-          className="btn-secondary h-8 w-8 inline-flex items-center justify-center rounded-lg p-0"
-        >
-          <IconFileTypePdf size={16} className="text-rose-600 dark:text-rose-400" />
-        </button>
-      </div>
-    </div>
+      {tab === 'customers' ? (
+        <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3 shadow-2xs">
+          <div className="flex items-center gap-2.5 text-xs text-[var(--muted)]">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--surface-elevated)] text-[#1E3A5F] dark:text-sky-400">
+              <IconInfoCircle size={15} />
+            </div>
+            <div>
+              <span className="font-semibold text-[var(--ink)]">Live Outstanding Ledger Balances</span>
+              <p className="text-[11px] text-[var(--muted)]">Customer receivables reflect real-time outstanding ledger amounts as of today. Date range filtering does not apply.</p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Mobile Filter Toggle Strip (hidden sm:hidden - hidden by default on mobile) */}
+          <div className="flex sm:hidden items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setMobileDateFilterOpen(v => !v)}
+              className="flex min-w-0 flex-1 items-center gap-2 text-left"
+              aria-expanded={mobileDateFilterOpen}
+              aria-label="Toggle date filters"
+            >
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--surface-elevated)] text-[#1E3A5F] dark:text-sky-400">
+                <IconCalendar size={14} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-[var(--muted)] block">Report Period</span>
+                <span className="font-mono text-xs font-semibold text-[var(--ink)] truncate block">
+                  {appliedDates.start} → {appliedDates.end}
+                </span>
+              </div>
+              <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-md border border-[var(--line)] transition-colors ${
+                mobileDateFilterOpen ? 'bg-[#1E3A5F] text-white' : 'bg-[var(--surface-elevated)] text-[var(--muted)]'
+              }`}>
+                <IconFilter size={12} />
+                <span>{mobileDateFilterOpen ? 'Hide Filter' : 'Change Dates'}</span>
+              </span>
+            </button>
+          </div>
 
-    {/* Expandable on Mobile, Always Visible on Desktop */}
-    <section
-      className={`${mobileDateFilterOpen ? 'block' : 'hidden'} sm:block rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-5 shadow-xs`}
-      aria-label="Report date filters"
-    >
-    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-      <div className="flex flex-col gap-2">
-        <span className="text-xs font-semibold text-[var(--ink-secondary)]">Date range</span>
-        <div className="flex flex-wrap items-center gap-1.5" aria-label="Quick date ranges">
-          {[
-            ['Today', getToday(), getToday()],
-            ['This Month', getMonthStart(), getToday()],
-            ['Last 30 Days', getLast30Days(), getToday()],
-            ['Last 90 Days', getLast90Days(), getToday()],
-          ].map(([label, fDate, tDate]) => {
-            const isSelected = appliedDates.start === fDate && appliedDates.end === tDate
-            return (
+          <section
+            className={`${mobileDateFilterOpen ? 'block' : 'hidden'} sm:block rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3 shadow-2xs`}
+            aria-label="Report date filters"
+          >
+          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
+            {/* Quick Date Presets Row */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--surface-elevated)] text-[var(--muted)]">
+                <IconCalendar size={14} />
+              </div>
+              {DATE_PRESETS.map(preset => (
+                <button
+                  key={preset.key}
+                  type="button"
+                  onClick={() => applyPreset(preset)}
+                  className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                    datePreset === preset.key
+                      ? 'bg-[#1E3A5F] text-white shadow-2xs'
+                      : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Custom Range & Actions */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="date"
+                  value={startDate}
+                  max={endDate || getToday()}
+                  onChange={e => {
+                    setStartDate(e.target.value)
+                    setDatePreset('custom')
+                  }}
+                  className="h-8 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 text-xs font-mono text-[var(--ink)] outline-none focus:border-[#1E3A5F] focus:ring-1 focus:ring-[#1E3A5F]"
+                  aria-label="Report start date"
+                />
+                <span className="text-[10px] text-[var(--muted)] font-bold uppercase tracking-wider">TO</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  min={startDate}
+                  max={getToday()}
+                  onChange={e => {
+                    setEndDate(e.target.value)
+                    setDatePreset('custom')
+                  }}
+                  className="h-8 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-2.5 text-xs font-mono text-[var(--ink)] outline-none focus:border-[#1E3A5F] focus:ring-1 focus:ring-[#1E3A5F]"
+                  aria-label="Report end date"
+                />
+              </div>
+
               <button
-                key={label}
                 type="button"
-                onClick={() => handlePreset(fDate, tDate)}
-                aria-pressed={isSelected}
-                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                  isSelected
-                    ? 'border-[#1E3A5F] bg-[#1E3A5F] text-white'
-                    : 'border-[var(--line)] bg-[var(--surface)] text-[var(--muted)] hover:border-[#1E3A5F] hover:text-[var(--ink)]'
-                }`}
+                onClick={handleApplyFilters}
+                disabled={isDateInvalid || loading}
+                className="h-8 px-3.5 rounded-md bg-[#1E3A5F] text-white text-xs font-semibold hover:bg-[#162d4a] disabled:opacity-50 transition shadow-2xs"
               >
-                {label}
+                Apply
               </button>
-            )
-          })}
+
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                disabled={loading}
+                title="Reset to current month"
+                aria-label="Reset date range to current month"
+                className="h-8 px-2.5 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--muted)] text-xs font-semibold hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition flex items-center gap-1"
+              >
+                <IconRotate2 size={13} />
+                <span className="hidden sm:inline">Reset</span>
+              </button>
+            </div>
+          </div>
+
+          {isDateInvalid && (
+            <p
+              className="mt-2 flex items-center gap-1.5 text-xs font-medium text-rose-600"
+              role="alert"
+            >
+              <IconAlertCircle size={13} />
+              Start date cannot be after end date.
+            </p>
+          )}
+        </section>
+        </>
+      )}
+
+      {/* =====================================================
+          APPLIED FILTER METADATA STRIP
+      ====================================================== */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] px-3 py-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 text-[var(--muted)]">
+            <IconFilter size={13} className="text-[#1E3A5F] dark:text-sky-400" />
+            <span className="text-[11px] font-bold uppercase tracking-wider">Active Period:</span>
+          </div>
+          <span className="font-mono text-[11px] font-semibold text-[var(--ink)] bg-[var(--surface)] px-2 py-0.5 rounded border border-[var(--line)]">
+            {tab === 'customers' ? 'Live Balances (Today)' : `${appliedDates.start} → ${appliedDates.end}`}
+          </span>
+          {data && (
+            <span className="text-[11px] text-[var(--muted)]">
+              • {data.summary?.count ?? data.count ?? data.invoices?.length ?? data.products?.length ?? data.expenses?.length ?? data.daily?.length ?? data.results?.length ?? 0} records analyzed
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3 text-[11px] text-[var(--muted)]">
+          <span>Report Currency: <strong className="text-[var(--ink)] font-mono">INR (₹)</strong></span>
         </div>
       </div>
-
-      <div className="flex flex-wrap items-end gap-2">
-        <ReportDateField
-          id="report-from-date"
-          label="Start Date"
-          value={startDate}
-          max={endDate}
-          onChange={setStartDate}
-        />
-
-        <ReportDateField
-          id="report-to-date"
-          label="End Date"
-          value={endDate}
-          min={startDate}
-          onChange={setEndDate}
-        />
-
-        <button
-          type="button"
-          onClick={handleApplyFilters}
-          disabled={isDateInvalid || loading}
-          className="btn-primary h-9 min-h-9 min-w-20 px-3 text-xs font-semibold justify-center whitespace-nowrap"
-        >
-          Apply
-        </button>
-
-        <button
-          type="button"
-          onClick={handleResetFilters}
-          disabled={loading}
-          title="Reset date filter to This Month"
-          aria-label="Reset date range to this month"
-          className="   btn-secondary h-9 min-h-9 min-w-20 px-3 text-xs font-semibold justify-center whitespace-nowrap"
-        >
-          <IconRotate2
-            size={12}
-          />
-          <span>Reset</span>
-        </button>
-      </div>
-    </div>
-
-    {isDateInvalid && (
-      <p
-        className="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-rose-600"
-        role="alert"
-      >
-        <IconAlertCircle size={12} />
-        Start date cannot be after end date.
-      </p>
-    )}
-  </section>
-  </>
-) : (
-  <div className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] px-3 py-2 text-[11px] text-[var(--muted)]">
-    <IconInfoCircle
-      size={13}
-      className="shrink-0 text-[#1E3A5F] dark:text-slate-300"
-    />
-    <span>
-      Customer receivables reflect real-time outstanding ledger amounts as of today.
-      Date range filtering does not apply.
-    </span>
-  </div>
-)}
-
+      
       {/* =====================================================
           REPORT BODY CONTENT
       ====================================================== */}
@@ -1480,6 +1424,89 @@ function CustomerReportView({ data }) {
           </table>
         </div>
       </div>
+
+      {/* Customer Credit Collection History (Who Gave, Who Collected, Exact Date & Time) */}
+      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+        <div className="border-b border-[var(--line)] px-4 py-3 bg-[var(--surface-subtle)] flex items-center justify-between">
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+              Customer Receivables Collection History
+            </h3>
+            <p className="text-[11px] text-[var(--muted)] mt-0.5">
+              Detailed tracking: Who Gave (Customer), Who Collected (Staff), Date & Time, and Reference
+            </p>
+          </div>
+          <span className="text-xs font-mono font-semibold text-emerald-700 dark:text-emerald-400">
+            {Array.isArray(data?.collections) ? data.collections.length : 0} Collections
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="erp-report-table">
+            <thead>
+              <tr>
+                <th>Date &amp; Time (When)</th>
+                <th>Who Gave (Customer)</th>
+                <th>Who Collected</th>
+                <th>Method</th>
+                <th>Transaction / Ref</th>
+                <th>Invoice</th>
+                <th className="text-right">Amount Collected</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!Array.isArray(data?.collections) || data.collections.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-xs text-[var(--muted)]">
+                    No customer receivable collections recorded yet.
+                  </td>
+                </tr>
+              ) : (
+                data.collections.map((col, idx) => (
+                  <tr key={col.id || idx}>
+                    <td className="font-mono text-xs text-[var(--ink)]">
+                      {col.date_time || (col.created_at ? new Date(col.created_at).toLocaleString() : '—')}
+                    </td>
+                    <td>
+                      <div className="font-semibold text-xs text-[var(--ink)]">{col.who_gave}</div>
+                      {col.who_gave_phone && col.who_gave_phone !== '—' && (
+                        <div className="font-mono text-[10px] text-[var(--muted)]">{col.who_gave_phone}</div>
+                      )}
+                    </td>
+                    <td>
+                      <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                        {col.who_collected || 'Staff'}
+                      </span>
+                    </td>
+                    <td className="font-mono text-xs font-semibold uppercase text-[var(--ink)]">
+                      {col.method}
+                    </td>
+                    <td className="font-mono text-xs text-[var(--muted)] select-all">
+                      {col.reference}
+                    </td>
+                    <td className="font-mono text-xs text-[#1E3A5F] dark:text-sky-300">
+                      {col.invoice_number}
+                    </td>
+                    <td className="text-right font-mono font-bold text-emerald-700 dark:text-emerald-400">
+                      + {fmtCurrency(col.amount)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+            {Array.isArray(data?.collections) && data.collections.length > 0 && (
+              <tfoot>
+                <tr>
+                  <td colSpan={6}>Total Recent Collections</td>
+                  <td className="text-right font-mono text-emerald-700 dark:text-emerald-400 font-bold">
+                    + {fmtCurrency(data?.total_collected_amount || data.collections.reduce((sum, c) => sum + (Number(c.amount) || 0), 0))}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+      </div>
     </div>
   )
 }
@@ -1602,6 +1629,79 @@ function PaymentReportView({ data }) {
                 </tr>
               </tfoot>
             )}
+          </table>
+        </div>
+      </div>
+
+      {/* Detailed Payment Audit Trail (Who Gave, Who Collected, When Collected) */}
+      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+        <div className="border-b border-[var(--line)] px-4 py-3 bg-[var(--surface-subtle)] flex items-center justify-between">
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+              Payment Collection Log (Who Gave, Who Collected, Date &amp; Time)
+            </h3>
+            <p className="text-[11px] text-[var(--muted)] mt-0.5">
+              Auditable collection entries with exact timestamps, staff receiver, and transaction references
+            </p>
+          </div>
+          <span className="text-xs font-mono font-semibold text-teal-700 dark:text-teal-400">
+            {Array.isArray(data?.transactions) ? data.transactions.length : 0} Records
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="erp-report-table">
+            <thead>
+              <tr>
+                <th>Date &amp; Time (When)</th>
+                <th>Who Gave (Customer)</th>
+                <th>Who Collected</th>
+                <th>Method</th>
+                <th>Transaction / Ref</th>
+                <th>Invoice</th>
+                <th className="text-right">Amount Collected</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!Array.isArray(data?.transactions) || data.transactions.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-xs text-[var(--muted)]">
+                    No payment collection transactions recorded in this period.
+                  </td>
+                </tr>
+              ) : (
+                data.transactions.map((tx, idx) => (
+                  <tr key={tx.id || idx}>
+                    <td className="font-mono text-xs text-[var(--ink)]">
+                      {tx.date_time || (tx.created_at ? new Date(tx.created_at).toLocaleString() : '—')}
+                    </td>
+                    <td>
+                      <div className="font-semibold text-xs text-[var(--ink)]">{tx.who_gave}</div>
+                      {tx.who_gave_phone && (
+                        <div className="font-mono text-[10px] text-[var(--muted)]">{tx.who_gave_phone}</div>
+                      )}
+                    </td>
+                    <td>
+                      <span className="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-xs font-semibold text-teal-800 dark:bg-teal-950/40 dark:text-teal-300">
+                        {tx.who_collected || 'Staff'}
+                      </span>
+                    </td>
+                    <td className="font-mono text-xs font-semibold uppercase text-[var(--ink)]">
+                      {tx.method}
+                    </td>
+                    <td className="font-mono text-xs text-[var(--muted)] select-all">
+                      {tx.reference}
+                    </td>
+                    <td className="font-mono text-xs text-[#1E3A5F] dark:text-sky-300">
+                      {tx.invoice_number}
+                    </td>
+                    <td className="text-right font-mono font-bold text-teal-700 dark:text-teal-400">
+                      + {fmtCurrency(tx.amount)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
           </table>
         </div>
       </div>

@@ -207,6 +207,8 @@ class InvoiceService:
                     method=payment_data['method'],
                     amount=amount,
                     reference=payment_data.get('reference', ''),
+                    notes=payment_data.get('notes', ''),
+                    created_by=created_by,
                 )
                 if payment_data.get('method') == 'razorpay' and payment_data.get('reference'):
                     from ..models import RazorpayTransaction
@@ -389,9 +391,11 @@ class InvoiceService:
                 raise ValueError(f'Cannot collect payment on a {invoice.status} invoice.')
 
             if amount > invoice.balance_due:
-                raise ValueError(
-                    f'Payment amount ({amount:.2f}) exceeds invoice balance due ({invoice.balance_due:.2f}).'
-                )
+                if (amount - invoice.balance_due) > Decimal('0.01'):
+                    raise ValueError(
+                        f'Payment amount ({amount:.2f}) exceeds invoice balance due ({invoice.balance_due:.2f}).'
+                    )
+                amount = invoice.balance_due
 
             valid_methods = {choice[0] for choice in Payment.METHOD_CHOICES}
             pay_method = method if method in valid_methods else 'cash'
@@ -425,6 +429,8 @@ class InvoiceService:
                     method=pay_method,
                     amount=amount,
                     reference=clean_reference,
+                    notes=notes,
+                    created_by=user,
                 )
                 invoice.paid_amount += amount
                 invoice.balance_due = max(Decimal('0'), invoice.grand_total - invoice.paid_amount)

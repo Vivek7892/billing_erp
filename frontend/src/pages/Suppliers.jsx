@@ -1538,7 +1538,7 @@ export default function Suppliers() {
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={() => setImportModal(true)}
@@ -1546,13 +1546,13 @@ export default function Suppliers() {
             title="Bulk import suppliers from Excel or CSV"
           >
             <IconFileTypeXls size={15} />
-            <span>Import</span>
+            <span className="hidden sm:inline">Import</span>
           </button>
 
           <button
             type="button"
             onClick={openAdd}
-            className="btn-primary h-8.5 px-3.5 text-xs hidden sm:inline-flex items-center justify-center gap-1.5 rounded-lg shadow-xs"
+            className="btn-primary h-8.5 px-3 sm:px-3.5 text-xs inline-flex items-center justify-center gap-1.5 rounded-lg shadow-xs"
           >
             <IconPlus size={14} />
             <span>Add Supplier</span>
@@ -1772,7 +1772,18 @@ export default function Suppliers() {
                           Contact
                         </div>
                         <div className="text-xs text-[var(--ink)] mt-0.5 truncate">
-                          {supplier.phone || supplier.email || '—'}
+                          {supplier.phone ? (
+                            <a href={`tel:${supplier.phone}`} className="text-teal-700 dark:text-teal-400 hover:underline inline-flex items-center gap-1 font-mono">
+                              <IconPhone size={11} />
+                              <span>{supplier.phone}</span>
+                            </a>
+                          ) : supplier.email ? (
+                            <a href={`mailto:${supplier.email}`} className="text-teal-700 dark:text-teal-400 hover:underline truncate block">
+                              {supplier.email}
+                            </a>
+                          ) : (
+                            '—'
+                          )}
                         </div>
                       </div>
                       <div>
@@ -1785,50 +1796,54 @@ export default function Suppliers() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-[var(--line-subtle)]">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[var(--line-subtle)]">
                       <button
                         type="button"
                         onClick={() => toggleExpand(supplier.id)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded border border-[var(--line)] bg-[var(--surface-elevated)] text-[11px] font-semibold text-[var(--ink)]"
+                        className="inline-flex min-h-[34px] items-center gap-1.5 px-2.5 py-1 rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] text-[11px] font-semibold text-[var(--ink)] active:scale-95 transition"
                       >
-                        <IconPackage size={12} className="text-[#1E3A5F] dark:text-slate-300" />
+                        <IconPackage size={13} className="text-[#1E3A5F] dark:text-sky-400" />
                         <span>{supplierProducts.length} Products</span>
                         {expanded ? <IconChevronDown size={12} /> : <IconChevronRight size={12} />}
                       </button>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 ml-auto">
                         {due > 0 && (
                           <button
                             type="button"
                             onClick={() => openPayment(supplier)}
-                            className="btn-success btn-sm inline-flex items-center gap-1"
+                            className="btn-success btn-sm min-h-[34px] px-2.5 inline-flex items-center gap-1 text-[11px] font-bold"
                           >
-                            <IconCreditCard size={12} />
-                            Pay
+                            <IconCreditCard size={13} />
+                            <span>Pay</span>
                           </button>
                         )}
                         <button
                           type="button"
                           onClick={() => openSupplierReturn(supplier)}
-                          className="btn-secondary btn-sm inline-flex items-center gap-1"
+                          className="btn-secondary btn-sm min-h-[34px] px-2.5 inline-flex items-center gap-1 text-[11px] font-semibold"
                           title="Return items from a supplier purchase"
                         >
-                          <IconRotate2 size={12} />
+                          <IconRotate2 size={13} />
                           <span>Return</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => openEdit(supplier)}
-                          className="h-7 px-2 border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:text-[var(--ink)] text-[11px] font-semibold flex items-center gap-1 rounded"
+                          className="min-h-[34px] min-w-[34px] border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:text-[var(--ink)] text-[11px] font-semibold flex items-center justify-center rounded-md active:scale-95 transition"
+                          title="Edit supplier"
+                          aria-label="Edit supplier"
                         >
-                          <IconPencil size={12} />
+                          <IconPencil size={13} />
                         </button>
                         <button
                           type="button"
                           onClick={() => setDeleteTarget(supplier)}
-                          className="h-7 w-7 border border-[var(--line)] bg-[var(--surface)] text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 rounded flex items-center justify-center"
+                          className="min-h-[34px] min-w-[34px] border border-[var(--line)] bg-[var(--surface)] text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-md flex items-center justify-center active:scale-95 transition"
+                          title="Delete supplier"
+                          aria-label="Delete supplier"
                         >
-                          <IconTrash size={12} />
+                          <IconTrash size={13} />
                         </button>
                       </div>
                     </div>

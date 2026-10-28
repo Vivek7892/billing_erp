@@ -1,4 +1,16 @@
-from ..reports import customer, expenses, gst, inventory, payment, product, profit, sales, supplier
+from ..reports import (
+    cancelled_refunded,
+    customer,
+    expenses,
+    gst,
+    inventory,
+    payment,
+    product,
+    profit,
+    reconciliation,
+    sales,
+    supplier,
+)
 
 
 class ReportService:
@@ -12,6 +24,8 @@ class ReportService:
         'payments': payment.build,
         'expenses': expenses.build,
         'inventory': inventory.build,
+        'cancelled_refunded': cancelled_refunded.build,
+        'reconciliation': reconciliation.build,
     }
 
     @classmethod

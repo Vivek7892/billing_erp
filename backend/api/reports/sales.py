@@ -31,26 +31,37 @@ def build(business, params):
     collection += CustomerPayment.objects.filter(
         business=business, created_at__date__gte=start, created_at__date__lte=end,
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
-    summary.update({
-        'gross_sales': summary['total_sales'] or Decimal('0'),
-        'returns': returns_total,
-        'net_sales': (summary['total_sales'] or Decimal('0')) - returns_total,
-        'collection': collection,
-        'outstanding': invoices.aggregate(total=Sum('balance_due'))['total'] or Decimal('0'),
-    })
+    outstanding = invoices.aggregate(total=Sum('balance_due'))['total'] or Decimal('0')
+    gross_sales = summary['total_sales'] or Decimal('0')
+    net_sales = gross_sales - returns_total
+    float_summary = {
+        'count': int(summary['count'] or 0),
+        'gross_sales': float(gross_sales),
+        'total_sales': float(gross_sales),
+        'total_discount': float(summary['total_discount'] or 0),
+        'total_tax': float(summary['total_tax'] or 0),
+        'returns': float(returns_total),
+        'net_sales': float(net_sales),
+        'collection': float(collection),
+        'outstanding': float(outstanding),
+    }
     daily = list(invoices.values('created_at__date').annotate(
         total=Sum('grand_total'), count=Count('id'),
     ).order_by('created_at__date'))
-    payload = {'summary': summary, 'daily': daily}
-    rows = [[str(row['created_at__date']), int(row['count'] or 0), float(row['total'] or 0)] for row in daily]
+    daily_serializable = [
+        {'created_at__date': str(row['created_at__date']), 'total': float(row['total'] or 0), 'count': int(row['count'] or 0)}
+        for row in daily
+    ]
+    payload = {'summary': float_summary, 'daily': daily_serializable}
+    rows = [[row['created_at__date'], int(row['count'] or 0), float(row['total'] or 0)] for row in daily_serializable]
     summary_rows = [
-        ('Gross Invoiced Sales', float(summary['total_sales'] or 0)),
-        ('Total Discounts', float(summary['total_discount'] or 0)),
-        ('Sales Returns', float(summary['returns'] or 0)),
-        ('Net Sales Revenue', float(summary['net_sales'] or 0)),
-        ('Output GST Tax', float(summary['total_tax'] or 0)),
-        ('Total Collections', float(summary['collection'] or 0)),
-        ('Outstanding Balance', float(summary['outstanding'] or 0)),
-        ('Completed Invoices', int(summary['count'] or 0)),
+        ('Gross Invoiced Sales', float_summary['gross_sales']),
+        ('Total Discounts', float_summary['total_discount']),
+        ('Sales Returns', float_summary['returns']),
+        ('Net Sales Revenue', float_summary['net_sales']),
+        ('Output GST Tax', float_summary['total_tax']),
+        ('Total Collections', float_summary['collection']),
+        ('Outstanding Balance', float_summary['outstanding']),
+        ('Completed Invoices', float_summary['count']),
     ]
     return ReportData('Sales Summary Report', 'sales-summary-report', payload, ['Date', 'Invoice Count', 'Total Sales'], rows, summary_rows)

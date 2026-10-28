@@ -32,19 +32,19 @@
 
 .dark .pb-page,
 .dark .pb-modal {
-  --pb-canvas: var(--app-bg, #0B1120);
-  --pb-surface: var(--surface, #111827);
-  --pb-surface-alt: var(--surface-hover, #172033);
-  --pb-border: var(--line, #263244);
-  --pb-border-strong: var(--line-strong, #334155);
+  --pb-canvas: var(--app-bg, #121316);
+  --pb-surface: var(--surface, #1A1B1E);
+  --pb-surface-alt: var(--surface-hover, #26282D);
+  --pb-border: var(--line, #2E3035);
+  --pb-border-strong: var(--line-strong, #3E4149);
 
-  --pb-text: var(--ink, #F8FAFC);
-  --pb-text-secondary: var(--ink-secondary, #94A3B8);
-  --pb-muted: var(--muted, #64748B);
-  --pb-primary: var(--primary, #2563EB);
-  --pb-primary-hover: var(--primary-hover, #1D4ED8);
-  --pb-success: var(--success, #22C55E);
-  --pb-success-hover: var(--success-hover, #16A34A);
+  --pb-text: var(--ink, #F3F4F6);
+  --pb-text-secondary: var(--ink-secondary, #9CA3AF);
+  --pb-muted: var(--muted, #6B7280);
+  --pb-primary: var(--primary, #6366F1);
+  --pb-primary-hover: var(--primary-hover, #818CF8);
+  --pb-success: var(--success, #10B981);
+  --pb-success-hover: var(--success-hover, #059669);
 }
 
 /* Tabular Lining Numerals for POS Scannability */

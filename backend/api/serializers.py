@@ -346,10 +346,60 @@ class InvoiceItemSerializer(serializers.ModelSerializer):
 
 class PaymentSerializer(serializers.ModelSerializer):
     transaction_id = serializers.CharField(source='reference', read_only=True)
+    collected_by_name = serializers.SerializerMethodField()
+    customer_name = serializers.SerializerMethodField()
+    customer_mobile = serializers.SerializerMethodField()
+    notes = serializers.SerializerMethodField()
+    payment_date = serializers.SerializerMethodField()
 
     class Meta:
         model = Payment
-        fields = ['id', 'invoice', 'customer_payment', 'method', 'amount', 'reference', 'transaction_id', 'created_at']
+        fields = [
+            'id', 'invoice', 'customer_payment', 'method', 'amount',
+            'reference', 'transaction_id', 'notes', 'collected_by_name',
+            'customer_name', 'customer_mobile', 'payment_date', 'created_at'
+        ]
+
+    def get_collected_by_name(self, obj):
+        if obj.created_by:
+            return obj.created_by.get_full_name() or obj.created_by.username
+        if obj.customer_payment and obj.customer_payment.created_by:
+            return obj.customer_payment.created_by.get_full_name() or obj.customer_payment.created_by.username
+        if obj.invoice and obj.invoice.created_by:
+            return obj.invoice.created_by.get_full_name() or obj.invoice.created_by.username
+        return 'Staff'
+
+    def get_customer_name(self, obj):
+        if obj.customer_payment and obj.customer_payment.customer:
+            return obj.customer_payment.customer.name
+        if obj.invoice:
+            if obj.invoice.customer:
+                return obj.invoice.customer.name
+            if obj.invoice.customer_name:
+                return obj.invoice.customer_name
+        return 'Walk-in Customer'
+
+    def get_customer_mobile(self, obj):
+        if obj.customer_payment and obj.customer_payment.customer:
+            return obj.customer_payment.customer.mobile or ''
+        if obj.invoice:
+            if obj.invoice.customer and obj.invoice.customer.mobile:
+                return obj.invoice.customer.mobile
+            if obj.invoice.customer_phone:
+                return obj.invoice.customer_phone
+        return ''
+
+    def get_notes(self, obj):
+        if obj.notes:
+            return obj.notes
+        if obj.customer_payment and obj.customer_payment.notes:
+            return obj.customer_payment.notes
+        return ''
+
+    def get_payment_date(self, obj):
+        if not obj.created_at:
+            return ''
+        return obj.created_at.strftime('%d %b %Y, %I:%M %p')
 
 
 class InvoiceSerializer(serializers.ModelSerializer):
@@ -483,6 +533,7 @@ class CustomerPaymentSerializer(serializers.ModelSerializer):
     customer_mobile = serializers.CharField(source='customer.mobile', read_only=True, default='')
     invoice_number = serializers.CharField(source='invoice.invoice_number', read_only=True, default='')
     created_by_name = serializers.SerializerMethodField()
+    collected_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = CustomerPayment
@@ -493,7 +544,9 @@ class CustomerPaymentSerializer(serializers.ModelSerializer):
         if not obj.created_by:
             return ''
         return obj.created_by.get_full_name() or obj.created_by.username
-        read_only_fields = ['business', 'created_by']
+
+    def get_collected_by_name(self, obj):
+        return self.get_created_by_name(obj)
 
     def validate(self, attrs):
         if attrs.get('amount') is not None and attrs['amount'] <= 0:

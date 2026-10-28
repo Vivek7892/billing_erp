@@ -2224,27 +2224,43 @@ def generate_report_pdf(
     rpt_table.setStyle(TableStyle(rpt_style))
     story.append(rpt_table)
 
-    # 4. Footer callback with page numbers
+    # 4. Two-pass NumberedCanvas for exact "Page X of Y" and footer rule
+    from reportlab.pdfgen import canvas as rl_canvas
+
     footer_shop = shop_name[:90]
     footer_contact = f" | Phone: {shop_phone}" if shop_phone else ""
 
-    def _draw_page_footer(canvas, document):
-        canvas.saveState()
-        canvas.setStrokeColor(C_BORDER)
-        canvas.setLineWidth(0.4)
-        canvas.line(margin_l, 9.5 * mm, page_w - margin_r, 9.5 * mm)
+    class ReportNumberedCanvas(rl_canvas.Canvas):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._saved_page_states = []
 
-        canvas.setFillColor(C_MUTED)
-        canvas.setFont(font_r, 6.8)
-        left_text = f"{footer_shop}{footer_contact}  |  {_clean_str(title)}"
-        canvas.drawString(margin_l, 6 * mm, left_text[:145])
+        def showPage(self):
+            self._saved_page_states.append(dict(self.__dict__))
+            self._startPage()
 
-        canvas.setFillColor(C_BLACK)
-        canvas.setFont(font_b, 6.8)
-        canvas.drawRightString(page_w - margin_r, 6 * mm, f"Page {document.page}")
-        canvas.restoreState()
+        def save(self):
+            num_pages = len(self._saved_page_states)
+            for state in self._saved_page_states:
+                self.__dict__.update(state)
+                self.saveState()
+                self.setStrokeColor(C_BORDER)
+                self.setLineWidth(0.4)
+                self.line(margin_l, 9.5 * mm, page_w - margin_r, 9.5 * mm)
 
-    doc.build(story, onFirstPage=_draw_page_footer, onLaterPages=_draw_page_footer)
+                self.setFillColor(C_MUTED)
+                self.setFont(font_r, 6.8)
+                left_text = f"{footer_shop}{footer_contact}  |  {_clean_str(title)}"
+                self.drawString(margin_l, 6 * mm, left_text[:145])
+
+                self.setFillColor(C_BLACK)
+                self.setFont(font_b, 6.8)
+                self.drawRightString(page_w - margin_r, 6 * mm, f"Page {self._pageNumber} of {num_pages}")
+                self.restoreState()
+                rl_canvas.Canvas.showPage(self)
+            rl_canvas.Canvas.save(self)
+
+    doc.build(story, canvasmaker=ReportNumberedCanvas)
     buffer.seek(0)
     return buffer
 

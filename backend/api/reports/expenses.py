@@ -7,11 +7,15 @@ from .common import period
 
 def build(business, params):
     start, end = period(params)
-    expenses = Expense.objects.filter(
-        business=business,
-        expense_date__gte=start,
-        expense_date__lte=end,
-    ).order_by('-expense_date')
+    expenses = (
+        Expense.objects.filter(
+            business=business,
+            expense_date__gte=start,
+            expense_date__lte=end,
+        )
+        .select_related('category', 'created_by')
+        .order_by('-expense_date')
+    )
 
     summary = expenses.aggregate(
         total_amount=Sum('amount'),
@@ -36,29 +40,28 @@ def build(business, params):
         for row in by_category_qs
     ]
 
-    raw_expense_list = list(
-        expenses.values(
-            'expense_date',
-            'description',
-            'amount',
-            'payment_method',
-            'category__name',
-            'notes',
+    expense_list = []
+    for exp in expenses:
+        creator = (
+            (exp.created_by.get_full_name() or exp.created_by.username)
+            if exp.created_by
+            else '—'
         )
-    )
+        cat_name = exp.category.name if exp.category else 'Uncategorised'
+        method_name = (exp.payment_method or '—').replace('_', ' ').title()
+        amt = float(exp.amount or 0)
 
-    expense_list = [
-        {
-            'expense_date': str(row['expense_date']),
-            'description': row['description'] or '—',
-            'category': row['category__name'] or 'Uncategorised',
-            'category__name': row['category__name'] or 'Uncategorised',
-            'payment_method': (row['payment_method'] or '—').replace('_', ' ').title(),
-            'amount': float(row['amount'] or 0),
-            'notes': row['notes'] or '',
-        }
-        for row in raw_expense_list
-    ]
+        expense_list.append({
+            'id': exp.id,
+            'expense_date': str(exp.expense_date),
+            'description': exp.description or '—',
+            'category': cat_name,
+            'category__name': cat_name,
+            'payment_method': method_name,
+            'amount': amt,
+            'created_by': creator,
+            'notes': exp.notes or '',
+        })
 
     total_amount = float(summary['total_amount'] or 0)
     total_count = int(summary['count'] or 0)
@@ -76,7 +79,7 @@ def build(business, params):
         },
     }
 
-    headers = ['Date', 'Description', 'Category', 'Payment Method', 'Amount']
+    headers = ['Date', 'Description', 'Category', 'Payment Method', 'Amount', 'Recorded By', 'Notes']
     rows = [
         [
             r['expense_date'],
@@ -84,6 +87,8 @@ def build(business, params):
             r['category'],
             r['payment_method'],
             r['amount'],
+            r['created_by'],
+            r['notes'],
         ]
         for r in expense_list
     ]

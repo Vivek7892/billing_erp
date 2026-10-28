@@ -8,6 +8,8 @@ METHOD_LABELS = {
     'cash': 'Cash',
     'upi': 'UPI',
     'card': 'Credit / Debit Card',
+    'bank': 'Bank Transfer',
+    'online': 'Online Payment',
     'credit': 'Customer Credit / Khata',
     'cheque': 'Cheque',
     'bank_transfer': 'Bank Transfer',
@@ -104,8 +106,61 @@ def build(business, params):
         .order_by('created_at__date')
     )
 
+    # Detailed collections & audit trail in date range:
+    # Captures: Who gave, Who collected, Date & Time, Payment Method, Reference, Linked Invoice, Amount
+    detailed_payments = Payment.objects.filter(
+        invoice__business=business,
+        created_at__date__gte=start,
+        created_at__date__lte=end,
+    ).select_related(
+        'invoice', 'invoice__customer', 'customer_payment',
+        'customer_payment__customer', 'created_by', 'customer_payment__created_by'
+    ).order_by('-created_at')[:100]
+
+    transactions = []
+    for p in detailed_payments:
+        # Who gave
+        who_gave = 'Walk-in Customer'
+        who_gave_phone = ''
+        if p.customer_payment and p.customer_payment.customer:
+            who_gave = p.customer_payment.customer.name
+            who_gave_phone = p.customer_payment.customer.mobile or ''
+        elif p.invoice and p.invoice.customer:
+            who_gave = p.invoice.customer.name
+            who_gave_phone = p.invoice.customer.mobile or ''
+        elif p.invoice and p.invoice.customer_name:
+            who_gave = p.invoice.customer_name
+            who_gave_phone = p.invoice.customer_phone or ''
+
+        # Who collected
+        who_collected = 'Staff'
+        if p.created_by:
+            who_collected = p.created_by.get_full_name() or p.created_by.username
+        elif p.customer_payment and p.customer_payment.created_by:
+            who_collected = p.customer_payment.created_by.get_full_name() or p.customer_payment.created_by.username
+        elif p.invoice and p.invoice.created_by:
+            who_collected = p.invoice.created_by.get_full_name() or p.invoice.created_by.username
+
+        raw_m = str(p.method or 'cash').lower()
+        method_label = METHOD_LABELS.get(raw_m, raw_m.upper())
+
+        transactions.append({
+            'id': p.id,
+            'who_gave': who_gave,
+            'who_gave_phone': who_gave_phone,
+            'who_collected': who_collected,
+            'amount': float(p.amount),
+            'method': method_label,
+            'reference': p.reference or f'TXN-{p.id}',
+            'invoice_number': p.invoice.invoice_number if p.invoice else '—',
+            'created_at': p.created_at.isoformat() if p.created_at else '',
+            'date_time': p.created_at.strftime('%d %b %Y, %I:%M %p') if p.created_at else '',
+            'notes': p.notes or (p.customer_payment.notes if p.customer_payment else ''),
+        })
+
     payload = {
         'methods': method_rows,
+        'transactions': transactions,
         'daily': [
             {
                 'date': str(r['created_at__date']),

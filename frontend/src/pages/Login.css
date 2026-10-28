@@ -833,3 +833,62 @@
   color: #1597D4;
   text-decoration: underline;
 }
+/* ============================================================
+   DARK MODE OVERRIDES (DARK GREY)
+============================================================ */
+[data-theme="dark"] .login-shell,
+.dark .login-shell,
+[data-theme="dark"] .login-panel,
+.dark .login-panel {
+  background: #121316 !important;
+  color: #F3F4F6 !important;
+  color-scheme: dark;
+}
+
+[data-theme="dark"] .login-heading h1,
+.dark .login-heading h1,
+[data-theme="dark"] .login-brand-text strong,
+.dark .login-brand-text strong {
+  color: #F3F4F6 !important;
+}
+
+[data-theme="dark"] .login-heading p,
+.dark .login-heading p,
+[data-theme="dark"] .login-brand-text small,
+.dark .login-brand-text small {
+  color: #9CA3AF !important;
+}
+
+[data-theme="dark"] .login-field label,
+.dark .login-field label {
+  color: #D1D5DB !important;
+}
+
+[data-theme="dark"] .login-input-box,
+.dark .login-input-box {
+  background: #1A1B1E !important;
+  border-color: #2E3035 !important;
+  color: #F3F4F6 !important;
+}
+
+[data-theme="dark"] .login-input,
+.dark .login-input {
+  color: #F3F4F6 !important;
+}
+
+[data-theme="dark"] .login-input-box:focus-within,
+.dark .login-input-box:focus-within {
+  background: #25272D !important;
+  border-color: #6366F1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+}
+
+[data-theme="dark"] .login-remember span,
+.dark .login-remember span {
+  color: #9CA3AF !important;
+}
+
+[data-theme="dark"] .login-footer-copy,
+.dark .login-footer-copy {
+  color: #6B7280 !important;
+}
