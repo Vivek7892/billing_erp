@@ -9,7 +9,8 @@ import {
   IconCheck,
 } from '@tabler/icons-react'
 import { usePageLoadingRegistration } from './PageLoadingContext'
-
+import SearchInput from './SearchInput'
+export { SearchInput }
 
 /* ============================================================
    CARD
@@ -1200,51 +1201,6 @@ export function PageHeader({
 }
 
 /* ============================================================
-   SEARCH INPUT
-============================================================ */
-
-export function SearchInput({
-  value,
-  onChange,
-  placeholder = 'Search…',
-  className = '',
-  autoFocus = false,
-  onClear,
-}) {
-  return (
-    <div className={`group relative flex items-center min-h-[42px] w-full rounded-xl bg-[var(--surface-elevated)] px-2.5 transition-all duration-200 shadow-2xs ${className}`}>
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-        <IconSearch size={14} strokeWidth={2.2} />
-      </div>
-
-      <input
-        type="search"
-        className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
-        placeholder={placeholder}
-        value={value ?? ''}
-        onChange={onChange}
-        autoFocus={autoFocus}
-      />
-
-      {value ? (
-        <button
-          type="button"
-          onClick={() => {
-            if (onClear) onClear()
-            onChange?.({ target: { value: '' } })
-          }}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
-          aria-label="Clear search"
-          title="Clear search"
-        >
-          <IconX size={13} strokeWidth={2.5} />
-        </button>
-      ) : null}
-    </div>
-  )
-}
-
-/* ============================================================
    DATE FILTER BAR
 ============================================================ */
 
@@ -1572,13 +1528,13 @@ export function StatusBadge({ status, label: customLabel }) {
 }
 
 /* ============================================================
-   SEARCH BAR (With Ctrl+K and clear button)
+   SEARCH BAR (Standardized Search Component wrapper)
 ============================================================ */
 
 export function SearchBar({
   value,
   onChange,
-  placeholder = 'Search… (Ctrl+K)',
+  placeholder = 'Search…',
   className = '',
   onClear,
   shortcut = 'Ctrl+K',
@@ -1589,45 +1545,40 @@ export function SearchBar({
   clearButtonClassName = '',
   clearButtonProps = {},
   shortcutClassName = '',
+  variant = 'standard',
+  autoFocus = false,
   children,
+  ...props
 }) {
+  const handleChange = (e) => {
+    // Support both direct string handler and event handler
+    if (typeof onChange === 'function') {
+      if (e && e.target !== undefined) {
+        onChange(e.target.value)
+      } else {
+        onChange(e)
+      }
+    }
+  }
+
   return (
-    <div className={`group relative flex items-center min-h-[42px] w-full min-w-[200px] flex-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs ${className}`}>
-      <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300 ${iconClassName}`}>
-        <IconSearch size={14} strokeWidth={2.2} />
-      </div>
-
-      <input
-        {...inputProps}
-        ref={inputRef}
-        type="text"
-        value={value || ''}
-        onChange={e => onChange?.(e.target.value)}
-        placeholder={placeholder}
-        className={`w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none ${inputClassName}`}
-      />
-
-      {value ? (
-        <button
-          type="button"
-          onClick={() => {
-            onChange?.('')
-            onClear?.()
-          }}
-          {...clearButtonProps}
-          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95 ${clearButtonClassName}`}
-          aria-label="Clear search"
-          title="Clear search"
-        >
-          <IconX size={13} strokeWidth={2.5} />
-        </button>
-      ) : shortcut ? (
-        <kbd className={`hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs ${shortcutClassName}`}>
-          {shortcut}
-        </kbd>
-      ) : null}
+    <SearchInput
+      ref={inputRef}
+      value={value}
+      onChange={handleChange}
+      onClear={onClear}
+      placeholder={placeholder}
+      shortcut={shortcut}
+      variant={variant}
+      className={className}
+      inputClassName={inputClassName}
+      iconClassName={iconClassName}
+      clearButtonClassName={clearButtonClassName}
+      inputProps={{ ...inputProps, autoFocus }}
+      {...props}
+    >
       {children}
-    </div>
+    </SearchInput>
   )
 }
 

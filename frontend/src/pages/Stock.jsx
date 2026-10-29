@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import api, { API_BASE_URL } from '../api'
 import productService from '../features/inventory/api/productService'
-import { Badge, PageHeader, Modal, Spinner, EmptyState, Pagination, TableSkeleton, SearchBar } from '../components/UI'
+import { Badge, PageHeader, Modal, Spinner, EmptyState, Pagination, TableSkeleton, SearchBar, SearchInput } from '../components/UI'
 import { MobileKpiGrid, MobileFAB } from '../components/MobileUI'
 import { STOCK_STATUS } from '../constants'
 import toast from 'react-hot-toast'
@@ -607,37 +607,26 @@ export default function Stock() {
       ====================================================== */}
       {/* Mobile Search & Filter Toggle Bar */}
       <div className="flex items-center gap-2 sm:hidden">
-        <div className="group relative flex min-w-0 flex-1 items-center h-[36px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5">
-          <IconPackage size={14} className="shrink-0 text-[var(--muted)] mr-2" />
-          <input
-            className="w-full bg-transparent text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
-            placeholder="Search stock..."
-            value={q}
-            onChange={e => setQ(e.target.value)}
-          />
-          {q && (
-            <button
-              type="button"
-              onClick={() => setQ('')}
-              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[var(--muted)]"
-            >
-              <IconX size={13} />
-            </button>
-          )}
-        </div>
+        <SearchInput
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          onClear={() => setQ('')}
+          placeholder="Search products by name, SKU or barcode..."
+          className="flex-1"
+        />
         <button
           type="button"
           onClick={() => setMobileFiltersOpen(v => !v)}
-          className={`flex h-[36px] items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold shadow-2xs transition active:scale-95 ${
+          className={`flex h-[38px] items-center gap-1.5 rounded-md border px-3 text-xs font-semibold transition shrink-0 ${
             mobileFiltersOpen || isFilterActive
-              ? 'border-[#1E3A5F] bg-blue-50 text-[#1E3A5F] dark:border-blue-700 dark:bg-blue-950/60 dark:text-sky-300 font-bold'
-              : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+              ? 'border-[#0057B8] bg-blue-50/70 text-[#0057B8] dark:border-slate-400 dark:bg-white/10 dark:text-slate-100 font-bold'
+              : 'border-[#D9E0E8] dark:border-[var(--line)] bg-white dark:bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
           }`}
         >
-          <IconFilter size={14} />
+          <IconFilter size={15} />
           <span>Filters</span>
           {isFilterActive && (
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#1E3A5F] text-[9px] font-bold text-white">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#0057B8] text-[9px] font-bold text-white">
               •
             </span>
           )}
@@ -648,30 +637,14 @@ export default function Stock() {
       <div className={`${mobileFiltersOpen ? 'block' : 'hidden'} sm:block rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3 shadow-2xs space-y-2.5`}>
         {/* Search Bar on Desktop */}
         <div className="hidden sm:flex items-center gap-2">
-          <div className="group relative flex min-w-0 flex-1 items-center h-[36px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 transition hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-1 focus-within:ring-[#1E3A5F]/20">
-            <IconPackage size={14} className="shrink-0 text-[var(--muted)] group-focus-within:text-[#1E3A5F] dark:group-focus-within:text-sky-300 mr-2" />
-            <input
-              className="w-full bg-transparent text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
-              placeholder="Search product name, SKU, barcode, supplier..."
-              value={q}
-              onChange={e => setQ(e.target.value)}
-            />
-            {q ? (
-              <button
-                type="button"
-                onClick={() => setQ('')}
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
-                aria-label="Clear search"
-                title="Clear search"
-              >
-                <IconX size={13} />
-              </button>
-            ) : (
-              <kbd className="hidden sm:inline-flex shrink-0 items-center rounded border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)]">
-                Ctrl+K
-              </kbd>
-            )}
-          </div>
+          <SearchInput
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            onClear={() => setQ('')}
+            placeholder="Search products by name, SKU or barcode..."
+            shortcut="Ctrl+K"
+            className="flex-1"
+          />
 
           {isFilterActive && (
             <button
@@ -703,14 +676,14 @@ export default function Stock() {
                 onClick={() => setFilter(tab.key)}
                 className={`shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-semibold border transition ${
                   filter === tab.key
-                    ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-2xs'
+                    ? 'bg-[var(--primary)] border-[var(--primary)] text-white dark:text-slate-900 shadow-2xs'
                     : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)]'
                 }`}
               >
                 <span>{tab.label}</span>
                 <span className={`text-[10px] font-mono px-1 rounded-full ${
                   filter === tab.key
-                    ? 'bg-white/20 text-white'
+                    ? 'bg-white/20 text-white dark:bg-black/20 dark:text-slate-900'
                     : 'bg-[var(--surface-subtle)] text-[var(--muted)]'
                 }`}>
                   {tab.count}
@@ -867,7 +840,7 @@ export default function Stock() {
                       <button
                         type="button"
                         onClick={() => openAdjust(p)}
-                        className="flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-[#1E3A5F] text-white text-xs font-semibold hover:bg-[#162F4D] active:scale-95 transition shadow-2xs"
+                        className="flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-[#1E3A5F] text-white dark:bg-slate-100 dark:text-slate-900 text-xs font-semibold hover:bg-[#162F4D] active:scale-95 transition shadow-2xs"
                         title="Adjust Stock"
                       >
                         <IconAdjustmentsHorizontal size={13} className="shrink-0" />
@@ -1039,12 +1012,12 @@ export default function Stock() {
                         </td>
 
                         {/* Unit Cost */}
-                        <td className="px-3 py-2 text-right align-middle font-mono text-xs text-[var(--muted)]">
+                        <td className="amount price px-3 py-2 text-right align-middle font-mono text-xs text-[var(--muted)]">
                           {fmtCurrency(p.purchase_price)}
                         </td>
 
                         {/* Total Stock Value */}
-                        <td className="px-3 py-2 text-right align-middle font-mono font-bold text-xs text-[var(--ink)]">
+                        <td className="amount price px-3 py-2 text-right align-middle font-mono font-bold text-xs text-[var(--ink)]">
                           {fmtCurrency(
                             Number(p.current_stock || 0) *
                               Number(p.purchase_price || 0),
@@ -1322,7 +1295,7 @@ export default function Stock() {
                 type="button"
                 onClick={submitAdjust}
                 disabled={adjusting}
-                className="h-10 w-full rounded-lg bg-[#1E3A5F] px-4 text-xs font-semibold text-white hover:bg-[#162F4D] transition flex items-center justify-center gap-2 sm:w-36 active:scale-95 shadow-2xs"
+                className="h-10 w-full rounded-lg bg-[#1E3A5F] px-4 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900 hover:bg-[#162F4D] transition flex items-center justify-center gap-2 sm:w-36 active:scale-95 shadow-2xs"
               >
                 {adjusting ? (
                   <>

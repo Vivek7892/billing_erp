@@ -9,6 +9,7 @@ import {
   Spinner,
   TableSkeleton,
   EmptyState,
+  SearchInput,
 } from '../components/UI'
 
 import { CreditCollectedVisual, CustomerEmptyIllustration } from '../components/visuals'
@@ -1104,34 +1105,14 @@ export default function Customers() {
         <div className="flex w-full flex-col gap-2.5 sm:flex-row sm:items-center">
 
           {/* Search */}
-          <div className="group relative flex min-w-0 flex-1 items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 transition-all duration-200 hover:border-[var(--line-strong)] focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface)] text-[var(--muted)] group-focus-within:text-[#1E3A5F] dark:group-focus-within:text-sky-400">
-              <IconSearch size={15} strokeWidth={2.2} />
-            </div>
-
-            <input
-              className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
-              placeholder="Search name, mobile, or email..."
-              value={search}
-              onChange={event => setSearch(event.target.value)}
-            />
-
-            {search ? (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] hover:text-[var(--ink)] active:scale-95 transition"
-                title="Clear search"
-                aria-label="Clear search"
-              >
-                <IconX size={14} strokeWidth={2.5} />
-              </button>
-            ) : (
-              <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-subtle)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)]">
-                Ctrl+K
-              </kbd>
-            )}
-          </div>
+          <SearchInput
+            value={search}
+            onChange={event => setSearch(event.target.value)}
+            onClear={() => setSearch('')}
+            placeholder="Search customers by name, phone or customer ID..."
+            shortcut="Ctrl+K"
+            className="flex-1"
+          />
 
           {/* Credit filter - simple pill button */}
           <button

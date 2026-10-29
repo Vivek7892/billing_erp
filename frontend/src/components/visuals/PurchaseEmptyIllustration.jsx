@@ -24,10 +24,10 @@ export default function PurchaseEmptyIllustration({ className = '', onNewPurchas
           </span>
         </div>
 
-        <h3 className="text-sm font-bold text-[#111111] dark:text-white">
+        <h3 className="text-sm font-bold text-[var(--ink)]">
           No Purchase Orders Recorded
         </h3>
-        <p className="text-xs text-[#555555] dark:text-gray-400 mt-1 max-w-xs">
+        <p className="text-xs text-[var(--muted)] mt-1 max-w-xs leading-relaxed">
           Track supplier purchases, inward shipments, GST input tax credits, and payment liabilities.
         </p>
 
@@ -35,7 +35,7 @@ export default function PurchaseEmptyIllustration({ className = '', onNewPurchas
           <button
             type="button"
             onClick={onNewPurchase}
-            className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#0057B8] text-white text-xs font-bold hover:bg-[#003F8F] transition-colors shadow-sm"
+            className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[var(--line)] bg-[#1E3A5F] text-white text-xs font-semibold hover:bg-[#162F4D] dark:border-slate-200 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-colors shadow-xs"
           >
             <IconPlus size={14} />
             <span>Create Purchase Order</span>

@@ -271,14 +271,14 @@
   --muted-light: #4B5563;
   --placeholder: #6B7280;
 
-  /* Primary Accent in Dark Mode */
-  --primary: #6366F1;
-  --primary-hover: #818CF8;
-  --primary-active: #4F46E5;
-  --primary-contrast: #FFFFFF;
-  --primary-light: rgba(99, 102, 241, 0.15);
-  --primary-border: #3E4149;
-  --primary-text: #818CF8;
+  /* Primary Accent / Action Button in Dark Mode — Light color, strictly NO BLUE */
+  --primary: #F3F4F6;
+  --primary-hover: #FFFFFF;
+  --primary-active: #E5E7EB;
+  --primary-contrast: #111827;
+  --primary-light: rgba(243, 244, 246, 0.12);
+  --primary-border: #E5E7EB;
+  --primary-text: #F3F4F6;
 
   --accent: #14B8A6;
   --accent-hover: #2DD4BF;
@@ -355,7 +355,7 @@
   --num-positive: #34D399;
   --num-negative: #F87171;
   --num-neutral: #9CA3AF;
-  --amount-sales: #818CF8;
+  --amount-sales: #34D399;
   --amount-expense: #F87171;
   --amount-profit: #34D399;
   --amount-due: #FBBF24;
@@ -541,8 +541,9 @@ small {
   color: #0F172A;
   font-weight: 700;
 }
-.dark .num {
-  color: #F1F5F9;
+.dark .num,
+[data-theme="dark"] .num {
+  color: #34D399 !important;
 }
 
 .num-lg {
@@ -857,15 +858,173 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   background: var(--primary-active);
   color: var(--primary-contrast);
 }
-.dark .btn-primary {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: var(--primary-contrast);
+.dark .btn-primary,
+[data-theme="dark"] .btn-primary {
+  border: 1px solid #E5E7EB !important;
+  background-color: #F3F4F6 !important;
+  color: #111827 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
-.dark .btn-primary:hover:not(:disabled) {
-  border-color: var(--primary-hover);
-  background: var(--primary-hover);
-  color: var(--primary-contrast);
+.dark .btn-primary *,
+[data-theme="dark"] .btn-primary * {
+  color: #111827 !important;
+}
+.dark .btn-primary:hover:not(:disabled),
+[data-theme="dark"] .btn-primary:hover:not(:disabled) {
+  border-color: #FFFFFF !important;
+  background-color: #FFFFFF !important;
+  color: #111827 !important;
+}
+.dark .btn-primary:hover:not(:disabled) *,
+[data-theme="dark"] .btn-primary:hover:not(:disabled) * {
+  color: #111827 !important;
+}
+.dark .btn-primary:active:not(:disabled),
+[data-theme="dark"] .btn-primary:active:not(:disabled) {
+  border-color: #D1D5DB !important;
+  background-color: #E5E7EB !important;
+  color: #111827 !important;
+}
+
+/* Ensure NO BLUE buttons in dark mode — convert primary/blue/dark buttons to crisp light style */
+.dark button[class*="bg-blue-"],
+[data-theme="dark"] button[class*="bg-blue-"],
+.dark a[class*="bg-blue-"],
+[data-theme="dark"] a[class*="bg-blue-"],
+.dark button[class*="bg-indigo-"],
+[data-theme="dark"] button[class*="bg-indigo-"],
+.dark a[class*="bg-indigo-"],
+[data-theme="dark"] a[class*="bg-indigo-"],
+.dark button.bg-\[\#0057B8\],
+[data-theme="dark"] button.bg-\[\#0057B8\],
+.dark a.bg-\[\#0057B8\],
+[data-theme="dark"] a.bg-\[\#0057B8\],
+.dark button.bg-\[\#1E3A5F\],
+[data-theme="dark"] button.bg-\[\#1E3A5F\],
+.dark a.bg-\[\#1E3A5F\],
+[data-theme="dark"] a.bg-\[\#1E3A5F\] {
+  background-color: #F3F4F6 !important;
+  color: #111827 !important;
+  border-color: #E5E7EB !important;
+}
+
+/* Ensure ALL white/light background buttons & active tabs in dark mode have visible, high-contrast dark text */
+.dark .btn-primary,
+[data-theme="dark"] .btn-primary,
+.dark button.btn-primary,
+[data-theme="dark"] button.btn-primary,
+.dark button.bg-white,
+[data-theme="dark"] button.bg-white,
+.dark a.bg-white,
+[data-theme="dark"] a.bg-white,
+.dark button[class*="bg-[var(--primary)]"],
+[data-theme="dark"] button[class*="bg-[var(--primary)]"],
+.dark [class*="bg-[var(--primary)]"],
+[data-theme="dark"] [class*="bg-[var(--primary)]"],
+.dark button[class*="bg-blue-"],
+[data-theme="dark"] button[class*="bg-blue-"],
+.dark button[class*="bg-indigo-"],
+[data-theme="dark"] button[class*="bg-indigo-"],
+.dark button.bg-\[\#0057B8\],
+[data-theme="dark"] button.bg-\[\#0057B8\],
+.dark button.bg-\[\#1E3A5F\],
+[data-theme="dark"] button.bg-\[\#1E3A5F\] {
+  color: #111827 !important;
+}
+
+.dark .btn-primary *,
+[data-theme="dark"] .btn-primary *,
+.dark button.btn-primary *,
+[data-theme="dark"] button.btn-primary *,
+.dark button.bg-white *,
+[data-theme="dark"] button.bg-white *,
+.dark a.bg-white *,
+[data-theme="dark"] a.bg-white *,
+.dark button[class*="bg-[var(--primary)]"] *:not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="text-emerald"]):not([class*="text-rose"]),
+[data-theme="dark"] button[class*="bg-[var(--primary)]"] *:not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="text-emerald"]):not([class*="text-rose"]),
+.dark [class*="bg-[var(--primary)]"] *:not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="text-emerald"]):not([class*="text-rose"]),
+[data-theme="dark"] [class*="bg-[var(--primary)]"] *:not([class*="bg-emerald"]):not([class*="bg-rose"]):not([class*="bg-amber"]):not([class*="text-emerald"]):not([class*="text-rose"]),
+.dark button[class*="bg-blue-"] *,
+[data-theme="dark"] button[class*="bg-blue-"] *,
+.dark a[class*="bg-blue-"] *,
+[data-theme="dark"] a[class*="bg-blue-"] *,
+.dark button[class*="bg-indigo-"] *,
+[data-theme="dark"] button[class*="bg-indigo-"] *,
+.dark a[class*="bg-indigo-"] *,
+[data-theme="dark"] a[class*="bg-indigo-"] *,
+.dark button.bg-\[\#0057B8\] *,
+[data-theme="dark"] button.bg-\[\#0057B8\] *,
+.dark a.bg-\[\#0057B8\] *,
+[data-theme="dark"] a.bg-\[\#0057B8\] *,
+.dark button.bg-\[\#1E3A5F\] *,
+[data-theme="dark"] button.bg-\[\#1E3A5F\] *,
+.dark a.bg-\[\#1E3A5F\] *,
+[data-theme="dark"] a.bg-\[\#1E3A5F\] * {
+  color: #111827 !important;
+}
+
+.dark button[class*="bg-blue-"]:hover:not(:disabled),
+[data-theme="dark"] button[class*="bg-blue-"]:hover:not(:disabled),
+.dark a[class*="bg-blue-"]:hover:not(:disabled),
+[data-theme="dark"] a[class*="bg-blue-"]:hover:not(:disabled),
+.dark button[class*="bg-indigo-"]:hover:not(:disabled),
+[data-theme="dark"] button[class*="bg-indigo-"]:hover:not(:disabled),
+.dark a[class*="bg-indigo-"]:hover:not(:disabled),
+[data-theme="dark"] a[class*="bg-indigo-"]:hover:not(:disabled),
+.dark button.bg-\[\#0057B8\]:hover:not(:disabled),
+[data-theme="dark"] button.bg-\[\#0057B8\]:hover:not(:disabled),
+.dark a.bg-\[\#0057B8\]:hover:not(:disabled),
+[data-theme="dark"] a.bg-\[\#0057B8\]:hover:not(:disabled),
+.dark button.bg-\[\#1E3A5F\]:hover:not(:disabled),
+[data-theme="dark"] button.bg-\[\#1E3A5F\]:hover:not(:disabled),
+.dark a.bg-\[\#1E3A5F\]:hover:not(:disabled),
+[data-theme="dark"] a.bg-\[\#1E3A5F\]:hover:not(:disabled) {
+  background-color: #FFFFFF !important;
+  color: #111827 !important;
+  border-color: #FFFFFF !important;
+}
+
+/* ============================================================
+   ONLY AMOUNTS & PRICES IN DARK MODE — Emerald Green (#34D399)
+   Quantities, item counts, invoice numbers, dates, times,
+   phone numbers, and barcodes stay normal ink color (#F3F4F6)
+============================================================ */
+
+.dark .amount:not([class*="text-red"]):not([class*="text-rose"]):not([class*="text-amber"]):not(.num-due),
+[data-theme="dark"] .amount:not([class*="text-red"]):not([class*="text-rose"]):not([class*="text-amber"]):not(.num-due),
+.dark .price:not([class*="text-red"]):not([class*="text-rose"]):not([class*="text-amber"]),
+[data-theme="dark"] .price:not([class*="text-red"]):not([class*="text-rose"]):not([class*="text-amber"]),
+.dark .currency,
+[data-theme="dark"] .currency,
+.dark td.amount:not([class*="text-red"]):not([class*="text-rose"]):not([class*="text-amber"]):not(.num-due),
+[data-theme="dark"] td.amount:not([class*="text-red"]):not([class*="text-rose"]):not([class*="text-amber"]):not(.num-due),
+.dark td.price:not([class*="text-red"]):not([class*="text-rose"]):not([class*="text-amber"]),
+[data-theme="dark"] td.price:not([class*="text-red"]):not([class*="text-rose"]):not([class*="text-amber"]),
+.dark .amount-sales,
+[data-theme="dark"] .amount-sales,
+.dark .text-sales,
+[data-theme="dark"] .text-sales,
+.dark .amount-profit,
+[data-theme="dark"] .amount-profit,
+.dark .num-positive,
+[data-theme="dark"] .num-positive,
+.dark .price-val,
+[data-theme="dark"] .price-val,
+.dark .pb-price-val,
+[data-theme="dark"] .pb-price-val,
+.dark .pb-sum-val,
+[data-theme="dark"] .pb-sum-val,
+.dark .pb-num-total,
+[data-theme="dark"] .pb-num-total,
+.dark .pb-num-rate,
+[data-theme="dark"] .pb-num-rate,
+.dark .pb-gt-figure,
+[data-theme="dark"] .pb-gt-figure,
+.dark .pb-floating-total b,
+[data-theme="dark"] .pb-floating-total b,
+.dark [data-amount="true"],
+[data-theme="dark"] [data-amount="true"] {
+  color: #34D399 !important;
 }
 
 /* Secondary — Surface with subtle border var(--line) */
@@ -2652,120 +2811,50 @@ header {
 
 
 /* ============================================================
-   SIMPLE, LIGHT & BORDERLESS INPUTS & SEARCH BARS
-   Removes outer borders, harsh outlines, and heavy focus rings
-   across all input fields, containers, wrappers, and selects,
-   keeping them clean, light, and minimal.
+   MINIMALIST, MODERN SEARCH BARS & INPUT SYSTEM
+   - Background: Pure white (#FFFFFF) in light mode, #1A1B1E in dark mode
+   - Border: Subtle neutral #D9E0E8 (light), #2E3035 (dark)
+   - Focus: Subtle primary blue #0057B8 focus ring, NO sky-blue highlight block
 ============================================================ */
 
-/* 1. Remove all outer borders and shadows from input wrappers, search containers, and groups */
-div:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"])),
-div:has(> select),
-div:has(> textarea),
-label:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"])),
-.group:has(> input:not([type="checkbox"]):not([type="radio"])),
-[class*="focus-within"]:has(> input:not([type="checkbox"]):not([type="radio"])),
-.pb-search-field,
-.notifications-search {
+/* Remove browser default cancel buttons and outlines */
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+  display: none;
+  -webkit-appearance: none;
+}
+
+/* Inner inputs inside search bar containers remain completely borderless & transparent */
+.group input[type="search"],
+.group input[type="text"],
+[class*="focus-within"] input[type="search"],
+[class*="focus-within"] input[type="text"] {
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
+  background-color: transparent !important;
 }
 
-.dark div:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"])),
-.dark div:has(> select),
-.dark div:has(> textarea),
-.dark label:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"])),
-.dark .group:has(> input:not([type="checkbox"]):not([type="radio"])),
-.dark [class*="focus-within"]:has(> input:not([type="checkbox"]):not([type="radio"])),
-.dark .pb-search-field,
-.dark .notifications-search {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-/* 2. On focus of wrapper, maintain completely clean borderless appearance */
-div:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"])):focus-within,
-div:has(> select):focus-within,
-div:has(> textarea):focus-within,
-label:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"])):focus-within,
-.group:has(> input:not([type="checkbox"]):not([type="radio"])):focus-within,
-[class*="focus-within"]:has(> input:not([type="checkbox"]):not([type="radio"])):focus-within,
-.pb-search-field:focus-within,
-.notifications-search:focus-within {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-/* 3. Inputs inside containers inherit clean borderless inner style */
-div:has(> input) > input:not([type="checkbox"]):not([type="radio"]),
-label:has(> input) > input:not([type="checkbox"]):not([type="radio"]),
-.pb-search-field input,
-.notifications-search input {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-/* 4. All input fields, selects, textareas, and controls: light, clean, and borderless */
-input.input,
-.erp-control,
-input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]) {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  --tw-ring-shadow: 0 0 #0000 !important;
-  --tw-ring-offset-shadow: 0 0 #0000 !important;
-  --tw-ring-color: transparent !important;
-  --tw-ring-width: 0px !important;
-}
-
+/* Eliminate awkward sky-blue background block on input focus */
+input:focus,
 input.input:focus,
-.erp-control:focus,
-input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):focus {
-  background-color: #E0F2FE !important;
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  --tw-ring-shadow: 0 0 #0000 !important;
-  --tw-ring-offset-shadow: 0 0 #0000 !important;
-  --tw-ring-color: transparent !important;
-  --tw-ring-width: 0px !important;
+.erp-control:focus {
+  outline: none;
 }
 
-/* Dark mode input background, focus & highlights - clean dark grey, borderless */
-.dark input.input,
-.dark .erp-control,
-.dark input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]) {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  background-color: #222328 !important;
-  color: #F3F4F6 !important;
+/* Ensure mobile floating buttons have high contrast */
+.dark .fab-bottom,
+[data-theme="dark"] .fab-bottom,
+.dark .MobileFAB,
+[data-theme="dark"] .MobileFAB {
+  color: #111827 !important;
 }
 
-.dark input.input:focus,
-.dark .erp-control:focus,
-.dark input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):focus {
-  background-color: #2D2F36 !important;
-  color: #FFFFFF !important;
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-.dark div:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"])):focus-within,
-.dark div:has(> select):focus-within,
-.dark div:has(> textarea):focus-within,
-.dark label:has(> input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"])):focus-within,
-.dark .group:has(> input:not([type="checkbox"]):not([type="radio"])):focus-within,
-.dark [class*="focus-within"]:has(> input:not([type="checkbox"]):not([type="radio"])):focus-within,
-.dark .pb-search-field:focus-within,
-.dark .notifications-search:focus-within {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-  background-color: #2D2F36 !important;
+.dark .fab-bottom *,
+[data-theme="dark"] .fab-bottom *,
+.dark .MobileFAB *,
+[data-theme="dark"] .MobileFAB * {
+  color: #111827 !important;
 }

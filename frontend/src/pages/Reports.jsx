@@ -350,6 +350,13 @@ export default function Reports() {
           border-right: 1px solid var(--line-subtle);
           border-bottom: 1px solid var(--line-subtle);
         }
+
+        .dark .reports-page .font-mono:not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-amber"]):not([class*="text-orange"]):not(.text-muted),
+        [data-theme="dark"] .reports-page .font-mono:not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-amber"]):not([class*="text-orange"]):not(.text-muted),
+        .dark .reports-page td.font-mono:not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-amber"]):not([class*="text-orange"]):not(.text-muted),
+        [data-theme="dark"] .reports-page td.font-mono:not([class*="text-rose"]):not([class*="text-red"]):not([class*="text-amber"]):not([class*="text-orange"]):not(.text-muted) {
+          color: #34D399;
+        }
       `}</style>
 
       {/* =====================================================

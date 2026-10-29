@@ -729,7 +729,7 @@ export default function TransactionLedger() {
             <button
               type="button"
               onClick={() => setShowFilters(v => !v)}
-              className="lg:hidden inline-flex h-10 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] shadow-2xs shrink-0"
+              className="lg:hidden inline-flex h-[38px] items-center gap-1.5 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] shadow-2xs shrink-0"
               aria-label="Toggle filters"
             >
               <IconFilter size={15} />

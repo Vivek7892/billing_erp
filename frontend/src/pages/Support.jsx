@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { PageHeader } from '../components/UI'
+import { PageHeader, SearchInput } from '../components/UI'
 import {
   IconPhone,
   IconMail,
@@ -261,31 +261,13 @@ export default function Support() {
             </p>
           </div>
 
-          <div className="flex h-9 w-full items-center rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 lg:w-72">
-            <IconSearch
-              size={14}
-              className="shrink-0 text-[var(--muted)]"
-            />
-
-            <input
-              type="search"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search questions..."
-              className="min-w-0 flex-1 bg-transparent px-2 text-xs outline-none placeholder:text-[var(--placeholder)]"
-            />
-
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                className="text-[var(--muted)] hover:text-[var(--ink)]"
-                aria-label="Clear search"
-              >
-                <IconX size={13} />
-              </button>
-            )}
-          </div>
+          <SearchInput
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onClear={() => setSearch('')}
+            placeholder="Search help topics & questions..."
+            className="w-full lg:w-72"
+          />
         </div>
 
         {/* Categories */}

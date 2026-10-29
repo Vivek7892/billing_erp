@@ -1,4 +1,5 @@
 import { MobileBottomNav, MobileQuickActionSheet } from './MobileUI'
+import SearchInput from './SearchInput'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import api from '../api'
@@ -476,32 +477,27 @@ function GlobalSearch() {
 
   return (
     <div ref={ref} className="relative w-full max-w-sm">
-      <div className={`group flex items-center gap-2 rounded-xl px-2.5 py-1.5 w-full transition-all duration-200 border shadow-xs ${
-        open || q
-          ? 'bg-[var(--surface)] border-[#1E3A5F] ring-2 ring-[#1E3A5F]/15 dark:border-sky-500 dark:ring-sky-500/20'
-          : 'bg-[var(--surface-elevated)] border-[var(--line)] hover:border-slate-300 dark:hover:border-slate-600'
-      }`}>
-        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[var(--surface)] text-[var(--muted)] group-focus-within:text-[#1E3A5F] dark:group-focus-within:text-sky-300">
-          <IconSearch size={13} strokeWidth={2.2} />
-        </div>
-        <input
-          value={q}
-          onChange={e => { setQ(e.target.value); setOpen(e.target.value.length > 0) }}
-          onFocus={() => setOpen(true)}
-          onBlur={() => { if (!q) setOpen(false) }}
-          onKeyDown={handleKeyDown}
-          placeholder="Search products… (Ctrl+K)"
-          aria-label="Search products"
-          className="bg-transparent text-xs outline-none w-full text-[var(--ink)] placeholder:text-[var(--placeholder)] font-medium"
-        />
-        {q ? (
-          <button onClick={() => { setQ(''); setOpen(false) }} aria-label="Clear search" className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface)] transition-colors">
-            <IconX size={12} strokeWidth={2.5} />
-          </button>
-        ) : (
-          <kbd className="hidden sm:inline-flex shrink-0 items-center rounded border border-[var(--line)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">Ctrl+K</kbd>
-        )}
-      </div>
+      <SearchInput
+        value={q}
+        onChange={e => {
+          const val = e.target.value
+          setQ(val)
+          setOpen(val.length > 0)
+        }}
+        onClear={() => {
+          setQ('')
+          setOpen(false)
+        }}
+        placeholder="Search products… (Ctrl+K)"
+        shortcut="Ctrl+K"
+        variant="compact"
+        inputProps={{
+          onFocus: () => setOpen(true),
+          onBlur: () => { if (!q) setOpen(false) },
+          onKeyDown: handleKeyDown,
+          'aria-label': 'Search products',
+        }}
+      />
 
       {open && q && (
         <div className="absolute top-full mt-2 left-0 w-80 bg-[var(--surface)] rounded-2xl shadow-[var(--shadow-lg)] border border-[var(--line)] z-50 overflow-hidden">

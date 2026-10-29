@@ -2,7 +2,7 @@ import { MobileFAB } from '../components/MobileUI'
 import { Fragment, useState, useEffect, useMemo, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import api from '../api'
-import { Badge, PageHeader, Modal, Spinner, EmptyState, ConfirmDialog, TableSkeleton } from '../components/UI'
+import { Badge, PageHeader, Modal, Spinner, EmptyState, ConfirmDialog, TableSkeleton, SearchInput } from '../components/UI'
 
 import toast from 'react-hot-toast'
 import { PurchaseEmptyIllustration } from '../components/visuals'
@@ -1570,32 +1570,14 @@ export default function Purchases() {
           {tab === 'orders' && (
             <div className="space-y-4">
               <div className={`flex flex-col gap-3 p-3.5 ${cardCls} sm:flex-row sm:items-center`}>
-                <div className="group relative flex flex-1 items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-slate-600 dark:text-slate-300 transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-                    <IconSearch size={14} strokeWidth={2.2} />
-                  </div>
-                  <input
-                    className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
-                    placeholder="Search supplier or invoice number..."
-                    value={poSearch}
-                    onChange={e => setPoSearch(e.target.value)}
-                  />
-                  {poSearch ? (
-                    <button
-                      type="button"
-                      onClick={() => setPoSearch('')}
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-500 hover:bg-[var(--surface-elevated)] hover:text-slate-900 dark:hover:text-slate-100 transition-colors active:scale-95"
-                      title="Clear search"
-                      aria-label="Clear search"
-                    >
-                      <IconX size={13} strokeWidth={2.5} />
-                    </button>
-                  ) : (
-                    <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-slate-600 dark:text-slate-400 shadow-2xs">
-                      Ctrl+K
-                    </kbd>
-                  )}
-                </div>
+                <SearchInput
+                  value={poSearch}
+                  onChange={e => setPoSearch(e.target.value)}
+                  onClear={() => setPoSearch('')}
+                  placeholder="Search purchases by purchase number or supplier..."
+                  shortcut="Ctrl+K"
+                  className="flex-1"
+                />
 
                 <div className="flex items-center gap-2">
                   <button
@@ -1853,32 +1835,14 @@ export default function Purchases() {
           {tab === 'suppliers' && (
             <div className="space-y-4">
               <div className={`flex flex-col gap-3 p-3.5 ${cardCls} sm:flex-row sm:items-center`}>
-                <div className="group relative flex flex-1 items-center min-h-[42px] rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-                    <IconSearch size={14} strokeWidth={2.2} />
-                  </div>
-                  <input
-                    className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none"
-                    placeholder="Search suppliers..."
-                    value={supSearch}
-                    onChange={e => setSupSearch(e.target.value)}
-                  />
-                  {supSearch ? (
-                    <button
-                      type="button"
-                      onClick={() => setSupSearch('')}
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
-                      title="Clear search"
-                      aria-label="Clear search"
-                    >
-                      <IconX size={13} strokeWidth={2.5} />
-                    </button>
-                  ) : (
-                    <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
-                      Ctrl+K
-                    </kbd>
-                  )}
-                </div>
+                <SearchInput
+                  value={supSearch}
+                  onChange={e => setSupSearch(e.target.value)}
+                  onClear={() => setSupSearch('')}
+                  placeholder="Search suppliers by name, phone or supplier ID..."
+                  shortcut="Ctrl+K"
+                  className="flex-1"
+                />
 
                 <div className="flex items-center gap-2">
                   <button

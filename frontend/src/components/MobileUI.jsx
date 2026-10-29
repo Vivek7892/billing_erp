@@ -67,7 +67,7 @@ export function MobileBottomNav({ onOpenMenu, onQuickAction }) {
           type="button"
           onClick={onQuickAction}
           aria-label="Quick Actions"
-          className="flex h-11 w-11 -mt-3 items-center justify-center rounded-full bg-[var(--primary)] text-white shadow-md shadow-[var(--primary)]/30 active:scale-95 transition-transform"
+          className="flex h-11 w-11 -mt-3 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--primary-contrast)] dark:bg-slate-100 dark:text-slate-900 shadow-md active:scale-95 transition-transform"
         >
           <IconPlus size={24} strokeWidth={2.6} />
         </button>
@@ -113,7 +113,7 @@ export function MobileQuickActionSheet({ open, onClose }) {
       label: 'New Bill / POS',
       sub: 'Create and collect counter sale',
       icon: IconPlus,
-      color: 'bg-blue-600 text-white',
+      color: 'bg-[#1E3A5F] text-white dark:bg-slate-100 dark:text-slate-900',
     },
     {
       to: '/products',
@@ -194,7 +194,7 @@ export function MobileFAB({ icon: Icon = IconPlus, label, onClick, to, className
 
   const classes = [
     'fixed right-4 fab-bottom z-30 flex items-center justify-center gap-2 rounded-full shadow-lg shadow-[var(--primary)]/30 transition-all active:scale-95 md:hidden',
-    'bg-[var(--primary)] text-white hover:brightness-105',
+    'bg-[var(--primary)] text-[var(--primary-contrast)] dark:bg-slate-100 dark:text-slate-900 hover:brightness-105',
     label ? 'h-12 px-4.5' : 'h-13 w-13',
     className,
   ].join(' ')
@@ -288,7 +288,7 @@ export function MobileFilterSheet({ open, onClose, onClear, onApply, activeCount
               onApply?.()
               onClose?.()
             }}
-            className="flex-1 min-h-[44px] rounded-xl bg-[var(--primary)] text-xs font-bold text-white shadow-xs hover:brightness-105"
+            className="flex-1 min-h-[44px] rounded-xl bg-[var(--primary)] text-xs font-bold text-[var(--primary-contrast)] dark:bg-slate-100 dark:text-slate-900 shadow-xs hover:brightness-105"
           >
             Apply filters
           </button>

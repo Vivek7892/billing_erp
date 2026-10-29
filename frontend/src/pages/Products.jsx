@@ -1288,21 +1288,21 @@ export default function Products() {
       {/* Mobile Search & Filter Toggle Bar */}
       <div className="flex items-center gap-2 sm:hidden">
         <div className="min-w-0 flex-1">
-          <SearchBar value={search} onChange={setSearch} placeholder="Search products..." />
+          <SearchBar value={search} onChange={setSearch} placeholder="Search products by name, SKU or barcode..." />
         </div>
         <button
           type="button"
           onClick={() => setMobileFiltersOpen(v => !v)}
-          className={`flex h-11 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold shadow-2xs transition active:scale-95 ${
+          className={`flex h-[38px] items-center gap-1.5 rounded-md border px-3 text-xs font-semibold transition shrink-0 ${
             mobileFiltersOpen || isFilterActive
-              ? 'border-[#1E3A5F] bg-blue-50 text-[#1E3A5F] dark:border-blue-700 dark:bg-blue-950/60 dark:text-sky-300 font-bold'
-              : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+              ? 'border-[#0057B8] bg-blue-50/70 text-[#0057B8] dark:border-slate-400 dark:bg-white/10 dark:text-slate-100 font-bold'
+              : 'border-[#D9E0E8] dark:border-[var(--line)] bg-white dark:bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
           }`}
         >
           <IconFilter size={15} />
           <span>Filters</span>
           {isFilterActive && (
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#1E3A5F] text-[9px] font-bold text-white">
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#0057B8] text-[9px] font-bold text-white">
               •
             </span>
           )}
@@ -1314,7 +1314,7 @@ export default function Products() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-12 lg:items-center">
           {/* Search bar on Desktop */}
           <div className="hidden sm:block sm:col-span-2 lg:col-span-4 min-w-0">
-            <SearchBar value={search} onChange={setSearch} placeholder="Search name, SKU, barcode, brand..." shortcut="Ctrl+K" />
+            <SearchBar value={search} onChange={setSearch} placeholder="Search products by name, SKU or barcode..." shortcut="Ctrl+K" />
           </div>
 
           {/* Category Dropdown */}
@@ -1521,38 +1521,28 @@ export default function Products() {
                       </div>
                     </div>
 
-                    {/* Action Bar: Eye (View) · Barcode · Adjust · Three dots */}
-                    <div className="flex items-center gap-1.5 pt-2 border-t border-[var(--line-subtle)]" onClick={e => e.stopPropagation()}>
+                    {/* Action Bar: View · Adjust Stock · More */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-[var(--line-subtle)]" onClick={e => e.stopPropagation()}>
                       {/* View Eye Button */}
                       <button
                         type="button"
                         onClick={() => openDetails(product)}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition shrink-0"
+                        className="flex-1 inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition"
                         title="View Details"
                       >
-                        <IconEye size={15} />
-                      </button>
-
-                      {/* Barcode Button */}
-                      <button
-                        type="button"
-                        onClick={() => openBarcode(product)}
-                        className="flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition shadow-2xs"
-                        title="Print Barcode"
-                      >
-                        <IconBarcode size={13} className="shrink-0" />
-                        <span className="truncate">Barcode</span>
+                        <IconEye size={14} />
+                        <span>View</span>
                       </button>
 
                       {/* Adjust Button */}
                       <button
                         type="button"
                         onClick={() => openAdjust(product)}
-                        className="flex-1 inline-flex h-8 items-center justify-center gap-1 rounded-lg bg-[#1E3A5F] text-white text-xs font-semibold hover:bg-[#162F4D] active:scale-95 transition shadow-2xs"
+                        className="flex-1 inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-[#1E3A5F] text-white dark:bg-slate-100 dark:text-slate-900 text-xs font-semibold hover:bg-[#162F4D] dark:hover:bg-white active:scale-95 transition shadow-2xs"
                         title="Adjust Stock"
                       >
-                        <IconAdjustmentsHorizontal size={13} className="shrink-0" />
-                        <span className="truncate">Adjust</span>
+                        <IconAdjustmentsHorizontal size={14} className="shrink-0" />
+                        <span>Adjust Stock</span>
                       </button>
 
                       {/* Three dot button */}
@@ -1569,7 +1559,18 @@ export default function Products() {
                         </button>
 
                         {mobileMoreId === product.id && (
-                          <div className="absolute right-0 bottom-full mb-1 z-50 w-44 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl">
+                          <div className="absolute right-0 bottom-full mb-1 z-50 w-48 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMobileMoreId(null)
+                                openBarcode(product)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+                            >
+                              <IconBarcode size={14} />
+                              <span>Print Barcode</span>
+                            </button>
                             <button
                               type="button"
                               onClick={() => {

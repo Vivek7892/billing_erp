@@ -5,7 +5,7 @@ import { getAccessToken } from '../services/tokenStorage'
 import { API_BASE_URL } from '../api'
 import invoiceService from '../features/billing/api/invoiceService'
 import settingsService from '../features/settings/api/settingsService'
-import { Spinner, TableSkeleton, ConfirmDialog, EmptyState, useModalA11y } from '../components/UI'
+import { Spinner, TableSkeleton, ConfirmDialog, EmptyState, useModalA11y, SearchInput } from '../components/UI'
 import { INVOICE_STATUS, PAYMENT_STATUS, PAYMENT_METHODS } from '../constants'
 import toast from 'react-hot-toast'
 import InvoiceDocument from '../components/InvoiceDocument'
@@ -1641,7 +1641,7 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
         </div>
 
         <div className="shrink-0 text-right">
-          <div className="font-mono text-sm font-extrabold tabular-nums text-[var(--ink)]">
+          <div className="amount price font-mono text-sm font-extrabold tabular-nums text-[var(--ink)]">
             {fmt(bill.grand_total)}
           </div>
           {isDue ? (
@@ -1812,6 +1812,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
   const [method, setMethod] = useState('cash')
   const [reference, setReference] = useState(() => generateTxnId())
   const [notes, setNotes] = useState('')
+  const [whoGave, setWhoGave] = useState(bill?.customer_name || 'Walk-in Customer')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [copiedUpi, setCopiedUpi] = useState(false)
@@ -1826,6 +1827,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
       setError('')
       setReference(generateTxnId())
       setNotes('')
+      setWhoGave(bill?.customer_name || 'Walk-in Customer')
       setRecordedPayment(null)
       setActiveTab(due > 0 ? 'collect' : 'history')
       setPaymentsList(Array.isArray(bill?.payments) ? bill.payments : [])
@@ -1887,11 +1889,12 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
     try {
       const txnRef = reference.trim() || generateTxnId()
       const invId = targetId || currentBill?.id || bill?.id
+      const fullNotes = [notes.trim(), whoGave && whoGave !== activeBill?.customer_name ? `Gave by: ${whoGave}` : ''].filter(Boolean).join(' • ')
       const res = await invoiceService.collectPayment(invId, {
         amount: num,
         method,
         reference: txnRef,
-        notes: notes.trim(),
+        notes: fullNotes,
       })
 
       const newLatest = res?.latest_payment || {
@@ -1900,7 +1903,10 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
         method,
         reference: txnRef,
         transaction_id: txnRef,
+        customer_name: whoGave || activeBill?.customer_name,
+        collected_by_name: 'Staff / Cashier',
         created_at: new Date().toISOString(),
+        notes: fullNotes,
       }
 
       setRecordedPayment(newLatest)
@@ -1943,12 +1949,12 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
     }
   }
 
-  // Payment methods with tactile icons & descriptions
+  // Payment methods: compact, clean, responsive
   const METHODS = [
-    { id: 'cash', label: 'Cash', icon: IconCurrencyRupee, badge: 'Counter Cash' },
-    { id: 'upi', label: 'UPI / QR', icon: IconQrcode, badge: 'Instant Scan' },
-    { id: 'card', label: 'Card / POS', icon: IconCreditCard, badge: 'Terminal / Tap' },
-    { id: 'bank', label: 'Bank', icon: IconBuildingBank, badge: 'NEFT / RTGS' },
+    { id: 'cash', label: 'Cash', icon: IconCurrencyRupee, badge: 'Counter' },
+    { id: 'upi', label: 'UPI / QR', icon: IconQrcode, badge: 'Instant' },
+    { id: 'card', label: 'Card / POS', icon: IconCreditCard, badge: 'Swipe/Tap' },
+    { id: 'bank', label: 'Bank Transfer', icon: IconBuildingBank, badge: 'NEFT/IMPS' },
   ]
 
   const upiId = shopSettings?.shop_upi_id || ''
@@ -1972,46 +1978,98 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
         role="dialog"
         aria-modal="true"
         aria-labelledby="collect-payment-title"
-        className="flex max-h-[92dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border-t border-slate-200 bg-[var(--surface)] text-[var(--ink)] shadow-2xl outline-none dark:border-slate-800 sm:max-h-[calc(100dvh-40px)] sm:rounded-2xl sm:border"
+        className="flex max-h-[94dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-2xl border-t border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-2xl outline-none sm:max-h-[88dvh] sm:rounded-2xl sm:border"
         onClick={e => e.stopPropagation()}
       >
         {/* Mobile touch indicator */}
-        <div className="flex justify-center pt-2 sm:hidden">
+        <div className="flex justify-center pt-2.5 sm:hidden">
           <div className="h-1 w-10 rounded-full bg-slate-300 dark:bg-slate-700" />
         </div>
 
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 bg-[var(--surface)] px-4 py-3 dark:border-slate-800/80 sm:px-5">
+        {/* Minimalist Header */}
+        <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3 sm:px-5">
           <div className="flex min-w-0 items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
-              <IconCoin size={20} />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+              <IconCurrencyRupee size={20} />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h2 id="collect-payment-title" className="text-base font-bold text-[var(--ink)] leading-tight">
+                <h2 id="collect-payment-title" className="text-sm sm:text-base font-bold text-[var(--ink)] leading-tight">
                   Collect Payment
                 </h2>
-                <span className="inline-flex items-center rounded-md border border-slate-200/80 bg-slate-50 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+                <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-md border border-[var(--line)] bg-[var(--surface-subtle)] text-[var(--ink)]">
                   {currentBill.invoice_number}
                 </span>
+                {balanceDue <= 0 ? (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                    <IconCheck size={11} strokeWidth={2.5} /> Settled
+                  </span>
+                ) : paidAmount > 0 ? (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                    Partial
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
+                    Due
+                  </span>
+                )}
               </div>
-              <p className="truncate text-xs text-[var(--muted)] mt-0.5">
-                {currentBill.customer_name || 'Walk-in Customer'} {currentBill.customer_phone ? `• ${currentBill.customer_phone}` : ''}
+              <p className="truncate text-xs text-[var(--muted)] mt-0.5 flex items-center gap-1.5">
+                <span>{currentBill.customer_name || 'Walk-in Customer'}</span>
+                {currentBill.customer_phone && (
+                  <>
+                    <span>•</span>
+                    <span className="font-mono">{currentBill.customer_phone}</span>
+                  </>
+                )}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-400 hover:text-slate-600 hover:border-slate-300 dark:border-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
             aria-label="Close"
           >
             <IconX size={16} />
           </button>
         </div>
 
+        {/* Minimalist 3-Pillar Financial Summary Strip */}
+        <div className="border-b border-[var(--line)] bg-[var(--surface-subtle)] px-4 py-2.5 sm:px-5">
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2">
+              <span className="block text-[10px] font-semibold uppercase text-[var(--muted)]">Invoiced</span>
+              <span className="font-mono text-xs sm:text-sm font-bold text-[var(--ink)]">{fmt(grandTotal)}</span>
+            </div>
+            <div className="rounded-lg border border-emerald-200/60 bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-950/20 p-2">
+              <span className="block text-[10px] font-semibold uppercase text-emerald-700 dark:text-emerald-400">Collected</span>
+              <span className="amount price font-mono text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-400">{fmt(paidAmount)}</span>
+            </div>
+            <div className="rounded-lg border border-amber-200/60 bg-amber-50/40 dark:border-amber-900/50 dark:bg-amber-950/20 p-2">
+              <span className="block text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-400">Balance Due</span>
+              <span className={`font-mono text-xs sm:text-sm font-bold ${balanceDue <= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                {balanceDue <= 0 ? '₹0.00' : fmt(balanceDue)}
+              </span>
+            </div>
+          </div>
+
+          {/* Micro progress bar */}
+          <div className="mt-2 flex items-center gap-2">
+            <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+              <div
+                className="h-full bg-emerald-500 transition-all duration-300 rounded-full"
+                style={{ width: `${percentPaid}%` }}
+              />
+            </div>
+            <span className="text-[10px] font-mono font-medium text-[var(--muted)] shrink-0">
+              {percentPaid}% Settled
+            </span>
+          </div>
+        </div>
+
         {/* Tab Switcher: Collect vs History */}
-        <div className="flex border-b border-slate-100 bg-slate-50/70 px-4 py-1.5 dark:border-slate-800 dark:bg-slate-900/50 sm:px-5">
-          <div className="grid w-full grid-cols-2 gap-1 rounded-lg border border-slate-200/80 bg-white/80 p-0.5 dark:border-slate-800 dark:bg-slate-900">
+        <div className="border-b border-[var(--line)] px-4 py-1.5 sm:px-5 bg-[var(--surface)]">
+          <div className="grid w-full grid-cols-2 gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] p-0.5">
             <button
               type="button"
               onClick={() => {
@@ -2020,11 +2078,11 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
               }}
               className={`flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition ${
                 activeTab === 'collect' && !recordedPayment
-                  ? 'bg-[#1E3A5F] text-white shadow-xs'
+                  ? 'bg-[var(--primary)] text-white dark:text-slate-900 shadow-xs'
                   : 'text-[var(--ink-secondary)] hover:text-[var(--ink)]'
               }`}
             >
-              <IconCurrencyRupee size={15} />
+              <IconCurrencyRupee size={14} />
               <span>Collect Payment</span>
             </button>
             <button
@@ -2035,14 +2093,14 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
               }}
               className={`flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-semibold transition ${
                 activeTab === 'history'
-                  ? 'bg-[#1E3A5F] text-white shadow-xs'
+                  ? 'bg-[var(--primary)] text-white dark:text-slate-900 shadow-xs'
                   : 'text-[var(--ink-secondary)] hover:text-[var(--ink)]'
               }`}
             >
-              <IconHistory size={15} />
+              <IconHistory size={14} />
               <span>Payment History</span>
               <span className={`inline-flex items-center rounded-full px-1.5 text-[10px] font-bold ${
-                activeTab === 'history' ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                activeTab === 'history' ? 'bg-white/20 text-white dark:bg-black/20 dark:text-slate-900' : 'bg-slate-200 dark:bg-slate-800 text-[var(--ink)]'
               }`}>
                 {paymentsList.length}
               </span>
@@ -2052,74 +2110,74 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
 
         {/* Content Area */}
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
-          {/* SUCCESS RECEIPT CARD (When a payment was just recorded) */}
+          {/* SUCCESS RECEIPT CARD */}
           {recordedPayment ? (
-            <div className="space-y-4 py-2">
+            <div className="space-y-3.5 py-1">
               <div className="flex flex-col items-center justify-center text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 shadow-inner dark:bg-emerald-950/60 dark:text-emerald-400">
-                  <IconCircleCheck size={36} />
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+                  <IconCircleCheck size={30} />
                 </div>
-                <h3 className="mt-3 text-base font-bold text-[var(--ink)]">
+                <h3 className="mt-2.5 text-sm sm:text-base font-bold text-[var(--ink)]">
                   Payment Recorded Successfully!
                 </h3>
                 <p className="text-xs text-[var(--muted)]">
-                  Payment record created and ledger synchronized
+                  Ledger synchronized &bull; Receipt generated
                 </p>
               </div>
 
-              {/* Receipt Summary Card */}
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/20 space-y-3">
-                <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2.5 dark:border-emerald-900/40">
-                  <span className="text-xs font-medium text-emerald-800 dark:text-emerald-300">Amount Received</span>
-                  <span className="font-mono text-xl font-bold text-emerald-700 dark:text-emerald-300">
-                    {fmt(recordedPayment.amount)}
+              {/* Minimalist Receipt Card */}
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3.5 dark:border-emerald-900/60 dark:bg-emerald-950/20 space-y-2.5 text-xs">
+                <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2 dark:border-emerald-900/40">
+                  <span className="font-medium text-emerald-800 dark:text-emerald-300">Amount Received</span>
+                  <span className="amount price font-mono text-lg font-bold text-emerald-700 dark:text-emerald-300">
+                    + {fmt(recordedPayment.amount)}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    <span className="block text-[11px] text-[var(--muted)]">Payment ID</span>
+                    <span className="block text-[10px] text-[var(--muted)]">Payment ID</span>
                     <span className="font-mono font-semibold text-[var(--ink)]">#PAY-{recordedPayment.id}</span>
                   </div>
                   <div>
-                    <span className="block text-[11px] text-[var(--muted)]">Method</span>
+                    <span className="block text-[10px] text-[var(--muted)]">Method</span>
                     <span className="font-semibold uppercase text-[var(--ink)]">{recordedPayment.method || method}</span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs border-t border-emerald-200/50 pt-2 dark:border-emerald-900/40">
                   <div>
-                    <span className="block text-[11px] text-[var(--muted)]">Who Gave</span>
-                    <span className="font-semibold text-[var(--ink)] truncate block">{activeBill?.customer_name || 'Walk-in Customer'}</span>
+                    <span className="block text-[10px] text-[var(--muted)]">Who Gave</span>
+                    <span className="font-semibold text-[var(--ink)] truncate block">{whoGave || activeBill?.customer_name || 'Walk-in Customer'}</span>
                   </div>
                   <div>
-                    <span className="block text-[11px] text-[var(--muted)]">Who Collected</span>
+                    <span className="block text-[10px] text-[var(--muted)]">Who Collected</span>
                     <span className="font-semibold text-[var(--ink)] truncate block">{recordedPayment.collected_by_name || 'Staff / Cashier'}</span>
                   </div>
                 </div>
 
-                <div className="rounded-lg border border-slate-200/80 bg-white/90 p-2.5 dark:border-slate-800 dark:bg-slate-900/80">
+                <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider">Transaction ID</span>
+                    <span className="text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">Transaction ID</span>
                     <button
                       type="button"
                       onClick={() => handleCopyText(recordedPayment.reference || recordedPayment.transaction_id, 'txn')}
-                      className="inline-flex items-center gap-1 text-[11px] font-medium text-[#1E3A5F] hover:underline dark:text-sky-400"
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-sky-700 hover:underline dark:text-sky-400"
                     >
                       {copiedTxn === (recordedPayment.reference || recordedPayment.transaction_id) ? (
                         <>
-                          <IconCheck size={12} className="text-emerald-600" />
+                          <IconCheck size={11} className="text-emerald-600" />
                           <span className="text-emerald-600 font-semibold">Copied</span>
                         </>
                       ) : (
                         <>
-                          <IconCopy size={12} />
+                          <IconCopy size={11} />
                           <span>Copy</span>
                         </>
                       )}
                     </button>
                   </div>
-                  <div className="mt-1 font-mono text-xs font-bold text-slate-800 dark:text-slate-200 break-all select-all">
+                  <div className="mt-0.5 font-mono text-xs font-bold text-[var(--ink)] break-all select-all">
                     {recordedPayment.reference || recordedPayment.transaction_id || 'N/A'}
                   </div>
                 </div>
@@ -2133,16 +2191,16 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
               </div>
 
               {/* Actions */}
-              <div className="flex flex-col gap-2 pt-2 sm:flex-row">
+              <div className="flex flex-col gap-2 pt-1 sm:flex-row">
                 <button
                   type="button"
                   onClick={() => {
                     setRecordedPayment(null)
                     setActiveTab('history')
                   }}
-                  className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-[var(--surface)] text-xs font-semibold text-[var(--ink-secondary)] transition hover:border-slate-300 hover:text-[var(--ink)] dark:border-slate-800"
+                  className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
                 >
-                  <IconHistory size={16} />
+                  <IconHistory size={15} />
                   <span>View All Payments ({paymentsList.length})</span>
                 </button>
                 {balanceDue > 0 && (
@@ -2152,16 +2210,16 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                       setRecordedPayment(null)
                       setActiveTab('collect')
                     }}
-                    className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 text-xs font-semibold text-amber-800 transition hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                    className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 text-xs font-semibold text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 transition"
                   >
-                    <IconPlus size={16} />
+                    <IconPlus size={15} />
                     <span>Collect Remaining ({fmt(balanceDue)})</span>
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex h-10 items-center justify-center rounded-lg bg-[#1E3A5F] px-5 text-xs font-bold text-white transition hover:bg-[#162F4D]"
+                  className="flex h-9 items-center justify-center rounded-lg bg-[var(--primary)] text-white dark:text-slate-900 px-4 text-xs font-bold transition hover:opacity-90"
                 >
                   Done
                 </button>
@@ -2169,86 +2227,48 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
             </div>
           ) : activeTab === 'collect' ? (
             /* ===================================================
-               TAB 1: COLLECT PAYMENT FORM
+               TAB 1: IMPROVED COLLECT PAYMENT SECTION
                =================================================== */
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Balance Due KPI with Progress Bar */}
-              <div className="rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50/70 via-white/80 to-amber-50/30 p-3.5 dark:border-amber-900/50 dark:from-amber-950/20 dark:via-slate-900/60 dark:to-amber-950/10">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400">
-                      Balance Due
-                    </span>
-                    <div className="mt-0.5 font-mono text-2xl font-extrabold text-amber-700 dark:text-amber-400 sm:text-3xl">
-                      {fmt(balanceDue)}
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1 text-right">
-                    <div className="inline-flex items-center gap-1 rounded-md border border-slate-200/80 bg-white/90 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:border-slate-800 dark:bg-slate-900/80 dark:text-slate-300">
-                      <span className="text-[10px] text-[var(--muted)] uppercase">Invoice Total:</span>
-                      <span className="font-mono font-semibold">{fmt(grandTotal)}</span>
-                    </div>
-                    <div className="inline-flex items-center gap-1 rounded-md border border-emerald-200/70 bg-emerald-50/90 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300">
-                      <span className="text-[10px] uppercase">Already Paid:</span>
-                      <span className="font-mono font-semibold">{fmt(paidAmount)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Micro progress bar */}
-                <div className="mt-2.5">
-                  <div className="flex items-center justify-between text-[10px] font-medium text-[var(--muted)] mb-1">
-                    <span>Payment Progress</span>
-                    <span>{percentPaid}% Settled</span>
-                  </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                    <div
-                      className="h-full bg-emerald-500 transition-all duration-300 rounded-full"
-                      style={{ width: `${percentPaid}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-
+            <form onSubmit={handleSubmit} className="space-y-3.5">
               {balanceDue <= 0 ? (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 text-center dark:border-emerald-900/60 dark:bg-emerald-950/20">
-                  <IconCircleCheck size={28} className="mx-auto text-emerald-600 dark:text-emerald-400" />
-                  <h4 className="mt-1.5 text-sm font-bold text-emerald-900 dark:text-emerald-300">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4 text-center dark:border-emerald-900/60 dark:bg-emerald-950/20">
+                  <IconCircleCheck size={26} className="mx-auto text-emerald-600 dark:text-emerald-400" />
+                  <h4 className="mt-1 text-sm font-bold text-emerald-900 dark:text-emerald-300">
                     Invoice Settled in Full
                   </h4>
                   <p className="mt-0.5 text-xs text-emerald-700/80 dark:text-emerald-400/80">
-                    No balance remaining on this bill. You can view past payments in the History tab.
+                    No balance remaining on this bill. View payment records below or in the History tab.
                   </p>
                   <button
                     type="button"
                     onClick={() => setActiveTab('history')}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 transition"
+                    className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700 transition"
                   >
-                    <IconHistory size={14} />
-                    <span>View Payment History</span>
+                    <IconHistory size={13} />
+                    <span>View Payment History ({paymentsList.length})</span>
                   </button>
                 </div>
               ) : (
                 <>
-                  {/* Amount to Collect Input & Chips */}
-                  <div className="rounded-xl border border-slate-200/90 bg-[var(--surface)] p-3.5 dark:border-slate-800">
-                    <div className="mb-2 flex items-center justify-between">
+                  {/* Amount to Collect with Quick Chips */}
+                  <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
+                    <div className="mb-1.5 flex items-center justify-between">
                       <label className="text-xs font-bold uppercase tracking-wider text-[var(--ink-secondary)]">
                         Amount to Collect <span className="text-rose-500">*</span>
                       </label>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
                           onClick={() => handleQuickAmount(balanceDue)}
                           className="rounded-md border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 transition hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
                         >
-                          Full Due ({fmt(balanceDue)})
+                          Full ({fmt(balanceDue)})
                         </button>
                         {balanceDue > 50 && (
                           <button
                             type="button"
                             onClick={() => handleQuickAmount((balanceDue / 2).toFixed(2))}
-                            className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                            className="rounded-md border border-[var(--line)] bg-[var(--surface-subtle)] px-2 py-0.5 text-[11px] font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-hover)]"
                           >
                             50%
                           </button>
@@ -2256,7 +2276,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                         <button
                           type="button"
                           onClick={() => handleQuickAmount('')}
-                          className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-500 transition hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900"
+                          className="rounded-md border border-[var(--line)] bg-[var(--surface)] px-1.5 py-0.5 text-[11px] text-[var(--muted)] hover:text-[var(--ink)]"
                         >
                           Clear
                         </button>
@@ -2264,7 +2284,7 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                     </div>
 
                     <div className="relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[var(--muted)]">
                         <IconCurrencyRupee size={18} />
                       </div>
                       <input
@@ -2276,8 +2296,8 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                         value={amount}
                         onChange={e => handleAmountChange(e.target.value)}
                         placeholder="0.00"
-                        className={`h-11 w-full rounded-lg border bg-[var(--surface)] pl-9 pr-3 text-lg font-mono font-bold text-[var(--ink)] outline-none transition focus:border-[#1E3A5F] focus:ring-2 focus:ring-[#1E3A5F]/15 ${
-                          error ? 'border-rose-400' : 'border-slate-200 dark:border-slate-800'
+                        className={`h-10 w-full rounded-lg border bg-[var(--surface)] pl-8 pr-3 text-lg font-mono font-bold text-[var(--ink)] outline-none transition focus:border-[var(--focus)] focus:ring-1 focus:ring-[var(--focus)] ${
+                          error ? 'border-rose-400' : 'border-[var(--line)]'
                         }`}
                         aria-invalid={Boolean(error)}
                       />
@@ -2285,12 +2305,12 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
 
                     {/* Live remaining calculation */}
                     {amountNum > 0 && !error && (
-                      <div className="mt-2 flex items-center justify-between text-xs font-medium">
-                        <span className="text-[var(--muted)]">Remaining after this payment:</span>
+                      <div className="mt-1.5 flex items-center justify-between text-xs">
+                        <span className="text-[var(--muted)]">Remaining after this:</span>
                         {isSettlingInFull ? (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                            <IconCheck size={12} />
-                            Will settle bill in full
+                          <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                            <IconCheck size={12} strokeWidth={2.5} />
+                            Settles invoice completely
                           </span>
                         ) : (
                           <span className="font-mono font-semibold text-amber-700 dark:text-amber-400">
@@ -2301,19 +2321,19 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                     )}
 
                     {error && (
-                      <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300" role="alert">
-                        <IconAlertCircle size={14} className="mt-0.5 shrink-0" />
+                      <p className="mt-1.5 flex items-start gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-1 text-xs text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300" role="alert">
+                        <IconAlertCircle size={13} className="mt-0.5 shrink-0" />
                         <span>{error}</span>
                       </p>
                     )}
                   </div>
 
-                  {/* Payment Method Selector */}
+                  {/* Payment Method Selector (Minimalist Horizontal Pills) */}
                   <div>
-                    <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-[var(--ink-secondary)]">
+                    <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-[var(--ink-secondary)]">
                       Payment Method
                     </label>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
                       {METHODS.map(m => {
                         const Icon = m.icon
                         const selected = method === m.id
@@ -2323,113 +2343,96 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                             type="button"
                             onClick={() => setMethod(m.id)}
                             aria-pressed={selected}
-                            className={`flex min-h-[58px] flex-col items-center justify-center rounded-xl border p-2 text-xs font-semibold transition ${
+                            className={`flex h-11 items-center justify-center gap-1.5 rounded-lg border px-2 text-xs font-semibold transition ${
                               selected
-                                ? m.id === 'cash'
-                                  ? 'border-emerald-600 bg-emerald-600 text-white shadow-sm shadow-emerald-600/20'
-                                  : m.id === 'upi'
-                                    ? 'border-sky-600 bg-sky-600 text-white shadow-sm shadow-sky-600/20'
-                                    : m.id === 'card'
-                                      ? 'border-violet-600 bg-violet-600 text-white shadow-sm shadow-violet-600/20'
-                                      : 'border-indigo-600 bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
-                                : 'border-slate-200 bg-[var(--surface)] text-[var(--ink-secondary)] hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700'
+                                ? 'border-emerald-600 bg-emerald-600 text-white shadow-xs dark:border-emerald-500 dark:bg-emerald-600'
+                                : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)]'
                             }`}
                           >
-                            <Icon size={18} className="mb-1" />
+                            <Icon size={16} />
                             <span>{m.label}</span>
-                            <span className={`text-[10px] font-normal ${selected ? 'text-white/80' : 'text-[var(--muted)]'}`}>
-                              {m.badge}
-                            </span>
                           </button>
                         )
                       })}
                     </div>
                   </div>
 
-                  {/* Contextual Visual Panel (UPI QR / Card / Cash / Bank) */}
+                  {/* Contextual Visual Panel (UPI QR / Card / Bank / Cash) */}
                   {method === 'upi' ? (
-                    <div className="grid grid-cols-1 items-center gap-3 rounded-xl border border-sky-200/80 bg-sky-50/50 p-3 dark:border-sky-900/60 dark:bg-sky-950/20 sm:grid-cols-[116px_1fr]">
-                      <div className="mx-auto flex w-fit items-center justify-center rounded-xl border border-slate-200 bg-white p-2 shadow-xs dark:border-slate-700">
-                        <QRCodeSVG value={upiUri} size={100} level="M" includeMargin={false} />
+                    <div className="grid grid-cols-1 items-center gap-3 rounded-xl border border-sky-200 bg-sky-50/50 p-2.5 dark:border-sky-900/50 dark:bg-sky-950/20 sm:grid-cols-[100px_1fr]">
+                      <div className="mx-auto flex w-fit items-center justify-center rounded-lg border border-[var(--line)] bg-white p-1.5 shadow-xs">
+                        <QRCodeSVG value={upiUri} size={88} level="M" includeMargin={false} />
                       </div>
 
                       <div className="min-w-0 text-center sm:text-left">
-                        <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-sky-700 dark:text-sky-400 sm:justify-start">
-                          <IconQrcode size={15} />
+                        <div className="flex items-center justify-center gap-1 text-xs font-bold text-sky-700 dark:text-sky-400 sm:justify-start">
+                          <IconQrcode size={14} />
                           <span>Dynamic UPI QR Code</span>
                         </div>
-                        <p className="mt-1 font-mono text-lg font-bold text-[var(--ink)]">
+                        <p className="font-mono text-base font-bold text-[var(--ink)]">
                           {fmt(amountNum)}
                         </p>
-                        <div className="mt-1 flex flex-wrap items-center justify-center gap-1.5 text-xs text-[var(--muted)] sm:justify-start">
-                          <span className="break-all font-mono text-[11px] font-medium">{effectiveUpiId}</span>
+                        <div className="mt-0.5 flex flex-wrap items-center justify-center gap-1.5 text-xs text-[var(--muted)] sm:justify-start">
+                          <span className="font-mono text-[11px] font-medium">{effectiveUpiId}</span>
                           <button
                             type="button"
                             onClick={() => handleCopyText(effectiveUpiId, 'upi')}
-                            className="inline-flex items-center gap-1 rounded bg-white/80 px-1.5 py-0.5 text-[11px] font-semibold text-sky-700 hover:underline dark:bg-slate-900 dark:text-sky-400"
-                            title="Copy UPI ID"
+                            className="inline-flex items-center gap-0.5 rounded border border-[var(--line)] bg-[var(--surface)] px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 hover:underline dark:text-sky-400"
                           >
-                            {copiedUpi ? <IconCheck size={12} className="text-emerald-500" /> : <IconCopy size={12} />}
+                            {copiedUpi ? <IconCheck size={11} className="text-emerald-500" /> : <IconCopy size={11} />}
                             <span>{copiedUpi ? 'Copied' : 'Copy'}</span>
                           </button>
                         </div>
-                        <p className="mt-1 text-[10px] text-[var(--muted-light)]">
-                          Scan with Google Pay &bull; PhonePe &bull; Paytm &bull; BHIM
+                        <p className="text-[10px] text-[var(--muted)] mt-0.5">
+                          Scan with Google Pay, PhonePe, Paytm, BHIM
                         </p>
                       </div>
                     </div>
                   ) : method === 'card' ? (
-                    <div className="flex items-start gap-2.5 rounded-xl border border-violet-200/80 bg-violet-50/40 p-3 dark:border-violet-900/40 dark:bg-violet-950/20">
-                      <IconCreditCard size={18} className="mt-0.5 shrink-0 text-violet-600 dark:text-violet-400" />
+                    <div className="flex items-start gap-2 rounded-lg border border-violet-200/80 bg-violet-50/30 p-2.5 dark:border-violet-900/40 dark:bg-violet-950/20 text-xs">
+                      <IconCreditCard size={16} className="mt-0.5 shrink-0 text-violet-600 dark:text-violet-400" />
                       <div>
-                        <p className="text-xs font-semibold text-[var(--ink)]">
-                          Card / POS Terminal Collection
-                        </p>
-                        <p className="mt-0.5 text-[11px] text-[var(--muted)]">
-                          Tap or swipe customer's Debit/Credit card for {fmt(amountNum)}. Enter auth code or card reference below.
+                        <span className="font-semibold text-[var(--ink)]">Card / POS Terminal Collection</span>
+                        <p className="text-[11px] text-[var(--muted)] mt-0.5">
+                          Collect {fmt(amountNum)} via POS card machine. Auth code or terminal batch can be entered in Ref ID below.
                         </p>
                       </div>
                     </div>
                   ) : method === 'bank' ? (
-                    <div className="flex items-start gap-2.5 rounded-xl border border-indigo-200/80 bg-indigo-50/40 p-3 dark:border-indigo-900/40 dark:bg-indigo-950/20">
-                      <IconBuildingBank size={18} className="mt-0.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                    <div className="flex items-start gap-2 rounded-lg border border-indigo-200/80 bg-indigo-50/30 p-2.5 dark:border-indigo-900/40 dark:bg-indigo-950/20 text-xs">
+                      <IconBuildingBank size={16} className="mt-0.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
                       <div>
-                        <p className="text-xs font-semibold text-[var(--ink)]">
-                          Bank Transfer / Net Banking (NEFT/RTGS/IMPS)
-                        </p>
-                        <p className="mt-0.5 text-[11px] text-[var(--muted)]">
-                          Record direct bank transfer of {fmt(amountNum)}. Bank UTR can be recorded below.
+                        <span className="font-semibold text-[var(--ink)]">Direct Bank Transfer (NEFT/RTGS/IMPS)</span>
+                        <p className="text-[11px] text-[var(--muted)] mt-0.5">
+                          Bank UTR reference number can be saved below for accounting reconciliation.
                         </p>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-start gap-2.5 rounded-xl border border-emerald-200/80 bg-emerald-50/40 p-3 dark:border-emerald-900/40 dark:bg-emerald-950/20">
-                      <IconCurrencyRupee size={18} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    <div className="flex items-start gap-2 rounded-lg border border-emerald-200/80 bg-emerald-50/30 p-2.5 dark:border-emerald-900/40 dark:bg-emerald-950/20 text-xs">
+                      <IconCurrencyRupee size={16} className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                       <div>
-                        <p className="text-xs font-semibold text-[var(--ink)]">
-                          Physical Cash Collection
-                        </p>
-                        <p className="mt-0.5 text-[11px] text-[var(--muted)]">
-                          Collect {fmt(amountNum)} in currency at the counter. Receipt is generated with unique Transaction ID.
+                        <span className="font-semibold text-[var(--ink)]">Physical Cash Collection</span>
+                        <p className="text-[11px] text-[var(--muted)] mt-0.5">
+                          Count {fmt(amountNum)} in currency at the counter. Receipt with audit timestamp will be stored.
                         </p>
                       </div>
                     </div>
                   )}
 
-                  {/* Transaction ID & Notes Fields */}
-                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  {/* Traceability Fields: Who Gave, Who Collected, Transaction ID, Notes */}
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <div>
-                      <div className="mb-1 flex items-center justify-between">
-                        <label className="text-xs font-medium text-[var(--ink-secondary)]">
+                      <div className="mb-0.5 flex items-center justify-between">
+                        <label className="text-[11px] font-medium text-[var(--ink-secondary)]">
                           Transaction ID / Ref
                         </label>
                         <button
                           type="button"
                           onClick={handleRegenerateTxnId}
-                          className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-slate-500 hover:text-[#1E3A5F] dark:hover:text-sky-400"
-                          title="Generate new ID"
+                          className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-sky-700 hover:underline dark:text-sky-400"
                         >
-                          <IconRefresh size={11} />
+                          <IconRefresh size={10} />
                           <span>Generate New</span>
                         </button>
                       </div>
@@ -2438,39 +2441,52 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                         value={reference}
                         onChange={e => setReference(e.target.value)}
                         placeholder="e.g. TXN-... or UTR"
-                        className="h-9 w-full rounded-lg border border-slate-200 bg-[var(--surface)] px-3 font-mono text-xs font-medium text-[var(--ink)] placeholder:text-slate-400 outline-none transition focus:border-[#1E3A5F] dark:border-slate-800 dark:placeholder:text-slate-600"
+                        className="h-8 w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 font-mono text-xs text-[var(--ink)] outline-none focus:border-[var(--focus)]"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-[var(--ink-secondary)]">
-                        Payment Notes (Optional)
+                      <label className="mb-0.5 block text-[11px] font-medium text-[var(--ink-secondary)]">
+                        Who Gave Payment
                       </label>
                       <input
                         type="text"
-                        value={notes}
-                        onChange={e => setNotes(e.target.value)}
-                        placeholder="e.g. Counter payment"
-                        className="h-9 w-full rounded-lg border border-slate-200 bg-[var(--surface)] px-3 text-xs font-medium text-[var(--ink)] placeholder:text-slate-400 outline-none transition focus:border-[#1E3A5F] dark:border-slate-800 dark:placeholder:text-slate-600"
+                        value={whoGave}
+                        onChange={e => setWhoGave(e.target.value)}
+                        placeholder="Customer name"
+                        className="h-8 w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs text-[var(--ink)] outline-none focus:border-[var(--focus)]"
                       />
                     </div>
                   </div>
 
-                  {/* Submit Button */}
-                  <div className="pt-2">
+                  <div>
+                    <label className="mb-0.5 block text-[11px] font-medium text-[var(--ink-secondary)]">
+                      Payment Notes (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={notes}
+                      onChange={e => setNotes(e.target.value)}
+                      placeholder="e.g. Counter payment, advance settled"
+                      className="h-8 w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs text-[var(--ink)] outline-none focus:border-[var(--focus)]"
+                    />
+                  </div>
+
+                  {/* Submit CTA */}
+                  <div className="pt-1">
                     <button
                       type="submit"
                       disabled={submitting || Boolean(error) || !amount || amountNum <= 0}
-                      className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#1E3A5F] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#162F4D] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-4 text-xs sm:text-sm font-bold text-white dark:text-slate-900 shadow-sm transition hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {submitting ? (
                         <>
-                          <Spinner size={16} />
+                          <Spinner size={15} />
                           <span>Recording Payment…</span>
                         </>
                       ) : (
                         <>
-                          <IconCheck size={18} />
+                          <IconCheck size={16} strokeWidth={2.5} />
                           <span>Record Payment &bull; {fmt(amountNum)}</span>
                         </>
                       )}
@@ -2478,143 +2494,208 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
                   </div>
                 </>
               )}
+
+              {/* INLINE PAYMENT HISTORY PREVIEW ON THE COLLECT TAB */}
+              <div className="mt-4 pt-3 border-t border-[var(--line)]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-secondary)] flex items-center gap-1.5">
+                    <IconHistory size={13} />
+                    <span>Payment History for this Bill ({paymentsList.length})</span>
+                  </span>
+                  {paymentsList.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('history')}
+                      className="text-[11px] font-semibold text-sky-700 dark:text-sky-400 hover:underline"
+                    >
+                      View Detailed &rarr;
+                    </button>
+                  )}
+                </div>
+
+                {loadingHistory ? (
+                  <div className="py-3 text-center text-xs text-[var(--muted)]">Loading payments…</div>
+                ) : paymentsList.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-[var(--line)] py-3 px-3 text-center text-xs text-[var(--muted)]">
+                    No previous payments recorded for this bill.
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 max-h-44 overflow-y-auto pr-0.5">
+                    {paymentsList.slice(0, 3).map((p, idx) => {
+                      const payMethod = (p.method || 'cash').toLowerCase()
+                      const txnId = p.reference || p.transaction_id || `TXN-${p.id}`
+                      return (
+                        <div
+                          key={p.id || idx}
+                          className="flex items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--surface-subtle)] px-2.5 py-1.5 text-xs"
+                        >
+                          <div className="min-w-0 flex items-center gap-2">
+                            <span className="font-mono text-[10px] font-bold text-[var(--muted)]">#PAY-{p.id || idx + 1}</span>
+                            <span className="inline-flex items-center rounded border border-[var(--line)] bg-[var(--surface)] px-1.5 py-0.2 text-[9px] font-bold uppercase">
+                              {p.method || 'Cash'}
+                            </span>
+                            <span className="text-[10px] text-[var(--muted)] truncate">
+                              {formatDate(p.created_at)} {formatTime(p.created_at)}
+                            </span>
+                          </div>
+                          <div className="shrink-0 font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                            + {fmt(p.amount)}
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {paymentsList.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('history')}
+                        className="w-full text-center py-1 text-[11px] font-semibold text-[var(--muted)] hover:text-[var(--ink)]"
+                      >
+                        + {paymentsList.length - 3} more payments &bull; View All
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </form>
           ) : (
             /* ===================================================
-               TAB 2: PAYMENT HISTORY LIST
+               TAB 2: COMPREHENSIVE PAYMENT HISTORY LIST
                =================================================== */
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--ink-secondary)]">
-                    Payment History ({paymentsList.length})
+                    All Recorded Payments ({paymentsList.length})
                   </h4>
                   <p className="text-[11px] text-[var(--muted)]">
-                    All payments received and recorded for this bill
+                    Audit trail of receipts recorded for {currentBill.invoice_number}
                   </p>
                 </div>
                 {balanceDue > 0 && (
                   <button
                     type="button"
                     onClick={() => setActiveTab('collect')}
-                    className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                    className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 transition"
                   >
                     <IconPlus size={13} />
-                    <span>Collect More</span>
+                    <span>Collect Remaining</span>
                   </button>
                 )}
               </div>
 
               {loadingHistory ? (
                 <div className="flex items-center justify-center py-10">
-                  <Spinner size={22} />
+                  <Spinner size={20} />
                   <span className="ml-2 text-xs text-[var(--muted)]">Loading payments…</span>
                 </div>
               ) : paymentsList.length === 0 ? (
-                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 py-10 text-center dark:border-slate-800">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800">
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--line)] py-10 text-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-[var(--muted)]">
                     <IconHistory size={20} />
                   </div>
                   <p className="mt-2 text-xs font-medium text-[var(--ink)]">No payments recorded yet</p>
                   <p className="mt-0.5 text-[11px] text-[var(--muted)]">
-                    Payments collected against this bill will appear here with Transaction IDs.
+                    Collected payments will appear here with audit timestamps and Transaction IDs.
                   </p>
                   {balanceDue > 0 && (
                     <button
                       type="button"
                       onClick={() => setActiveTab('collect')}
-                      className="mt-3 inline-flex items-center gap-1 rounded-lg bg-[#1E3A5F] px-3 py-1.5 text-xs font-semibold text-white shadow-xs"
+                      className="mt-3 inline-flex items-center gap-1 rounded-lg bg-[var(--primary)] text-white dark:text-slate-900 px-3 py-1.5 text-xs font-bold shadow-xs"
                     >
-                      <IconCurrencyRupee size={14} />
+                      <IconCurrencyRupee size={13} />
                       <span>Collect First Payment</span>
                     </button>
                   )}
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-0.5">
                   {paymentsList.map((p, idx) => {
                     const payMethod = (p.method || 'cash').toLowerCase()
                     const MethodIcon = (payMethod === 'upi' ? IconQrcode : payMethod === 'card' ? IconCreditCard : payMethod === 'bank' ? IconBuildingBank : IconCurrencyRupee) || IconCurrencyRupee
                     const methodColor = payMethod === 'upi' ? 'text-sky-600 bg-sky-50 dark:bg-sky-950/50 dark:text-sky-400' : payMethod === 'card' ? 'text-violet-600 bg-violet-50 dark:bg-violet-950/50 dark:text-violet-400' : payMethod === 'bank' ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50 dark:text-indigo-400' : 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-400'
-
                     const txnId = p.reference || p.transaction_id || `TXN-INV-${p.id}`
 
                     return (
                       <div
                         key={p.id || idx}
-                        className="flex flex-col gap-2 rounded-xl border border-slate-200/80 bg-[var(--surface)] p-3 text-xs transition hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700 sm:flex-row sm:items-center sm:justify-between"
+                        className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-xs space-y-2 transition hover:border-[var(--line-strong)]"
                       >
-                        <div className="flex items-start gap-2.5 min-w-0">
-                          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${methodColor}`}>
-                            <MethodIcon size={16} />
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${methodColor}`}>
+                              <MethodIcon size={14} />
+                            </div>
+                            <span className="font-mono font-bold text-[var(--ink)]">
+                              #PAY-{p.id || idx + 1}
+                            </span>
+                            <span className="inline-flex items-center rounded border border-[var(--line)] bg-[var(--surface-subtle)] px-1.5 py-0.2 text-[10px] font-bold uppercase">
+                              {p.method || 'Cash'}
+                            </span>
                           </div>
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="font-mono font-bold text-[var(--ink)]">
-                                #PAY-{p.id || idx + 1}
-                              </span>
-                              <span className="inline-flex items-center rounded-md border border-slate-200/70 bg-slate-50 px-1.5 py-0.2 text-[10px] font-semibold uppercase text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                                {p.method || 'Cash'}
-                              </span>
-                            </div>
-                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                              <span className="font-mono text-[11px] text-[var(--muted)]">
-                                TXN: <strong className="text-[var(--ink)] select-all">{txnId}</strong>
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleCopyText(txnId, 'txn')}
-                                className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-sky-700 hover:underline dark:text-sky-400"
-                                title="Copy Transaction ID"
-                              >
-                                {copiedTxn === txnId ? (
-                                  <span className="text-emerald-600">Copied</span>
-                                ) : (
-                                  <>
-                                    <IconCopy size={11} />
-                                    <span>Copy</span>
-                                  </>
-                                )}
-                              </button>
-                            </div>
-                            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-[var(--muted)]">
-                              <span><strong className="text-[var(--ink)] font-medium">Who gave:</strong> {p.customer_name || activeBill?.customer_name || 'Walk-in Customer'}</span>
-                              <span>&bull;</span>
-                              <span><strong className="text-[var(--ink)] font-medium">Collected by:</strong> {p.collected_by_name || 'Staff'}</span>
-                              <span>&bull;</span>
-                              <span>{formatDate(p.created_at)} &bull; {formatTime(p.created_at)}</span>
-                              {p.notes ? <span>&bull; {p.notes}</span> : null}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between border-t border-slate-100 pt-1.5 sm:border-0 sm:pt-0 sm:text-right">
-                          <span className="text-[11px] text-[var(--muted)] sm:hidden">Received:</span>
-                          <span className="font-mono text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                          <span className="amount price font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">
                             + {fmt(p.amount)}
                           </span>
                         </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-[var(--line)]">
+                          <div>
+                            <span className="block text-[10px] text-[var(--muted)]">Who Gave</span>
+                            <span className="font-medium text-[var(--ink)] truncate block">{p.customer_name || activeBill?.customer_name || 'Walk-in Customer'}</span>
+                          </div>
+                          <div>
+                            <span className="block text-[10px] text-[var(--muted)]">Who Collected</span>
+                            <span className="font-medium text-[var(--ink)] truncate block">{p.collected_by_name || 'Staff / Cashier'}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[11px] pt-1 border-t border-[var(--line)]">
+                          <div className="flex items-center gap-1 font-mono text-[10px] text-[var(--muted)] truncate">
+                            <span>TXN:</span>
+                            <span className="font-bold text-[var(--ink)] truncate select-all">{txnId}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyText(txnId, 'txn')}
+                              className="ml-1 text-sky-700 dark:text-sky-400 hover:underline shrink-0"
+                            >
+                              {copiedTxn === txnId ? 'Copied' : <IconCopy size={11} />}
+                            </button>
+                          </div>
+                          <span className="text-[10px] text-[var(--muted)] font-mono shrink-0">
+                            {formatDate(p.created_at)} {formatTime(p.created_at)}
+                          </span>
+                        </div>
+
+                        {p.notes && (
+                          <div className="text-[10px] text-[var(--muted)] italic pt-0.5">
+                            Note: {p.notes}
+                          </div>
+                        )}
                       </div>
                     )
                   })}
                 </div>
               )}
 
-              {/* History Summary Footer */}
-              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-900/40">
-                <div className="grid grid-cols-3 gap-2 text-center text-xs">
+              {/* History Bottom Summary Banner */}
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-2.5">
+                <div className="flex items-center justify-between text-xs">
                   <div>
-                    <span className="block text-[10px] font-semibold uppercase text-[var(--muted)]">Invoiced</span>
-                    <span className="font-mono font-bold text-[var(--ink)]">{fmt(grandTotal)}</span>
+                    <span className="text-[10px] uppercase text-[var(--muted)] font-semibold">Remaining Due:</span>
+                    <div className={`font-mono text-sm font-bold ${balanceDue <= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                      {balanceDue <= 0 ? '✓ Paid in Full' : fmt(balanceDue)}
+                    </div>
                   </div>
-                  <div>
-                    <span className="block text-[10px] font-semibold uppercase text-emerald-700 dark:text-emerald-400">Collected</span>
-                    <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">{fmt(paidAmount)}</span>
-                  </div>
-                  <div>
-                    <span className="block text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-400">Pending</span>
-                    <span className="font-mono font-bold text-amber-700 dark:text-amber-400">{fmt(balanceDue)}</span>
-                  </div>
+                  {balanceDue > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('collect')}
+                      className="inline-flex items-center gap-1 rounded-lg bg-[var(--primary)] text-white dark:text-slate-900 px-3 py-1.5 text-xs font-bold shadow-xs hover:opacity-90"
+                    >
+                      <IconPlus size={13} />
+                      <span>Collect {fmt(balanceDue)}</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -2622,11 +2703,11 @@ function CollectPaymentModal({ bill, shopSettings, shopName, onClose, onSuccess 
         </div>
 
         {/* Modal Footer */}
-        <div className="flex shrink-0 items-center justify-end border-t border-slate-100 bg-[var(--surface)] p-3 dark:border-slate-800 sm:px-5">
+        <div className="flex shrink-0 items-center justify-end border-t border-[var(--line)] bg-[var(--surface)] p-3 sm:px-5">
           <button
             type="button"
             onClick={onClose}
-            className="h-9 w-full rounded-lg border border-slate-200 bg-[var(--surface)] px-4 text-xs font-semibold text-[var(--ink-secondary)] transition hover:border-slate-300 hover:text-[var(--ink)] dark:border-slate-800 dark:hover:border-slate-700 sm:w-auto"
+            className="h-9 w-full sm:w-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] px-4 text-xs font-semibold text-[var(--ink-secondary)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
           >
             Close
           </button>
@@ -3103,7 +3184,7 @@ export default function Bills() {
             <button
               type="button"
               onClick={() => navigate('/billing/new')}
-              className="btn-primary h-8 sm:h-8.5 px-3.5 text-xs font-semibold text-white inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 shadow-xs"
+              className="btn-primary h-8 sm:h-8.5 px-3.5 text-xs font-semibold inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 shadow-xs"
             >
               <IconPlus size={14} />
               <span>New Bill</span>
@@ -3218,14 +3299,14 @@ export default function Bills() {
                   onClick={() => setStatusFilter(st.value)}
                   className={`shrink-0 inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-semibold border transition ${
                     statusFilter === st.value
-                      ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-2xs'
+                      ? 'bg-[var(--primary)] border-[var(--primary)] text-white dark:text-slate-900 shadow-2xs'
                       : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)]'
                   }`}
                 >
                   <span>{st.label}</span>
                   <span className={`text-[10px] font-mono px-1 rounded-full ${
                     statusFilter === st.value
-                      ? 'bg-white/20 text-white'
+                      ? 'bg-white/20 text-white dark:bg-black/20 dark:text-slate-900'
                       : 'bg-[var(--surface-subtle)] text-[var(--muted)]'
                   }`}>
                     {st.count}
@@ -3309,53 +3390,37 @@ export default function Bills() {
           )}
 
           {/* Search Bar + Controls */}
-          <div className="flex w-full items-center gap-2">
+          <div className="flex w-full items-center gap-2.5">
             {/* Search */}
-            <div className="group relative flex min-w-0 flex-1 items-center h-[34px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 transition hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-1 focus-within:ring-[#1E3A5F]/20">
-              <IconSearch size={14} className="shrink-0 text-[var(--muted)] group-focus-within:text-[#1E3A5F] dark:group-focus-within:text-sky-300 mr-2" />
-              <input
-                ref={searchInputRef}
-                className="w-full bg-transparent text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
-                placeholder="Search invoice number, customer name or phone... (Ctrl+K)"
-                value={search}
-                onChange={e => {
-                  setSearch(e.target.value)
-                  setPage(1)
-                }}
-              />
-              {search ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearch('')
-                    setPage(1)
-                  }}
-                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]"
-                  aria-label="Clear search"
-                  title="Clear search"
-                >
-                  <IconX size={13} />
-                </button>
-              ) : (
-                <kbd className="hidden sm:inline-flex shrink-0 items-center rounded border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)]">
-                  Ctrl+K
-                </kbd>
-              )}
-            </div>
+            <SearchInput
+              ref={searchInputRef}
+              value={search}
+              onChange={e => {
+                setSearch(e.target.value)
+                setPage(1)
+              }}
+              onClear={() => {
+                setSearch('')
+                setPage(1)
+              }}
+              placeholder="Search invoice number, customer name or phone..."
+              shortcut="Ctrl+K"
+              className="flex-1"
+            />
 
             {/* Filter Toggle Button */}
             <button
               type="button"
               onClick={() => setAdvancedFiltersOpen(v => !v)}
-              className={`inline-flex h-[34px] items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-semibold shadow-2xs transition shrink-0 ${
+              className={`inline-flex h-[38px] items-center justify-center gap-1.5 rounded-md border px-3 text-xs font-semibold transition shrink-0 ${
                 paymentMethodFilter || minAmount || maxAmount || advancedFiltersOpen
-                  ? 'border-[#1E3A5F] bg-blue-50 text-[#1E3A5F] dark:border-blue-600 dark:bg-blue-950/50 dark:text-sky-300'
-                  : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)]'
+                  ? 'border-[#0057B8] bg-blue-50/70 text-[#0057B8] dark:border-slate-400 dark:bg-white/10 dark:text-slate-100'
+                  : 'border-[#D9E0E8] dark:border-[var(--line)] bg-white dark:bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)]'
               }`}
               title="Toggle advanced filters"
               aria-label="Toggle advanced filters"
             >
-              <IconAdjustmentsHorizontal size={13} />
+              <IconAdjustmentsHorizontal size={15} />
               <span>Filters</span>
               {(paymentMethodFilter || minAmount || maxAmount) && (
                 <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-[#1E3A5F] px-1 text-[9px] text-white">
@@ -3450,7 +3515,7 @@ export default function Bills() {
               <button
                 type="button"
                 onClick={exportSelectedCsv}
-                className="inline-flex h-7 items-center gap-1.5 rounded border border-[#1E3A5F] bg-[#1E3A5F] hover:bg-[#162a45] px-2.5 text-xs font-semibold text-white shadow-2xs transition active:scale-95"
+                className="inline-flex h-7 items-center gap-1.5 rounded border border-[#1E3A5F] bg-[#1E3A5F] hover:bg-[#162a45] px-2.5 text-xs font-semibold text-white dark:border-slate-200 dark:bg-slate-100 dark:text-slate-900 shadow-2xs transition active:scale-95"
               >
                 <IconDownload size={12} />
                 <span>Export Selected</span>
@@ -3475,13 +3540,12 @@ export default function Bills() {
           {loading ? (
             <TableSkeleton rows={10} cols={11} label="Loading bills" />
           ) : visibleBills.length === 0 ? (
-            <>
-             
-                <InvoiceEmptyIllustration
+            <div className="py-8 px-4 flex items-center justify-center bg-[var(--surface)]">
+              <InvoiceEmptyIllustration
                 title={search || statusFilter !== 'all' ? "No invoices match your filters" : "No Invoices Generated Yet"}
                 description={search || statusFilter !== 'all' ? "Try changing your search, date range, or payment status filters." : "Start billing customers with high-speed barcode scanning, dynamic UPI QR and automated GST calculations."}
               />
-            </>
+            </div>
           ) : (
             <>
               {/* Mobile cards view (sm:hidden) */}
@@ -3680,7 +3744,7 @@ export default function Bills() {
 
                           {/* 5. Total (Right) */}
                           <td className="px-3 py-2 text-right align-middle">
-                            <div className="font-mono text-xs sm:text-sm font-bold tabular-nums text-[var(--ink)]">
+                            <div className="amount price font-mono text-xs sm:text-sm font-bold tabular-nums text-[var(--ink)]">
                               {fmt(total)}
                             </div>
                             {discount > 0 && (
@@ -3719,7 +3783,7 @@ export default function Bills() {
 
                           {/* 9. Status (Center) */}
                           <td className="px-2 py-2 text-center align-middle">
-                            <div className="flex justify-center">
+                            <div className="flex justify-center items-center gap-1  ">
                               <StatusPill bill={bill} />
                             </div>
                           </td>

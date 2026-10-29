@@ -2040,8 +2040,9 @@ export default function NewBill() {
               onChange={value => { setSearch(value); setSearchActive(true); setActiveIdx(-1) }}
               onClear={() => { setActiveIdx(-1); setSearchActive(true); searchRef.current?.focus() }}
               inputRef={searchRef}
-              placeholder="Search products by name, SKU or barcode"
+              placeholder="Search products or scan barcode..."
               shortcut="Ctrl+K"
+              variant="product"
               className="pb-search-field"
               inputClassName="pb-search-input"
               iconClassName="pb-field-icon"
@@ -2084,7 +2085,7 @@ export default function NewBill() {
                             <span className="pb-strong">{p.name}</span>
                             {isOut(p) && <span className="pb-badge">Out of stock</span>}
                             <span className="pb-sub block">
-                              SKU: {p.sku || '—'} | Barcode: {p.barcode || '—'}
+                              SKU: {p.sku || '—'}{p.category_name ? ` · ${p.category_name}` : ''}
                             </span>
                           </span>
                           <span className="pb-result-side">
@@ -2111,7 +2112,7 @@ export default function NewBill() {
                               disabled={isOut(p)}
                             >
                               <span className="pb-strong">{p.name}</span>
-                              <span className="pb-sub">{p.sku || p.barcode || '—'}</span>
+                              <span className="pb-sub">{p.sku || p.category_name || '—'}</span>
                               <span className="pb-sub">Stock: {stockLabel(p)}</span>
                             </button>
                             <div className="pb-suggestion-side">
@@ -2141,7 +2142,7 @@ export default function NewBill() {
                               disabled={isOut(p)}
                             >
                               <span className="pb-strong">{p.name}</span>
-                              <span className="pb-sub">{p.sku || p.barcode || '—'}</span>
+                              <span className="pb-sub">{p.sku || p.category_name || '—'}</span>
                               <span className="pb-sub">Stock: {stockLabel(p)}</span>
                             </button>
                             <div className="pb-suggestion-side">
@@ -2230,7 +2231,6 @@ export default function NewBill() {
                           <div className="pb-prod-sub">
                             <span className="pb-mobile-only pb-sku-inline">{p.sku ? `SKU: ${p.sku} · ` : ''}</span>
                             {[p.category_name, p.unit].filter(Boolean).join(' · ')}
-                            {p.barcode && <span className="pb-barcode-inline"> · &#9641; {p.barcode}</span>}
                           </div>
                         </td>
                         <td>
@@ -2908,18 +2908,46 @@ export default function NewBill() {
             </div>
             <div className="pb-floating-total">
               <span>Total:</span>
-              <b>{fmt(grandTotal)}</b>
+              <b className="font-mono text-emerald-600 dark:text-emerald-400">{fmt(grandTotal)}</b>
             </div>
           </div>
-          <button
-            type="button"
-            className="pb-floating-checkout-btn"
-            onClick={() => {
-              setMobilePaymentOpen(true)
-            }}
-          >
-            {mobileTab === 'catalog' ? 'View Cart & Pay →' : 'Proceed to Pay →'}
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {mobileTab === 'catalog' ? (
+              <>
+                <button
+                  type="button"
+                  className="px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition"
+                  onClick={() => setMobileTab('cart')}
+                >
+                  View Cart
+                </button>
+                <button
+                  type="button"
+                  className="pb-floating-checkout-btn px-3.5 py-2 rounded-lg font-bold text-xs"
+                  onClick={() => setMobilePaymentOpen(true)}
+                >
+                  Pay {fmt(grandTotal)} &rarr;
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition"
+                  onClick={() => setMobileTab('catalog')}
+                >
+                  + Add More
+                </button>
+                <button
+                  type="button"
+                  className="pb-floating-checkout-btn px-3.5 py-2 rounded-lg font-bold text-xs"
+                  onClick={() => setMobilePaymentOpen(true)}
+                >
+                  Proceed to Pay &rarr;
+                </button>
+              </>
+            )}
+          </div>
         </aside>
       )}
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import api from '../api'
-import { PageHeader, Spinner, Modal } from '../components/UI'
+import { PageHeader, Spinner, Modal, SearchInput } from '../components/UI'
 import toast from 'react-hot-toast'
 import {
   IconTrash,
@@ -210,34 +210,15 @@ export default function RecycleBin() {
           </button>
         </div>
 
-        <div className="w-full md:w-72">
-          <div className="group relative flex items-center min-h-[42px] w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-xs">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-              <IconSearch size={14} strokeWidth={2.2} />
-            </div>
-            <input
-              type="text"
-              value={q}
-              onChange={e => setQ(e.target.value)}
-              placeholder="Search records in register..."
-              className="w-full bg-transparent px-2.5 text-xs sm:text-sm font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
-            />
-            {q ? (
-              <button
-                type="button"
-                onClick={() => setQ('')}
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--muted)] transition-colors hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)] active:scale-95"
-                title="Clear search"
-                aria-label="Clear search"
-              >
-                <IconX size={13} strokeWidth={2.5} />
-              </button>
-            ) : (
-              <kbd className="hidden sm:inline-flex shrink-0 items-center rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--muted)] shadow-2xs">
-                Ctrl+K
-              </kbd>
-            )}
-          </div>
+        <div className="w-full md:w-80">
+          <SearchInput
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            onClear={() => setQ('')}
+            placeholder="Search deleted records by name or reference..."
+            shortcut="Ctrl+K"
+            className="w-full"
+          />
         </div>
       </div>
 

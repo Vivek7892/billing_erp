@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { SearchInput } from '../components/UI'
 import { useAuth } from '../AuthContext'
 import { ROLES } from '../constants'
 import toast from 'react-hot-toast'
@@ -1166,34 +1167,15 @@ export default function Notifications() {
         {/* Toolbar: Search & Select Dropdowns */}
         <div className="notifications-filter-bar flex flex-wrap items-center gap-1.5 sm:gap-2">
           {/* Search Box with Ctrl+K */}
-          <div className="notifications-search group relative flex items-center h-8 sm:h-9 flex-1 min-w-[180px] max-w-sm rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/15 shadow-2xs">
-            <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[var(--muted)] group-focus-within:text-[var(--primary)]">
-              <IconSearch size={13} strokeWidth={2.2} />
-            </div>
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search notifications..."
-              className="w-full bg-transparent px-1.5 text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
-            />
-            {search ? (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-[var(--muted)] hover:bg-[var(--surface-elevated)] hover:text-[var(--ink)]"
-                title="Clear search"
-                aria-label="Clear search"
-              >
-                <IconX size={11} strokeWidth={2.5} />
-              </button>
-            ) : (
-              <kbd className="hidden sm:inline-flex shrink-0 items-center rounded border border-[var(--line)] bg-[var(--surface-elevated)] px-1 py-0.2 text-[9px] font-semibold text-[var(--muted)] shadow-2xs">
-                Ctrl+K
-              </kbd>
-            )}
-          </div>
+          <SearchInput
+            ref={searchInputRef}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onClear={() => setSearch('')}
+            placeholder="Search notifications by title or message..."
+            shortcut="Ctrl+K"
+            className="flex-1 min-w-[200px] max-w-sm"
+          />
 
           <button
             type="button"

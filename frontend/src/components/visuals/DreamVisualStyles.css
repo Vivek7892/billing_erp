@@ -986,17 +986,18 @@
    DARK MODE
 ========================================================================== */
 
+[data-theme="dark"],
 .dark {
-  --dwt-bg: #0F172A;
-  --dwt-surface: #111827;
-  --dwt-surface-soft: #172033;
+  --dwt-bg: #121316;
+  --dwt-surface: #1A1B1E;
+  --dwt-surface-soft: #202125;
 
-  --dwt-ink: #F8FAFC;
+  --dwt-ink: #F3F4F6;
   --dwt-secondary: #CBD5E1;
-  --dwt-muted: #94A3B8;
+  --dwt-muted: #9CA3AF;
 
-  --dwt-border: #263449;
-  --dwt-border-soft: #1E293B;
+  --dwt-border: #2E3035;
+  --dwt-border-soft: #24252A;
 
   --dwt-blue-50: #102442;
   --dwt-blue-100: #12315A;
@@ -1006,16 +1007,25 @@
 }
 
 
+[data-theme="dark"] .dwt-visual-card,
 .dark .dwt-visual-card,
+[data-theme="dark"] .dwt-card,
 .dark .dwt-card,
+[data-theme="dark"] .dwt-tile,
 .dark .dwt-tile,
+[data-theme="dark"] .dwt-stat,
 .dark .dwt-stat {
   background: var(--dwt-surface);
-
   border-color: var(--dwt-border);
+  box-shadow: none;
+}
 
-  box-shadow:
-    0 6px 24px rgba(0, 0, 0, 0.25);
+[data-theme="dark"] .dwt-visual-card.bg-transparent,
+.dark .dwt-visual-card.bg-transparent,
+.dwt-visual-card.bg-transparent {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
 }
 
 

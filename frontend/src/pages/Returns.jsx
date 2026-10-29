@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api, { API_BASE_URL } from '../api'
 import { getAccessToken } from '../services/tokenStorage'
-import { Badge, Spinner, Modal } from '../components/UI'
+import { Badge, Spinner, Modal, SearchInput } from '../components/UI'
 import { MobileFAB } from '../components/MobileUI'
 import {
   IconRotate2,
@@ -413,29 +413,13 @@ export default function Returns() {
 
     <div className="flex items-center gap-2 w-full sm:w-auto">
       {/* Search bar */}
-      <div className="group relative flex items-center min-h-[38px] w-full sm:w-64 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 transition-all duration-200 hover:border-slate-300 dark:hover:border-slate-600 focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15 dark:focus-within:border-sky-500 dark:focus-within:ring-sky-500/20 shadow-2xs">
-        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-elevated)] text-[var(--muted)] transition-colors group-focus-within:bg-blue-50 group-focus-within:text-[#1E3A5F] dark:group-focus-within:bg-blue-950/50 dark:group-focus-within:text-sky-300">
-          <IconSearch size={13} strokeWidth={2.2} />
-        </div>
-        <input
-          type="text"
-          value={returnSearch}
-          onChange={e => setReturnSearch(e.target.value)}
-          placeholder="Search returns..."
-          className="w-full bg-transparent px-2 text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
-        />
-        {returnSearch ? (
-          <button
-            type="button"
-            onClick={() => setReturnSearch('')}
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[var(--muted)] hover:text-[var(--ink)]"
-            title="Clear search"
-            aria-label="Clear search"
-          >
-            <IconX size={12} strokeWidth={2.5} />
-          </button>
-        ) : null}
-      </div>
+      <SearchInput
+        value={returnSearch}
+        onChange={e => setReturnSearch(e.target.value)}
+        onClear={() => setReturnSearch('')}
+        placeholder="Search returns by invoice number or customer..."
+        className="w-full sm:w-72"
+      />
 
       
     </div>
@@ -491,9 +475,9 @@ export default function Returns() {
                                 <div className="font-semibold uppercase tracking-wide text-[var(--muted)]">Bill / Invoice</div>
                                 <div className="mt-1 font-mono font-semibold text-[var(--ink)]">{r.invoice_number || `#${r.invoice}`}</div>
                               </div>
-                              <div className="sm:col-span-3">
+                              <div className="">
                                 <div className="font-semibold uppercase tracking-wide text-[var(--muted)]">Return reason</div>
-                                <div className="mt-1 whitespace-pre-wrap text-[var(--ink-secondary)]">{r.reason || 'No reason provided.'}</div>
+                                <div className="mt-1 font-mono font-semibold text-[var(--ink)]">{r.reason || 'No reason provided.'}</div>
                               </div>
                             </div>
                             <table className="erp-table w-full text-xs border-t border-[var(--line)]">

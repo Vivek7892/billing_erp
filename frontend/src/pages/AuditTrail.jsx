@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import api from '../api'
-import { PageHeader, Spinner, Modal, Pagination } from '../components/UI'
+import { PageHeader, Spinner, Modal, Pagination, SearchInput } from '../components/UI'
 import { MobileKpiGrid } from '../components/MobileUI'
 import toast from 'react-hot-toast'
 import {
@@ -918,27 +918,15 @@ export default function AuditTrail() {
       <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-3.5 shadow-xs space-y-3">
         {/* Quick Search bar + Mobile Filters Toggle */}
         <div className="flex items-center gap-2">
-          <div className="group relative flex flex-1 items-center min-h-[40px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 transition focus-within:border-[#1E3A5F] focus-within:ring-2 focus-within:ring-[#1E3A5F]/15">
-            <IconSearch size={14} className="text-[var(--muted)] shrink-0 group-focus-within:text-[#1E3A5F]" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              className="w-full bg-transparent px-2 text-xs font-medium text-[var(--ink)] placeholder:text-[var(--placeholder)] outline-none"
-              placeholder="Search action, entity, user, IP... (Ctrl+K)"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-            {search ? (
-              <button
-                type="button"
-                onClick={() => setSearch('')}
-                className="text-[var(--muted)] hover:text-[var(--ink)] p-1 rounded"
-                title="Clear search"
-              >
-                <IconX size={13} />
-              </button>
-            ) : null}
-          </div>
+          <SearchInput
+            ref={searchInputRef}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onClear={() => setSearch('')}
+            placeholder="Search action, entity, user, IP..."
+            shortcut="Ctrl+K"
+            className="flex-1"
+          />
 
           <button
             type="button"

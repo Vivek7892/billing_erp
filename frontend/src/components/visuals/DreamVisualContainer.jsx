@@ -67,7 +67,7 @@ export default function DreamVisualContainer({
 
   return (
     <div
-      className={`dwt-visual-card relative flex flex-col items-center justify-center ${className}`}
+      className={`dwt-visual-card relative flex flex-col items-center justify-center ${className?.includes('bg-transparent') ? '!bg-transparent !border-0 !shadow-none' : ''} ${className}`}
       style={aspectRatio !== 'auto' ? { aspectRatio } : undefined}
       role="figure"
       aria-label={title || 'Dreamwithtech Billing ERP Visual'}
