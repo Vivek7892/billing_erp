@@ -43,6 +43,7 @@ import {
   IconCircleCheck,
   IconCircleX,
   IconMenu2,
+  IconCopy,
 } from '@tabler/icons-react'
 import { useEffect, useState, createContext, useContext, useRef, useCallback, useMemo } from 'react'
 import toast from 'react-hot-toast'
@@ -59,7 +60,7 @@ function MenuIcon({ size = 20 }) {
   return <IconMenu2 size={size} stroke={2} aria-hidden="true" />
 }
 
-export const ShopContext = createContext({ logoSrc: '', shopName: 'Dreamwithtech' })
+export const ShopContext = createContext({ logoSrc: '', shopName: 'Dreamwithtech', shopId: '' })
 export const useShop = () => useContext(ShopContext)
 
 const NAV_GROUPS = [
@@ -244,7 +245,7 @@ function NavGroupItems({ items, collapsed, mobile, groupLabel, open, setOpen, on
   )
 }
 
-function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, logoSrc, onNav, onToggle, onClose, onLogout }) {
+function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, shopId, logoSrc, onNav, onToggle, onClose, onLogout }) {
   const [headerHovered, setHeaderHovered] = useState(false)
   const location = useLocation()
   const canAccessUtility = [ROLES.ADMIN, ROLES.OWNER].includes(String(user?.role || '').toLowerCase())
@@ -292,7 +293,26 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, l
             </div>
             <div className="min-w-0 flex-1">
               <div className={`text-[11px] font-bold whitespace-nowrap leading-tight tracking-tight ${settingsMode ? 'text-[var(--ink)]' : 'text-white'}`}>{shopName}</div>
-              {shopPhone && <div className={`mt-1 whitespace-normal break-words text-[10px] font-medium ${settingsMode ? 'text-[var(--muted)]' : 'text-slate-400'}`}>{shopPhone}</div>}
+              {shopId && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigator.clipboard.writeText(shopId)
+                    toast.success(`Copied Shop ID: ${shopId}`)
+                  }}
+                  title="Click to copy Shop ID"
+                  className={`inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wide transition-colors ${
+                    settingsMode
+                      ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+                      : 'bg-white/10 text-blue-300 hover:bg-white/20 border border-white/15'
+                  }`}
+                >
+                  <span>{shopId}</span>
+                  <IconCopy size={10} className="opacity-70" />
+                </button>
+              )}
+              {shopPhone && <div className={`mt-0.5 whitespace-normal break-words text-[10px] font-medium ${settingsMode ? 'text-[var(--muted)]' : 'text-slate-400'}`}>{shopPhone}</div>}
             </div>
             {!mobile && (
               <button
@@ -1049,7 +1069,7 @@ function LiveDateTime() {
   )
 }
 
-function ProfileMenu({ user }) {
+function ProfileMenu({ user, shopId }) {
   const { logout } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
@@ -1161,7 +1181,24 @@ function ProfileMenu({ user }) {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-bold text-[var(--ink)]">{displayName}</p>
                 <p className="truncate text-[10px] text-[var(--muted)]">{user?.email || 'Signed in'}</p>
-                {user?.role && <span className="mt-0.5 inline-block text-[9px] uppercase tracking-wider font-semibold text-[var(--primary)]">{user.role}</span>}
+                <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                  {user?.role && <span className="inline-block text-[9px] uppercase tracking-wider font-semibold text-[var(--primary)]">{user.role}</span>}
+                  {(shopId || user?.business_shop_id) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const id = shopId || user?.business_shop_id
+                        navigator.clipboard.writeText(id)
+                        toast.success(`Copied Shop ID: ${id}`)
+                      }}
+                      title="Copy Shop ID"
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[10px] font-mono font-bold"
+                    >
+                      <span>{shopId || user?.business_shop_id}</span>
+                      <IconCopy size={10} />
+                    </button>
+                  )}
+                </div>
               </div>
               <button
                 type="button"
@@ -1191,6 +1228,7 @@ export default function Layout({ children }) {
   const [quickActionOpen, setQuickActionOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const [shopName, setShopName] = useState(() => user?.business_name || 'Dreamwithtech')
+  const [shopId, setShopId] = useState(() => user?.business_shop_id || '')
   const [shopPhone, setShopPhone] = useState('')
   const [shopLogo, setShopLogo] = useState('')
   const [activePageLoaders, setActivePageLoaders] = useState(() => new Set())
@@ -1208,7 +1246,10 @@ export default function Layout({ children }) {
     if (user?.business_name) {
       setShopName(prev => (!prev || prev === 'Dreamwithtech' ? user.business_name : prev))
     }
-  }, [user?.business_name])
+    if (user?.business_shop_id) {
+      setShopId(prev => prev || user.business_shop_id)
+    }
+  }, [user?.business_name, user?.business_shop_id])
 
   useEffect(() => {
     api.get('/settings/all/').then(response => {
@@ -1216,18 +1257,21 @@ export default function Layout({ children }) {
       if (name) setShopName(name)
       if (response.data?.shop_phone) setShopPhone(response.data.shop_phone)
       if (response.data?.shop_logo) setShopLogo(response.data.shop_logo)
+      if (response.data?.shop_id) setShopId(response.data.shop_id)
     }).catch(() => {})
 
     const onUpdate = e => {
       if (e?.detail?.shop_logo) setShopLogo(e.detail.shop_logo)
       if (e?.detail?.shop_name) setShopName(e.detail.shop_name)
       if (e?.detail?.shop_phone) setShopPhone(e.detail.shop_phone)
+      if (e?.detail?.shop_id) setShopId(e.detail.shop_id)
       if (!e?.detail) {
         api.get('/settings/all/').then(res => {
           const name = res.data?.shop_name || user?.business_name
           if (name) setShopName(name)
           if (res.data?.shop_phone) setShopPhone(res.data.shop_phone)
           if (res.data?.shop_logo) setShopLogo(res.data.shop_logo)
+          if (res.data?.shop_id) setShopId(res.data.shop_id)
         }).catch(() => {})
       }
     }
@@ -1266,7 +1310,7 @@ export default function Layout({ children }) {
   }
 
   return (
-    <ShopContext.Provider value={{ logoSrc, shopName }}>
+    <ShopContext.Provider value={{ logoSrc, shopName, shopId }}>
       <div className="flex h-screen h-[100dvh] min-h-0 overflow-hidden" style={{ background: 'var(--app-bg)' }}>
 
         {/* Sidebar Desktop */}
@@ -1278,6 +1322,7 @@ export default function Layout({ children }) {
             user={user}
             shopName={shopName}
             shopPhone={shopPhone}
+            shopId={shopId}
             logoSrc={logoSrc}
             onNav={() => {}}
             onToggle={() => setCollapsed(v => !v)}
@@ -1296,6 +1341,7 @@ export default function Layout({ children }) {
               user={user}
               shopName={shopName}
               shopPhone={shopPhone}
+              shopId={shopId}
               logoSrc={logoSrc}
               onNav={() => setMobileOpen(false)}
               onToggle={() => {}}
@@ -1357,7 +1403,7 @@ export default function Layout({ children }) {
 
               <div className="hidden sm:block w-px h-5 bg-[var(--line)]" />
 
-              <ProfileMenu user={user} />
+              <ProfileMenu user={user} shopId={shopId} />
             </div>
 
             {/* Mobile Search Bar Expansion */}

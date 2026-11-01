@@ -1077,12 +1077,22 @@ class SuperAdminDashboardView(APIView):
     def get(self, request):
         if not request.user.is_superuser:
             return Response({'error': 'Forbidden'}, status=403)
-        businesses = Business.objects.annotate(
+        qs = Business.objects.all()
+        search = request.query_params.get('search', '').strip()
+        if search:
+            qs = qs.filter(
+                Q(shop_id__icontains=search) |
+                Q(name__icontains=search) |
+                Q(owner_name__icontains=search) |
+                Q(mobile__icontains=search) |
+                Q(email__icontains=search)
+            )
+        businesses = qs.annotate(
             user_count=Count('members', distinct=True),
             invoice_count=Count('invoice', distinct=True),
             total_revenue=Sum('invoice__grand_total'),
         ).values(
-            'id', 'name', 'owner_name', 'mobile', 'email',
+            'id', 'shop_id', 'name', 'owner_name', 'mobile', 'email',
             'business_type', 'created_at', 'user_count', 'invoice_count', 'total_revenue'
         ).order_by('-created_at')
         return Response({
@@ -2845,10 +2855,10 @@ class SettingViewSet(viewsets.ModelViewSet):
         # Keep the legacy key/value API compatible while preventing arbitrary keys
         # from being created by stale or malformed clients.
         known_keys = set(self.all(request).data.keys())
-        known_keys.difference_update({'active_templates', 'template_settings', 'id', 'business'})
+        known_keys.difference_update({'active_templates', 'template_settings', 'id', 'business', 'shop_id'})
         from .services.approval_service import ApprovalService
         known_keys.update(ApprovalService.DEFAULT_SETTINGS)
-        incoming_keys = set(request.data.keys()) - {'reason', '_reason', 'active_templates', 'template_settings', 'id', 'business'}
+        incoming_keys = set(request.data.keys()) - {'reason', '_reason', 'active_templates', 'template_settings', 'id', 'business', 'shop_id'}
 
         bool_keys = {
             key for key in incoming_keys
@@ -3054,6 +3064,7 @@ class SettingViewSet(viewsets.ModelViewSet):
         biz = getattr(request.user, 'business', None)
         defaults = {
             # Business
+            'shop_id': biz.shop_id if biz else '',
             'shop_name': biz.name if biz else '',
             'shop_address': biz.address if biz else '',
             'shop_phone': biz.mobile if biz else '',
@@ -3610,6 +3621,29 @@ class GlobalSearchView(APIView):
         business = request.user.business
         contains = query[:100]
         results = []
+
+        # Search by Shop ID or store name
+        if business and business.shop_id and (contains.upper() in business.shop_id or contains.lower() in business.name.lower()):
+            results.append({
+                'type': 'shop',
+                'id': str(business.id),
+                'label': f"{business.name} ({business.shop_id})",
+                'subtitle': f"Shop ID: {business.shop_id} · Manage Business Settings",
+                'route': '/settings?tab=manage-business',
+            })
+
+        if request.user.is_superuser:
+            for b in Business.objects.filter(
+                Q(shop_id__icontains=contains) | Q(name__icontains=contains) | Q(owner_name__icontains=contains)
+            )[:4]:
+                if not any(r['id'] == str(b.id) for r in results):
+                    results.append({
+                        'type': 'shop',
+                        'id': str(b.id),
+                        'label': f"{b.name} ({b.shop_id or 'No ID'})",
+                        'subtitle': f"Shop ID: {b.shop_id or '—'} · Owner: {b.owner_name or '—'}",
+                        'route': '/settings?tab=manage-business',
+                    })
         for product in Product.objects.filter(
             business=business,
             status='active',

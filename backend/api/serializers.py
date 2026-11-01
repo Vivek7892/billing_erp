@@ -9,7 +9,7 @@ class BusinessSerializer(serializers.ModelSerializer):
     class Meta:
         model = Business
         fields = '__all__'
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'shop_id', 'created_at']
 
 
 import re
@@ -176,15 +176,16 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False)
     business_name = serializers.CharField(source='business.name', read_only=True)
+    business_shop_id = serializers.CharField(source='business.shop_id', read_only=True)
     onboarding_completed = serializers.BooleanField(source='has_completed_onboarding', read_only=True)
     onboarding_step = serializers.CharField(read_only=True)
 
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone',
-                  'is_active', 'password', 'business', 'business_name', 'is_verified',
+                  'is_active', 'password', 'business', 'business_name', 'business_shop_id', 'is_verified',
                   'onboarding_completed', 'onboarding_step']
-        read_only_fields = ['business', 'is_verified', 'onboarding_completed', 'onboarding_step']
+        read_only_fields = ['business', 'business_shop_id', 'is_verified', 'onboarding_completed', 'onboarding_step']
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)

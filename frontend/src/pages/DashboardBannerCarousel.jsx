@@ -21,8 +21,8 @@ const slides = [
   {
     image: currentBanner,
     icon: IconLayoutDashboard,
-    eyebrow: 'ERP OVERVIEW',
-    title: 'Your business, at a glance',
+    eyebrow: '  ERP OVERVIEW',
+    title: '  Your business, at a glance',
     description: 'Sales, stock, payments and business activity in one place.',
   },
   {
@@ -167,26 +167,26 @@ export default function DashboardBannerCarousel({ className = '' } = {}) {
         <p>{slide.description}</p>
       </div>
 
-      {/* Navigation */}
-      <div className="dashboard-banner-navigation">
-        <button
-          type="button"
-          className="dashboard-banner-arrow dashboard-banner-previous"
-          onClick={showPrevious}
-          aria-label="Show previous banner"
-        >
-          <IconChevronLeft size={17} aria-hidden="true" />
-        </button>
+     {/* Navigation */}
+<div className="dashboard-banner-navigation">
+  <button
+    type="button"
+    className="dashboard-banner-arrow dashboard-banner-previous"
+    onClick={showPrevious}
+    aria-label="Show previous banner"
+  >
+    <IconChevronLeft size={17} />
+  </button>
 
-        <button
-          type="button"
-          className="dashboard-banner-arrow dashboard-banner-next"
-          onClick={showNext}
-          aria-label="Show next banner"
-        >
-          <IconChevronRight size={17} aria-hidden="true" />
-        </button>
-      </div>
+  <button
+    type="button"
+    className="dashboard-banner-arrow dashboard-banner-next"
+    onClick={showNext}
+    aria-label="Show next banner"
+  >
+    <IconChevronRight size={17} />
+  </button>
+</div>
 
       {/* Pagination */}
       <div

@@ -23,13 +23,71 @@ def default_short_link_expiry():
     return timezone.now() + timedelta(days=30)
 
 
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
+
+
 def generate_public_token():
     chars = string.ascii_letters + string.digits
     return ''.join(secrets.choice(chars) for _ in range(8))
 
 
+class RetiredShopID(models.Model):
+    """
+    Registry of retired/deleted Shop IDs to guarantee Shop IDs are NEVER reused.
+    """
+    shop_id = models.CharField(max_length=12, unique=True)
+    business_name = models.CharField(max_length=200, blank=True)
+    retired_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-retired_at']
+        verbose_name = 'Retired Shop ID'
+        verbose_name_plural = 'Retired Shop IDs'
+
+    def __str__(self):
+        return f"{self.shop_id} ({self.business_name})"
+
+
+def generate_unique_shop_id(year=None, max_attempts=500):
+    """
+    Generate a unique Shop ID strictly in DWAAYYNN format:
+    - DW: Fixed prefix (2 characters)
+    - AA: Two randomly chosen uppercase letters (A-Z)
+    - YY: Two-digit registration year (e.g. 26 for 2026)
+    - NN: Two randomly chosen digits (00-99)
+    Examples: DWKT2618, DWXR2674, DWMQ2639
+    Guaranteed unique across active businesses and retired/deleted shop IDs.
+    """
+    if year is None:
+        year = timezone.now().year % 100
+    else:
+        year = int(str(year)[-2:])
+    yy = f"{year:02d}"
+
+    for _ in range(max_attempts):
+        letters = ''.join(secrets.choice(string.ascii_uppercase) for _ in range(2))
+        digits = f"{secrets.randbelow(100):02d}"
+        candidate = f"DW{letters}{yy}{digits}"
+        if (
+            not Business.objects.filter(shop_id=candidate).exists()
+            and not RetiredShopID.objects.filter(shop_id=candidate).exists()
+        ):
+            return candidate
+
+    raise ValueError("Unable to generate unique Shop ID after maximum attempts.")
+
+
 class Business(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    shop_id = models.CharField(
+        max_length=12,
+        unique=True,
+        null=True,
+        blank=True,
+        editable=False,
+        help_text="Unique 7/8-character Shop ID in DWAAYYNN format (e.g. DWKT2618)",
+    )
     name = models.CharField(max_length=200)
     business_type = models.CharField(max_length=100, blank=True)
     owner_name = models.CharField(max_length=200, blank=True)
@@ -57,7 +115,49 @@ class Business(models.Model):
         verbose_name_plural = 'businesses'
 
     def __str__(self):
+        if self.shop_id:
+            return f"{self.name} ({self.shop_id})"
         return self.name
+
+    def save(self, *args, **kwargs):
+        # 1. Once assigned, keep Shop ID permanent even if shop name/profile changes (Req 11)
+        if self.pk:
+            orig = Business.objects.filter(pk=self.pk).values_list('shop_id', flat=True).first()
+            if orig:
+                self.shop_id = orig
+
+        # 2. Auto-generate Shop ID if absent (Req 8, 9, 12)
+        if not self.shop_id:
+            reg_year = (self.created_at.year if self.created_at else timezone.now().year) % 100
+            for attempt in range(10):
+                self.shop_id = generate_unique_shop_id(year=reg_year)
+                try:
+                    super().save(*args, **kwargs)
+                    return
+                except IntegrityError:
+                    if attempt == 9:
+                        raise
+                    self.shop_id = None
+        else:
+            super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        # Retire Shop ID permanently before deleting (Req 10)
+        if self.shop_id:
+            RetiredShopID.objects.get_or_create(
+                shop_id=self.shop_id,
+                defaults={'business_name': self.name}
+            )
+        return super().delete(*args, **kwargs)
+
+
+@receiver(post_delete, sender=Business)
+def retire_business_shop_id_on_delete(sender, instance, **kwargs):
+    if instance.shop_id:
+        RetiredShopID.objects.get_or_create(
+            shop_id=instance.shop_id,
+            defaults={'business_name': instance.name}
+        )
 
 
 class User(AbstractUser):
