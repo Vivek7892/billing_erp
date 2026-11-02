@@ -429,10 +429,13 @@ DEFAULT_ALLOWED_ORIGINS = [
     'http://127.0.0.1:3000',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
     'https://app.dreamwithtech.dev',
     'https://accounts.dreamwithtech.dev',
     'https://share.dreamwithtech.dev',
     'https://dreamwithtech.dev',
+    'https://admin.dreamwithtech.dev',
 ]
 
 cors_env = config('CORS_ALLOWED_ORIGINS', default='').strip()

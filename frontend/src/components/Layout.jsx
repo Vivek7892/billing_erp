@@ -260,7 +260,10 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, s
   const [headerHovered, setHeaderHovered] = useState(false)
   const location = useLocation()
   const canAccessUtility = [ROLES.ADMIN, ROLES.OWNER].includes(String(user?.role || '').toLowerCase())
-  const requestedSettingsTab = new URLSearchParams(location.search).get('tab') || 'manage-business'
+  const pathSettingsTab = location.pathname.startsWith('/settings/')
+    ? location.pathname.split('/')[2]
+    : null
+  const requestedSettingsTab = pathSettingsTab || new URLSearchParams(location.search).get('tab') || 'manage-business'
   const currentSettingsTab = requestedSettingsTab === 'business'
     ? 'manage-business'
     : requestedSettingsTab === 'billing'
@@ -357,7 +360,7 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, s
                 return (
                   <NavLink
                     key={id}
-                    to={`/settings?tab=${id}`}
+                    to={`/settings/${id}`}
                     onClick={onNav}
                     title={collapsed && !mobile ? label : undefined}
                     aria-current={isActive ? 'page' : undefined}
@@ -1285,10 +1288,13 @@ export default function Layout({ children }) {
 
   const logoSrc = shopLogo || logoImg
   const settingsMode = location.pathname === '/settings' || location.pathname.startsWith('/settings/')
-  const invoiceSettingsMode = location.pathname === '/settings'
-    && ['invoice-settings', 'billing'].includes(new URLSearchParams(location.search).get('tab'))
-  const printSettingsMode = location.pathname === '/settings'
-    && ['print-settings', 'templates'].includes(new URLSearchParams(location.search).get('tab'))
+  const settingsTabParam = location.pathname.startsWith('/settings/')
+    ? location.pathname.split('/')[2]
+    : new URLSearchParams(location.search).get('tab')
+  const invoiceSettingsMode = settingsMode
+    && ['invoice-settings', 'billing'].includes(settingsTabParam)
+  const printSettingsMode = settingsMode
+    && ['print-settings', 'templates'].includes(settingsTabParam)
   const fixedPreviewSettingsMode = invoiceSettingsMode || printSettingsMode
   const handleSettingsLogout = () => {
     logout()

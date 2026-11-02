@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { normalizeThermalSettings, buildUpiPaymentUrl } from '../utils/thermalSettings'
+import { formatDate as formatDateUtil } from '../utils/formatters'
 
 export default function ThermalReceipt({
   invoice = {},
@@ -72,7 +73,7 @@ export default function ThermalReceipt({
     const d = inv.created_at || inv.date
     if (!d) return ''
     try {
-      return formatDate(d)
+      return formatDateUtil(d)
     } catch {
       return String(d)
     }

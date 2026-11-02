@@ -638,7 +638,7 @@ export default function Notifications() {
       })
       return
     }
-    navigate('/settings?tab=approvals')
+    navigate('/settings/approvals')
   }
 
   // ─── Review & Approval Click Handler ─────────────────────────────────────

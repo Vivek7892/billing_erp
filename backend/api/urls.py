@@ -1,4 +1,5 @@
 from django.urls import path, include
+from django.http import JsonResponse
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
@@ -25,6 +26,7 @@ router.register('communication-logs', views.CommunicationLogViewSet, basename='c
 router.register('approval-requests', views.ApprovalRequestViewSet, basename='approval-request')
 
 urlpatterns = [
+    path('health/', lambda r: JsonResponse({'status': 'ok'}), name='api-healthcheck'),
     path('auth/register/', views.RegisterView.as_view(), name='register'),
     path('auth/verify-otp/', views.VerifyOTPView.as_view(), name='verify-otp'),
     path('auth/verify-email/', views.VerifyOTPView.as_view(), name='verify-email'),

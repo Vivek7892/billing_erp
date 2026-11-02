@@ -7,3 +7,4 @@ staticfiles/
 "backend/.env"
 /doc/*.md
 /admin-frontend/
+/docs/

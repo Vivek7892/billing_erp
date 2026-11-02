@@ -336,6 +336,14 @@ function AppRoutes() {
           </Guard>
         }
       />
+      <Route
+        path="/settings/:tab"
+        element={
+          <Guard adminOnly>
+            <Settings />
+          </Guard>
+        }
+      />
 
       <Route
         path="/payments/reconciliation"

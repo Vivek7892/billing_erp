@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import ThermalReceipt from './ThermalReceipt'
+import { formatCurrency, formatDate as formatDateUtil } from '../utils/formatters'
 
 /**
  * Robust Indian numbering system converter to words:
@@ -164,7 +165,7 @@ export default function InvoiceDocument({
   const formatDate = d => {
     if (!d) return ''
     try {
-      return formatDate(d)
+      return formatDateUtil(d)
     } catch {
       return String(d)
     }

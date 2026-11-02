@@ -141,19 +141,88 @@ function getPdfUrl(billId, printer = false, template = null) {
   else if (printer === 'half_a4' || printer === 'a5') printerParam = '&printer=half_a4'
   else if (printer === 'a4') printerParam = '&printer=a4'
   const tplParam = template ? `&template=${template}` : ''
-  return `${API_BASE_URL}/invoices/${billId}/pdf/?token=${token}${printerParam}${tplParam}`
+  let base = API_BASE_URL
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname === 'localhost' && base.includes('127.0.0.1')) {
+      base = base.replace('127.0.0.1', 'localhost')
+    } else if (window.location.hostname === '127.0.0.1' && base.includes('localhost')) {
+      base = base.replace('localhost', '127.0.0.1')
+    }
+  }
+  return `${base}/invoices/${billId}/pdf/?token=${token}${printerParam}${tplParam}`
 }
 
-function openPdf(billId, printer = false, template = null) {
-  const url = getPdfUrl(billId, printer, template)
+async function openPdf(billId, printer = false, template = null) {
   const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-  if (isMobile) {
-    window.open(url, '_blank', 'noopener,noreferrer')
-    return
+  let previewWindow = null
+  if (!isMobile) {
+    try {
+      previewWindow = window.open('about:blank', '_blank')
+    } catch {
+      // ignore popup blocker error
+    }
   }
-  const w = window.open('', '_blank')
-  if (!w) { toast.error('Popup blocked. Please allow popups.'); return }
-  w.location.href = url
+
+  const params = {}
+  if (printer === 'thermal_58' || printer === '58mm') params.printer = 'thermal_58'
+  else if (printer === true || printer === 'thermal' || printer === 'thermal_80') params.printer = 'thermal'
+  else if (printer === 'half_a4' || printer === 'a5') params.printer = 'half_a4'
+  else if (printer === 'a4') params.printer = 'a4'
+  if (template) params.template = template
+
+  try {
+    const res = await invoiceService.getPdf(billId, params, { responseType: 'blob' })
+    const blob = new Blob([res.data], { type: 'application/pdf' })
+    const blobUrl = URL.createObjectURL(blob)
+
+    if (previewWindow && !previewWindow.closed) {
+      previewWindow.location.href = blobUrl
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 120000)
+    } else {
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.target = '_blank'
+      a.rel = 'noopener noreferrer'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 120000)
+    }
+  } catch (err) {
+    if (previewWindow && !previewWindow.closed) {
+      previewWindow.close()
+    }
+    const fallbackUrl = getPdfUrl(billId, printer, template)
+    window.open(fallbackUrl, '_blank', 'noopener,noreferrer')
+  }
+}
+
+async function downloadPdf(billId, invoiceNumber = 'invoice', printer = false, template = null) {
+  const params = { download: '1' }
+  if (printer === 'thermal_58' || printer === '58mm') params.printer = 'thermal_58'
+  else if (printer === true || printer === 'thermal' || printer === 'thermal_80') params.printer = 'thermal'
+  else if (printer === 'half_a4' || printer === 'a5') params.printer = 'half_a4'
+  else if (printer === 'a4') params.printer = 'a4'
+  if (template) params.template = template
+
+  const toastId = toast.loading('Preparing PDF...')
+  try {
+    const res = await invoiceService.getPdf(billId, params, { responseType: 'blob' })
+    const blob = new Blob([res.data], { type: 'application/pdf' })
+    const blobUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = blobUrl
+    link.download = `Invoice-${invoiceNumber || billId}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000)
+    toast.success('PDF downloaded', { id: toastId })
+  } catch (err) {
+    toast.error('Could not download PDF. Opening in new tab...', { id: toastId })
+    const fallbackUrl = getPdfUrl(billId, printer, template) + '&download=1'
+    window.open(fallbackUrl, '_blank')
+  }
 }
 
 async function fetchPdfBlob(billId) {
@@ -897,7 +966,7 @@ function InvoiceModal({
                     type="button"
                     onClick={() => {
                       setMobileMenuOpen(false)
-                      openPdf(selected.id, modalMode)
+                      downloadPdf(selected.id, selected.invoice_number, modalMode)
                     }}
                     className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
                   >
@@ -1078,7 +1147,7 @@ function InvoiceModal({
               {/* Download PDF */}
               <button
                 type="button"
-                onClick={() => openPdf(selected.id, modalMode)}
+                onClick={() => downloadPdf(selected.id, selected.invoice_number, modalMode)}
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-xs font-semibold text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)]"
                 title="Download PDF"
               >
