@@ -249,7 +249,7 @@ export default function Inventory() {
 
       {tab === 'stock' && (
         <>
-          <Card className="p-2.5 sm:p-3">
+          <Card className="erp-filter-panel p-2.5 sm:p-3">
             <div className="flex items-center gap-2">
               <SearchInput
                 value={search}

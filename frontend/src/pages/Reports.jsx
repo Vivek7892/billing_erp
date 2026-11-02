@@ -35,24 +35,23 @@ import {
 } from 'recharts'
 import toast from 'react-hot-toast'
 import { MobileKpiGrid } from '../components/MobileUI'
+import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+  fmtCurrency,
+  fmtNumber,
+} from '../utils/formatters'
 
 /* ============================================================
    FORMATTING UTILITIES
 ============================================================ */
-const fmtCurrency = v =>
-  `₹${Number(v || 0).toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
-
-const fmtNumber = v =>
-  Number(v || 0).toLocaleString('en-IN')
-
-const formatDateInput = value => {
-  if (!value) return ''
-  const [year, month, day] = value.split('-')
-  return year && month && day ? `${day}/${month}/${year}` : value
-}
+const formatDateInput = value => formatDate(value)
 
 
 /* ============================================================
@@ -473,7 +472,7 @@ export default function Reports() {
           </div>
 
           <section
-            className={`${mobileDateFilterOpen ? 'block' : 'hidden'} sm:block rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3 shadow-2xs`}
+            className={`erp-filter-panel ${mobileDateFilterOpen ? 'block' : 'hidden'} sm:block rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3 shadow-2xs`}
             aria-label="Report date filters"
           >
           <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">

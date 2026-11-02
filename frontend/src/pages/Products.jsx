@@ -19,6 +19,16 @@ import { MobileKpiGrid, MobileFAB } from '../components/MobileUI'
 import toast from 'react-hot-toast'
 import BarcodePrintModal from '../components/BarcodePrintModal'
 import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '../utils/formatters'
+import {
   IconPlus,
   IconFilter,
   IconEdit,
@@ -90,12 +100,6 @@ const EMPTY_FORM = {
 }
 
 const numVal = value => Number(value || 0)
-
-const formatCurrency = value =>
-  `₹${numVal(value).toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
 
 function generateRandomSKU(name = '') {
   const prefix = name
@@ -1310,7 +1314,7 @@ export default function Products() {
       </div>
 
       {/* Filter Toolbar: Hidden on mobile unless opened, always visible on desktop */}
-      <div className={`${mobileFiltersOpen ? 'block' : 'hidden'} sm:block rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-3.5 space-y-3`}>
+      <div className={`erp-filter-panel ${mobileFiltersOpen ? 'block' : 'hidden'} sm:block rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-3.5 space-y-3`}>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-12 lg:items-center">
           {/* Search bar on Desktop */}
           <div className="hidden sm:block sm:col-span-2 lg:col-span-4 min-w-0">
@@ -2656,10 +2660,7 @@ export default function Products() {
                       {detailHistory.map(tx => (
                         <tr key={tx.id}>
                           <td className="font-mono whitespace-nowrap text-[var(--muted)]">
-                            {new Date(tx.created_at).toLocaleString('en-IN', {
-                              dateStyle: 'short',
-                              timeStyle: 'short',
-                            })}
+                            {formatDateTime(tx.created_at)}
                           </td>
                           <td>
                             <span

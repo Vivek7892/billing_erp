@@ -139,7 +139,7 @@ function AppRoutes() {
     window.location.hostname === 'share.dreamwithtech.dev' &&
     (window.location.pathname === '/' || window.location.pathname === '')
   ) {
-    window.location.replace('https://app.dreamwithtech.dev')
+    window.location.replace('https://accounts.dreamwithtech.dev')
     return null
   }
 

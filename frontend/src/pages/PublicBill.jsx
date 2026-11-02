@@ -20,38 +20,22 @@ import {
 } from '@tabler/icons-react'
 
 import invoiceService from '../features/billing/api/invoiceService'
+import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '../utils/formatters'
+
 import { API_BASE_URL } from '../api'
 
-const currency = (value) =>
-  `₹${Number(value || 0).toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
+const currency = (value) => formatCurrency(value)
 
-const formatDate = (value) => {
-  if (!value) return '—'
-  try {
-    return new Date(value).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    })
-  } catch {
-    return String(value)
-  }
-}
 
-const formatTime = (value) => {
-  if (!value) return ''
-  try {
-    return new Date(value).toLocaleTimeString('en-IN', {
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } catch {
-    return ''
-  }
-}
 
 /* ============================================================
    CUSTOMER PAYMENT STATUS BADGE

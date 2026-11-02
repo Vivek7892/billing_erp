@@ -577,6 +577,22 @@ class Payment(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    def save(self, *args, **kwargs):
+        if not self.reference:
+            from .utils import generate_transaction_id
+            self.reference = generate_transaction_id()
+        elif self.pk:
+            orig = Payment.objects.filter(pk=self.pk).values('reference').first()
+            if orig and orig['reference'] and orig['reference'] != self.reference:
+                raise ValueError('Transaction ID is permanent and cannot be modified.')
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, force=False, **kwargs):
+        if not force:
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied('Payment records are immutable and cannot be deleted.')
+        super().delete(*args, **kwargs)
+
     class Meta:
         constraints = [
             models.CheckConstraint(check=Q(amount__gt=0), name='payment_amount_positive'),
@@ -686,6 +702,22 @@ class CustomerPayment(models.Model):
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.reference:
+            from .utils import generate_transaction_id
+            self.reference = generate_transaction_id()
+        elif self.pk:
+            orig = CustomerPayment.objects.filter(pk=self.pk).values('reference').first()
+            if orig and orig['reference'] and orig['reference'] != self.reference:
+                raise ValueError('Transaction ID is permanent and cannot be modified.')
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, force=False, **kwargs):
+        if not force:
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied('Customer payment records are immutable and cannot be deleted.')
+        super().delete(*args, **kwargs)
 
     class Meta:
         constraints = [

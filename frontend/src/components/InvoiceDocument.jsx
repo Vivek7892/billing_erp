@@ -158,13 +158,13 @@ export default function InvoiceDocument({
   const invoiceTableStyle = tLayout.table_style || s.invoice_table_style || 'clean'
 
   // Currency formatter
-  const fmt = val => `₹${Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const fmt = val => formatCurrency(val)
 
   // Date formatter
   const formatDate = d => {
     if (!d) return ''
     try {
-      return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      return formatDate(d)
     } catch {
       return String(d)
     }

@@ -360,6 +360,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             'reference', 'transaction_id', 'notes', 'collected_by_name',
             'customer_name', 'customer_mobile', 'payment_date', 'created_at'
         ]
+        read_only_fields = ['reference', 'transaction_id', 'created_at']
 
     def get_collected_by_name(self, obj):
         if obj.created_by:
@@ -520,7 +521,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expense
         fields = '__all__'
-        read_only_fields = ['business', 'created_by']
+        read_only_fields = ['business', 'created_by', 'reference', 'transaction_id']
 
     def validate_amount(self, value):
         if value <= 0:
@@ -539,7 +540,7 @@ class CustomerPaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerPayment
         fields = '__all__'
-        read_only_fields = ['business', 'created_by']
+        read_only_fields = ['business', 'created_by', 'reference', 'transaction_id']
 
     def get_created_by_name(self, obj):
         if not obj.created_by:
@@ -575,7 +576,7 @@ class SupplierPaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = SupplierPayment
         fields = '__all__'
-        read_only_fields = ['business', 'created_by']
+        read_only_fields = ['business', 'created_by', 'reference', 'transaction_id']
 
     def validate(self, attrs):
         if attrs['amount'] <= 0:

@@ -202,12 +202,27 @@ class InvoiceService:
             invoice.save()
 
             for payment_data, amount in zip(payments_data, payment_amounts):
+                pay_method = payment_data.get('method', 'cash')
+                raw_ref = (payment_data.get('reference') or '').strip()
+                p_notes = (payment_data.get('notes') or '').strip()
+                if pay_method == 'razorpay' and raw_ref:
+                    txn_ref = raw_ref
+                elif raw_ref and not raw_ref.startswith('TXN-'):
+                    from ..utils import generate_transaction_id
+                    txn_ref = generate_transaction_id()
+                    p_notes = f"{p_notes} • Ref: {raw_ref}".strip(' •')
+                elif raw_ref.startswith('TXN-'):
+                    txn_ref = raw_ref
+                else:
+                    from ..utils import generate_transaction_id
+                    txn_ref = generate_transaction_id()
+
                 Payment.objects.create(
                     invoice=invoice,
-                    method=payment_data['method'],
+                    method=pay_method,
                     amount=amount,
-                    reference=payment_data.get('reference', ''),
-                    notes=payment_data.get('notes', ''),
+                    reference=txn_ref,
+                    notes=p_notes,
                     created_by=created_by,
                 )
                 if payment_data.get('method') == 'razorpay' and payment_data.get('reference'):
@@ -400,11 +415,18 @@ class InvoiceService:
             valid_methods = {choice[0] for choice in Payment.METHOD_CHOICES}
             pay_method = method if method in valid_methods else 'cash'
 
-            clean_reference = (reference or '').strip()
-            if not clean_reference:
-                import uuid
-                from django.utils import timezone
-                clean_reference = f"TXN-{timezone.now().strftime('%y%m%d%H%M')}-{uuid.uuid4().hex[:4].upper()}"
+            from ..utils import generate_transaction_id
+            raw_ref = (reference or '').strip()
+            clean_notes = (notes or '').strip()
+            if raw_ref and not raw_ref.startswith('TXN-'):
+                clean_notes = f"{clean_notes} • Ref: {raw_ref}".strip(' •')
+                clean_reference = generate_transaction_id()
+            elif raw_ref.startswith('TXN-'):
+                clean_reference = raw_ref
+            else:
+                clean_reference = generate_transaction_id()
+
+            notes = clean_notes
 
             if invoice.customer_id:
                 from .payment_service import PaymentService

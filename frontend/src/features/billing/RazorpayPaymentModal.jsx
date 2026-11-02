@@ -9,6 +9,7 @@ import {
   IconLock,
 } from '@tabler/icons-react'
 import api from '../../api'
+import { formatCurrency } from '../../utils/formatters'
 import { Modal } from '../../components/UI'
 import toast from 'react-hot-toast'
 
@@ -153,7 +154,7 @@ export default function RazorpayPaymentModal({
     onClose?.()
   }
 
-  const fmt = v => `₹${Number(v || 0).toFixed(2)}`
+  const fmt = v => formatCurrency(v)
 
   return (
     <Modal open={open} onClose={handleClose} title="Secure online payment" size="sm">

@@ -23,7 +23,18 @@ import {
 } from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 
-const fmt = v => `₹${Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
+import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '../utils/formatters'
+
+const fmt = v => formatCurrency(v)
 
 const FILTERS = [
   { key: 'all', label: 'All' },
@@ -178,14 +189,14 @@ function ViewModal({ open, onClose, invoice }) {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] px-4 py-3 text-xs">
           <InfoRow label="Customer" value={invoice.customer_name || 'Walk-in'} />
           <InfoRow label="Phone" value={invoice.customer_phone || '—'} />
-          <InfoRow label="Date" value={new Date(invoice.created_at).toLocaleString('en-IN')} />
+          <InfoRow label="Date" value={formatDateTime(invoice.created_at)} />
           <InfoRow label="Payment Method" value={invoice.payment_method} valueClass="capitalize" />
           <InfoRow label="Payment Status" value={<Badge status={invoice.payment_status} />} />
           <InfoRow label="Invoice Status" value={<Badge status={invoice.status} />} />
           {invoice.place_of_supply && <InfoRow label="Place of Supply" value={invoice.place_of_supply} />}
           {invoice.created_by_name && <InfoRow label="Created By" value={invoice.created_by_name} />}
           {invoice.cancelled_by_name && <InfoRow label="Cancelled By" value={invoice.cancelled_by_name} />}
-          {invoice.cancelled_at && <InfoRow label="Cancelled At" value={new Date(invoice.cancelled_at).toLocaleString('en-IN')} />}
+          {invoice.cancelled_at && <InfoRow label="Cancelled At" value={formatDateTime(invoice.cancelled_at)} />}
           {invoice.cancel_reason && <InfoRow label="Cancel Reason" value={invoice.cancel_reason} valueClass="text-rose-600 dark:text-rose-400" />}
           {invoice.notes && <InfoRow label="Notes" value={invoice.notes} />}
         </div>
@@ -451,7 +462,7 @@ export default function Returns() {
                         <td className="font-mono font-semibold text-[#1E3A5F] dark:text-slate-200 text-sm">{r.return_number}</td>
                         <td className="font-mono text-sm text-[var(--muted)]">{r.invoice_number || `#${r.invoice}`}</td>
                         <td className="text-sm text-[var(--ink-secondary)]">{r.customer_name || '—'}</td>
-                        <td className="text-sm text-[var(--muted)]">{r.created_at ? new Date(r.created_at).toLocaleString('en-IN') : '—'}</td>
+                        <td className="text-sm text-[var(--muted)]">{r.created_at ? formatDateTime(r.created_at) : '—'}</td>
                         <td className="text-center text-sm font-mono text-[var(--muted)]">{(r.items || []).length}</td>
                         <td className="text-sm text-[var(--muted)] capitalize">{r.refund_method || '—'}</td>
                         <td className="text-right font-mono font-bold text-[var(--ink)] text-sm">{fmt(r.refund_amount)}</td>
@@ -529,7 +540,7 @@ export default function Returns() {
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 border-t border-[var(--line-subtle)] pt-2">
                     <InfoRow label="Customer" value={r.customer_name || '—'} />
-                    <InfoRow label="Date" value={r.created_at ? new Date(r.created_at).toLocaleString('en-IN') : '—'} />
+                    <InfoRow label="Date" value={r.created_at ? formatDateTime(r.created_at) : '—'} />
                     <InfoRow label="Items" value={(r.items || []).length} />
                     <InfoRow label="Method" value={r.refund_method || '—'} valueClass="capitalize" />
                     <InfoRow label="Processed by" value={r.created_by_name || (r.created_by ? `User #${r.created_by}` : '—')} />

@@ -3393,7 +3393,7 @@ export default function Settings() {
             </div>
 
             {/* Category Filter Pills (Horizontally Scrollable on Mobile) */}
-            <div className="flex items-center gap-1.5 overflow-x-auto px-4 py-2 sm:px-6 bg-slate-50 border-b border-slate-100 scrollbar-none shrink-0">
+            <div className="erp-filter-panel flex items-center gap-1.5 overflow-x-auto px-4 py-2 sm:px-6 bg-slate-50 border-b border-slate-100 scrollbar-none shrink-0">
               {[
                 { id: 'all', label: 'All Templates' },
                 { id: 'a4', label: 'A4 GST Sheets' },

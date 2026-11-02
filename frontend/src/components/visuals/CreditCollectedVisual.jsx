@@ -5,12 +5,8 @@ import {
   IconQrcode,
 } from '@tabler/icons-react'
 import DreamVisualContainer from './DreamVisualContainer'
+import { formatCurrency } from '../../utils/formatters'
 
-const formatCurrency = value =>
-  `₹${Number(value || 0).toLocaleString('en-IN', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })}`
 
 export default function CreditCollectedVisual({
   className = '',

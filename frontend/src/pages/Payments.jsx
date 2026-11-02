@@ -53,6 +53,16 @@ import {
 import { CustomerCollectPaymentModal } from './Customers'
 import customerService from '../features/customers/api/customerService'
 import settingsService from '../features/settings/api/settingsService'
+import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '../utils/formatters'
 
 const today = new Date().toISOString().slice(0, 10)
 const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
@@ -81,55 +91,7 @@ const DATE_PRESETS = [
   { key: 'all', label: 'All Time', start: '', end: '' },
 ]
 
-const formatCurrency = value =>
-  `₹${Number(value || 0).toLocaleString('en-IN', {
-    maximumFractionDigits: 2,
-  })}`
 
-const formatDate = value => {
-  if (!value) return '—'
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) return '—'
-
-  return date.toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
-const formatTime = value => {
-  if (!value) return ''
-  try {
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return ''
-    return date.toLocaleTimeString('en-IN', {
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } catch {
-    return ''
-  }
-}
-
-const formatDateTime = value => {
-  if (!value) return '—'
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) return '—'
-
-  return `${date.toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })} · ${date.toLocaleTimeString('en-IN', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })}`
-}
 
 const getPaymentRef = bill => {
   if (!bill) return '—'
@@ -1087,7 +1049,7 @@ export default function Payments() {
       {activeTab === 'transactions' && (
         <>
           {/* DATE FILTER BAR */}
-          <section className={`${mobileFiltersOpen ? 'block' : 'hidden'} sm:block rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3`}>
+          <section className={`erp-filter-panel ${mobileFiltersOpen ? 'block' : 'hidden'} sm:block rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3`}>
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-1.5 overflow-x-auto">
                 <IconCalendar size={13} className="shrink-0 text-[var(--muted)]" />
@@ -2268,7 +2230,7 @@ export default function Payments() {
           ) : (
             <div className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--surface)] shadow-xs">
               {/* Desktop Table View */}
-              <div className="overflow-x-auto min-h-[220px] pb-4">
+              <div className="hidden min-h-[220px] overflow-x-auto pb-4 md:block">
                 <table className="erp-table w-full text-left text-xs min-w-[760px]">
                   <colgroup>
                     <col style={{ width: '28%' }} />
@@ -2355,19 +2317,19 @@ export default function Payments() {
               </div>
 
               {/* Mobile Cards View */}
-              <div className="hidden">
+              <div className="divide-y divide-[var(--line-subtle)] md:hidden">
                 {filteredCustomers.map(customer => {
                   const due = Number(customer.outstanding_amount || 0)
                   return (
-                    <article key={customer.id} className="p-3.5 space-y-2.5 bg-[var(--surface)]">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-[var(--primary)] border border-[var(--line)]">
+                    <article key={customer.id} className="space-y-2.5 p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface-subtle)] text-[var(--primary)]">
                             <IconUserCircle size={14} />
                           </div>
                           <div className="min-w-0">
-                            <h4 className="font-bold text-sm text-[var(--ink)] truncate">{customer.name}</h4>
-                            <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+                            <h4 className="truncate text-sm font-semibold text-[var(--ink)]">{customer.name}</h4>
+                            <div className="mt-0.5 flex items-center gap-2 text-xs text-[var(--muted)]">
                               {customer.mobile ? (
                                 <a href={`tel:${customer.mobile}`} className="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-medium">
                                   <IconPhone size={10} />
@@ -2380,27 +2342,29 @@ export default function Payments() {
                           </div>
                         </div>
 
-                        <div className="text-right shrink-0">
-                          <p className={`font-mono text-sm font-bold ${due > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                        <div className="shrink-0 text-right">
+                          <p className="text-[10px] text-[var(--muted)]">Due</p>
+                          <p className={`font-mono text-sm font-bold tabular-nums ${due > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                             {formatCurrency(due)}
                           </p>
-                          <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.2 rounded ${
-                            due > 0 ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300' : 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300'
-                          }`}>
-                            {due > 0 ? 'Due' : 'Clear'}
-                          </span>
                         </div>
                       </div>
 
-                      {due > 0 && (
+                      {due > 0 ? (
                         <button
                           type="button"
                           onClick={() => setSelectedCustomerForPay(customer)}
-                          className="w-full inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold text-xs shadow-xs transition"
+                          aria-label={`Collect payment for ${customer.name}`}
+                          className="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 active:bg-emerald-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-950/60"
                         >
-                          <IconCurrencyRupee size={13} />
-                          <span>Collect Payment</span>
+                          <IconCurrencyRupee size={15} />
+                          <span>Collect payment</span>
                         </button>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                          <IconCircleCheck size={14} />
+                          <span>Account settled</span>
+                        </div>
                       )}
                     </article>
                   )

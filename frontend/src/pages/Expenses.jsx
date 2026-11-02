@@ -20,8 +20,18 @@ import {
   IconReceipt,
 } from '@tabler/icons-react'
 import toast from 'react-hot-toast'
+import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '../utils/formatters'
 
-const fmt = v => `₹${Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+const fmt = v => formatCurrency(v)
 
 const CATEGORIES = ['Rent', 'Utilities', 'Salaries', 'Transport', 'Supplies', 'Marketing', 'Maintenance', 'Other']
 const METHODS = ['cash', 'upi', 'card', 'online']
@@ -294,9 +304,7 @@ export default function Expenses() {
 
                         <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[10px] text-[var(--muted-light)]">
                           <span>
-                            {e.expense_date
-                              ? new Date(e.expense_date).toLocaleDateString('en-IN')
-                              : '—'}
+                            {formatDate(e.expense_date)}
                           </span>
                           <span>•</span>
                           <span className="capitalize">{e.payment_method}</span>
@@ -393,9 +401,7 @@ export default function Expenses() {
                         </td>
 
                         <td className="text-sm text-[var(--muted)] font-mono">
-                          {e.expense_date
-                            ? new Date(e.expense_date).toLocaleDateString('en-IN')
-                            : '—'}
+                          {formatDate(e.expense_date)}
                         </td>
 
                         <td className="text-xs capitalize text-[var(--muted)]">

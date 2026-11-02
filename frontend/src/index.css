@@ -19,6 +19,26 @@
   height: 0;
 }
 
+/* Shared visual shell for page-level filter and search toolbars. */
+.erp-filter-panel {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 12px;
+  box-shadow: var(--shadow-xs);
+}
+
+.erp-filter-panel :is(button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--focus-ring, var(--primary));
+  outline-offset: 2px;
+}
+
+@media (min-width: 640px) {
+  .erp-filter-panel {
+    padding: 14px;
+  }
+}
+
 @theme {
   --color-indigo-50: #F1F5F9;
   --color-indigo-100: #E2E8F0;
@@ -531,7 +551,8 @@ small {
 .quantity,
 .price,
 .currency,
-.tabular {
+.tabular,
+.tabular-nums {
   font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";

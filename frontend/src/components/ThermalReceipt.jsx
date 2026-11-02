@@ -72,11 +72,7 @@ export default function ThermalReceipt({
     const d = inv.created_at || inv.date
     if (!d) return ''
     try {
-      return new Date(d).toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      })
+      return formatDate(d)
     } catch {
       return String(d)
     }

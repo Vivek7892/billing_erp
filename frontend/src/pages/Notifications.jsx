@@ -5,6 +5,17 @@ import { useAuth } from '../AuthContext'
 import { ROLES } from '../constants'
 import toast from 'react-hot-toast'
 import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '../utils/formatters'
+
+import {
   IconAlertCircle,
   IconAlertTriangle,
   IconArrowUpRight,
@@ -93,22 +104,10 @@ function formatINR(val) {
   if (val === null || val === undefined || val === '') return ''
   const num = Number(val)
   if (isNaN(num)) return String(val)
-  return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return formatCurrency(num)
 }
 
-function formatTime(isoString) {
-  if (!isoString) return '—'
-  const d = new Date(isoString)
-  if (isNaN(d.getTime())) return '—'
-  return d.toLocaleString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  })
-}
+
 
 function relativeTime(isoString) {
   if (!isoString) return ''
@@ -148,7 +147,7 @@ function DiffViewer({ currentData, proposedData }) {
     if (typeof val === 'number') {
       const k = (key || '').toLowerCase()
       if (k.includes('price') || k.includes('amount') || k.includes('total') || k.includes('limit') || k.includes('balance')) {
-        return `₹${Number(val).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        return formatCurrency(val)
       }
       return val.toString()
     }
@@ -1133,7 +1132,7 @@ export default function Notifications() {
       )}
 
       {/* ── 4. Tabs & Filter Toolbar ── */}
-      <section className="notifications-filter-panel space-y-2 sm:space-y-2.5">
+      <section className="erp-filter-panel notifications-filter-panel space-y-2 sm:space-y-2.5">
         {/* Primary Tabs */}
         <div className="flex items-center gap-1 overflow-x-auto border-b border-[var(--line)] pb-1.5 scrollbar-none">
           {tabList.map(tab => {
@@ -1401,7 +1400,7 @@ export default function Notifications() {
 
                               {/* Timestamp */}
                               <td className="py-2.5 whitespace-nowrap">
-                                <div className="text-xs font-mono text-[var(--ink)]">{formatTime(item.created_at)}</div>
+                                <div className="text-xs font-mono text-[var(--ink)]">{formatDateTime(item.created_at)}</div>
                                 <div className="text-[10px] text-[var(--muted)] font-mono mt-0.5">{relativeTime(item.created_at)}</div>
                               </td>
 
@@ -1588,7 +1587,7 @@ export default function Notifications() {
                             </div>
 
                             <span className="notification-card-time shrink-0 text-right">
-                              <span className="block text-[11px] font-medium text-[var(--ink-secondary)]">{formatTime(item.created_at)}</span>
+                              <span className="block text-[11px] font-medium text-[var(--ink-secondary)]">{formatDateTime(item.created_at)}</span>
                               <span className="block text-[10px] text-[var(--muted)]">{relativeTime(item.created_at)}</span>
                             </span>
                           </div>
@@ -1877,7 +1876,7 @@ export default function Notifications() {
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] p-2.5">
                   <span className="text-[9px] font-bold uppercase text-[var(--muted)] block">Created At</span>
-                  <span className="font-mono text-[var(--ink)] mt-0.5 block text-[11px]">{formatTime(detailModal.created_at)}</span>
+                  <span className="font-mono text-[var(--ink)] mt-0.5 block text-[11px]">{formatDateTime(detailModal.created_at)}</span>
                   <span className="text-[10px] text-[var(--muted)] font-mono">{relativeTime(detailModal.created_at)}</span>
                 </div>
                 <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] p-2.5">

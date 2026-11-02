@@ -57,6 +57,7 @@ ALLOWED_HOSTS = [
             '127.0.0.1,'
             'testserver,'
             'app.dreamwithtech.dev,'
+            'accounts.dreamwithtech.dev,'
             'share.dreamwithtech.dev,'
             'api.dreamwithtech.dev,'
             '.dreamwithtech.dev,'
@@ -429,6 +430,7 @@ DEFAULT_ALLOWED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'https://app.dreamwithtech.dev',
+    'https://accounts.dreamwithtech.dev',
     'https://share.dreamwithtech.dev',
     'https://dreamwithtech.dev',
 ]
@@ -506,7 +508,7 @@ SECURE_HSTS_PRELOAD = False
 # Frontend public URL for digital bills and redirects
 FRONTEND_URL = config(
     'FRONTEND_URL',
-    default='http://localhost:3000' if DEBUG else 'https://app.dreamwithtech.dev'
+    default='http://localhost:3000' if DEBUG else 'https://accounts.dreamwithtech.dev'
 ).rstrip('/')
 
 # Public bill dedicated share link domain

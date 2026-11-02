@@ -1,4 +1,14 @@
 import WhatsAppShareModal from '../components/WhatsAppShareModal'
+import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '../utils/formatters'
 /*
  * NewBill.jsx
  * Desktop-first POS billing screen: three-column workspace + payment dock.
@@ -110,11 +120,11 @@ function loadActiveBill() {
   }
 }
 
-const fmt = value => `₹${Number(value || 0).toFixed(2)}`
+const fmt = value => formatCurrency(value)
 const fmtSigned = value => {
   const n = Number(value || 0)
   if (Math.abs(n) < 0.005) return fmt(0)
-  return `${n < 0 ? '-' : '+'}₹${Math.abs(n).toFixed(2)}`
+  return `${n < 0 ? '- ' : '+ '}${formatCurrency(Math.abs(n))}`
 }
 const upiUri = (upiId, name, amount, invoice = 'NEW-BILL') => {
   const params = new URLSearchParams()
@@ -251,9 +261,9 @@ function SimpleCalculator({ open, onClose }) {
     if (/^\d$/.test(key)) enterDigit(key)
     else if (key === '.') appendDecimal()
     else if (key === '+') chooseOperator('+')
-    else if (key === '-') chooseOperator('âˆ’')
-    else if (key === '*') chooseOperator('Ã—')
-    else if (key === '/') chooseOperator('Ã·')
+    else if (key === '-') chooseOperator('−')
+    else if (key === '*') chooseOperator('×')
+    else if (key === '/') chooseOperator('÷')
     else if (key === '%') setDisplay(value => value === 'Error' ? '0' : String(Number(value) / 100))
     else if (key === 'Enter' || key === '=') equals()
     else if (key === 'Backspace') backspace()
@@ -386,12 +396,12 @@ function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, on
         </div>
         {item.batches?.length > 0 && <select aria-label={`Batch for ${item.product_name}`} className="mt-1 max-w-full rounded border border-slate-300 bg-white px-1 py-0.5 text-[11px]" value={item.batch_id || ''} onChange={e => onBatch(item.id, e.target.value)}>
           <option value="">Select batch</option>
-          {item.batches.filter(batch => batch.active && Number(batch.quantity) > 0).map(batch => <option key={batch.id} value={batch.id}>{batch.batch_number} · {batch.quantity} available{batch.expiry_date ? ` · exp ${batch.expiry_date}` : ''}</option>)}
+          {item.batches.filter(batch => batch.active && Number(batch.quantity) > 0).map(batch => <option key={batch.id} value={batch.id}>{batch.batch_number} · {formatQuantity(batch.quantity)} available{batch.expiry_date ? ` · exp ${formatDate(batch.expiry_date)}` : ''}</option>)}
         </select>}
-        {overStock && <div className="pb-item-sub pb-text-red">Available stock: {stock}</div>}
+        {overStock && <div className="pb-item-sub pb-text-red">Available stock: {formatQuantity(stock)}</div>}
         <div className="pb-mobile-only pb-item-mobile-rate">
           @ {fmt(item.unit_price)}
-          {item.discount_percent > 0 && <span className="pb-text-red"> ({item.discount_percent}% off)</span>}
+          {item.discount_percent > 0 && <span className="pb-text-red"> ({formatPercent(item.discount_percent)} off)</span>}
         </div>
       </td>
       <td className="pb-td-qty">
@@ -448,7 +458,7 @@ function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, on
       <td className="pb-td-total">
         <div className="pb-price-val pb-num-total">{fmt(item.total)}</div>
         {showGst && item.gst_percent > 0 && (
-          <div className="pb-gst-val pb-num-gst">GST {item.gst_percent}%</div>
+          <div className="pb-gst-val pb-num-gst">GST {formatPercent(item.gst_percent)}</div>
         )}
       </td>
       <td className="pb-td-act">
@@ -736,8 +746,8 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
               {numericAmount > 0 ? (
                 <>
                   <span className="pb-qr-curr">₹</span>
-                  <span className="pb-qr-figure">
-                    {numericAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <span className="pb-qr-figure font-mono tabular-nums">
+                    {formatDecimal(numericAmount, 2)}
                   </span>
                 </>
               ) : (
@@ -805,7 +815,7 @@ function QrPaymentModal({ open, onClose, upiId, shopName, invoice, billTotal, ha
                   onClick={() => applyPreset(v)}
                   className={`pb-chip${Math.abs(numericAmount - v) < 0.005 ? ' pb-chip-active' : ''}`}
                 >
-                  ₹{v.toLocaleString('en-IN')}
+                  {formatCurrency(v)}
                 </button>
               ))}
             </div>
@@ -1775,8 +1785,8 @@ export default function NewBill() {
   }
 
   const stockLabel = p => {
-    const s = p?.current_stock ?? 0
-    return `${s}${p?.unit ? ` ${p.unit}` : ''}`
+    const s = Number(p?.current_stock ?? 0)
+    return `${formatQuantity(s)}${p?.unit ? ` ${p.unit}` : ''}`
   }
   const isOut = p => {
     const s = enforcedStock(p)
@@ -2071,7 +2081,7 @@ export default function NewBill() {
                 <div className="pb-dropdown" id="pb-search-list" role="listbox">
                   {search.trim() ? (
                     <>
-                      <div className="pb-dd-head">Search results ({filtered.length})</div>
+                      <div className="pb-dd-head">Search results ({formatNumber(filtered.length)})</div>
                       {searchResults.length ? searchResults.map((p, i) => (
                         <div
                           role="option"
@@ -2095,7 +2105,7 @@ export default function NewBill() {
                         </div>
                       )) : <div className="pb-dd-empty">No products found for “{search.trim()}”.</div>}
                       {filtered.length > searchResults.length && (
-                        <div className="pb-dd-empty">Showing {searchResults.length} of {filtered.length} — type more to narrow the list.</div>
+                        <div className="pb-dd-empty">Showing {formatNumber(searchResults.length)} of {formatNumber(filtered.length)} — type more to narrow the list.</div>
                       )}
                     </>
                   ) : (
@@ -2302,7 +2312,7 @@ export default function NewBill() {
           </div>
 
           <div className="pb-table-footer">
-            <span>Showing {filtered.length} products</span>
+            <span>Showing {formatNumber(filtered.length)} products</span>
             <span className="pb-hide-sm">Press Ctrl+K or scan barcode to search</span>
           </div>
         </section>
@@ -2316,9 +2326,9 @@ export default function NewBill() {
                 <IconShoppingCart size={16} className="text-blue-600" />
                 <span>Active Sale Cart</span>
               </div>
-              <span className="pb-cart-count-pill">
-                {cart.length} {cart.length === 1 ? 'item' : 'items'}
-                {totalQty > 0 ? ` (${totalQty} units)` : ''}
+              <span className="pb-cart-count-pill font-mono tabular-nums">
+                {formatNumber(cart.length)} {cart.length === 1 ? 'item' : 'items'}
+                {totalQty > 0 ? ` (${formatQuantity(totalQty)} units)` : ''}
               </span>
             </div>
 
@@ -2495,7 +2505,7 @@ export default function NewBill() {
             <div className="pb-sum-grid">
               <div className="pb-sum-row">
                 <span className="pb-sum-label">Items Count:</span>
-                <span className="pb-sum-val">{cart.length} ({totalQty} qty)</span>
+                <span className="pb-sum-val font-mono tabular-nums">{formatNumber(cart.length)} ({formatQuantity(totalQty)} qty)</span>
               </div>
               <div className="pb-sum-row">
                 <span className="pb-sum-label">Subtotal:</span>
@@ -2641,11 +2651,11 @@ export default function NewBill() {
                       <button
                         key={v}
                         type="button"
-                        className="pb-chip"
+                        className="pb-chip font-mono tabular-nums"
                         disabled={grandTotal <= 0 || !cart.length}
                         onClick={() => addCashChip(v)}
                       >
-                        +{v}
+                        +₹{formatNumber(v)}
                       </button>
                     ))}
                     <button
@@ -2904,7 +2914,7 @@ export default function NewBill() {
           <div className="pb-floating-info">
             <div className="pb-floating-qty">
               <IconShoppingCart size={15} />
-              <span><b>{cart.length}</b> {cart.length === 1 ? 'item' : 'items'} ({totalQty} units)</span>
+              <span className="font-mono tabular-nums"><b>{formatNumber(cart.length)}</b> {cart.length === 1 ? 'item' : 'items'} ({formatQuantity(totalQty)} units)</span>
             </div>
             <div className="pb-floating-total">
               <span>Total:</span>
@@ -2956,7 +2966,7 @@ export default function NewBill() {
         open={mobilePaymentOpen}
         onClose={() => setMobilePaymentOpen(false)}
         title="Collect Payment"
-        subtitle={`${cart.length} item${cart.length === 1 ? '' : 's'} (${totalQty} units) · ${customer ? customer.name : 'Walk-in Customer'}`}
+        subtitle={`${formatNumber(cart.length)} item${cart.length === 1 ? '' : 's'} (${formatQuantity(totalQty)} units) · ${customer ? customer.name : 'Walk-in Customer'}`}
         size="lg"
         footer={
           <div className="flex w-full flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
@@ -3030,7 +3040,7 @@ export default function NewBill() {
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Total to Collect</span>
                 <div className="text-3xl font-black font-mono tracking-tight text-emerald-600 dark:text-emerald-400">{fmt(grandTotal)}</div>
                 <div className="mt-1 text-xs text-[var(--muted)] flex items-center gap-1.5 flex-wrap">
-                  <span className="font-semibold text-[var(--ink)]">{cart.length} {cart.length === 1 ? 'item' : 'items'} ({totalQty} units)</span>
+                  <span className="font-semibold text-[var(--ink)] font-mono tabular-nums">{formatNumber(cart.length)} {cart.length === 1 ? 'item' : 'items'} ({formatQuantity(totalQty)} units)</span>
                   <span>•</span>
                   <span>{customer ? customer.name : 'Walk-in Customer'}</span>
                 </div>
@@ -3134,10 +3144,10 @@ export default function NewBill() {
                     <button
                       key={v}
                       type="button"
-                      className="min-h-[38px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 font-mono text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+                      className="min-h-[38px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 font-mono text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] transition tabular-nums"
                       onClick={() => addCashChip(v)}
                     >
-                      +{v}
+                      +₹{formatNumber(v)}
                     </button>
                   ))}
                   <button
@@ -3464,7 +3474,7 @@ export default function NewBill() {
                 <div>
                   <div className="font-bold text-sm text-[var(--ink)]">{d.customerName || 'Walk-in Customer'}</div>
                   <div className="text-xs text-[var(--muted)] mt-0.5">
-                    {new Date(d.savedAt).toLocaleString('en-IN')} · {(d.cart || []).length} item(s) · Total {fmt(draftTotal)}
+                    {formatDateTime(d.savedAt)} · {formatNumber((d.cart || []).length)} item(s) · Total {fmt(draftTotal)}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -3532,8 +3542,8 @@ export default function NewBill() {
 
             <div className="flex items-center justify-between">
               <span className="text-[var(--muted)] font-medium">Total Items Billed:</span>
-              <span className="font-mono font-semibold text-[var(--ink)]">
-                {Array.isArray(lastInvoice?.items) ? lastInvoice.items.length : cart.length} item{cart.length === 1 ? '' : 's'} ({totalQty} units)
+              <span className="font-mono font-semibold text-[var(--ink)] tabular-nums">
+                {formatNumber(Array.isArray(lastInvoice?.items) ? lastInvoice.items.length : cart.length)} item{cart.length === 1 ? '' : 's'} ({formatQuantity(totalQty)} units)
               </span>
             </div>
           </div>

@@ -4,6 +4,17 @@ import { PageHeader, Spinner, Modal, Pagination, SearchInput } from '../componen
 import { MobileKpiGrid } from '../components/MobileUI'
 import toast from 'react-hot-toast'
 import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '../utils/formatters'
+
+import {
   IconShieldCheck,
   IconSearch,
   IconX,
@@ -108,10 +119,8 @@ function isSensitiveKey(key) {
   return /(password|token|secret|api.?key|authorization|credential|signature)/i.test(String(key))
 }
 
-function formatCurrency(val) {
-  const num = Number(val)
-  if (isNaN(num)) return '₹0.00'
-  return '₹' + num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+function formatCurrencyVal(val) {
+  return formatCurrency(val)
 }
 
 function formatBusinessValue(key, val) {
@@ -123,7 +132,7 @@ function formatBusinessValue(key, val) {
   const lowerKey = String(key).toLowerCase()
   if (lowerKey.includes('price') || lowerKey.includes('amount') || lowerKey.includes('balance') || lowerKey.includes('mrp')) {
     const num = Number(val)
-    if (!isNaN(num)) return formatCurrency(num)
+    if (!isNaN(num)) return formatCurrencyVal(num)
   }
   if (lowerKey.includes('percent') || lowerKey.includes('gst') || lowerKey.includes('tax')) {
     const num = Number(val)
@@ -915,7 +924,7 @@ export default function AuditTrail() {
       )}
 
       {/* Comprehensive Filter Toolbar (Section C) */}
-      <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-3.5 shadow-xs space-y-3">
+      <div className="erp-filter-panel rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-3.5 shadow-xs space-y-3">
         {/* Quick Search bar + Mobile Filters Toggle */}
         <div className="flex items-center gap-2">
           <SearchInput
@@ -1217,7 +1226,7 @@ export default function AuditTrail() {
                       {getActionBadge(log.action, log.result)}
                       <span className="block mt-1 text-[11px] font-mono text-[var(--muted)]">
                         {log.created_at
-                          ? new Date(log.created_at).toLocaleString('en-IN', {
+                          ? formatDateTime(log.created_at, {
                               day: '2-digit',
                               month: 'short',
                               year: 'numeric',
@@ -1320,7 +1329,7 @@ export default function AuditTrail() {
                           title={log.created_at ? new Date(log.created_at).toISOString() : ''}
                         >
                           {log.created_at
-                            ? new Date(log.created_at).toLocaleString('en-IN', {
+                            ? formatDateTime(log.created_at, {
                                 day: '2-digit',
                                 month: 'short',
                                 year: 'numeric',
@@ -1468,7 +1477,7 @@ export default function AuditTrail() {
 
               <div className="flex items-center gap-2">
                 <span className="font-mono text-[11px] text-[var(--ink-secondary)]">
-                  {selectedLog.created_at ? new Date(selectedLog.created_at).toLocaleString('en-IN') : '—'}
+                  {selectedLog.created_at ? formatDateTime(selectedLog.created_at) : '—'}
                 </span>
                 <button
                   type="button"

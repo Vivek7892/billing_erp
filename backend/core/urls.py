@@ -18,7 +18,7 @@ def healthcheck(request):
 # Until that point, maintaining a duplicate prefix that routes to identical
 # code is misleading and adds no value.
 urlpatterns = [
-    path('', RedirectView.as_view(url=config('FRONTEND_URL', default='http://localhost:3000' if settings.DEBUG else 'https://app.dreamwithtech.dev').rstrip('/') + '/', permanent=False)),
+    path('', RedirectView.as_view(url=config('FRONTEND_URL', default='http://localhost:3000' if settings.DEBUG else 'https://accounts.dreamwithtech.dev').rstrip('/') + '/', permanent=False)),
     path('health/', healthcheck, name='healthcheck'),
     path('admin/', admin.site.urls),
     path('s/<str:code>/', PublicInvoiceShortLinkView.as_view(), name='invoice-short-link'),

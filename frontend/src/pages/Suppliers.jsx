@@ -42,11 +42,18 @@ import toast from 'react-hot-toast'
    HELPERS
 ============================================================ */
 
-const fmt = value =>
-  `₹${Number(value || 0).toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
+import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '../utils/formatters'
+
+const fmt = value => formatCurrency(value)
 
 const EMPTY = {
   name: '',
@@ -1616,7 +1623,7 @@ export default function Suppliers() {
       {/* ======================================================
           SEARCH TOOLBAR
       ====================================================== */}
-      <div className="mb-4 rounded-md border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3">
+      <div className="erp-filter-panel mb-4 rounded-md border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <SearchInput
             value={q}

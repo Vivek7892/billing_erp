@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   IconAlertTriangle,
@@ -7,15 +7,18 @@ import {
   IconArrowUpRight,
   IconChartBar,
   IconCalendarEvent,
+  IconCheck,
   IconCircleCheck,
   IconClockHour3,
   IconCreditCard,
   IconEye,
   IconFileText,
+  IconFilter,
   IconPackage,
   IconPlus,
   IconRefresh,
   IconRoute,
+  IconX,
 } from '@tabler/icons-react'
 import {
   Area,
@@ -37,6 +40,16 @@ import {
   InformationalBanner,
   EcosystemVisualModal,
 } from '../components/visual-content'
+import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  fmtCurrency,
+} from '../utils/formatters'
 
 const EMPTY = {
   today_sales: 0,
@@ -71,12 +84,12 @@ const EMPTY = {
   low_stock_products: [],
   recent_bills: [],
   top_products: [],
+  is_filtered: false,
+  filter_label: '',
+  filter_period: 'today',
+  filter_start: '',
+  filter_end: '',
 }
-
-const fmtCurrency = value =>
-  `₹${Number(value || 0).toLocaleString('en-IN', {
-    maximumFractionDigits: 0,
-  })}`
 
 const percentChange = (current, previous) => {
   if (!Number(previous)) return 0
@@ -86,15 +99,7 @@ const percentChange = (current, previous) => {
   ) / 10
 }
 
-function formatDateShort(dateString) {
-  if (!dateString) return '—'
-  const d = new Date(dateString)
-  if (isNaN(d.getTime())) return '—'
-  const day = String(d.getDate()).padStart(2, '0')
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const year = String(d.getFullYear()).slice(-2)
-  return `${day}/${month}/${year}`
-}
+const formatDateShort = (dateString) => formatDate(dateString)
 
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -137,17 +142,48 @@ export default function Dashboard() {
   const [ecosystemModalOpen, setEcosystemModalOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [showMoreMobile, setShowMoreMobile] = useState(false)
+  const [filterPeriod, setFilterPeriod] = useState('today')
+  const [customDate, setCustomDate] = useState('')
+  const [filterOpen, setFilterOpen] = useState(false)
+  const filterRef = useRef(null)
+
+  const isFiltered = useMemo(() => {
+    return filterPeriod !== 'today' || Boolean(customDate) || Boolean(data?.is_filtered)
+  }, [filterPeriod, customDate, data?.is_filtered])
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (filterRef.current && !filterRef.current.contains(e.target)) {
+        setFilterOpen(false)
+      }
+    }
+    if (filterOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [filterOpen])
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
     return () => clearInterval(timer)
   }, [])
 
-  const loadDashboard = useCallback(async () => {
+  const loadDashboard = useCallback(async (overrideFilter) => {
     try {
       setRefreshing(true)
       setError('')
-      const response = await api.get('/dashboard/')
+      const activePeriod = overrideFilter && 'period' in overrideFilter ? overrideFilter.period : filterPeriod
+      const activeDate = overrideFilter && 'date' in overrideFilter ? overrideFilter.date : customDate
+
+      const params = {}
+      if (activePeriod && activePeriod !== 'today') {
+        params.period = activePeriod
+      }
+      if (activeDate) {
+        params.date = activeDate
+      }
+
+      const response = await api.get('/dashboard/', { params })
       setData({
         ...EMPTY,
         ...(response.data || {}),
@@ -158,7 +194,37 @@ export default function Dashboard() {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [])
+  }, [filterPeriod, customDate])
+
+  const handleSelectPeriod = (period) => {
+    setFilterPeriod(period)
+    setCustomDate('')
+    setFilterOpen(false)
+    loadDashboard({ period, date: '' })
+  }
+
+  const handleApplyCustomDate = (dateVal) => {
+    if (!dateVal) return
+    setFilterPeriod('custom')
+    setCustomDate(dateVal)
+    setFilterOpen(false)
+    loadDashboard({ period: 'custom', date: dateVal })
+  }
+
+  const handleResetFilter = () => {
+    setFilterPeriod('today')
+    setCustomDate('')
+    setFilterOpen(false)
+    loadDashboard({ period: 'today', date: '' })
+  }
+
+  const filterOptions = [
+    { id: 'today', label: 'Today (Live)' },
+    { id: 'yesterday', label: 'Yesterday' },
+    { id: '7days', label: 'Last 7 Days' },
+    { id: 'this_month', label: 'This Month' },
+    { id: 'prev_month', label: 'Previous Month' },
+  ]
 
   useEffect(() => {
     loadDashboard()
@@ -241,7 +307,7 @@ export default function Dashboard() {
 
   const primaryKpis = useMemo(() => [
     {
-      label: "Today's Sales",
+      label: isFiltered ? `${data.filter_label || 'Period'} Sales` : "Today's Sales",
       value: fmtCurrency(data.today_sales),
       sub: `${data.today_bills || 0} bills`,
       onClick: () => navigate('/sales/invoices'),
@@ -264,7 +330,7 @@ export default function Dashboard() {
       sub: `${creditDueCount} pending`,
       onClick: () => navigate('/parties/customers?credit_due=1'),
     },
-  ], [data, creditDueCount, navigate])
+  ], [data, creditDueCount, navigate, isFiltered])
 
   const secondaryKpis = useMemo(() => [
     {
@@ -304,13 +370,11 @@ export default function Dashboard() {
     <div className="dashboard-page min-w-0 space-y-4 pb-6">
       
       {/* -------------------------------------------------------------
-          TOP BAR: Store Name, Live IST Clock, Action Controls
+          TOP BAR: Store Name, Live IST Clock, Action Controls & Filter Symbol
       -------------------------------------------------------------- */}
       <header className="dashboard-header rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 sm:px-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-           
-
             <h1 className="truncate text-lg sm:text-xl font-bold tracking-tight text-[var(--ink)]">
               {shopName || 'Dreamwithtech ERP'}
             </h1>
@@ -342,26 +406,124 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="hidden sm:flex sm:w-auto sm:items-center sm:gap-2">
-            <button
-              type="button"
-              onClick={() => navigate('/billing/new')}
-              className="btn-primary inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-bold text-white shadow-2xs transition"
-            >
-              <IconPlus size={15} strokeWidth={2.5} />
-              <span>New Bill</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/reports')}
-              className="btn-secondary inline-flex min-h-[40px] min-w-0 items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold shadow-2xs transition"
-            >
-              <IconFileText size={14} />
-              <span>Reports</span>
-            </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Small filter button - symbol only - to get previous data */}
+            <div className="relative" ref={filterRef}>
+              <button
+                type="button"
+                onClick={() => setFilterOpen(v => !v)}
+                title={isFiltered ? `Filtered: ${data.filter_label || 'Previous Data'}` : 'Filter previous data'}
+                aria-label="Filter previous data"
+                className={`relative inline-flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-lg border transition shadow-2xs ${
+                  isFiltered
+                    ? 'border-blue-500 bg-blue-50 text-blue-600 dark:border-blue-500 dark:bg-blue-950/50 dark:text-blue-400 font-bold'
+                    : 'border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--line-strong)]'
+                }`}
+              >
+                <IconFilter size={15} />
+                {isFiltered && (
+                  <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-600" />
+                  </span>
+                )}
+              </button>
+
+              {filterOpen && (
+                <div className="erp-filter-panel absolute right-0 top-full mt-1.5 w-56 z-50 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-xl ring-1 ring-black/5 dark:ring-white/5 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="flex items-center justify-between px-2 py-1.5 border-b border-[var(--line)] mb-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                      Previous Data
+                    </span>
+                    {isFiltered && (
+                      <button
+                        type="button"
+                        onClick={handleResetFilter}
+                        className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-0.5">
+                    {filterOptions.map(opt => {
+                      const active = filterPeriod === opt.id && !customDate
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => handleSelectPeriod(opt.id)}
+                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition ${
+                            active
+                              ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 font-bold'
+                              : 'text-[var(--ink)] hover:bg-[var(--surface-hover)]'
+                          }`}
+                        >
+                          <span>{opt.label}</span>
+                          {active && <IconCheck size={14} className="text-blue-600 dark:text-blue-400 shrink-0" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <div className="mt-2 pt-2 border-t border-[var(--line)] px-1">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] mb-1">
+                      Pick Specific Date
+                    </label>
+                    <input
+                      type="date"
+                      value={customDate}
+                      onChange={e => handleApplyCustomDate(e.target.value)}
+                      max={new Date().toISOString().split('T')[0]}
+                      className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] px-2 py-1.5 text-xs text-[var(--ink)] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="hidden sm:flex sm:items-center sm:gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/billing/new')}
+                className="btn-primary inline-flex min-h-[36px] items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white shadow-2xs transition"
+              >
+                <IconPlus size={15} strokeWidth={2.5} />
+                <span>New Bill</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/reports')}
+                className="btn-secondary inline-flex min-h-[36px] min-w-0 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-2xs transition"
+              >
+                <IconFileText size={14} />
+                <span>Reports</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
+
+      {/* FILTER ACTIVE BANNER */}
+      {isFiltered && (
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-blue-200 bg-blue-50/70 px-3.5 py-2 text-xs text-blue-900 dark:border-blue-900/50 dark:bg-blue-950/30 dark:text-blue-300">
+          <div className="flex items-center gap-2">
+            <IconCalendarEvent size={15} className="shrink-0 text-blue-600 dark:text-blue-400" />
+            <span>
+              Showing previous data: <strong>{data.filter_label || 'Custom Period'}</strong>
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleResetFilter}
+            className="flex items-center gap-1 font-bold text-blue-700 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-200 hover:underline"
+          >
+            <IconX size={13} />
+            <span>Reset to Today</span>
+          </button>
+        </div>
+      )}
 
       {nearExpiryBatches.length > 0 && (
         <section aria-labelledby="near-expiry-title" className="rounded-xl border border-amber-300 bg-amber-50 p-3.5 shadow-sm dark:border-amber-800 dark:bg-amber-950/30 sm:p-4">
@@ -378,8 +540,8 @@ export default function Dashboard() {
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {nearExpiryBatches.slice(0, 6).map(batch => (
               <button key={batch.id} type="button" onClick={() => navigate(`/inventory/stock?search=${encodeURIComponent(batch.sku || batch.product_name)}`)} className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-amber-200 bg-white/80 px-3 py-2 text-left hover:border-amber-400 dark:border-amber-900/70 dark:bg-slate-900/50">
-                <span className="min-w-0"><span className="block truncate text-xs font-semibold text-[var(--ink)]">{batch.product_name}</span><span className="block truncate text-[11px] text-[var(--muted)]">Batch {batch.batch_number} · {batch.quantity} {batch.unit}</span></span>
-                <span className={`shrink-0 text-right text-[11px] font-bold ${batch.days_left <= 7 ? 'text-rose-700 dark:text-rose-300' : 'text-amber-800 dark:text-amber-300'}`}><span className="block">{batch.days_left === 0 ? 'Expires today' : `${batch.days_left} days`}</span><span className="font-medium">{formatDateShort(batch.expiry_date)}</span></span>
+                <span className="min-w-0"><span className="block truncate text-xs font-semibold text-[var(--ink)]">{batch.product_name}</span><span className="block truncate text-[11px] text-[var(--muted)]">Batch {batch.batch_number} · {formatQuantity(batch.quantity)} {batch.unit}</span></span>
+                <span className={`shrink-0 text-right text-[11px] font-bold ${batch.days_left <= 7 ? 'text-rose-700 dark:text-rose-300' : 'text-amber-800 dark:text-amber-300'}`}><span className="block">{batch.days_left === 0 ? 'Expires today' : `${batch.days_left} days`}</span><span className="font-medium">{formatDate(batch.expiry_date)}</span></span>
               </button>
             ))}
           </div>
@@ -451,10 +613,10 @@ export default function Dashboard() {
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 divide-y divide-[var(--line-subtle)] text-xs shadow-2xs space-y-0">
             <div className="flex items-center justify-between pb-2">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                Today at a glance
+                {isFiltered ? `${data.filter_label || 'Period'} at a glance` : 'Today at a glance'}
               </span>
               <span className="text-[11px] text-[var(--muted)] font-mono">
-                {data.today_bills || 0} bills today
+                {data.today_bills || 0} bills {isFiltered ? 'in period' : 'today'}
               </span>
             </div>
 
@@ -466,14 +628,14 @@ export default function Dashboard() {
             </div>
 
             <div className="flex items-center justify-between py-2">
-              <span className="text-[var(--muted)]">Purchases Today</span>
+              <span className="text-[var(--muted)]">{isFiltered ? 'Purchases (Period)' : 'Purchases Today'}</span>
               <span className="font-mono font-semibold text-[var(--ink)] tabular-nums">
                 {fmtCurrency(data.today_purchases)}
               </span>
             </div>
 
             <div className="flex items-center justify-between py-2">
-              <span className="text-[var(--muted)]">Expenses Today</span>
+              <span className="text-[var(--muted)]">{isFiltered ? 'Expenses (Period)' : 'Expenses Today'}</span>
               <span className="font-mono font-semibold text-[var(--ink)] tabular-nums">
                 {fmtCurrency(data.today_expenses)}
               </span>
@@ -528,22 +690,29 @@ export default function Dashboard() {
       <div className="hidden md:block space-y-4">
       {/* BUSINESS SNAPSHOT */}
       <section aria-labelledby="business-snapshot-title" className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)]">
-        <h2 id="business-snapshot-title" className="border-b border-[var(--line)] px-4 py-2.5 text-sm font-semibold">Business Insights</h2>
+        <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2.5">
+          <h2 id="business-snapshot-title" className="text-sm font-semibold">Business Insights</h2>
+          {isFiltered && (
+            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+              Showing: {data.filter_label || 'Previous Data'}
+            </span>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-px bg-[var(--line)] lg:grid-cols-4">
           <button type="button" onClick={() => navigate('/sales/invoices')} className="min-w-0 bg-[var(--surface)] px-3 py-3 text-left transition hover:bg-[var(--surface-hover)] sm:px-4">
-            <span className="text-xs font-semibold text-[var(--muted)]">Sales</span>
+            <span className="text-xs font-semibold text-[var(--muted)]">{isFiltered ? (data.filter_label ? `${data.filter_label} Sales` : 'Period Sales') : 'Sales'}</span>
             <p className="mt-1 truncate font-mono text-xl font-extrabold tabular-nums text-[var(--ink)] sm:text-2xl">{fmtCurrency(data.today_sales)}</p>
-            <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-medium text-[var(--muted)]"><span>{data.today_bills || 0} bills</span><span className="px-0.5">·</span><span className={`inline-flex items-center gap-0.5 ${Number(data.yesterday_sales) ? (salesTrend > 0 ? 'text-emerald-700 dark:text-emerald-400' : salesTrend < 0 ? 'text-red-600 dark:text-red-400' : 'text-[var(--muted)]') : ''}`}>{Number(data.yesterday_sales) && (salesTrend > 0 ? <IconArrowUp size={14} aria-label="Up" /> : salesTrend < 0 ? <IconArrowDown size={14} aria-label="Down" /> : null)}{salesTrendLabel}</span></p>
+            <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-medium text-[var(--muted)]"><span>{data.today_bills || 0} bills</span>{!isFiltered && <><span className="px-0.5">·</span><span className={`inline-flex items-center gap-0.5 ${Number(data.yesterday_sales) ? (salesTrend > 0 ? 'text-emerald-700 dark:text-emerald-400' : salesTrend < 0 ? 'text-red-600 dark:text-red-400' : 'text-[var(--muted)]') : ''}`}>{Number(data.yesterday_sales) && (salesTrend > 0 ? <IconArrowUp size={14} aria-label="Up" /> : salesTrend < 0 ? <IconArrowDown size={14} aria-label="Down" /> : null)}{salesTrendLabel}</span></>}</p>
           </button>
           <button type="button" onClick={() => navigate('/sales/payments')} className="min-w-0 bg-[var(--surface)] px-3 py-3 text-left transition hover:bg-[var(--surface-hover)] sm:px-4">
             <span className="text-xs font-semibold text-[var(--muted)]">Collections</span>
             <p className="mt-1 truncate font-mono text-xl font-extrabold tabular-nums text-[var(--ink)] sm:text-2xl">{fmtCurrency(data.today_collection || data.today_payments_total)}</p>
-            <p className="mt-0.5 text-xs text-[var(--muted)]">Today <span className="px-1">·</span> Tax {fmtCurrency(data.today_tax)}</p>
+            <p className="mt-0.5 text-xs text-[var(--muted)]">{isFiltered ? (data.filter_label || 'Period') : 'Today'} <span className="px-1">·</span> Tax {fmtCurrency(data.today_tax)}</p>
           </button>
           <button type="button" onClick={() => navigate('/reports')} className="min-w-0 bg-[var(--surface)] px-3 py-3 text-left transition hover:bg-[var(--surface-hover)] sm:px-4">
             <span className="text-xs font-semibold text-[var(--muted)]">Profit</span>
             <p className={`mt-1 truncate font-mono text-xl font-extrabold tabular-nums sm:text-2xl ${Number(data.today_profit) >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{fmtCurrency(data.today_profit)}</p>
-            <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-medium text-[var(--muted)]"><span>Margin {Number(data.profit_margin || 0).toFixed(1)}%</span>{hasProfitBaseline && <span className={`inline-flex items-center gap-0.5 ${profitDifference >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{profitDifference > 0 ? <IconArrowUp size={14} /> : profitDifference < 0 ? <IconArrowDown size={14} /> : null}{profitTrendLabel}</span>}</p>
+            <p className="mt-1 flex flex-wrap items-center gap-1 text-sm font-medium text-[var(--muted)]"><span>Margin {Number(data.profit_margin || 0).toFixed(1)}%</span>{!isFiltered && hasProfitBaseline && <span className={`inline-flex items-center gap-0.5 ${profitDifference >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{profitDifference > 0 ? <IconArrowUp size={14} /> : profitDifference < 0 ? <IconArrowDown size={14} /> : null}{profitTrendLabel}</span>}</p>
           </button>
           <div className="min-w-0 bg-[var(--surface)] px-3 py-3 sm:px-4">
             <span className="text-xs font-semibold text-[var(--muted)]">Receivables & stock</span>
@@ -554,13 +723,13 @@ export default function Dashboard() {
       </section>
 
       {/* TODAY AT A GLANCE */}
-      <section aria-label="Today at a glance" className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 sm:px-4">
-        <h2 className="mb-2 text-sm font-semibold text-[var(--ink)]">Today at a glance</h2>
+      <section aria-label="Summary at a glance" className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 sm:px-4">
+        <h2 className="mb-2 text-sm font-semibold text-[var(--ink)]">{isFiltered ? `${data.filter_label || 'Period'} at a glance` : 'Today at a glance'}</h2>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
         <span className="text-[var(--muted)]">Bills <strong className="font-mono tabular-nums text-[var(--ink)]">{data.today_bills || 0}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
         <span className="text-[var(--muted)]">Avg bill <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.avg_bill_today)}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
-        <span className="text-[var(--muted)]">Purchases <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.today_purchases)}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
-        <span className="text-[var(--muted)]">Expenses <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.today_expenses)}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
+        <span className="text-[var(--muted)]">{isFiltered ? 'Purchases' : 'Purchases'} <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.today_purchases)}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
+        <span className="text-[var(--muted)]">{isFiltered ? 'Expenses' : 'Expenses'} <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.today_expenses)}</strong></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
         <span className="text-[var(--muted)]">Month sales <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.month_sales)}</strong> <span className="text-xs">{Number(data.last_month_sales) ? `${data.sales_growth > 0 ? '+' : ''}${Number(data.sales_growth || 0).toFixed(1)}% vs prior month` : ''}</span></span><span className="hidden text-[var(--line-strong)] sm:inline">|</span>
         <span className="text-[var(--muted)]">Month profit <strong className="font-mono tabular-nums text-[var(--ink)]">{fmtCurrency(data.month_profit)}</strong> <span className="text-xs">{Number(data.last_month_profit) ? `${percentChange(data.month_profit, data.last_month_profit) > 0 ? '+' : ''}${percentChange(data.month_profit, data.last_month_profit)}% vs prior month` : ''}</span></span>
         </div>
@@ -861,7 +1030,7 @@ export default function Dashboard() {
                       {bill.customer_name || 'Walk-in Customer'}
                     </p>
                     <p className="mt-0.5 font-mono text-[10px] text-[var(--muted)]">
-                      {formatDateShort(bill.created_at)}
+                      {formatDate(bill.created_at)}
                     </p>
                   </div>
 
@@ -918,7 +1087,7 @@ export default function Dashboard() {
                         </span>
                       </td>
                       <td className="text-xs text-[var(--muted)] font-mono">
-                        {formatDateShort(bill.created_at)}
+                        {formatDate(bill.created_at)}
                       </td>
                       <td className="text-right num-col font-bold text-[var(--ink)] font-mono">
                         {fmtCurrency(bill.grand_total)}
@@ -998,7 +1167,7 @@ export default function Dashboard() {
                         </span>
                       </td>
                       <td className="text-right num-col font-mono text-xs text-[var(--ink-secondary)]">
-                        {prod.total_qty} units
+                        {formatQuantity(prod.total_qty)} units
                       </td>
                       <td className="text-right num-col font-mono font-bold text-[var(--ink)]">
                         {fmtCurrency(prod.total_revenue)}
@@ -1014,7 +1183,7 @@ export default function Dashboard() {
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--surface-elevated)] font-mono text-xs font-bold text-[var(--muted)]">{idx + 1}</span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-[var(--ink)]">{prod.product_name}</p>
-                    <p className="mt-0.5 text-xs text-[var(--muted)]">{prod.total_qty} units sold</p>
+                    <p className="mt-0.5 text-xs text-[var(--muted)]">{formatQuantity(prod.total_qty)} units sold</p>
                   </div>
                   <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-[var(--ink)]">{fmtCurrency(prod.total_revenue)}</span>
                 </div>
@@ -1077,10 +1246,10 @@ export default function Dashboard() {
                             : 'text-amber-600'
                         }`}
                       >
-                        {prod.current_stock}
+                        {formatQuantity(prod.current_stock)}
                       </td>
                       <td className="text-right num-col text-xs text-[var(--muted)] font-mono">
-                        {prod.minimum_stock}
+                        {formatQuantity(prod.minimum_stock)}
                       </td>
                       <td className="text-center">
                         <Badge
@@ -1109,11 +1278,11 @@ export default function Dashboard() {
                 <div key={prod.id} className="flex items-center gap-3 px-3 py-2.5">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-[var(--ink)]">{prod.name}</p>
-                    <p className="mt-0.5 text-xs text-[var(--muted)]">Minimum {prod.minimum_stock}</p>
+                    <p className="mt-0.5 text-xs text-[var(--muted)]">Minimum {formatQuantity(prod.minimum_stock)}</p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <Badge status={Number(prod.current_stock) <= 0 ? 'out_of_stock' : 'low_stock'} />
-                    <span className={`font-mono text-xs font-bold tabular-nums ${Number(prod.current_stock) <= 0 ? 'text-red-600' : 'text-amber-600'}`}>{prod.current_stock} in stock</span>
+                    <span className={`font-mono text-xs font-bold tabular-nums ${Number(prod.current_stock) <= 0 ? 'text-red-600' : 'text-amber-600'}`}>{formatQuantity(prod.current_stock)} in stock</span>
                   </div>
                   <button type="button" onClick={() => navigate('/inventory/products')} className="min-h-9 shrink-0 rounded-md border border-[var(--line)] px-2 text-xs font-medium">Adjust</button>
                 </div>

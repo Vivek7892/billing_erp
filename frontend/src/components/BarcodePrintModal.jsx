@@ -4,6 +4,17 @@ import { API_BASE_URL } from '../api'
 import { getAccessToken } from '../services/tokenStorage'
 import toast from 'react-hot-toast'
 import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '../utils/formatters'
+
+import {
   IconPrinter,
   IconDownload,
   IconMinus,
@@ -214,17 +225,9 @@ export default function BarcodePrintModal({
   const hasMrp = mrpNum != null && !isNaN(mrpNum) && mrpNum > 0
   const strikeThroughMrp = hasMrp && mrpNum > sellingPriceNum
 
-  const formattedPrice = `₹${sellingPriceNum.toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
+  const formattedPrice = formatCurrency(sellingPriceNum)
 
-  const formattedMrp = hasMrp
-    ? `MRP ₹${mrpNum.toLocaleString('en-IN', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`
-    : ''
+  const formattedMrp = hasMrp ? `MRP ${formatCurrency(mrpNum)}` : ''
 
   const perPage = sel.perSheet ?? customCols * customRows
   const sheets = perPage > 0 ? Math.ceil(copies / perPage) : 1

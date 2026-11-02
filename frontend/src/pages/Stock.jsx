@@ -9,6 +9,17 @@ import toast from 'react-hot-toast'
 import BarcodePrintModal from '../components/BarcodePrintModal'
 import { InformationalBanner } from '../components/visual-content'
 import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+  fmtCurrency,
+} from '../utils/formatters'
+import {
   IconPlus,
   IconPackages,
   IconRefresh,
@@ -72,12 +83,6 @@ const STATUS_META = {
     bar: 'bg-rose-500',
   },
 }
-
-const fmtCurrency = val =>
-  `₹${Number(val || 0).toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
 
 export default function Stock() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
@@ -634,7 +639,7 @@ export default function Stock() {
       </div>
 
       {/* Filter Section: Hidden on mobile unless opened; always visible on desktop */}
-      <div className={`${mobileFiltersOpen ? 'block' : 'hidden'} sm:block rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3 shadow-2xs space-y-2.5`}>
+      <div className={`erp-filter-panel ${mobileFiltersOpen ? 'block' : 'hidden'} sm:block rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3 shadow-2xs space-y-2.5`}>
         {/* Search Bar on Desktop */}
         <div className="hidden sm:flex items-center gap-2">
           <SearchInput
@@ -1362,10 +1367,7 @@ export default function Stock() {
                   {historyList.map(tx => (
                     <tr key={tx.id}>
                       <td className="font-mono whitespace-nowrap text-[var(--muted)]">
-                        {new Date(tx.created_at).toLocaleString('en-IN', {
-                          dateStyle: 'short',
-                          timeStyle: 'short',
-                        })}
+                        {formatDateTime(tx.created_at)}
                       </td>
                       <td>
                         <span

@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '../utils/formatters'
+
 import { SearchInput } from '../components/UI'
 import {
   IconLayersLinked,
@@ -30,11 +41,7 @@ function saveDrafts(drafts) {
   localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts))
 }
 
-const fmt = v =>
-  `₹${Number(v || 0).toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
+const fmt = v => formatCurrency(v)
 
 export default function Drafts() {
   const [drafts, setDrafts] = useState([])
@@ -232,7 +239,7 @@ export default function Drafts() {
               draft.cart?.reduce((s, i) => s + (i.total || 0), 0) || 0
             const itemCount = draft.cart?.length || 0
             const savedAt = draft.savedAt
-              ? new Date(draft.savedAt).toLocaleString('en-IN', {
+              ? formatDateTime(draft.savedAt, {
                   day: '2-digit',
                   month: 'short',
                   hour: '2-digit',
@@ -332,7 +339,7 @@ export default function Drafts() {
                   draft.cart?.reduce((s, i) => s + (i.total || 0), 0) || 0
                 const itemCount = draft.cart?.length || 0
                 const savedAt = draft.savedAt
-                  ? new Date(draft.savedAt).toLocaleString('en-IN', {
+                  ? formatDateTime(draft.savedAt, {
                       day: '2-digit',
                       month: 'short',
                       hour: '2-digit',

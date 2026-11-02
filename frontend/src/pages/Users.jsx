@@ -235,7 +235,7 @@ export default function Users() {
       />
 
       {/* Role Summary Quick Filter Tabs */}
-      <div className="no-scrollbar flex items-center gap-2 overflow-x-auto border-b border-[var(--line)] pb-3">
+      <div className="erp-filter-panel no-scrollbar flex items-center gap-2 overflow-x-auto border-b border-[var(--line)] pb-3">
         <button
           type="button"
           onClick={() => setRoleFilter('all')}

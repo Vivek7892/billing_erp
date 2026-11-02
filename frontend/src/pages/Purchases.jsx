@@ -41,14 +41,20 @@ import {
   IconRefresh,
 } from '@tabler/icons-react'
 import CommunicationHistory from '../components/CommunicationHistory'
+import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '../utils/formatters'
 
-const fmt = v => `₹${Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
-const fmt2 = v => Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const fmtDate = value => value
-  ? new Date(`${value}T00:00:00`).toLocaleDateString('en-IN', {
-      day: '2-digit', month: 'short', year: 'numeric'
-    })
-  : '—'
+const fmt = v => formatCurrency(v)
+const fmt2 = v => formatDecimal(v, 2)
+const fmtDate = value => formatDate(value)
 
 const emptyForm = {
   supplier: '', invoice_number: '',
@@ -1569,7 +1575,7 @@ export default function Purchases() {
           {/* ── Purchase Orders Tab ── */}
           {tab === 'orders' && (
             <div className="space-y-4">
-              <div className={`flex flex-col gap-3 p-3.5 ${cardCls} sm:flex-row sm:items-center`}>
+              <div className={`erp-filter-panel flex flex-col gap-3 p-3.5 ${cardCls} sm:flex-row sm:items-center`}>
                 <SearchInput
                   value={poSearch}
                   onChange={e => setPoSearch(e.target.value)}
@@ -1834,7 +1840,7 @@ export default function Purchases() {
           {/* ── Suppliers Tab ── */}
           {tab === 'suppliers' && (
             <div className="space-y-4">
-              <div className={`flex flex-col gap-3 p-3.5 ${cardCls} sm:flex-row sm:items-center`}>
+              <div className={`erp-filter-panel flex flex-col gap-3 p-3.5 ${cardCls} sm:flex-row sm:items-center`}>
                 <SearchInput
                   value={supSearch}
                   onChange={e => setSupSearch(e.target.value)}

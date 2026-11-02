@@ -1,6 +1,7 @@
 import { MobileFAB } from '../components/MobileUI'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import customerService from '../features/customers/api/customerService'
+import invoiceService from '../features/billing/api/invoiceService'
 import settingsService from '../features/settings/api/settingsService'
 import {
   PageHeader,
@@ -49,6 +50,17 @@ import {
   IconMessageCircle,
 } from '@tabler/icons-react'
 
+import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '../utils/formatters'
+
 const emptyForm = {
   name: '',
   mobile: '',
@@ -58,11 +70,7 @@ const emptyForm = {
   credit_limit: '0',
 }
 
-const currency = value =>
-  `₹${Number(value || 0).toLocaleString('en-IN', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })}`
+const currency = value => formatCurrency(value)
 
 const getInitials = name =>
   String(name || 'Customer')
@@ -119,73 +127,85 @@ const getErrorMessage = error => {
 
 export function CustomerCollectPaymentModal({
   customer,
+  bill,
   shopSettings,
   shopName,
   onClose,
   onSuccess,
 }) {
-  const outstanding = Number(customer?.outstanding_amount || 0)
-  const creditLimit = Number(customer?.credit_limit || 0)
+  const paymentTarget = useMemo(() => customer || (bill ? {
+    id: bill.customer,
+    name: bill.customer_name || 'Walk-in Customer',
+    mobile: bill.customer_phone || '',
+    outstanding_amount: bill.balance_due,
+  } : null), [customer, bill])
+  const invoiceMode = Boolean(bill)
+  const outstanding = Number(invoiceMode ? bill?.balance_due || 0 : paymentTarget?.outstanding_amount || 0)
+  const creditLimit = Number(invoiceMode ? 0 : paymentTarget?.credit_limit || 0)
 
   const [activeTab, setActiveTab] = useState('collect') // 'collect' | 'history'
   const [paymentsList, setPaymentsList] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [recordedPayment, setRecordedPayment] = useState(null)
 
-  // Helper to generate a friendly transaction ID
-  const generateTxnId = () => {
-    const d = new Date()
-    const yy = String(d.getFullYear()).slice(-2)
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
-    const dd = String(d.getDate()).padStart(2, '0')
-    const hh = String(d.getHours()).padStart(2, '0')
-    const min = String(d.getMinutes()).padStart(2, '0')
-    const rand = Math.random().toString(36).substring(2, 6).toUpperCase()
-    return `TXN-${yy}${mm}${dd}${hh}${min}-${rand}`
-  }
-
   const [amount, setAmount] = useState(outstanding > 0 ? String(outstanding) : '')
   const [method, setMethod] = useState('cash')
-  const [reference, setReference] = useState(() => generateTxnId())
+  const [externalRef, setExternalRef] = useState('')
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [copiedUpi, setCopiedUpi] = useState(false)
-  const [copiedTxn, setCopiedTxn] = useState(false)
+  const [copiedTxn, setCopiedTxn] = useState('')
 
   // Load customer payment history when modal opens or tab switches
   useEffect(() => {
-    if (customer?.id) {
+    if (invoiceMode && bill?.id) {
       setLoadingHistory(true)
-      customerService.getCustomerTransactions(customer.id)
+      invoiceService.getInvoicePayments(bill.id)
+        .then(data => setPaymentsList(Array.isArray(data) ? data : (data?.results || data?.payments || [])))
+        .catch(() => setPaymentsList([]))
+        .finally(() => setLoadingHistory(false))
+    } else if (paymentTarget?.id) {
+      setLoadingHistory(true)
+      customerService.getCustomerPayments(paymentTarget.id)
         .then(data => {
           const list = Array.isArray(data)
             ? data
             : Array.isArray(data?.results)
             ? data.results
-            : Array.isArray(data?.transactions)
-            ? data.transactions
             : []
-          // Filter to payments / credits if transactions contain debits
           setPaymentsList(list)
         })
-        .catch(() => {})
+        .catch(() => {
+          customerService.getCustomerTransactions(paymentTarget.id)
+            .then(data => {
+              const list = Array.isArray(data)
+                ? data
+                : Array.isArray(data?.results)
+                ? data.results
+                : Array.isArray(data?.transactions)
+                ? data.transactions
+                : []
+              setPaymentsList(list)
+            })
+            .catch(() => {})
+        })
         .finally(() => setLoadingHistory(false))
     }
-  }, [customer])
+  }, [customer, bill, invoiceMode, paymentTarget?.id])
 
   useEffect(() => {
-    if (customer) {
+    if (paymentTarget) {
       setAmount(outstanding > 0 ? String(outstanding) : '')
       setMethod('cash')
-      setReference(generateTxnId())
+      setExternalRef('')
       setNotes('')
       setError('')
       setCopiedUpi(false)
       setRecordedPayment(null)
       setActiveTab('collect')
     }
-  }, [customer, outstanding])
+  }, [customer, bill, paymentTarget, outstanding])
 
   useEffect(() => {
     const handleKeyDown = event => {
@@ -197,7 +217,7 @@ export function CustomerCollectPaymentModal({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [onClose, submitting])
 
-  if (!customer) return null
+  if (!paymentTarget) return null
 
   const handleAmountChange = value => {
     setAmount(value)
@@ -215,18 +235,12 @@ export function CustomerCollectPaymentModal({
     setError('')
   }
 
-  const handleRegenerateTxnId = () => {
-    const nextTxn = generateTxnId()
-    setReference(nextTxn)
-    toast.success('Generated new Transaction ID')
-  }
-
-  const handleCopyTxn = () => {
-    if (!reference) return
-    navigator.clipboard.writeText(reference).then(() => {
-      setCopiedTxn(true)
+  const handleCopyTxn = (text) => {
+    if (!text) return
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedTxn(text)
       toast.success('Transaction ID copied')
-      setTimeout(() => setCopiedTxn(false), 2000)
+      setTimeout(() => setCopiedTxn(''), 2000)
     })
   }
 
@@ -246,24 +260,37 @@ export function CustomerCollectPaymentModal({
     setError('')
 
     try {
-      const txnRef = reference.trim() || generateTxnId()
-      const res = await customerService.recordPayment(customer.id, {
-        amount: num,
-        method,
-        reference: txnRef,
-        notes: notes.trim(),
-      })
+      const res = invoiceMode
+        ? await invoiceService.collectPayment(bill.id, {
+            amount: num,
+            method,
+            reference: externalRef.trim(),
+            notes: notes.trim(),
+          })
+        : await customerService.recordPayment(paymentTarget.id, {
+            amount: num,
+            method,
+            reference: externalRef.trim(),
+            notes: notes.trim(),
+          })
 
+      const paymentRecord = invoiceMode ? (res?.latest_payment || res) : res
+      const txnId = paymentRecord?.transaction_id || paymentRecord?.reference || res?.reference || (paymentRecord?.id ? `TXN-COL-${paymentRecord.id}` : '')
       const recorded = {
+        id: paymentRecord?.id,
         amount: num,
         method,
-        reference: txnRef,
-        date: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-        remainingDue: Math.max(0, outstanding - num),
+        reference: txnId,
+        transaction_id: txnId,
+        date: new Date().toISOString(),
+        remainingDue: invoiceMode ? Number(res?.balance_due ?? Math.max(0, outstanding - num)) : Math.max(0, outstanding - num),
       }
       setRecordedPayment(recorded)
+      if (!invoiceMode && res?.id) {
+        setPaymentsList(prev => [res, ...prev])
+      }
 
-      toast.success(`${currency(num)} payment recorded for ${customer.name}`)
+      toast.success(`${currency(num)} payment recorded for ${paymentTarget.name}`)
       window.dispatchEvent(
         new CustomEvent('pos:payment-collected', {
           detail: res,
@@ -288,7 +315,7 @@ export function CustomerCollectPaymentModal({
   const upiId = shopSettings?.shop_upi_id || ''
   const payeeName = shopName || 'ShopEase POS'
   const upiUrl = upiId
-    ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${encodeURIComponent(amount || '0')}&cu=INR&tn=${encodeURIComponent(`Khata-${customer.name}`)}`
+    ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${encodeURIComponent(amount || '0')}&cu=INR&tn=${encodeURIComponent(invoiceMode ? `Invoice-${bill.invoice_number || bill.id}` : `Khata-${paymentTarget.name}`)}`
     : ''
 
   const handleCopyUpi = () => {
@@ -327,7 +354,7 @@ export function CustomerCollectPaymentModal({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h2 id="collect-payment-title" className="text-sm sm:text-base font-bold text-[var(--ink)] leading-tight">
-                  Collect Customer Payment
+                  {invoiceMode ? 'Collect Invoice Payment' : 'Collect Customer Payment'}
                 </h2>
                 {outstanding <= 0 ? (
                   <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
@@ -340,7 +367,7 @@ export function CustomerCollectPaymentModal({
                 )}
               </div>
               <p className="truncate text-xs text-[var(--muted)] mt-0.5">
-                {customer.name} {customer.mobile ? `(${customer.mobile})` : ''}
+                {paymentTarget.name} {paymentTarget.mobile ? `(${paymentTarget.mobile})` : ''}{invoiceMode && bill?.invoice_number ? ` · Invoice ${bill.invoice_number}` : ''}
               </p>
             </div>
           </div>
@@ -381,7 +408,7 @@ export function CustomerCollectPaymentModal({
             }`}
           >
             <IconHistory size={15} />
-            <span>Customer History</span>
+            <span>{invoiceMode ? 'Invoice History' : 'Customer History'}</span>
             {paymentsList.length > 0 && (
               <span className="rounded-full bg-slate-200 px-1.5 py-0.2 text-[10px] font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
                 {paymentsList.length}
@@ -395,7 +422,7 @@ export function CustomerCollectPaymentModal({
           {activeTab === 'history' ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-xs font-semibold text-[var(--muted)]">
-                <span>Recent Customer Payments &amp; Entries</span>
+                <span>{invoiceMode ? 'Payments on this invoice' : 'Recent Customer Payments &amp; Entries'}</span>
                 <span>{paymentsList.length} Records</span>
               </div>
 
@@ -406,30 +433,72 @@ export function CustomerCollectPaymentModal({
                 </div>
               ) : paymentsList.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-[var(--line)] py-10 text-center text-xs text-[var(--muted)]">
-                  No payment entries found for this customer.
+                  No payment entries found for this {invoiceMode ? 'invoice' : 'customer'}.
                 </div>
               ) : (
-                <div className="divide-y divide-[var(--line)] rounded-xl border border-[var(--line)] bg-[var(--surface)] overflow-hidden">
-                  {paymentsList.map((p, idx) => (
-                    <div key={p.id || idx} className="flex items-center justify-between p-3 text-xs hover:bg-[var(--surface-hover)]">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-[var(--ink)]">
-                            {currency(p.amount || 0)}
-                          </span>
-                          <span className="rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-mono uppercase text-[var(--muted)]">
-                            {p.method || 'CASH'}
+                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-0.5">
+                  {paymentsList.map((p, idx) => {
+                    const payMethod = (p.method || 'cash').toLowerCase()
+                    const MethodIcon = (payMethod === 'upi' ? IconQrcode : payMethod === 'card' ? IconCreditCard : payMethod === 'bank' ? IconBuildingBank : IconCurrencyRupee) || IconCurrencyRupee
+                    const methodColor = payMethod === 'upi' ? 'text-sky-600 bg-sky-50 dark:bg-sky-950/50 dark:text-sky-400' : payMethod === 'card' ? 'text-violet-600 bg-violet-50 dark:bg-violet-950/50 dark:text-violet-400' : payMethod === 'bank' ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50 dark:text-indigo-400' : 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 dark:text-emerald-400'
+                    const txnId = p.reference || p.transaction_id || (p.id ? `TXN-COL-${p.id}` : '—')
+
+                    return (
+                      <div
+                        key={p.id || idx}
+                        className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-xs space-y-2 transition hover:border-[var(--line-strong)]"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${methodColor}`}>
+                              <MethodIcon size={14} />
+                            </div>
+                            <span className="font-mono font-bold text-[var(--ink)]">
+                              {p.id ? `#PAY-${p.id}` : `#REC-${idx + 1}`}
+                            </span>
+                            <span className="inline-flex items-center rounded border border-[var(--line)] bg-[var(--surface-subtle)] px-1.5 py-0.2 text-[10px] font-bold uppercase">
+                              {p.method || 'Cash'}
+                            </span>
+                            {p.invoice_number && (
+                              <span className="text-[10px] font-mono text-[var(--muted)]">
+                                Bill #{p.invoice_number}
+                              </span>
+                            )}
+                          </div>
+                          <span className="amount price font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                            + {currency(p.amount || 0)}
                           </span>
                         </div>
-                        <div className="font-mono text-[10px] text-[var(--muted)] mt-0.5 truncate">
-                          {p.created_at || p.date || '—'} {p.reference ? `• ${p.reference}` : ''}
+
+                        <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-[var(--line)]">
+                          <div className="flex items-center gap-1 font-mono text-[10px] text-[var(--muted)] truncate">
+                            <span>TXN:</span>
+                            <span className="font-bold text-[var(--ink)] truncate select-all">{txnId}</span>
+                            {txnId !== '—' && (
+                              <button
+                                type="button"
+                                onClick={() => handleCopyTxn(txnId)}
+                                className="ml-1 text-sky-700 dark:text-sky-400 hover:underline shrink-0"
+                                title="Copy Transaction ID"
+                              >
+                                {copiedTxn === txnId ? <IconCheck size={11} className="text-emerald-600" /> : <IconCopy size={11} />}
+                              </button>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-[var(--muted)] font-mono shrink-0">
+                            {p.created_at ? `${formatDate(p.created_at)} ${formatTime(p.created_at)}` : (p.date || '—')}
+                          </span>
                         </div>
+
+                        {(p.notes || p.collected_by_name) && (
+                          <div className="flex items-center justify-between text-[10px] text-[var(--muted)] pt-0.5">
+                            {p.collected_by_name ? <span>Collected by: <strong className="text-[var(--ink)] font-normal">{p.collected_by_name}</strong></span> : <span />}
+                            {p.notes && <span className="italic truncate max-w-[200px]">{p.notes}</span>}
+                          </div>
+                        )}
                       </div>
-                      <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        + {currency(p.amount || 0)}
-                      </span>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -443,7 +512,7 @@ export function CustomerCollectPaymentModal({
               <div>
                 <h3 className="text-base font-bold text-[var(--ink)]">Payment Recorded Successfully</h3>
                 <p className="text-xs text-[var(--muted)] mt-1">
-                  Received {currency(recordedPayment.amount)} from {customer.name}
+                  Received {currency(recordedPayment.amount)} from {paymentTarget.name}
                 </p>
               </div>
 
@@ -457,27 +526,41 @@ export function CustomerCollectPaymentModal({
                   <span className="font-semibold uppercase">{recordedPayment.method}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[var(--muted)]">Transaction Reference:</span>
-                  <span className="font-mono font-bold select-all">{recordedPayment.reference}</span>
+                  <span className="text-[var(--muted)]">Permanent Transaction ID:</span>
+                  <div className="flex items-center gap-1.5 font-mono font-bold">
+                    <span className="select-all text-[var(--ink)]">{recordedPayment.reference || recordedPayment.transaction_id || 'N/A'}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyTxn(recordedPayment.reference || recordedPayment.transaction_id)}
+                      className="text-sky-700 dark:text-sky-400 hover:underline inline-flex items-center"
+                      title="Copy Transaction ID"
+                    >
+                      {copiedTxn === (recordedPayment.reference || recordedPayment.transaction_id) ? (
+                        <IconCheck size={13} className="text-emerald-600" />
+                      ) : (
+                        <IconCopy size={13} />
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <div className="flex justify-between pt-1 border-t border-[var(--line)]">
-                  <span className="font-semibold text-[var(--ink)]">Remaining Khata Due:</span>
+                  <span className="font-semibold text-[var(--ink)]">Remaining {invoiceMode ? 'Invoice Balance' : 'Khata Due'}:</span>
                   <span className="font-bold font-mono text-rose-600 dark:text-rose-400">{currency(recordedPayment.remainingDue)}</span>
                 </div>
               </div>
 
               <div className="flex w-full gap-2">
-                <button
+                {!invoiceMode && <button
                   type="button"
                   onClick={() => {
                     setRecordedPayment(null)
                     setAmount(recordedPayment.remainingDue > 0 ? String(recordedPayment.remainingDue) : '')
-                    setReference(generateTxnId())
+                    setExternalRef('')
                   }}
                   className="flex-1 btn-secondary text-xs h-9 font-semibold"
                 >
                   Record Another
-                </button>
+                </button>}
                 <button
                   type="button"
                   onClick={onClose}
@@ -490,10 +573,10 @@ export function CustomerCollectPaymentModal({
           ) : (
             /* Collection Form */
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Customer Financial Overview Strip */}
+              {/* Payment Balance Overview */}
               <div className="flex items-center justify-between rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] p-3 text-xs">
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Outstanding Balance</div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">{invoiceMode ? 'Invoice Balance Due' : 'Outstanding Balance'}</div>
                   <div className="font-mono text-base font-bold text-rose-600 dark:text-rose-400 mt-0.5">
                     {currency(outstanding)}
                   </div>
@@ -626,36 +709,18 @@ export function CustomerCollectPaymentModal({
                 </div>
               )}
 
-              {/* Transaction Reference & Auto-Generate */}
+              {/* Optional External Reference (UTR / Cheque) */}
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-                    Transaction / Receipt Reference
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleRegenerateTxnId}
-                    className="inline-flex items-center gap-1 text-[11px] text-[#0057B8] hover:underline"
-                  >
-                    <IconRefresh size={11} /> New ID
-                  </button>
-                </div>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={reference}
-                    onChange={e => setReference(e.target.value)}
-                    placeholder="TXN-..."
-                    className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs font-mono text-[var(--ink)] focus:outline-none focus:border-[#0057B8] pr-16"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleCopyTxn}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)] hover:text-[var(--ink)]"
-                  >
-                    {copiedTxn ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--muted)] block mb-1">
+                  External Ref / UTR / Cheque (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={externalRef}
+                  onChange={e => setExternalRef(e.target.value)}
+                  placeholder="e.g. Bank UTR, Cheque No, or Auth Code"
+                  className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--ink)] placeholder-[var(--muted)] focus:outline-none focus:border-[#0057B8]"
+                />
               </div>
 
               {/* Optional Notes */}
@@ -1080,7 +1145,7 @@ export default function Customers() {
           FILTERS
       ====================================================== */}
 
-      <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3.5 shadow-xs">
+      <div className="erp-filter-panel rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 sm:p-3.5 shadow-xs">
         <div className="flex w-full flex-col gap-2.5 sm:flex-row sm:items-center">
 
           {/* Search */}
@@ -2003,7 +2068,7 @@ export default function Customers() {
                       {customerBills.map(bill => (
                         <tr key={bill.id}>
                           <td className="font-mono text-blue-600 dark:text-blue-400 text-xs">{bill.invoice_number}</td>
-                          <td className="text-xs font-mono">{new Date(bill.created_at).toLocaleDateString('en-IN')}</td>
+                          <td className="text-xs font-mono">{formatDate(bill.created_at)}</td>
                           <td className="text-right font-semibold text-xs font-mono">{currency(bill.grand_total)}</td>
                           <td className="text-center">
                             <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border ${

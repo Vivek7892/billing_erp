@@ -54,6 +54,11 @@ export const customerService = {
     return unwrapResponse(response)
   },
 
+  async getCustomerPayments(id) {
+    const response = await http.get(`/customers/${id}/payments/`)
+    return unwrapResponse(response)
+  },
+
   async getPaymentCollections(params = {}) {
     const response = await http.get('/customer-payments/', { params })
     const payload = unwrapResponse(response)

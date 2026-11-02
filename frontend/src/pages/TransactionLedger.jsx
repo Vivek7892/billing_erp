@@ -25,6 +25,17 @@ import {
   IconFilter,
 } from '@tabler/icons-react'
 import toast from 'react-hot-toast'
+import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '../utils/formatters'
+
 import { SearchBar } from '../components/UI'
 import { MobileKpiGrid } from '../components/MobileUI'
 
@@ -83,20 +94,7 @@ const ESTIMATED_GATEWAY_FEE_RATE = 0.02
 // FORMATTERS
 // --------------------------------------------------
 
-const fmt = (value, currency = 'INR') => {
-  const amount = Number(value || 0)
-
-  try {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: currency || 'INR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount)
-  } catch {
-    return `₹${amount.toFixed(2)}`
-  }
-}
+const fmt = (value, currency = 'INR') => formatCurrency(value)
 
 const fmtCompact = (value, currency = 'INR') => {
   const amount = Number(value || 0)
@@ -133,7 +131,8 @@ const fmtDate = (value) => {
   }
 }
 
-const fmtDateOnly = (value) => {
+const fmtDateOnly = (value) => formatDate(value);
+const _old_fmtDateOnly = (value) => {
   if (!value) return '—'
 
   try {
@@ -721,7 +720,7 @@ export default function TransactionLedger() {
           <span><strong className="font-semibold text-[var(--ink)]">{fmt(summary.tax)}</strong> tax</span>
         </div>
 
-        <section aria-label="Search and filters" className="flex flex-col gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
+        <section aria-label="Search and filters" className="erp-filter-panel flex flex-col gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1">
               <SearchBar value={search} onChange={setSearch} placeholder="Search invoice, order ID, payment ID, customer..." className="min-w-0 w-full" shortcut="Ctrl+K" />

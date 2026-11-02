@@ -17,7 +17,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.urls import reverse
 from django.db.models import Sum, Count, Q, F
 from django.utils import timezone
-from datetime import timedelta
+from datetime import datetime, timedelta, date
 from decimal import Decimal
 from io import BytesIO
 import csv
@@ -988,7 +988,7 @@ class PasswordResetRequestView(APIView):
             frontend_url = getattr(
                 settings,
                 'FRONTEND_URL',
-                'http://localhost:3000' if getattr(settings, 'DEBUG', False) else 'https://app.dreamwithtech.dev'
+                'http://localhost:3000' if getattr(settings, 'DEBUG', False) else 'https://accounts.dreamwithtech.dev'
             ).rstrip('/')
 
             reset_link = f"{frontend_url}/reset-password?uid={uid}&token={token}"
@@ -3268,23 +3268,71 @@ class DashboardView(APIView):
     permission_classes = [IsCashierOrAdmin]
     def get(self, request):
         biz = request.user.business
-        today = timezone.localdate()
-        yesterday = today - timedelta(days=1)
-        month_start = today.replace(day=1)
+        real_today = timezone.localdate()
+        period = request.query_params.get('period', 'today').lower().strip()
+        custom_date_str = request.query_params.get('date')
+        from_date_str = request.query_params.get('from_date')
+        to_date_str = request.query_params.get('to_date')
+
+        is_range = False
+        if period == 'yesterday':
+            target_start = real_today - timedelta(days=1)
+            target_end = target_start
+        elif period == '7days':
+            target_start = real_today - timedelta(days=6)
+            target_end = real_today
+            is_range = True
+        elif period == 'this_month':
+            target_start = real_today.replace(day=1)
+            target_end = real_today
+            is_range = True
+        elif period in ('prev_month', 'previous_month'):
+            curr_month_start = real_today.replace(day=1)
+            target_end = curr_month_start - timedelta(days=1)
+            target_start = target_end.replace(day=1)
+            is_range = True
+        elif period == 'custom' and from_date_str and to_date_str:
+            try:
+                target_start = datetime.strptime(from_date_str, '%Y-%m-%d').date()
+                target_end = datetime.strptime(to_date_str, '%Y-%m-%d').date()
+                is_range = (target_start != target_end)
+            except Exception:
+                target_start = real_today
+                target_end = real_today
+        elif custom_date_str:
+            try:
+                target_start = datetime.strptime(custom_date_str, '%Y-%m-%d').date()
+                target_end = target_start
+            except Exception:
+                target_start = real_today
+                target_end = real_today
+        else:
+            period = 'today'
+            target_start = real_today
+            target_end = real_today
+
+        today = real_today
+        target_q = Q(created_at__date__gte=target_start, created_at__date__lte=target_end)
+        is_filtered = bool(target_start != real_today or target_end != real_today)
+        month_start = real_today.replace(day=1)
         last_month_start = (month_start - timedelta(days=1)).replace(day=1)
         last_month_end = month_start - timedelta(days=1)
-        week_start = today - timedelta(days=6)
+        week_start = real_today - timedelta(days=6)
 
-        # --- Single aggregated query for today / yesterday / month / last-month ---
+        # --- Single aggregated query for target / real_today / yesterday / month / last-month ---
         inv_agg = Invoice.objects.filter(
             business=biz, status='completed'
         ).aggregate(
-            today_sales=Sum('grand_total', filter=Q(created_at__date=today)),
-            today_bills=Count('id', filter=Q(created_at__date=today)),
-            today_discount=Sum('discount_amount', filter=Q(created_at__date=today)),
-            today_tax=Sum('tax_amount', filter=Q(created_at__date=today)),
-            yest_sales=Sum('grand_total', filter=Q(created_at__date=yesterday)),
-            yest_bills=Count('id', filter=Q(created_at__date=yesterday)),
+            target_sales=Sum('grand_total', filter=target_q),
+            target_bills=Count('id', filter=target_q),
+            target_discount=Sum('discount_amount', filter=target_q),
+            target_tax=Sum('tax_amount', filter=target_q),
+            today_sales=Sum('grand_total', filter=Q(created_at__date=real_today)),
+            today_bills=Count('id', filter=Q(created_at__date=real_today)),
+            today_discount=Sum('discount_amount', filter=Q(created_at__date=real_today)),
+            today_tax=Sum('tax_amount', filter=Q(created_at__date=real_today)),
+            yest_sales=Sum('grand_total', filter=Q(created_at__date=real_today - timedelta(days=1))),
+            yest_bills=Count('id', filter=Q(created_at__date=real_today - timedelta(days=1))),
             month_sales=Sum('grand_total', filter=Q(created_at__date__gte=month_start)),
             month_bills=Count('id', filter=Q(created_at__date__gte=month_start)),
             month_discount=Sum('discount_amount', filter=Q(created_at__date__gte=month_start)),
@@ -3295,10 +3343,10 @@ class DashboardView(APIView):
             )),
         )
 
-        today_sales = inv_agg['today_sales'] or 0
-        today_bills = inv_agg['today_bills'] or 0
-        today_discount = inv_agg['today_discount'] or 0
-        today_tax = inv_agg['today_tax'] or 0
+        today_sales = (inv_agg['target_sales'] if is_filtered else inv_agg['today_sales']) or 0
+        today_bills = (inv_agg['target_bills'] if is_filtered else inv_agg['today_bills']) or 0
+        today_discount = (inv_agg['target_discount'] if is_filtered else inv_agg['today_discount']) or 0
+        today_tax = (inv_agg['target_tax'] if is_filtered else inv_agg['today_tax']) or 0
         yesterday_sales = inv_agg['yest_sales'] or 0
         yesterday_bills = inv_agg['yest_bills'] or 0
         month_sales = inv_agg['month_sales'] or 0
@@ -3315,8 +3363,13 @@ class DashboardView(APIView):
                 line_profit=(F('total') - F('gst_amount')) - F('quantity') * F('cost_price')
             ).aggregate(total=Sum('line_profit'))['total'] or 0
 
-        today_profit = float(_profit_qs({'invoice__created_at__date': today}))
-        yesterday_profit = float(_profit_qs({'invoice__created_at__date': yesterday}))
+        target_profit = float(_profit_qs({
+            'invoice__created_at__date__gte': target_start,
+            'invoice__created_at__date__lte': target_end,
+        }))
+        real_today_profit = float(_profit_qs({'invoice__created_at__date': real_today}))
+        today_profit = target_profit if is_filtered else real_today_profit
+        yesterday_profit = float(_profit_qs({'invoice__created_at__date': real_today - timedelta(days=1)}))
         month_profit = float(_profit_qs({'invoice__created_at__date__gte': month_start}))
         last_month_profit = float(_profit_qs({
             'invoice__created_at__date__gte': last_month_start,
@@ -3325,34 +3378,42 @@ class DashboardView(APIView):
 
         # --- Purchases today / month / last month ---
         purch_agg = Purchase.objects.filter(business=biz).aggregate(
-            today_purchases=Sum('total_amount', filter=Q(purchase_date=today)),
+            target_purchases=Sum('total_amount', filter=Q(purchase_date__gte=target_start, purchase_date__lte=target_end)),
+            today_purchases=Sum('total_amount', filter=Q(purchase_date=real_today)),
             month_purchases=Sum('total_amount', filter=Q(purchase_date__gte=month_start)),
             last_month_purchases=Sum('total_amount', filter=Q(
                 purchase_date__gte=last_month_start,
                 purchase_date__lte=last_month_end,
             )),
         )
-        today_purchases = float(purch_agg['today_purchases'] or 0)
+        today_purchases = float((purch_agg['target_purchases'] if is_filtered else purch_agg['today_purchases']) or 0)
         month_purchases = float(purch_agg['month_purchases'] or 0)
         last_month_purchases = float(purch_agg['last_month_purchases'] or 0)
 
         # --- Expenses today / month / last month ---
         exp_agg = Expense.objects.filter(business=biz).aggregate(
-            today_expenses=Sum('amount', filter=Q(expense_date=today)),
+            target_expenses=Sum('amount', filter=Q(expense_date__gte=target_start, expense_date__lte=target_end)),
+            today_expenses=Sum('amount', filter=Q(expense_date=real_today)),
             month_expenses=Sum('amount', filter=Q(expense_date__gte=month_start)),
             last_month_expenses=Sum('amount', filter=Q(
                 expense_date__gte=last_month_start,
                 expense_date__lte=last_month_end,
             )),
         )
-        today_expenses = float(exp_agg['today_expenses'] or 0)
+        today_expenses = float((exp_agg['target_expenses'] if is_filtered else exp_agg['today_expenses']) or 0)
         month_expenses = float(exp_agg['month_expenses'] or 0)
         last_month_expenses = float(exp_agg['last_month_expenses'] or 0)
 
         # --- Payments / Collections today / month / last month ---
-        pay_today_inv = Payment.objects.filter(invoice__business=biz, invoice__status='completed', customer_payment__isnull=True, created_at__date=today).aggregate(s=Sum('amount'))['s'] or 0
-        pay_today_cust = CustomerPayment.objects.filter(business=biz, created_at__date=today).aggregate(s=Sum('amount'))['s'] or 0
-        today_payments_total = float(pay_today_inv + pay_today_cust)
+        pay_target_inv = Payment.objects.filter(
+            invoice__business=biz, invoice__status='completed', customer_payment__isnull=True,
+            created_at__date__gte=target_start, created_at__date__lte=target_end
+        ).aggregate(s=Sum('amount'))['s'] or 0
+        pay_target_cust = CustomerPayment.objects.filter(
+            business=biz,
+            created_at__date__gte=target_start, created_at__date__lte=target_end
+        ).aggregate(s=Sum('amount'))['s'] or 0
+        today_payments_total = float(pay_target_inv + pay_target_cust)
 
         pay_month_inv = Payment.objects.filter(invoice__business=biz, invoice__status='completed', customer_payment__isnull=True, created_at__date__gte=month_start).aggregate(s=Sum('amount'))['s'] or 0
         pay_month_cust = CustomerPayment.objects.filter(business=biz, created_at__date__gte=month_start).aggregate(s=Sum('amount'))['s'] or 0
@@ -3374,7 +3435,7 @@ class DashboardView(APIView):
 
         customer_agg = Customer.objects.filter(business=biz).aggregate(
             total=Count('id'),
-            new_today=Count('id', filter=Q(created_at__date=today)),
+            new_today=Count('id', filter=Q(created_at__date__gte=target_start, created_at__date__lte=target_end)),
             pending_credit=Sum('outstanding_amount'),
         )
         total_customers = customer_agg['total'] or 0
@@ -3452,11 +3513,13 @@ class DashboardView(APIView):
             invoice__business=biz,
             invoice__status='completed',
             customer_payment__isnull=True,
-            created_at__date=today,
+            created_at__date__gte=target_start,
+            created_at__date__lte=target_end,
         ).values('method').annotate(total=Sum('amount'), count=Count('id'))
         today_customer_payments = CustomerPayment.objects.filter(
             business=biz,
-            created_at__date=today,
+            created_at__date__gte=target_start,
+            created_at__date__lte=target_end,
         ).values('method').annotate(total=Sum('amount'), count=Count('id'))
         payment_totals = {}
         for row in list(today_payments) + list(today_customer_payments):
@@ -3515,7 +3578,7 @@ class DashboardView(APIView):
 
         # --- Hourly sales (1 query instead of 12) ---
         hourly_raw = (
-            Invoice.objects.filter(business=biz, created_at__date=today, status='completed')
+            Invoice.objects.filter(business=biz, created_at__date__gte=target_start, created_at__date__lte=target_end, status='completed')
             .values('created_at__hour')
             .annotate(total=Sum('grand_total'))
         )
@@ -3551,14 +3614,36 @@ class DashboardView(APIView):
             'days_left': (batch['expiry_date'] - today).days,
         } for batch in near_expiry_batches]
 
-        recent_bills = Invoice.objects.filter(business=biz, status='completed').order_by('-created_at')[:10]
+        if is_filtered:
+            filtered_recent = Invoice.objects.filter(
+                business=biz, status='completed',
+                created_at__date__gte=target_start, created_at__date__lte=target_end
+            ).order_by('-created_at')[:10]
+            recent_bills = filtered_recent if filtered_recent.exists() else Invoice.objects.filter(business=biz, status='completed').order_by('-created_at')[:10]
+        else:
+            recent_bills = Invoice.objects.filter(business=biz, status='completed').order_by('-created_at')[:10]
 
         avg_bill_today = float(today_sales) / today_bills if today_bills else 0
         avg_bill_month = float(month_sales) / month_bills if month_bills else 0
         sales_growth = round(((float(month_sales) - float(last_month_sales)) / float(last_month_sales) * 100), 1) if last_month_sales else 0
         profit_margin = round((today_profit / float(today_sales) * 100), 1) if today_sales else 0
 
+        filter_label = (
+            'Today' if not is_filtered else
+            'Yesterday' if period == 'yesterday' else
+            'Last 7 Days' if period == '7days' else
+            'This Month' if period == 'this_month' else
+            'Previous Month' if period in ('prev_month', 'previous_month') else
+            f"{target_start.strftime('%d %b %Y')}" if target_start == target_end else
+            f"{target_start.strftime('%d %b')} - {target_end.strftime('%d %b %Y')}"
+        )
+
         return Response({
+            'is_filtered': is_filtered,
+            'filter_period': period,
+            'filter_start': str(target_start),
+            'filter_end': str(target_end),
+            'filter_label': filter_label,
             'today_sales': float(today_sales),
             'today_bills': today_bills,
             'today_profit': today_profit,

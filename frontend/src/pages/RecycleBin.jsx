@@ -3,6 +3,17 @@ import api from '../api'
 import { PageHeader, Spinner, Modal, SearchInput } from '../components/UI'
 import toast from 'react-hot-toast'
 import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '../utils/formatters'
+
+import {
   IconTrash,
   IconRotate2,
   IconShieldExclamation,
@@ -162,7 +173,7 @@ export default function RecycleBin() {
       </div>
 
       {/* Tabs & Search Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+      <div className="erp-filter-panel flex flex-col md:flex-row md:items-center justify-between gap-2.5">
         <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-sm no-scrollbar">
           <button
             onClick={() => setTab('invoices')}
@@ -245,13 +256,13 @@ export default function RecycleBin() {
                       {inv.invoice_number}
                     </span>
                     <span className="font-mono font-bold text-sm text-[var(--ink)]">
-                      ₹{Number(inv.grand_total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      {formatCurrency(inv.grand_total)}
                     </span>
                   </div>
                   <div className="text-xs text-[var(--ink)] flex items-center justify-between">
                     <span>{inv.customer__name || 'Walk-in Customer'}</span>
                     <span className="text-[11px] font-mono text-[var(--muted)]">
-                      {inv.cancelled_at ? new Date(inv.cancelled_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                      {inv.cancelled_at ? formatDate(inv.cancelled_at) : '—'}
                     </span>
                   </div>
                   {inv.cancel_reason && (
@@ -304,7 +315,7 @@ export default function RecycleBin() {
                       </td>
                       <td className="py-2.5 px-3 text-[var(--muted)] font-mono text-[11px]">
                         {inv.cancelled_at
-                          ? new Date(inv.cancelled_at).toLocaleString('en-IN', {
+                          ? formatDateTime(inv.cancelled_at, {
                               day: '2-digit',
                               month: 'short',
                               year: 'numeric',
@@ -320,7 +331,7 @@ export default function RecycleBin() {
                         <span className="italic font-medium text-rose-700 dark:text-rose-300">"{inv.cancel_reason || 'Reversed'}"</span>
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-semibold text-[var(--ink)]">
-                        ₹{Number(inv.grand_total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        {formatCurrency(inv.grand_total)}
                       </td>
                       <td className="py-2.5 px-3">
                         <span className="font-mono text-[var(--ink-secondary)] py-2.5 px-3">
@@ -352,12 +363,12 @@ export default function RecycleBin() {
                       {p.name}
                     </span>
                     <span className="font-mono font-bold text-sm text-[var(--ink)]">
-                      ₹{Number(p.selling_price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      {formatCurrency(p.selling_price)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-[var(--muted)] font-mono">
                     <span>SKU: {p.sku || '—'} · Stock: {p.current_stock}</span>
-                    <span>{p.updated_at ? new Date(p.updated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</span>
+                    <span>{p.updated_at ? formatDate(p.updated_at) : '—'}</span>
                   </div>
                   <div className="pt-1 flex justify-end gap-2">
                     <button
@@ -415,14 +426,14 @@ export default function RecycleBin() {
                         {p.barcode || '—'}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-semibold text-[var(--ink)]">
-                        ₹{Number(p.selling_price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        {formatCurrency(p.selling_price)}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono text-[var(--ink)]">
                         {p.current_stock}
                       </td>
                       <td className="py-2.5 px-3 text-[var(--muted)] text-[11px] font-mono">
                         {p.updated_at
-                          ? new Date(p.updated_at).toLocaleString('en-IN', {
+                          ? formatDateTime(p.updated_at, {
                               day: '2-digit',
                               month: 'short',
                               year: 'numeric',
@@ -472,13 +483,13 @@ export default function RecycleBin() {
                       {po.invoice_number}
                     </span>
                     <span className="font-mono font-bold text-sm text-[var(--ink)]">
-                      ₹{Number(po.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                      {formatCurrency(po.total_amount)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-xs text-[var(--ink)]">
                     <span>{po.supplier__name || 'Direct Supplier'}</span>
                     <span className="text-[11px] font-mono text-[var(--muted)]">
-                      {po.created_at ? new Date(po.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                      {po.created_at ? formatDate(po.created_at) : '—'}
                     </span>
                   </div>
                   {po.notes && (
@@ -528,7 +539,7 @@ export default function RecycleBin() {
                       </td>
                       <td className="py-2.5 px-3 text-[var(--muted)] font-mono text-[11px]">
                         {po.created_at
-                          ? new Date(po.created_at).toLocaleString('en-IN', {
+                          ? formatDateTime(po.created_at, {
                               day: '2-digit',
                               month: 'short',
                               year: 'numeric',
@@ -539,7 +550,7 @@ export default function RecycleBin() {
                         {po.notes || '—'}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-semibold text-[var(--ink)]">
-                        ₹{Number(po.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        {formatCurrency(po.total_amount)}
                       </td>
                       <td className="py-2.5 px-3">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-950/40 text-rose-300 border border-rose-800/50">

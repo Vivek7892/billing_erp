@@ -13,39 +13,27 @@ import {
 import toast from 'react-hot-toast'
 import { Modal } from './UI'
 import { invoiceService } from '../features/billing/api/invoiceService'
+import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '../utils/formatters'
+
 
 /**
  * Format currency amount with Indian rupee symbol and commas.
  */
-function formatCurrency(val) {
-  const num = Number(val || 0)
-  return `₹${num.toLocaleString('en-IN', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
-}
+/* formatCurrency imported from formatters */
 
 /**
  * Format ISO date string or Date to '24 Oct 2026'
  */
-function formatDate(dateVal) {
-  if (!dateVal) {
-    return new Date().toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    })
-  }
-  const d = new Date(dateVal)
-  if (isNaN(d.getTime())) {
-    return String(dateVal)
-  }
-  return d.toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  })
-}
+/* formatDate imported from formatters */
 
 /**
  * Clean phone digits to 10-digit or full national number

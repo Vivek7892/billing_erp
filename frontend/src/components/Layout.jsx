@@ -3,6 +3,17 @@ import SearchInput from './SearchInput'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import api from '../api'
+import {
+  formatCurrency,
+  formatNumber,
+  formatDecimal,
+  formatPercent,
+  formatQuantity,
+  formatDate,
+  formatDateTime,
+  formatTime,
+} from '../utils/formatters'
+
 import logoImg from '../assets/logo.png'
 import { ROLES } from '../constants'
 import {
@@ -293,25 +304,8 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, s
             </div>
             <div className="min-w-0 flex-1">
               <div className={`text-[11px] font-bold whitespace-nowrap leading-tight tracking-tight ${settingsMode ? 'text-[var(--ink)]' : 'text-white'}`}>{shopName}</div>
-              {shopId && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    navigator.clipboard.writeText(shopId)
-                    toast.success(`Copied Shop ID: ${shopId}`)
-                  }}
-                  title="Click to copy Shop ID"
-                  className={`inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wide transition-colors ${
-                    settingsMode
-                      ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
-                      : 'bg-white/10 text-blue-300 hover:bg-white/20 border border-white/15'
-                  }`}
-                >
-                  <span>{shopId}</span>
-                  <IconCopy size={10} className="opacity-70" />
-                </button>
-              )}
+              
+              
               {shopPhone && <div className={`mt-0.5 whitespace-normal break-words text-[10px] font-medium ${settingsMode ? 'text-[var(--muted)]' : 'text-slate-400'}`}>{shopPhone}</div>}
             </div>
             {!mobile && (
@@ -573,15 +567,7 @@ function notificationTypeLabel(type = '') {
   return type.replaceAll('_', ' ').replace(/\b\w/g, letter => letter.toUpperCase()) || 'Notification'
 }
 
-function notificationDateTime(isoString) {
-  if (!isoString) return 'Time unavailable'
-  const date = new Date(isoString)
-  if (Number.isNaN(date.getTime())) return 'Time unavailable'
-  return date.toLocaleString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', hour12: true,
-  })
-}
+function notificationDateTime(isoString) { return formatDateTime(isoString, { fallback: 'Time unavailable' }) }
 
 function NotificationBell() {
   const [open, setOpen] = useState(false)
@@ -1192,7 +1178,7 @@ function ProfileMenu({ user, shopId }) {
                         toast.success(`Copied Shop ID: ${id}`)
                       }}
                       title="Copy Shop ID"
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[10px] font-mono font-bold"
+                      className="inline-flex items-center gap-1 rounded-md border border-slate-200/80 dark:border-slate-800/80 bg-[var(--surface-elevated)] px-2 py-0.5 text-[9px] font-semibold text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] transition"
                     >
                       <span>{shopId || user?.business_shop_id}</span>
                       <IconCopy size={10} />
