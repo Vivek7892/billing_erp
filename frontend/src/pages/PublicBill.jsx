@@ -435,15 +435,7 @@ export default function PublicBill() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={shareWhatsApp}
-            className="inline-flex items-center gap-1.5 border border-neutral-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 transition active:scale-[0.99]"
-            title="Share on WhatsApp"
-          >
-            <IconBrandWhatsapp size={15} className="text-[#25D366]" />
-            <span>WhatsApp</span>
-          </button>
+   
 
           <button
             type="button"

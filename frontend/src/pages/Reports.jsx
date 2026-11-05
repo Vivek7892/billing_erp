@@ -340,6 +340,7 @@ export default function Reports() {
     start: getYearStart(),
     end: getToday(),
   })
+  const [filterOpen, setFilterOpen] = useState(false)
 
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -677,7 +678,7 @@ export default function Reports() {
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="btn-secondary h-9 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 shrink-0"
+              className="btn-secondary h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 shrink-0 rounded-lg shadow-2xs hover:bg-[var(--surface-hover)] transition cursor-pointer"
               title="Go back to previous page"
               aria-label="Go back"
             >
@@ -694,7 +695,7 @@ export default function Reports() {
             <button
               type="button"
               onClick={() => setMobileDrawerOpen(true)}
-              className="btn-secondary lg:hidden h-9 px-3 text-xs font-semibold inline-flex items-center gap-2 shrink-0"
+              className="btn-secondary lg:hidden h-8.5 px-3 text-xs font-semibold inline-flex items-center gap-2 shrink-0 rounded-lg cursor-pointer"
               aria-label="Open report navigator"
             >
               <IconFolder size={15} className="text-[#0057B8]" />
@@ -704,7 +705,7 @@ export default function Reports() {
               </span>
             </button>
 
-            <span className="hidden sm:inline-block text-xs font-mono px-2.5 py-1.5 rounded-md bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)]">
+            <span className="hidden sm:inline-block text-xs font-mono px-2.5 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)]">
               22 Reports • Indian Accounting Standard
             </span>
           </div>
@@ -716,9 +717,9 @@ export default function Reports() {
           LEFT: Category & Sub-Category Selector (Adjacent to Main Menu Bar)
           RIGHT: Selected Report Workspace
       ====================================================== */}
-      <div className="flex flex-col lg:flex-row items-start gap-5">
+      <div className="flex flex-col lg:flex-row items-start gap-4 sm:gap-5">
         {/* LEFT COLUMN: CATEGORIES & SUB-REPORTS NAVIGATOR (DESKTOP) */}
-        <aside className="hidden lg:flex flex-col w-72 shrink-0 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-2xs sticky top-4 max-h-[calc(100vh-6rem)]">
+        <aside className="hidden lg:flex flex-col w-72 shrink-0 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-2xs sticky top-4 max-h-[calc(100vh-6rem)] overflow-hidden">
           <div className="flex items-center gap-2 px-1 pb-2 mb-2 border-b border-[var(--line-subtle)] shrink-0">
             <IconFolder size={16} className="text-[#0057B8]" />
             <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
@@ -741,7 +742,7 @@ export default function Reports() {
         </aside>
 
         {/* RIGHT COLUMN: MAIN REPORT WORKSPACE */}
-        <div className="flex-1 min-w-0 w-full space-y-4">
+        <div className="flex-1 min-w-0 w-full space-y-3.5">
           {/* Active Report Header Card */}
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4 shadow-2xs">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -771,14 +772,36 @@ export default function Reports() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+              <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
+                {/* Compact Filter Toggle Button */}
+                {!isSnapshotReport && (
+                  <button
+                    type="button"
+                    onClick={() => setFilterOpen(v => !v)}
+                    className={`h-8.5 px-3 text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg border transition cursor-pointer ${
+                      filterOpen
+                        ? 'bg-[#0057B8] text-white border-[#0057B8] shadow-xs'
+                        : 'btn-secondary text-[var(--ink)]'
+                    }`}
+                    title="Toggle Date Filters"
+                    aria-expanded={filterOpen}
+                  >
+                    <IconFilter size={15} className={filterOpen ? 'text-white' : 'text-[#0057B8]'} />
+                    <span>Filter</span>
+                    <IconChevronDown
+                      size={13}
+                      className={`transition-transform duration-200 ${filterOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                )}
+
                 {/* Refresh Button */}
                 <button
                   type="button"
                   onClick={() => fetchReport(tab, appliedDates)}
                   disabled={loading}
                   title="Refresh Report Data"
-                  className="btn-secondary h-9 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 shrink-0"
+                  className="btn-secondary h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 shrink-0 rounded-lg cursor-pointer"
                 >
                   <IconRefresh size={15} className={loading ? 'animate-spin' : ''} />
                   <span className="hidden sm:inline">Refresh</span>
@@ -792,7 +815,7 @@ export default function Reports() {
                     disabled={Boolean(exporting) || loading}
                     aria-haspopup="menu"
                     aria-expanded={exportMenuOpen}
-                    className="btn-primary h-9 px-3.5 text-xs font-semibold inline-flex items-center gap-1.5 shrink-0 shadow-xs"
+                    className="btn-primary h-8.5 px-3.5 text-xs font-semibold inline-flex items-center gap-1.5 shrink-0 rounded-lg shadow-xs cursor-pointer"
                   >
                     <IconDownload size={15} />
                     <span>{exporting ? `Preparing ${exporting.toUpperCase()}…` : 'Export'}</span>
@@ -802,22 +825,22 @@ export default function Reports() {
                     <div
                       role="menu"
                       aria-label="Choose report export format"
-                      className="absolute right-0 top-full z-50 mt-1.5 min-w-48 overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1 shadow-lg"
+                      className="absolute right-0 top-full z-50 mt-1.5 min-w-52 overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1 shadow-lg animate-in fade-in zoom-in-95 duration-100"
                     >
                       <button
                         type="button"
                         role="menuitem"
                         onClick={() => { setExportMenuOpen(false); handleExport('pdf') }}
-                        className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-colors"
+                        className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
                       >
                         <IconFileTypePdf size={16} className="text-rose-600 dark:text-rose-400" />
-                        <span>Download PDF (A4)</span>
+                        <span>Download PDF (A4 Accounting)</span>
                       </button>
                       <button
                         type="button"
                         role="menuitem"
                         onClick={() => { setExportMenuOpen(false); handleExport('xlsx') }}
-                        className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-colors"
+                        className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
                       >
                         <IconFileTypeXls size={16} className="text-emerald-600 dark:text-emerald-400" />
                         <span>Download Excel (.xlsx)</span>
@@ -826,7 +849,7 @@ export default function Reports() {
                         type="button"
                         role="menuitem"
                         onClick={() => { setExportMenuOpen(false); handleExport('csv') }}
-                        className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-colors"
+                        className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
                       >
                         <IconFileSpreadsheet size={16} className="text-sky-600 dark:text-sky-400" />
                         <span>Download CSV</span>
@@ -854,99 +877,144 @@ export default function Reports() {
               </div>
             </div>
           ) : (
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-2xs">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                {/* Filter Controls */}
-                <div className="flex flex-wrap items-center gap-2">
-                  {/* Preset Selector */}
-                  <div className="flex items-center gap-1.5">
-                    <IconCalendar size={15} className="text-[var(--muted)] shrink-0" />
-                    <select
-                      value={datePreset}
-                      onChange={e => {
-                        const val = e.target.value
-                        if (val === 'custom') {
-                          setDatePreset('custom')
-                        } else {
-                          const found = DATE_PRESETS.find(p => p.key === val)
-                          if (found) applyPreset(found)
-                        }
-                      }}
-                      className="h-9 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-medium text-[var(--ink)] focus:outline-none focus:border-[#0057B8] transition cursor-pointer"
-                      aria-label="Select date range"
-                    >
-                      {DATE_PRESETS.map(p => (
-                        <option key={p.key} value={p.key}>
-                          {p.label}
-                        </option>
-                      ))}
-                      <option value="custom">Custom Range</option>
-                    </select>
+            <div className="space-y-2.5">
+              {/* Active Reporting Period Pill Bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3.5 py-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-xs shadow-2xs">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5 text-[var(--muted)]">
+                    <IconCalendar size={14} className="text-[#0057B8]" />
+                    <span className="font-medium text-[var(--ink)]">Reporting Period:</span>
                   </div>
-
-                  {/* From Date */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-[var(--muted)] font-medium">From:</span>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={e => {
-                        setStartDate(e.target.value)
-                        setDatePreset('custom')
-                      }}
-                      className="h-9 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-mono text-[var(--ink)] focus:outline-none focus:border-[#0057B8] transition"
-                      aria-label="Start date"
-                    />
-                  </div>
-
-                  {/* To Date */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-[var(--muted)] font-medium">To:</span>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={e => {
-                        setEndDate(e.target.value)
-                        setDatePreset('custom')
-                      }}
-                      className="h-9 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-mono text-[var(--ink)] focus:outline-none focus:border-[#0057B8] transition"
-                      aria-label="End date"
-                    />
-                  </div>
-
-                  {/* Buttons */}
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={handleApplyFilters}
-                      disabled={isDateInvalid || loading}
-                      className="btn-primary h-9 px-3.5 text-xs font-semibold inline-flex items-center gap-1.5 shrink-0 shadow-xs"
-                    >
-                      <IconFilter size={14} />
-                      <span>Apply</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleResetFilters}
-                      disabled={loading}
-                      className="btn-secondary h-9 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 shrink-0"
-                      title="Reset to current financial year"
-                    >
-                      <IconRefresh size={14} className={loading ? 'animate-spin' : ''} />
-                      <span>Reset</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Applied Date Range Info */}
-                <div className="flex items-center gap-1.5 text-xs text-[var(--muted)] shrink-0 pt-1 lg:pt-0 border-t border-[var(--line-subtle)] lg:border-t-0">
-                  <span>Period:</span>
-                  <span className="font-mono font-medium text-[var(--ink)] bg-[var(--surface-elevated)] px-2 py-0.5 rounded border border-[var(--line-subtle)] text-[11px]">
-                    {formatDate(appliedDates.start)} to {formatDate(appliedDates.end)}
+                  <span className="font-mono font-semibold text-[var(--ink)] bg-[var(--surface-elevated)] px-2 py-0.5 rounded border border-[var(--line-subtle)] text-xs">
+                    {formatDate(appliedDates.start)} — {formatDate(appliedDates.end)}
+                  </span>
+                  <span className="text-[10px] font-sans font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[#0057B8]/10 text-[#0057B8]">
+                    {DATE_PRESETS.find(p => p.key === datePreset)?.label || 'Custom Period'}
                   </span>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setFilterOpen(v => !v)}
+                  className="text-xs font-semibold text-[#0057B8] hover:underline inline-flex items-center gap-1 self-start sm:self-auto cursor-pointer"
+                >
+                  <IconFilter size={13} />
+                  <span>{filterOpen ? 'Hide Filters' : 'Change Period / Custom Dates'}</span>
+                </button>
               </div>
+
+              {/* Expandable Filter Panel */}
+              {filterOpen && (
+                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-150 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-[var(--line-subtle)]">
+                    <div className="flex items-center gap-2">
+                      <IconFilter size={15} className="text-[#0057B8]" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+                        Date Range &amp; Presets
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFilterOpen(false)}
+                      className="text-[var(--muted)] hover:text-[var(--ink)] p-1 rounded-md hover:bg-[var(--surface-hover)] transition cursor-pointer"
+                      aria-label="Close filter panel"
+                    >
+                      <IconX size={15} />
+                    </button>
+                  </div>
+
+                  {/* Preset Quick Chips */}
+                  <div>
+                    <span className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider block mb-1.5">
+                      Quick Presets
+                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {DATE_PRESETS.map(p => {
+                        const isSelected = datePreset === p.key
+                        return (
+                          <button
+                            key={p.key}
+                            type="button"
+                            onClick={() => applyPreset(p)}
+                            className={`h-7 px-3 text-xs font-medium rounded-md transition cursor-pointer ${
+                              isSelected
+                                ? 'bg-[#0057B8] text-white font-semibold shadow-2xs'
+                                : 'bg-[var(--surface-elevated)] text-[var(--ink)] hover:bg-[var(--surface-hover)] border border-[var(--line-subtle)]'
+                            }`}
+                          >
+                            {p.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Date Inputs & Apply/Reset Actions */}
+                  <div className="pt-2 border-t border-[var(--line-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-medium text-[var(--muted)]">From:</label>
+                        <input
+                          type="date"
+                          value={startDate}
+                          onChange={e => {
+                            setStartDate(e.target.value)
+                            setDatePreset('custom')
+                          }}
+                          className="h-8.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-mono text-[var(--ink)] focus:outline-none focus:border-[#0057B8] transition"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-medium text-[var(--muted)]">To:</label>
+                        <input
+                          type="date"
+                          value={endDate}
+                          onChange={e => {
+                            setEndDate(e.target.value)
+                            setDatePreset('custom')
+                          }}
+                          className="h-8.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-mono text-[var(--ink)] focus:outline-none focus:border-[#0057B8] transition"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleApplyFilters()
+                          setFilterOpen(false)
+                        }}
+                        disabled={isDateInvalid || loading}
+                        className="btn-primary h-8.5 px-3.5 text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg shadow-xs cursor-pointer"
+                      >
+                        <IconFilter size={14} />
+                        <span>Apply</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleResetFilters()
+                          setFilterOpen(false)
+                        }}
+                        disabled={loading}
+                        className="btn-secondary h-8.5 px-3 text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg cursor-pointer"
+                        title="Reset to current financial year"
+                      >
+                        <IconRefresh size={14} className={loading ? 'animate-spin' : ''} />
+                        <span>Reset</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {isDateInvalid && (
+                    <p className="text-xs text-rose-600 font-medium">
+                      Start date cannot be after end date.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
