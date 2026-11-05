@@ -454,9 +454,9 @@ const isNumericCol = h => {
 }
 
 const isUserOrPartyCol = (c, r) => {
-  const label = String(c.label || '').toLowerCase()
-  const key = String(c.key || '').toLowerCase()
-  return (
+  const label = String(c?.label || '').toLowerCase()
+  const key = String(c?.key || '').toLowerCase()
+  const isParty =
     label.includes('customer') ||
     label.includes('party') ||
     label.includes('supplier') ||
@@ -468,9 +468,8 @@ const isUserOrPartyCol = (c, r) => {
     key.includes('customer') ||
     key.includes('party') ||
     key.includes('supplier') ||
-    key.includes('user') ||
-    Boolean(r.mobile || r.phone || r.gstin)
-  )
+    key.includes('user')
+  return Boolean(isParty && r)
 }
 
 const STATUS_TONE = {
@@ -1323,7 +1322,11 @@ export default function Reports() {
                     aria-label="To date"
                     className="h-9 rounded-md border border-[var(--line)] bg-transparent px-2.5 font-mono text-xs outline-none focus:border-[#0057B8]"
                   />
-                  <button type="button" onClick={handleApplyCustomDates} className={btn}>
+                  <button
+                    type="button"
+                    onClick={handleApplyCustomDates}
+                    className="inline-flex h-9 items-center rounded-md border border-[var(--line)] px-3 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] cursor-pointer transition-colors"
+                  >
                     Apply
                   </button>
                 </div>
