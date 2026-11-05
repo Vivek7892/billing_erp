@@ -280,17 +280,68 @@ const gstRows = [
 
 const sum = (rows, k) => (Array.isArray(rows) ? rows.reduce((s, r) => s + (Number(r[k]) || 0), 0) : 0)
 
+// Dynamic real metrics computed directly from datasets
+const salesTotal = sum(salesRows, 'total')
+const salesTaxable = sum(salesRows, 'taxable')
+const salesGst = sum(salesRows, 'gst')
+const salesCollected = salesRows.filter(r => r.status === 'Paid').reduce((s, r) => s + r.total, 0)
+const salesOutstanding = Math.max(0, salesTotal - salesCollected)
+const salesModeSums = {}
+salesRows.forEach(r => {
+  salesModeSums[r.mode] = (salesModeSums[r.mode] || 0) + r.total
+})
+const salesModeBreakdown = Object.entries(salesModeSums)
+  .sort((a, b) => b[1] - a[1])
+  .map(([mode, amt]) => [mode, Math.round((amt / (salesTotal || 1)) * 100), amt])
+
+const purchaseTotal = sum(purchaseRows, 'amount')
+const purchasePaid = sum(purchaseRows, 'paid')
+const purchaseDue = sum(purchaseRows, 'due')
+const purchaseSupplierSums = {}
+purchaseRows.forEach(r => {
+  purchaseSupplierSums[r.supplier] = (purchaseSupplierSums[r.supplier] || 0) + r.amount
+})
+const purchaseBreakdown = Object.entries(purchaseSupplierSums)
+  .sort((a, b) => b[1] - a[1])
+  .map(([sup, amt]) => [sup, Math.round((amt / (purchaseTotal || 1)) * 100), amt])
+
+const stockValuation = sum(stockRows, 'valuation')
+const lowStockCount = stockRows.filter(r => r.status === 'Low').length
+const outStockCount = stockRows.filter(r => r.status === 'Out of stock').length
+const stockCatSums = {}
+stockRows.forEach(r => {
+  stockCatSums[r.category] = (stockCatSums[r.category] || 0) + r.valuation
+})
+const stockBreakdown = Object.entries(stockCatSums)
+  .sort((a, b) => b[1] - a[1])
+  .map(([cat, amt]) => [cat, Math.round((amt / (stockValuation || 1)) * 100), amt])
+
+const bookCredit = sum(bookRows, 'credit')
+const bookDebit = sum(bookRows, 'debit')
+const bookClosing = bookRows[bookRows.length - 1]?.balance || 0
+const bookModeSums = {}
+bookRows.forEach(r => {
+  bookModeSums[r.mode] = (bookModeSums[r.mode] || 0) + (r.credit || r.debit || 0)
+})
+const bookTotal = bookCredit + bookDebit || 1
+const bookModeBreakdown = Object.entries(bookModeSums)
+  .sort((a, b) => b[1] - a[1])
+  .map(([mode, amt]) => [mode, Math.round((amt / bookTotal) * 100), amt])
+
+const ledgerTotal = sum(ledgerRows, 'outstanding')
+const ledgerOverdue = ledgerRows.filter(r => r.status === 'Overdue' || r.status === 'Due').reduce((s, r) => s + r.outstanding, 0)
+
 const FALLBACK_DATASETS = {
   sales: {
     kpis: [
-      { label: 'Net Sales', value: inr(sum(salesRows, 'total') * 6), delta: 12.4 },
-      { label: 'Collections', value: inr(sum(salesRows, 'total') * 5), delta: 9.1 },
-      { label: 'Outstanding', value: inr(184250), delta: -3.2, invert: true },
-      { label: 'Invoices', value: num(412), delta: 6.8 },
+      { label: 'Net Sales', value: inr(salesTotal), delta: 12.4 },
+      { label: 'Collections', value: inr(salesCollected), delta: 9.1 },
+      { label: 'Outstanding', value: inr(salesOutstanding), delta: -3.2, invert: true },
+      { label: 'Invoices', value: num(salesRows.length), delta: 6.8 },
     ],
     chartTitle: 'Revenue vs collections',
     breakdownTitle: 'Collections by payment mode',
-    breakdown: [['UPI', 46], ['Cash', 31], ['Card', 15], ['Bank', 8]],
+    breakdown: salesModeBreakdown,
     columns: [
       { key: 'invoice', label: 'Invoice' },
       { key: 'date', label: 'Date' },
@@ -306,14 +357,14 @@ const FALLBACK_DATASETS = {
   },
   purchases: {
     kpis: [
-      { label: 'Total Purchases', value: inr(sum(purchaseRows, 'amount')), delta: 4.2 },
-      { label: 'Paid to Suppliers', value: inr(sum(purchaseRows, 'paid')), delta: 5.9 },
-      { label: 'Payables', value: inr(sum(purchaseRows, 'due')), delta: 8.1, invert: true },
-      { label: 'Bills', value: num(purchaseRows.length * 4), delta: 2.0 },
+      { label: 'Total Purchases', value: inr(purchaseTotal), delta: 4.2 },
+      { label: 'Paid to Suppliers', value: inr(purchasePaid), delta: 5.9 },
+      { label: 'Payables', value: inr(purchaseDue), delta: 8.1, invert: true },
+      { label: 'Bills', value: num(purchaseRows.length), delta: 2.0 },
     ],
     chartTitle: 'Purchases vs payments',
     breakdownTitle: 'Spend by supplier',
-    breakdown: [['Hindustan Distributors', 34], ['Sai Wholesale', 24], ['Karnataka Agro', 18], ['Metro Traders', 14], ['Others', 10]],
+    breakdown: purchaseBreakdown,
     columns: [
       { key: 'bill', label: 'Bill No.' },
       { key: 'date', label: 'Date' },
@@ -328,14 +379,14 @@ const FALLBACK_DATASETS = {
   },
   inventory: {
     kpis: [
-      { label: 'Stock Valuation', value: inr(sum(stockRows, 'valuation') * 3), delta: 3.5 },
-      { label: 'SKUs Tracked', value: num(stockRows.length * 14), delta: 1.2 },
-      { label: 'Low Stock', value: '23', delta: 14.0, invert: true },
-      { label: 'Out of Stock', value: '7', delta: -12.5, invert: true },
+      { label: 'Stock Valuation', value: inr(stockValuation), delta: 3.5 },
+      { label: 'SKUs Tracked', value: num(stockRows.length), delta: 1.2 },
+      { label: 'Low Stock', value: num(lowStockCount), delta: 14.0, invert: true },
+      { label: 'Out of Stock', value: num(outStockCount), delta: -12.5, invert: true },
     ],
     chartTitle: 'Stock valuation trend',
     breakdownTitle: 'Valuation by category',
-    breakdown: [['Staples', 38], ['Grocery', 27], ['Beverages', 15], ['Snacks', 12], ['Household', 8]],
+    breakdown: stockBreakdown,
     columns: [
       { key: 'sku', label: 'SKU' },
       { key: 'item', label: 'Item' },
@@ -350,14 +401,14 @@ const FALLBACK_DATASETS = {
   },
   books: {
     kpis: [
-      { label: 'Total Receipts', value: inr(sum(bookRows, 'credit') * 4), delta: 7.7 },
-      { label: 'Total Payments', value: inr(sum(bookRows, 'debit') * 4), delta: 3.1, invert: true },
-      { label: 'Closing Balance', value: inr(bookRows[bookRows.length - 1].balance), delta: 5.4 },
-      { label: 'Vouchers', value: num(bookRows.length * 9), delta: 4.6 },
+      { label: 'Total Receipts', value: inr(bookCredit), delta: 7.7 },
+      { label: 'Total Payments', value: inr(bookDebit), delta: 3.1, invert: true },
+      { label: 'Closing Balance', value: inr(bookClosing), delta: 5.4 },
+      { label: 'Vouchers', value: num(bookRows.length), delta: 4.6 },
     ],
     chartTitle: 'Cash inflow vs outflow',
     breakdownTitle: 'Transactions by mode',
-    breakdown: [['UPI', 42], ['Cash', 35], ['Bank', 15], ['Card', 8]],
+    breakdown: bookModeBreakdown,
     columns: [
       { key: 'date', label: 'Date' },
       { key: 'voucher', label: 'Voucher' },
@@ -372,10 +423,10 @@ const FALLBACK_DATASETS = {
   },
   ledgers: {
     kpis: [
-      { label: 'Total Outstanding', value: inr(sum(ledgerRows, 'outstanding')), delta: -2.8, invert: true },
+      { label: 'Total Outstanding', value: inr(ledgerTotal), delta: -2.8, invert: true },
       { label: 'Debtor Accounts', value: num(ledgerRows.length), delta: 6.7 },
-      { label: 'Overdue > 60 days', value: inr(96400), delta: 11.2, invert: true },
-      { label: 'Avg. Collection Days', value: '27', delta: -4.0, invert: true },
+      { label: 'Overdue Balances', value: inr(ledgerOverdue), delta: 11.2, invert: true },
+      { label: 'Avg. Collection Days', value: '24', delta: -4.0, invert: true },
     ],
     chartTitle: 'Outstanding balance trend',
     breakdownTitle: 'Receivables aging',
@@ -555,15 +606,21 @@ function Nav({ activeKey, onSelect }) {
 }
 
 function Breakdown({ title, items }) {
+  if (!items || items.length === 0) return null
   return (
     <div>
       <h3 className="text-sm font-semibold">{title}</h3>
       <ul className="mt-4 space-y-3.5">
-        {items.map(([label, pct]) => (
+        {items.map(([label, pct, amt]) => (
           <li key={label}>
             <div className="mb-1 flex items-baseline justify-between text-[13px]">
-              <span className="truncate pr-2">{label}</span>
-              <span className="font-mono tabular-nums text-[var(--muted)] shrink-0">{pct}%</span>
+              <span className="truncate pr-2 font-medium">{label}</span>
+              <div className="flex items-center gap-1.5 font-mono tabular-nums text-xs">
+                {amt !== undefined && amt !== null && (
+                  <span className="font-semibold text-[var(--ink)]">{inr(amt)}</span>
+                )}
+                <span className="text-[var(--muted)]">({pct}%)</span>
+              </div>
             </div>
             <div className="h-1.5 w-full rounded-full bg-[var(--line-subtle,rgba(100,116,139,0.15))]">
               <div className="h-1.5 rounded-full bg-[#0057B8]" style={{ width: `${Math.min(pct, 100)}%` }} />
@@ -963,32 +1020,79 @@ export default function Reports() {
       ]
     }
 
-    // Chart trend mapping
+    // Chart trend mapping: use actual revenue and real collections
     let chartData = DEFAULT_TREND
     if (Array.isArray(backendData.daily) && backendData.daily.length > 0) {
       chartData = backendData.daily.map(d => {
         if (Array.isArray(d)) {
+          const rev = Number(d[2] || 0)
+          const col = d[3] !== undefined ? Number(d[3] || 0) : rev
           return {
             label: d[0] || '—',
-            revenue: Number(d[2] || 0),
-            collections: Math.round(Number(d[2] || 0) * 0.85),
+            revenue: rev,
+            collections: col,
           }
         }
         const rev = Number(d.total || d.total_sales || 0)
+        const col = Number(d.collection ?? d.collections ?? d.paid ?? rev)
         return {
           label: d.date || d.created_at__date || '—',
           revenue: rev,
-          collections: Math.round(rev * 0.85),
+          collections: col,
         }
       })
     }
 
-    // Breakdown mapping
-    let breakdown = fallback.breakdown
+    // Dynamic Breakdown mapping: real collections by payment mode
+    let breakdown = []
     if (Array.isArray(backendData.by_mode) && backendData.by_mode.length > 0) {
-      breakdown = backendData.by_mode.map(m => [m.mode || m[0], Number(m.share || m[1] || 25)])
+      breakdown = backendData.by_mode.map(m => [
+        m.mode || m[0],
+        Number(m.share || m[1] || 0),
+        Number(m.total || m[2] || 0),
+      ])
+    } else if (Array.isArray(backendData.methods) && backendData.methods.length > 0) {
+      breakdown = backendData.methods.map(m => [
+        m.method,
+        Number(m.share_pct || 0),
+        Number(m.total || 0),
+      ])
     } else if (Array.isArray(backendData.rates) && backendData.rates.length > 0) {
-      breakdown = backendData.rates.map(r => [`${r.gst_percent || 0}% GST`, Math.round(Number(r.taxable || 0) / 1000)])
+      const totalTax = backendData.rates.reduce((acc, r) => acc + Number(r.taxable || 0), 0) || 1
+      breakdown = backendData.rates.map(r => [
+        `${r.gst_percent || 0}% GST`,
+        Math.round((Number(r.taxable || 0) / totalTax) * 100),
+        Number(r.taxable || 0),
+      ])
+    } else {
+      // Dynamically compute real payment mode sums from active rows
+      const modeCol = columns.find(c => {
+        const l = (c.label || '').toLowerCase()
+        const k = (c.key || '').toLowerCase()
+        return l.includes('mode') || l.includes('method') || l.includes('channel') || k === 'mode'
+      })
+      const amountCol = columns.find(c => c.money || c.total || c.key === 'total' || c.key === 'amount')
+
+      if (modeCol && rows.length > 0) {
+        const modeSums = {}
+        let totalVal = 0
+        rows.forEach(r => {
+          const m = String(r[modeCol.key] || 'Other').trim()
+          const amt = Number(amountCol ? r[amountCol.key] : 0) || 0
+          modeSums[m] = (modeSums[m] || 0) + amt
+          totalVal += amt
+        })
+        const totalBase = totalVal || 1
+        breakdown = Object.entries(modeSums)
+          .sort((a, b) => b[1] - a[1])
+          .map(([mode, amt]) => [
+            mode,
+            Math.round((amt / totalBase) * 100),
+            amt,
+          ])
+      } else {
+        breakdown = fallback.breakdown || []
+      }
     }
 
     return {

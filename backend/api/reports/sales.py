@@ -52,7 +52,31 @@ def build(business, params):
         {'created_at__date': str(row['created_at__date']), 'total': float(row['total'] or 0), 'count': int(row['count'] or 0)}
         for row in daily
     ]
-    payload = {'summary': float_summary, 'daily': daily_serializable}
+
+    # Real collections by payment mode
+    from .payment import METHOD_LABELS
+    payment_methods_qs = list(
+        Payment.objects.filter(
+            invoice__business=business,
+            invoice__status='completed',
+            customer_payment__isnull=True,
+            created_at__date__gte=start,
+            created_at__date__lte=end,
+        ).values('method').annotate(
+            total=Sum('amount'),
+            count=Count('id'),
+        ).order_by('-total')
+    )
+    tot_collected = float(collection) or 1.0
+    by_mode = []
+    for pm in payment_methods_qs:
+        raw_m = str(pm['method'] or '').lower()
+        m_name = METHOD_LABELS.get(raw_m, raw_m.replace('_', ' ').title() if raw_m else 'Other')
+        m_amt = float(pm['total'] or 0)
+        pct = round((m_amt / tot_collected) * 100, 1) if tot_collected > 0 else 0
+        by_mode.append({'mode': m_name, 'share': pct, 'total': m_amt})
+
+    payload = {'summary': float_summary, 'daily': daily_serializable, 'by_mode': by_mode}
     rows = [[row['created_at__date'], int(row['count'] or 0), float(row['total'] or 0)] for row in daily_serializable]
     summary_rows = [
         ('Gross Invoiced Sales', float_summary['gross_sales']),
