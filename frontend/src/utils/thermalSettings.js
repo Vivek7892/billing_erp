@@ -10,7 +10,9 @@ export function parseBooleanSetting(val, defaultVal = false) {
   if (val === undefined || val === null || val === '') return defaultVal
   if (typeof val === 'boolean') return val
   const str = String(val).trim().toLowerCase()
-  return str === 'true' || str === '1' || str === 'yes'
+  if (str === 'true' || str === '1' || str === 'yes' || str === 'on') return true
+  if (str === 'false' || str === '0' || str === 'no' || str === 'off') return false
+  return defaultVal
 }
 
 export function isValidUpiId(upiId) {
@@ -58,38 +60,47 @@ export function normalizeThermalSettings(rawSettings = {}, invoice = null) {
   const widthRaw = String(s.thermal_paper_width || s.printer_paper_width || '').trim().toLowerCase()
   const width = (widthRaw === '58' || widthRaw === '2' || widthRaw === '58mm') ? 58 : 80
 
-  // 2. Precedence fallbacks with retail defaults
-  const showLogo = parseBooleanSetting(s.thermal_show_logo, parseBooleanSetting(s.show_business_logo, true))
+  // 2. Store identity toggles
+  const showShopDetails = parseBooleanSetting(s.show_shop_details, parseBooleanSetting(s.show_business_info, true))
+  const showBusinessName = showShopDetails && parseBooleanSetting(s.show_business_name, parseBooleanSetting(s.show_shop_name, true))
+  const showBusinessAddress = showShopDetails && parseBooleanSetting(s.show_business_address, true)
+  const showBusinessPhone = showShopDetails && parseBooleanSetting(s.show_business_phone, true)
+  const showBusinessEmail = showShopDetails && parseBooleanSetting(s.show_business_email, false)
+  const showBusinessGstin = showShopDetails && parseBooleanSetting(s.show_business_gstin, true)
+  const showLogo = showShopDetails && parseBooleanSetting(s.thermal_show_logo, parseBooleanSetting(s.show_business_logo, true))
+
+  // 3. Invoice Controls
   const showInvoiceNo = parseBooleanSetting(s.thermal_show_invoice_no, true)
   const showDate = parseBooleanSetting(s.thermal_show_date, true)
   const showTime = parseBooleanSetting(s.thermal_show_time, parseBooleanSetting(s.show_invoice_time, true))
   const showCashier = parseBooleanSetting(s.thermal_show_cashier, false)
   const showPaymentMode = parseBooleanSetting(s.thermal_show_payment_mode, parseBooleanSetting(s.show_payment_mode, true))
-  const showPlaceOfSupply = parseBooleanSetting(s.thermal_show_place_of_supply, false)
+  const showPlaceOfSupply = parseBooleanSetting(s.thermal_show_place_of_supply, parseBooleanSetting(s.show_place_of_supply, false))
 
-  // Customer / Party
-  const showCustomerName = parseBooleanSetting(s.thermal_show_customer_name, true)
-  const showCustomerPhone = parseBooleanSetting(s.thermal_show_customer_phone, false)
-  const showCustomerGstin = parseBooleanSetting(s.thermal_show_customer_gstin, false)
-  const showCustomerAddress = parseBooleanSetting(s.thermal_show_customer_address, false)
+  // 4. Customer / Party
+  const showCustomerName = parseBooleanSetting(s.thermal_show_customer_name, parseBooleanSetting(s.show_customer_name, true))
+  const showCustomerPhone = parseBooleanSetting(s.thermal_show_customer_phone, parseBooleanSetting(s.show_customer_phone, false))
+  const showCustomerGstin = parseBooleanSetting(s.thermal_show_customer_gstin, parseBooleanSetting(s.show_customer_gstin, false))
+  const showCustomerAddress = parseBooleanSetting(s.thermal_show_customer_address, parseBooleanSetting(s.show_customer_address, false))
 
-  // Items
-  const showSku = parseBooleanSetting(s.thermal_show_sku, false)
-  const showBarcode = parseBooleanSetting(s.thermal_show_barcode, false)
-  const showQty = parseBooleanSetting(s.thermal_show_qty, true)
-  const showRate = parseBooleanSetting(s.thermal_show_rate, true)
-  const showTotal = parseBooleanSetting(s.thermal_show_total, true)
-  const showDiscount = parseBooleanSetting(s.thermal_show_discount, false)
-  const showTax = parseBooleanSetting(s.thermal_show_tax, false)
-  const showBatch = parseBooleanSetting(s.thermal_show_batch, false)
-  const showExpiry = parseBooleanSetting(s.thermal_show_expiry, false)
-  const showMrp = parseBooleanSetting(s.thermal_show_mrp, false)
-  const showItemDesc = parseBooleanSetting(s.thermal_show_item_desc, false)
+  // 5. Items
+  const showSku = parseBooleanSetting(s.thermal_show_sku, parseBooleanSetting(s.show_sku_col, false))
+  const showBarcode = parseBooleanSetting(s.thermal_show_barcode, parseBooleanSetting(s.show_barcode_col, false))
+  const showQty = parseBooleanSetting(s.thermal_show_qty, parseBooleanSetting(s.show_qty_col, true))
+  const showRate = parseBooleanSetting(s.thermal_show_rate, parseBooleanSetting(s.show_rate_col, true))
+  const showTotal = parseBooleanSetting(s.thermal_show_total, parseBooleanSetting(s.show_total_col, true))
+  const showDiscount = parseBooleanSetting(s.thermal_show_discount, parseBooleanSetting(s.show_discount_col, false))
+  const showTax = parseBooleanSetting(s.thermal_show_tax, parseBooleanSetting(s.show_tax_cols, false))
+  const showBatch = parseBooleanSetting(s.thermal_show_batch, parseBooleanSetting(s.show_batch_col, false))
+  const showExpiry = parseBooleanSetting(s.thermal_show_expiry, parseBooleanSetting(s.show_expiry_col, false))
+  const showMrp = parseBooleanSetting(s.thermal_show_mrp, parseBooleanSetting(s.show_mrp_col, parseBooleanSetting(s.show_price_history, false)))
+  const showItemDesc = parseBooleanSetting(s.thermal_show_item_desc, parseBooleanSetting(s.show_item_description, false))
 
-  // Totals & Settlement
-  const showPartyBalance = parseBooleanSetting(s.thermal_show_party_balance, false)
+  // 6. Totals & Settlement
+  const showSubtotal = parseBooleanSetting(s.show_subtotal, true)
+  const showPartyBalance = parseBooleanSetting(s.thermal_show_party_balance, parseBooleanSetting(s.show_balance_due, false))
 
-  // UPI QR
+  // 7. UPI QR
   const upiId = (s.shop_upi_id || '').trim()
   const upiMerchantName = (s.upi_merchant_name || s.shop_name || '').trim()
   const upiConfigured = Boolean(upiId)
@@ -99,8 +110,11 @@ export function normalizeThermalSettings(rawSettings = {}, invoice = null) {
     parseBooleanSetting(s.show_upi_qr_on_thermal, parseBooleanSetting(s.upi_qr_enabled, true))
   )
 
-  // Digital Bill QR
-  const showBillQr = parseBooleanSetting(s.thermal_show_bill_qr, false)
+  // 8. Digital Bill QR
+  const showBillQr = parseBooleanSetting(
+    s.thermal_show_bill_qr,
+    parseBooleanSetting(s.show_bill_qr_on_thermal, false)
+  )
   const shareDomain = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PUBLIC_SHARE_URL) || (typeof window !== 'undefined' ? window.location.origin : '')
   let digitalBillUrl = ''
   if (inv.short_url) {
@@ -111,9 +125,10 @@ export function normalizeThermalSettings(rawSettings = {}, invoice = null) {
     digitalBillUrl = `${shareDomain}/b/${inv.id}`
   }
 
-  // Terms & Footer
-  const showTerms = parseBooleanSetting(s.thermal_show_terms, false)
+  // 9. Terms & Footer
+  const showTerms = parseBooleanSetting(s.thermal_show_terms, parseBooleanSetting(s.show_terms, false))
   const termsText = (s.thermal_terms || s.invoice_terms || '').trim()
+  const showFooter = parseBooleanSetting(s.thermal_show_footer, parseBooleanSetting(s.show_footer, true))
   const footerText = (s.receipt_footer || 'Thank you for shopping with us!\nVisit Again!').trim()
 
   return {
@@ -121,8 +136,15 @@ export function normalizeThermalSettings(rawSettings = {}, invoice = null) {
     is58mm: width === 58,
     is80mm: width === 80,
 
-    title: (s.thermal_title || 'TAX INVOICE').trim(),
+    title: (s.thermal_title || s.invoice_title || 'TAX INVOICE').trim(),
+    showShopDetails,
+    showBusinessName,
+    showBusinessAddress,
+    showBusinessPhone,
+    showBusinessEmail,
+    showBusinessGstin,
     showLogo,
+
     showInvoiceNo,
     showDate,
     showTime,
@@ -147,6 +169,7 @@ export function normalizeThermalSettings(rawSettings = {}, invoice = null) {
     showMrp,
     showItemDesc,
 
+    showSubtotal,
     showPartyBalance,
 
     showUpiQrToggle,
@@ -161,6 +184,7 @@ export function normalizeThermalSettings(rawSettings = {}, invoice = null) {
 
     showTerms,
     termsText,
+    showFooter,
     footerText,
 
     openCashDrawer: parseBooleanSetting(s.open_cash_drawer, false),
@@ -177,4 +201,3 @@ export function normalizeThermalSettings(rawSettings = {}, invoice = null) {
     upiMerchantName,
   }
 }
-

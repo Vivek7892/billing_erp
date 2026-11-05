@@ -20,7 +20,7 @@ class RegistrationAndAuthTests(TestCase):
     def test_successful_registration(self):
         payload = {
             'full_name': 'Ramesh Kumar',
-            'username': 'ramesh_store',
+            'business_name': 'Ramesh Store',
             'email': 'ramesh@example.com',
             'phone': '9876543210',
             'password': 'SecurePassword123',
@@ -29,41 +29,39 @@ class RegistrationAndAuthTests(TestCase):
         }
         response = self.client.post('/api/auth/register/', payload, format='json')
         self.assertEqual(response.status_code, 201)
-        self.assertFalse(response.data['require_verification'])
+        self.assertFalse(response.data.get('require_verification', False))
         self.assertIn('access', response.data)
         self.assertIn('refresh', response.data)
-        self.assertEqual(response.data['user']['username'], 'ramesh_store')
         self.assertEqual(response.data['user']['role'], 'owner')
         self.assertEqual(response.data['user']['first_name'], 'Ramesh')
         self.assertEqual(response.data['user']['last_name'], 'Kumar')
         self.assertFalse(response.data['user']['onboarding_completed'])
 
         # Verify password is encrypted and not stored in plaintext
-        user = User.objects.get(username='ramesh_store')
+        user = User.objects.get(phone='+919876543210')
         self.assertTrue(user.check_password('SecurePassword123'))
         self.assertNotEqual(user.password, 'SecurePassword123')
         self.assertEqual(user.role, 'owner')
 
-    @override_settings(REQUIRE_EMAIL_VERIFICATION=True)
-    def test_registration_with_verification_required(self):
+    def test_registration_without_mandatory_verification(self):
         payload = {
-            'full_name': 'Verify User',
-            'username': 'verify_user',
-            'email': 'verify@example.com',
+            'full_name': 'Direct User',
+            'business_name': 'Direct Store',
+            'phone': '9876543219',
+            'email': 'direct@example.com',
             'password': 'Password123',
             'confirm_password': 'Password123',
             'terms_accepted': True
         }
         response = self.client.post('/api/auth/register/', payload, format='json')
         self.assertEqual(response.status_code, 201)
-        self.assertTrue(response.data['require_verification'])
-        self.assertEqual(response.data['identifier'], 'verify@example.com')
-        self.assertIn('code sent', response.data['message'])
+        self.assertFalse(response.data.get('require_verification', False))
+        self.assertIn('access', response.data)
 
     def test_forbidden_role_manipulation_on_registration(self):
         payload = {
             'full_name': 'Attacker',
-            'username': 'attacker',
+            'business_name': 'Attacker Store',
             'email': 'attacker@example.com',
             'phone': '9876543211',
             'password': 'Password123',
@@ -76,52 +74,43 @@ class RegistrationAndAuthTests(TestCase):
         }
         response = self.client.post('/api/auth/register/', payload, format='json')
         self.assertEqual(response.status_code, 201)
-        user = User.objects.get(username='attacker')
+        user = User.objects.get(phone='+919876543211')
         self.assertEqual(user.role, 'owner')
         self.assertFalse(user.is_superuser)
         self.assertFalse(user.is_staff)
 
-    def test_duplicate_username_and_email(self):
+    def test_duplicate_phone_on_registration(self):
         User.objects.create_user(
-            username='existinguser',
+            username='+919876543212',
+            phone='+919876543212',
             email='existing@example.com',
-            password='Password123'
+            password='Password123',
+            is_verified=True,
         )
 
-        # Duplicate username
+        # Duplicate phone
         res1 = self.client.post('/api/auth/register/', {
-            'username': 'existinguser',
+            'business_name': 'Another Store',
+            'phone': '9876543212',
             'email': 'unique@example.com',
             'password': 'Password123',
             'confirm_password': 'Password123',
             'terms_accepted': True
         }, format='json')
         self.assertEqual(res1.status_code, 400)
-        self.assertIn('username', res1.data)
-
-        # Duplicate email
-        res2 = self.client.post('/api/auth/register/', {
-            'username': 'newuser123',
-            'email': 'EXISTING@example.com',  # case-insensitive check
-            'password': 'Password123',
-            'confirm_password': 'Password123',
-            'terms_accepted': True
-        }, format='json')
-        self.assertEqual(res2.status_code, 400)
-        self.assertIn('email', res2.data)
 
     def test_password_mismatch_and_weak_password(self):
         res1 = self.client.post('/api/auth/register/', {
-            'username': 'weakpass',
+            'phone': '9876543213',
             'email': 'weak@example.com',
-            'password': 'password',  # no numbers
-            'confirm_password': 'password',
+            'password': '123',
+            'confirm_password': '123',
             'terms_accepted': True
         }, format='json')
         self.assertEqual(res1.status_code, 400)
 
         res2 = self.client.post('/api/auth/register/', {
-            'username': 'mismatch',
+            'phone': '9876543214',
             'email': 'mismatch@example.com',
             'password': 'Password123',
             'confirm_password': 'Different123',
@@ -134,7 +123,8 @@ class RegistrationAndAuthTests(TestCase):
         user = User.objects.create_user(
             username='shopkeeper',
             email='shop@retail.in',
-            password='MyPassword123'
+            password='MyPassword123',
+            is_verified=True,
         )
 
         # Login with username

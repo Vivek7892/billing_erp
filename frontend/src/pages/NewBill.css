@@ -4347,3 +4347,92 @@
     font-size: 14px;
   }
 }
+
+/* Mobile fit and bottom cart actions */
+@media (max-width: 767px) {
+  .pb-page {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .pb-workspace {
+    min-height: 0;
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+
+  .pb-mobile-floating-dock {
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: 8px;
+    right: 8px;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 14px;
+    z-index: 70;
+  }
+
+  .pb-floating-info {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .pb-floating-qty {
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .pb-floating-total b {
+    font-size: 14px;
+  }
+
+  .pb-floating-cart-btn,
+  .pb-floating-checkout-btn {
+    min-height: 44px;
+    flex-shrink: 0;
+    border-radius: 10px;
+  }
+
+  .pb-floating-cart-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 0 12px;
+    border: 1px solid var(--pb-border);
+    background: var(--pb-surface-alt);
+    color: var(--pb-text);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .pb-floating-checkout-btn {
+    padding: 0 12px;
+    font-size: 12px;
+  }
+
+  /* Keep one clear fixed action at the bottom while the cart tab is open. */
+  .pb-mobile-cart-action-bar {
+    display: none !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .pb-mobile-floating-dock {
+    left: 6px;
+    right: 6px;
+    gap: 5px;
+    padding: 7px;
+  }
+
+  .pb-floating-qty {
+    font-size: 10px;
+  }
+
+  .pb-floating-cart-btn,
+  .pb-floating-checkout-btn {
+    padding-left: 9px;
+    padding-right: 9px;
+    font-size: 11px;
+  }
+}

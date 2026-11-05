@@ -6,6 +6,7 @@ import { formatDate as formatDateUtil } from '../utils/formatters'
 export default function ThermalReceipt({
   invoice = {},
   settings = {},
+  templateConfig = null,
   mode = null, // 'thermal_58' | 'thermal_80' | null (auto from settings)
   isPreview = false,
   className = '',
@@ -15,14 +16,70 @@ export default function ThermalReceipt({
   // 1. Resolve normalized thermal configuration
   const thermalConfig = useMemo(() => {
     const raw = { ...settings }
+
+    // Layer structured or flat templateConfig if supplied
+    if (templateConfig) {
+      const tBiz = templateConfig.business_info || {}
+      const tFields = templateConfig.fields || {}
+      const tPay = templateConfig.payment || {}
+      const tPage = templateConfig.page || {}
+
+      if (templateConfig.invoice_title) raw.thermal_title = templateConfig.invoice_title
+      if (tBiz.show_logo !== undefined) raw.thermal_show_logo = tBiz.show_logo
+      if (tBiz.show_name !== undefined) raw.show_business_name = tBiz.show_name
+      if (tBiz.show_address !== undefined) raw.show_business_address = tBiz.show_address
+      if (tBiz.show_phone !== undefined) raw.show_business_phone = tBiz.show_phone
+      if (tBiz.show_email !== undefined) raw.show_business_email = tBiz.show_email
+      if (tBiz.show_gstin !== undefined) raw.show_business_gstin = tBiz.show_gstin
+      if (tBiz.store_name_override) raw.shop_name = tBiz.store_name_override
+
+      if (tFields.show_customer_name !== undefined) raw.thermal_show_customer_name = tFields.show_customer_name
+      if (tFields.show_customer_phone !== undefined) raw.thermal_show_customer_phone = tFields.show_customer_phone
+      if (tFields.show_customer_address !== undefined) raw.thermal_show_customer_address = tFields.show_customer_address
+      if (tFields.show_customer_gstin !== undefined) raw.thermal_show_customer_gstin = tFields.show_customer_gstin
+      if (tFields.show_place_of_supply !== undefined) raw.thermal_show_place_of_supply = tFields.show_place_of_supply
+      if (tFields.show_payment_mode !== undefined) raw.thermal_show_payment_mode = tFields.show_payment_mode
+      if (tFields.show_sku !== undefined) raw.thermal_show_sku = tFields.show_sku
+      if (tFields.show_qty !== undefined) raw.thermal_show_qty = tFields.show_qty
+      if (tFields.show_rate !== undefined) raw.thermal_show_rate = tFields.show_rate
+      if (tFields.show_discount !== undefined) raw.thermal_show_discount = tFields.show_discount
+      if (tFields.show_tax_breakup !== undefined) raw.thermal_show_tax = tFields.show_tax_breakup
+      if (tFields.show_batch !== undefined) raw.thermal_show_batch = tFields.show_batch
+      if (tFields.show_expiry !== undefined) raw.thermal_show_expiry = tFields.show_expiry
+
+      if (tPay.show_upi_qr !== undefined) raw.thermal_show_upi_qr = tPay.show_upi_qr
+      if (tPay.show_digital_bill_qr !== undefined) raw.thermal_show_bill_qr = tPay.show_digital_bill_qr
+      if (tPay.show_terms !== undefined) raw.thermal_show_terms = tPay.show_terms
+      if (tPay.show_balance_due !== undefined) raw.thermal_show_party_balance = tPay.show_balance_due
+      if (tPay.show_footer !== undefined) raw.thermal_show_footer = tPay.show_footer
+      if (tPay.terms_override) raw.thermal_terms = tPay.terms_override
+      if (tPay.footer_text_override) raw.receipt_footer = tPay.footer_text_override
+
+      if (tPage.thermal_roll_width) raw.thermal_paper_width = tPage.thermal_roll_width
+
+      // Direct flat overrides from templateConfig
+      Object.keys(templateConfig).forEach(k => {
+        if (!['business_info', 'fields', 'layout', 'tax', 'payment', 'page'].includes(k)) {
+          raw[k] = templateConfig[k]
+        }
+      })
+    }
+
     if (mode === 'thermal_58') raw.thermal_paper_width = '58'
     else if (mode === 'thermal_80') raw.thermal_paper_width = '80'
+
     return normalizeThermalSettings(raw, inv)
-  }, [settings, inv, mode])
+  }, [settings, templateConfig, inv, mode])
 
   const {
     is58mm,
     title,
+    showShopDetails,
+    showBusinessName,
+    showBusinessAddress,
+    showBusinessPhone,
+    showBusinessEmail,
+    showBusinessGstin,
     showLogo,
     showInvoiceNo,
     showDate,
@@ -45,6 +102,7 @@ export default function ThermalReceipt({
     showExpiry,
     showMrp,
     showItemDesc,
+    showSubtotal,
     showPartyBalance,
     showUpiQrToggle,
     renderUpiQr,
@@ -54,6 +112,7 @@ export default function ThermalReceipt({
     digitalBillUrl,
     showTerms,
     termsText,
+    showFooter,
     footerText,
     shopName,
     shopAddress,
@@ -162,6 +221,22 @@ export default function ThermalReceipt({
   const pixelWidth = is58mm ? 216 : 300
   const qrPixelSize = is58mm ? 108 : 132
 
+  const hasStoreHeader = showShopDetails && (
+    (showLogo && shopLogo) ||
+    (showBusinessName && shopName) ||
+    (showBusinessAddress && shopAddress) ||
+    (showBusinessPhone && shopPhone) ||
+    (showBusinessEmail && shopEmail) ||
+    (showBusinessGstin && shopGstin)
+  )
+
+  const hasCustomerInfo = (
+    (showCustomerName && customerName) ||
+    (showCustomerPhone && customerPhone) ||
+    (showCustomerGstin && customerGstin) ||
+    (showCustomerAddress && customerAddress)
+  )
+
   return (
     <div
       className={`thermal-receipt font-mono bg-white text-black selection:bg-none ${className}`}
@@ -182,64 +257,72 @@ export default function ThermalReceipt({
       {/* ==============================================================
           1. STORE IDENTITY
       =============================================================== */}
-      <div className="text-center">
-        {showLogo && shopLogo && (
-          <div className="flex justify-center mb-1">
-            <img
-              src={shopLogo}
-              alt="Logo"
-              style={{
-                maxHeight: is58mm ? '24px' : '32px',
-                maxWidth: is58mm ? '80px' : '110px',
-                objectFit: 'contain',
-                filter: 'grayscale(100%) contrast(150%)',
-              }}
-            />
-          </div>
-        )}
+      {hasStoreHeader && (
+        <div className="text-center">
+          {showLogo && shopLogo && (
+            <div className="flex justify-center mb-1.5">
+              <img
+                src={shopLogo}
+                alt="Logo"
+                style={{
+                  maxHeight: is58mm ? '38px' : '48px',
+                  maxWidth: is58mm ? '120px' : '160px',
+                  width: 'auto',
+                  height: 'auto',
+                  objectFit: 'contain',
+                  filter: 'grayscale(100%) contrast(140%)',
+                  display: 'block',
+                  margin: '0 auto',
+                }}
+              />
+            </div>
+          )}
 
-        {shopName && (
-          <div
-            className="font-bold uppercase tracking-tight text-black"
-            style={{ fontSize: is58mm ? '12px' : '13.5px' }}
-          >
-            {shopName}
-          </div>
-        )}
+          {showBusinessName && shopName && (
+            <div
+              className="font-bold uppercase tracking-tight text-black"
+              style={{ fontSize: is58mm ? '12px' : '13.5px' }}
+            >
+              {shopName}
+            </div>
+          )}
 
-        {shopAddress && (
-          <div className="text-black" style={{ fontSize: is58mm ? '8px' : '9.5px', marginTop: '1px' }}>
-            {shopAddress.split('\n').filter(Boolean).map((line, idx) => (
-              <div key={idx}>{line.trim()}</div>
-            ))}
-          </div>
-        )}
+          {showBusinessAddress && shopAddress && (
+            <div className="text-black" style={{ fontSize: is58mm ? '8px' : '9.5px', marginTop: '1px' }}>
+              {shopAddress.split('\n').filter(Boolean).map((line, idx) => (
+                <div key={idx}>{line.trim()}</div>
+              ))}
+            </div>
+          )}
 
-        {(shopPhone || shopEmail) && (
-          <div className="text-black" style={{ fontSize: is58mm ? '8px' : '9.5px' }}>
-            {shopPhone && <span>Ph: {shopPhone}</span>}
-            {shopPhone && shopEmail && <span> · </span>}
-            {shopEmail && <span>{shopEmail}</span>}
-          </div>
-        )}
+          {(showBusinessPhone || showBusinessEmail) && (shopPhone || shopEmail) && (
+            <div className="text-black" style={{ fontSize: is58mm ? '8px' : '9.5px' }}>
+              {showBusinessPhone && shopPhone && <span>Ph: {shopPhone}</span>}
+              {showBusinessPhone && shopPhone && showBusinessEmail && shopEmail && <span> · </span>}
+              {showBusinessEmail && shopEmail && <span>{shopEmail}</span>}
+            </div>
+          )}
 
-        {shopGstin && (
-          <div className="font-bold text-black" style={{ fontSize: is58mm ? '8px' : '9.5px' }}>
-            GSTIN: {shopGstin}
-          </div>
-        )}
-      </div>
+          {showBusinessGstin && shopGstin && (
+            <div className="font-bold text-black" style={{ fontSize: is58mm ? '8px' : '9.5px' }}>
+              GSTIN: {shopGstin}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ==============================================================
           2. INVOICE CONTROL & CUSTOMER
       =============================================================== */}
       <div className="text-center mt-1">
-        <div
-          className="font-bold uppercase tracking-wider text-black"
-          style={{ fontSize: is58mm ? '10px' : '11.5px' }}
-        >
-          {isCancelled ? 'CANCELLED INVOICE' : title}
-        </div>
+        {title && (
+          <div
+            className="font-bold uppercase tracking-wider text-black"
+            style={{ fontSize: is58mm ? '10px' : '11.5px' }}
+          >
+            {isCancelled ? 'CANCELLED INVOICE' : title}
+          </div>
+        )}
 
         <div className="flex flex-wrap justify-center items-center gap-x-2 text-black" style={{ fontSize: is58mm ? '8.5px' : '9.5px' }}>
           {showInvoiceNo && (
@@ -253,7 +336,7 @@ export default function ThermalReceipt({
           )}
         </div>
 
-        {(showCashier || showPaymentMode || showPlaceOfSupply) && (
+        {((showCashier && cashierName) || (showPaymentMode && paymentMode) || (showPlaceOfSupply && placeOfSupply)) && (
           <div className="flex flex-wrap justify-center items-center gap-x-2 text-black" style={{ fontSize: is58mm ? '8px' : '9px' }}>
             {showCashier && cashierName && <span>Cashier: {cashierName}</span>}
             {showPaymentMode && paymentMode && <span>Mode: {paymentMode}</span>}
@@ -263,9 +346,9 @@ export default function ThermalReceipt({
       </div>
 
       {/* Customer line */}
-      {(showCustomerName || showCustomerPhone || showCustomerGstin || showCustomerAddress) && (
+      {hasCustomerInfo && (
         <div className="mt-1 pt-1 text-left text-black" style={{ fontSize: is58mm ? '8.5px' : '9.5px' }}>
-          {showCustomerName && (
+          {showCustomerName && customerName && (
             <div>Customer: <strong>{customerName}</strong></div>
           )}
           {showCustomerPhone && customerPhone && (
@@ -298,24 +381,25 @@ export default function ThermalReceipt({
           <span style={{ width: is58mm ? colWidths58.item : colWidths80.item }}>ITEM</span>
           {showQty && !is58mm && <span className="text-right" style={{ width: colWidths80.qty }}>QTY</span>}
           {showRate && !is58mm && <span className="text-right" style={{ width: colWidths80.rate }}>RATE</span>}
-          {showTotal && <span className="text-right" style={{ width: is58mm ? colWidths58.total : colWidths80.total }}>AMT</span>}
+          {showTotal && !is58mm && <span className="text-right" style={{ width: colWidths80.total }}>TOTAL</span>}
+          {showTotal && is58mm && <span className="text-right" style={{ width: colWidths58.total }}>TOTAL</span>}
         </div>
 
         {/* Item Rows */}
-        <div className="pt-0.5 space-y-1">
+        <div className="divide-y divide-dotted divide-black">
           {items.map((item, idx) => {
-            const name = item.product_name || item.name || `Item #${idx + 1}`
-            const qty = Number(item.quantity ?? 1)
-            const rate = Number(item.unit_price ?? item.price ?? 0)
+            const name = item.product_name || item.name || item.product?.name || 'Item'
+            const qty = Number(item.quantity ?? item.qty ?? 1)
+            const rate = Number(item.unit_price ?? item.rate ?? 0)
             const total = Number(item.total ?? (qty * rate))
-            const sku = item.sku || ''
-            const barcode = item.barcode || ''
-            const batch = item.batch_number || ''
-            const expiry = item.expiry_date || ''
-            const mrp = Number(item.mrp || 0)
-            const discPercent = Number(item.discount_percent || 0)
-            const gstPercent = Number(item.gst_percent || 0)
-            const desc = item.description || ''
+            const sku = item.sku || item.product?.sku || ''
+            const barcode = item.barcode || item.product?.barcode || ''
+            const batch = item.batch_number || item.batch_no || (typeof item.batch === 'string' ? item.batch : item.batch?.batch_number) || ''
+            const expiry = item.expiry_date || item.exp_date || item.batch?.expiry_date || ''
+            const mrp = Number(item.mrp || item.batch?.mrp || item.product?.mrp || 0)
+            const discPercent = Number(item.discount_percent || item.disc || 0)
+            const gstPercent = Number(item.gst_percent || item.gst || 0)
+            const desc = item.description || item.desc || item.product?.description || ''
 
             const hasMetaDetails = (
               (showSku && sku) ||
@@ -328,8 +412,10 @@ export default function ThermalReceipt({
               (showItemDesc && desc)
             )
 
+            const showSecondRow58 = showQty || showRate || showTotal
+
             return (
-              <div key={item.id || idx} className="text-black leading-tight">
+              <div key={item.id || idx} className="text-black leading-tight py-0.5">
                 {is58mm ? (
                   /* 58mm compact stacked row */
                   <div>
@@ -337,18 +423,21 @@ export default function ThermalReceipt({
                       {name}
                     </div>
 
-                    <div className="flex justify-between items-baseline" style={{ fontSize: '8px' }}>
+                    {showSecondRow58 && (
+                      <div className="flex justify-between items-baseline" style={{ fontSize: '8px' }}>
                         <span className="text-black" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
-                        {showQty && qty}
-                        {showQty && showRate && ` × ₹${fmt(rate)}`}
-                        {item.unit && ` (${item.unit})`}
-                      </span>
-                      {showTotal && (
-                        <span className="font-bold text-black tabular-nums" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
-                          ₹{fmt(total)}
+                          {showQty && qty}
+                          {showQty && item.unit && ` (${item.unit})`}
+                          {showQty && showRate && ` × ₹${fmt(rate)}`}
+                          {!showQty && showRate && `₹${fmt(rate)}`}
                         </span>
-                      )}
-                    </div>
+                        {showTotal && (
+                          <span className="font-bold text-black tabular-nums" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+                            ₹{fmt(total)}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   /* 80mm clean row - dynamically sized columns without blank gaps */
@@ -399,33 +488,35 @@ export default function ThermalReceipt({
         </div>
       </div>
 
-      {/* ─── SEPARATOR 2: Before Grand Total ─── */}
+      {/* ─── SEPARATOR 2: Before totals ─── */}
       <div
         className="my-1 border-t border-dashed border-black"
         style={{ borderWidth: '1px 0 0 0', borderStyle: 'dashed' }}
       />
 
       {/* ==============================================================
-          4. TOTALS & SETTLEMENT
+          4. TOTALS & SUMMARY
       =============================================================== */}
-      <div className="space-y-0.5 text-black" style={{ fontSize: is58mm ? '8.5px' : '9.5px' }}>
-        {/* Subtotal */}
-        <div className="flex justify-between">
-          <span>Subtotal</span>
-          <span className="tabular-nums">₹{fmt(subtotal || grandTotal)}</span>
-        </div>
+      <div className="space-y-0.5 text-black">
+        {/* Subtotal (only if discount or tax present and subtotal enabled) */}
+        {showSubtotal && (discountTotal > 0 || taxTotal > 0) && (
+          <div className="flex justify-between" style={{ fontSize: is58mm ? '8px' : '9px' }}>
+            <span>Subtotal</span>
+            <span className="tabular-nums">₹{fmt(subtotal)}</span>
+          </div>
+        )}
 
-        {/* Discount */}
-        {discountTotal > 0 && (
-          <div className="flex justify-between">
+        {/* Discount Total */}
+        {showDiscount && discountTotal > 0 && (
+          <div className="flex justify-between" style={{ fontSize: is58mm ? '8px' : '9px' }}>
             <span>Discount</span>
             <span className="tabular-nums">-₹{fmt(discountTotal)}</span>
           </div>
         )}
 
         {/* Tax */}
-        {taxTotal > 0 && (
-          <div className="flex justify-between">
+        {showTax && taxTotal > 0 && (
+          <div className="flex justify-between" style={{ fontSize: is58mm ? '8px' : '9px' }}>
             <span>Tax (GST)</span>
             <span className="tabular-nums">₹{fmt(taxTotal)}</span>
           </div>
@@ -433,7 +524,7 @@ export default function ThermalReceipt({
 
         {/* Round off */}
         {inv.round_off && Number(inv.round_off) !== 0 && (
-          <div className="flex justify-between">
+          <div className="flex justify-between" style={{ fontSize: is58mm ? '8px' : '9px' }}>
             <span>Round Off</span>
             <span className="tabular-nums">{Number(inv.round_off) > 0 ? '+' : ''}₹{fmt(inv.round_off)}</span>
           </div>
@@ -453,7 +544,7 @@ export default function ThermalReceipt({
 
         {/* Payment Settlement Status */}
         <div className="flex justify-between pt-0.5 font-medium" style={{ fontSize: is58mm ? '8.5px' : '9.5px' }}>
-          <span>Paid ({paymentMode})</span>
+          <span>Paid {showPaymentMode && paymentMode ? `(${paymentMode})` : ''}</span>
           <span className="tabular-nums">₹{fmt(paidAmount)}</span>
         </div>
 
@@ -482,7 +573,7 @@ export default function ThermalReceipt({
       </div>
 
       {/* ─── SEPARATOR 3: Before QR / Footer (Rendered only if QR or footer present) ─── */}
-      {(renderUpiQr || renderBillQr || showTerms || footerText || (isPreview && showUpiQrToggle && !upiValid)) && (
+      {(renderUpiQr || renderBillQr || (showTerms && termsText) || (showFooter && footerText) || (isPreview && showUpiQrToggle && !upiValid)) && (
         <div
           className="my-1.5 border-t border-dashed border-black"
           style={{ borderWidth: '1px 0 0 0', borderStyle: 'dashed' }}
@@ -574,7 +665,7 @@ export default function ThermalReceipt({
       {/* ==============================================================
           8. RECEIPT FOOTER GREETING
       =============================================================== */}
-      {footerText && (
+      {showFooter && footerText && (
         <div
           className="text-center font-bold text-black mt-1 leading-snug whitespace-pre-line"
           style={{ fontSize: is58mm ? '8px' : '9px' }}
@@ -585,4 +676,3 @@ export default function ThermalReceipt({
     </div>
   )
 }
-

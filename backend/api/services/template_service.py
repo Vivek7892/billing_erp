@@ -457,6 +457,30 @@ def save_template_config(business: Business, template_id: str, new_config: Dict[
         clean_config['paper_width'] = '58' if '58' in str(pg['thermal_roll_width']) else '80'
         clean_config['thermal_paper_width'] = clean_config['paper_width']
 
+    # For thermal templates, synchronize structured section toggles to thermal_show_* keys
+    if template_id.startswith('thermal'):
+        if 'show_logo' in b_info: clean_config['thermal_show_logo'] = 'true' if b_info['show_logo'] else 'false'
+        if 'show_customer_name' in flds: clean_config['thermal_show_customer_name'] = 'true' if flds['show_customer_name'] else 'false'
+        if 'show_customer_phone' in flds: clean_config['thermal_show_customer_phone'] = 'true' if flds['show_customer_phone'] else 'false'
+        if 'show_customer_address' in flds: clean_config['thermal_show_customer_address'] = 'true' if flds['show_customer_address'] else 'false'
+        if 'show_customer_gstin' in flds: clean_config['thermal_show_customer_gstin'] = 'true' if flds['show_customer_gstin'] else 'false'
+        if 'show_place_of_supply' in flds: clean_config['thermal_show_place_of_supply'] = 'true' if flds['show_place_of_supply'] else 'false'
+        if 'show_payment_mode' in flds: clean_config['thermal_show_payment_mode'] = 'true' if flds['show_payment_mode'] else 'false'
+        if 'show_sku' in flds: clean_config['thermal_show_sku'] = 'true' if flds['show_sku'] else 'false'
+        if 'show_qty' in flds: clean_config['thermal_show_qty'] = 'true' if flds['show_qty'] else 'false'
+        if 'show_rate' in flds: clean_config['thermal_show_rate'] = 'true' if flds['show_rate'] else 'false'
+        if 'show_discount' in flds: clean_config['thermal_show_discount'] = 'true' if flds['show_discount'] else 'false'
+        if 'show_tax_breakup' in flds: clean_config['thermal_show_tax'] = 'true' if flds['show_tax_breakup'] else 'false'
+        if 'show_batch' in flds: clean_config['thermal_show_batch'] = 'true' if flds['show_batch'] else 'false'
+        if 'show_expiry' in flds: clean_config['thermal_show_expiry'] = 'true' if flds['show_expiry'] else 'false'
+        if 'show_upi_qr' in pay: clean_config['thermal_show_upi_qr'] = 'true' if pay['show_upi_qr'] else 'false'
+        if 'show_digital_bill_qr' in pay: clean_config['thermal_show_bill_qr'] = 'true' if pay['show_digital_bill_qr'] else 'false'
+        if 'show_terms' in pay: clean_config['thermal_show_terms'] = 'true' if pay['show_terms'] else 'false'
+        if 'show_balance_due' in pay: clean_config['thermal_show_party_balance'] = 'true' if pay['show_balance_due'] else 'false'
+        if 'show_footer' in pay: clean_config['thermal_show_footer'] = 'true' if pay['show_footer'] else 'false'
+        if 'terms_override' in pay: clean_config['thermal_terms'] = str(pay['terms_override'])
+        if 'footer_text_override' in pay: clean_config['receipt_footer'] = str(pay['footer_text_override'])
+
     # 3. Also allow any flat keys passed directly
     for k, v in new_config.items():
         if k not in ('business_info', 'fields', 'layout', 'tax', 'payment', 'page'):
@@ -1012,6 +1036,29 @@ def resolve_invoice_template_settings(
             if 'thermal_roll_width' in pg:
                 merged['paper_width'] = '58' if '58' in str(pg['thermal_roll_width']) else '80'
                 merged['thermal_paper_width'] = merged['paper_width']
+
+            if is_thermal:
+                if 'show_logo' in b_info: merged['thermal_show_logo'] = 'true' if to_bool(b_info['show_logo']) else 'false'
+                if 'show_customer_name' in flds: merged['thermal_show_customer_name'] = 'true' if to_bool(flds['show_customer_name']) else 'false'
+                if 'show_customer_phone' in flds: merged['thermal_show_customer_phone'] = 'true' if to_bool(flds['show_customer_phone']) else 'false'
+                if 'show_customer_address' in flds: merged['thermal_show_customer_address'] = 'true' if to_bool(flds['show_customer_address']) else 'false'
+                if 'show_customer_gstin' in flds: merged['thermal_show_customer_gstin'] = 'true' if to_bool(flds['show_customer_gstin']) else 'false'
+                if 'show_place_of_supply' in flds: merged['thermal_show_place_of_supply'] = 'true' if to_bool(flds['show_place_of_supply']) else 'false'
+                if 'show_payment_mode' in flds: merged['thermal_show_payment_mode'] = 'true' if to_bool(flds['show_payment_mode']) else 'false'
+                if 'show_sku' in flds: merged['thermal_show_sku'] = 'true' if to_bool(flds['show_sku']) else 'false'
+                if 'show_qty' in flds: merged['thermal_show_qty'] = 'true' if to_bool(flds['show_qty']) else 'false'
+                if 'show_rate' in flds: merged['thermal_show_rate'] = 'true' if to_bool(flds['show_rate']) else 'false'
+                if 'show_discount' in flds: merged['thermal_show_discount'] = 'true' if to_bool(flds['show_discount']) else 'false'
+                if 'show_tax_breakup' in flds: merged['thermal_show_tax'] = 'true' if to_bool(flds['show_tax_breakup']) else 'false'
+                if 'show_batch' in flds: merged['thermal_show_batch'] = 'true' if to_bool(flds['show_batch']) else 'false'
+                if 'show_expiry' in flds: merged['thermal_show_expiry'] = 'true' if to_bool(flds['show_expiry']) else 'false'
+                if 'show_upi_qr' in pay: merged['thermal_show_upi_qr'] = 'true' if to_bool(pay['show_upi_qr']) else 'false'
+                if 'show_digital_bill_qr' in pay: merged['thermal_show_bill_qr'] = 'true' if to_bool(pay['show_digital_bill_qr']) else 'false'
+                if 'show_terms' in pay: merged['thermal_show_terms'] = 'true' if to_bool(pay['show_terms']) else 'false'
+                if 'show_balance_due' in pay: merged['thermal_show_party_balance'] = 'true' if to_bool(pay['show_balance_due']) else 'false'
+                if 'show_footer' in pay: merged['thermal_show_footer'] = 'true' if to_bool(pay['show_footer']) else 'false'
+                if 'terms_override' in pay: merged['thermal_terms'] = str(pay['terms_override'])
+                if 'footer_text_override' in pay: merged['receipt_footer'] = str(pay['footer_text_override'])
 
     # The global theme controls are an explicit app-wide override. Preserve
     # per-template typography and layout, but let chosen global colors/styles

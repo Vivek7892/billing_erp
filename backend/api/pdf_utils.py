@@ -528,7 +528,7 @@ def resolve_document_mode(s, invoice):
     return title, True
 
 
-def _logo_for_a4(s, max_width_mm=26, max_height_mm=22):
+def _logo_for_a4(s, max_width_mm=40, max_height_mm=24):
     """Resolve the configured business logo for PDF output with proportional aspect-ratio scaling.
 
     Supports:
@@ -582,15 +582,11 @@ def _logo_for_a4(s, max_width_mm=26, max_height_mm=22):
                     with PILImage.open(candidate) as pim:
                         ow, oh = pim.size
                     if ow > 0 and oh > 0:
-                        aspect = ow / float(oh)
                         max_w = max_width_mm * mm
                         max_h = max_height_mm * mm
-                        if aspect >= (max_width_mm / float(max_height_mm)):
-                            w = max_w
-                            h = max_w / aspect
-                        else:
-                            h = max_h
-                            w = max_h * aspect
+                        scale = min(max_w / float(ow), max_h / float(oh))
+                        w = ow * scale
+                        h = oh * scale
                         img = RLImage(candidate, width=w, height=h)
                         img.hAlign = "LEFT"
                         return img
@@ -610,15 +606,11 @@ def _logo_for_a4(s, max_width_mm=26, max_height_mm=22):
                         ow, oh = pim.size
                     image_data.seek(0)
                     if ow > 0 and oh > 0:
-                        aspect = ow / float(oh)
                         max_w = max_width_mm * mm
                         max_h = max_height_mm * mm
-                        if aspect >= (max_width_mm / float(max_height_mm)):
-                            w = max_w
-                            h = max_w / aspect
-                        else:
-                            h = max_h
-                            w = max_h * aspect
+                        scale = min(max_w / float(ow), max_h / float(oh))
+                        w = ow * scale
+                        h = oh * scale
                         img = RLImage(image_data, width=w, height=h)
                         img.hAlign = "LEFT"
                         return img
@@ -682,13 +674,36 @@ def build_header(s, invoice, document_title, logo_flowable=None, **_ignored):
 
     if show_shop_details and logo_flowable is not None and s.flag("show_business_logo", True):
         if identity_rows:
-            identity = _tbl([[logo_flowable, details]], [30 * mm, BODY_W * 0.60 - 30 * mm], [
-                ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 3 * mm),
-                ("TOPPADDING", (0, 0), (-1, -1), 0),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-            ])
+            h_layout = str(s.get("invoice_header_layout", "")).lower()
+            logo_w = getattr(logo_flowable, "drawWidth", 38 * mm)
+            col1_w = max(logo_w + 3 * mm, 38 * mm)
+            col2_w = max(20 * mm, BODY_W * 0.62 - col1_w)
+            if h_layout in ("center", "logo_top"):
+                logo_flowable.hAlign = "CENTER"
+                identity = _tbl([[logo_flowable], [details]], [BODY_W * 0.62], [
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0.5),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 1.5 * mm),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ])
+            elif h_layout == "logo_right":
+                identity = _tbl([[details, logo_flowable]], [col2_w, col1_w], [
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 2.5 * mm),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ])
+            else:
+                identity = _tbl([[logo_flowable, details]], [col1_w, col2_w], [
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 2.5 * mm),
+                    ("TOPPADDING", (0, 0), (-1, -1), 0),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ])
         else:
             identity = logo_flowable
     else:
@@ -789,6 +804,10 @@ def build_bill_to_and_details(s, invoice):
         left_rows.append([para(f"<b>Mobile:</b> {cust_phone}", size=7.2, color=colors.HexColor("#334155"))])
     if has_val(cust_gstin) and s.flag("show_customer_gstin", True):
         left_rows.append([para(f"<b>GSTIN:</b> {cust_gstin}", size=7.2, color=colors.HexColor("#334155"))])
+
+    if len(left_rows) == 1:
+        # All customer details disabled - completely omit BILL TO section
+        return []
 
     left = _tbl(left_rows, [None], [
         ("LEFTPADDING", (0, 0), (-1, -1), 0),
@@ -1345,7 +1364,10 @@ def generate_invoice_pdf(invoice, force_a4=False, paper_size=None, template=None
 
     story = []
     header_layout = str(s.get("invoice_header_layout", "logo_left")).lower()
-    logo = None if header_layout == "name_only" or not s.flag("show_business_logo", True) else _logo_for_a4(s, max_width_mm=22, max_height_mm=14)
+    is_a5 = paper_key == "a5" or template_name in ("half_a4", "advanced_gst_a5")
+    max_logo_w = 32 if is_a5 else 42
+    max_logo_h = 18 if is_a5 else 24
+    logo = None if header_layout == "name_only" or not s.flag("show_business_logo", True) else _logo_for_a4(s, max_width_mm=max_logo_w, max_height_mm=max_logo_h)
     story.extend(build_header(s, invoice, document_title, logo))
     story.extend(build_bill_to_and_details(s, invoice))
     story.append(build_items_table(s, invoice, show_tax=show_tax, interstate=interstate))
@@ -1502,13 +1524,13 @@ def generate_thermal_invoice_pdf(invoice, template=None):
     show_shop_details = s.flag("show_shop_details", True) and s.flag("show_business_info", True)
     if show_shop_details:
         if show_logo:
-            max_logo_w = 20 if is_58mm else 26
-            max_logo_h = 9 if is_58mm else 12
+            max_logo_w = 32 if is_58mm else 44
+            max_logo_h = 14 if is_58mm else 18
             logo = _logo_for_a4(s, max_width_mm=max_logo_w, max_height_mm=max_logo_h)
             if logo is not None:
                 logo.hAlign = "CENTER"
                 story.append(logo)
-                story.append(Spacer(1, 0.8 * mm))
+                story.append(Spacer(1, 1.2 * mm))
         if s.flag("show_business_name", True) and s.flag("show_shop_name", True) and has_val(shop_name):
             story.append(_tpara(str(shop_name).strip().upper(), size=8.5 if is_58mm else 10.0, align=TA_CENTER, bold=True))
         if s.flag("show_business_address", True) and has_val(shop_address):
@@ -1882,6 +1904,30 @@ def generate_thermal_invoice_pdf(invoice, template=None):
 
 
 def generate_report_pdf(
+    title,
+    headers,
+    rows,
+    business_profile=None,
+    summary_rows=None,
+    period_label='',
+    logo_bytes=None,
+    **kwargs,
+):
+    """Traditional Indian Accounting Report PDF Exporter."""
+    from reports.generators.pdf_generator import generate_accounting_pdf
+    return generate_accounting_pdf(
+        title=title,
+        headers=headers,
+        rows=rows,
+        business_profile=business_profile,
+        summary_rows=summary_rows,
+        period_label=period_label,
+        logo_bytes=logo_bytes,
+        **kwargs,
+    )
+
+
+def _legacy_generate_report_pdf(
     title,
     headers,
     rows,

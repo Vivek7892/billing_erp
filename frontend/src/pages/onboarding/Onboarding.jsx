@@ -12,6 +12,9 @@ import {
   IconShoppingBag,
   IconCheck,
   IconPencil,
+  IconShieldCheck,
+  IconDeviceMobile,
+  IconKey,
 } from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 import http from '../../api'
@@ -34,7 +37,8 @@ const STEPS = [
   { id: 1, key: 'business', label: 'Business Profile', icon: IconBuildingStore },
   { id: 2, key: 'preferences', label: 'Tax & Invoicing', icon: IconReceipt },
   { id: 3, key: 'choices', label: 'Catalogue Setup', icon: IconPackage },
-  { id: 4, key: 'review', label: 'Review & Launch', icon: IconCircleCheck },
+  { id: 4, key: 'security', label: 'Security (2FA)', icon: IconShieldCheck },
+  { id: 5, key: 'review', label: 'Review & Launch', icon: IconCircleCheck },
 ]
 
 export default function Onboarding() {
@@ -82,6 +86,45 @@ export default function Onboarding() {
   })
 
   const [completed, setCompleted] = useState(false)
+
+  // Step 4: Two-Factor Authentication (Optional or Later)
+  const [totpSetupMode, setTotpSetupMode] = useState(false)
+  const [totpData, setTotpData] = useState(null)
+  const [totpCode, setTotpCode] = useState('')
+  const [totpEnabled, setTotpEnabled] = useState(false)
+  const [totpRecoveryCodes, setTotpRecoveryCodes] = useState([])
+  const [totpLoading, setTotpLoading] = useState(false)
+
+  const handleStartTotpSetup = async () => {
+    setTotpLoading(true)
+    try {
+      const { data } = await http.post('/auth/2fa/setup/')
+      setTotpData(data)
+      setTotpSetupMode(true)
+    } catch (e) {
+      toast.error('Failed to initiate 2FA setup')
+    } finally {
+      setTotpLoading(false)
+    }
+  }
+
+  const handleConfirmTotp = async () => {
+    if (!totpCode || totpCode.trim().length !== 6) {
+      toast.error('Enter the 6-digit code from your authenticator app')
+      return
+    }
+    setTotpLoading(true)
+    try {
+      const { data } = await http.post('/auth/2fa/confirm/', { code: totpCode.trim() })
+      setTotpEnabled(true)
+      setTotpRecoveryCodes(data.recovery_codes || [])
+      toast.success('Google Authenticator successfully enabled!')
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Invalid verification code')
+    } finally {
+      setTotpLoading(false)
+    }
+  }
 
   // Fetch initial onboarding state from backend on mount
   useEffect(() => {
@@ -180,7 +223,12 @@ export default function Onboarding() {
     if (!businessData.business_type) nextErrors.business_type = 'Please select a business type'
 
     if (businessData.mobile.trim()) {
-      const clean = businessData.mobile.replace(/\D/g, '')
+      let clean = businessData.mobile.replace(/\D/g, '')
+      if (clean.length === 12 && clean.startsWith('91')) {
+        clean = clean.slice(2)
+      } else if (clean.length === 11 && clean.startsWith('0')) {
+        clean = clean.slice(1)
+      }
       if (clean.length !== 10) nextErrors.mobile = 'Enter a valid 10-digit mobile number'
     }
 
@@ -848,18 +896,217 @@ export default function Onboarding() {
                   disabled={saving}
                   className="onboarding-btn-primary"
                 >
-                  <span>{saving ? 'Saving...' : 'Continue to Review'}</span>
+                  <span>{saving ? 'Saving...' : 'Continue to Security'}</span>
                   <IconArrowRight size={16} />
                 </button>
               </div>
             </section>
           )}
 
-          {/* STEP 4: REVIEW & CONFIRM */}
+          {/* STEP 4: TWO-FACTOR SECURITY (OPTIONAL OR LATER) */}
           {currentStep === 4 && (
             <section aria-labelledby="step4-title">
               <div className="onboarding-title-area">
-                <h2 id="step4-title">Review and launch your store</h2>
+                <h2 id="step4-title">Account Security &amp; 2FA (Optional)</h2>
+                <p>Protect your store with Google Authenticator (TOTP), or choose to set it up later in Settings.</p>
+              </div>
+
+              {totpEnabled ? (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-5 text-emerald-900">
+                    <div className="flex items-center gap-2 font-bold text-sm text-emerald-800">
+                      <IconCheck size={20} className="shrink-0 text-emerald-600" />
+                      <span>Google Authenticator Successfully Activated!</span>
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-emerald-700">
+                      Your merchant account is now secured with two-factor authentication. Each login will require your 6-digit authenticator code.
+                    </p>
+                  </div>
+
+                  {totpRecoveryCodes.length > 0 && (
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                      <span className="text-xs font-bold text-slate-800">Your Backup Recovery Codes:</span>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono text-xs font-semibold text-slate-700">
+                        {totpRecoveryCodes.map((code, idx) => (
+                          <div key={idx} className="bg-white p-2 text-center rounded border border-slate-200">
+                            {code}
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[11px] text-slate-500">Store these in a safe place. Each code can be used once if you lose device access.</p>
+                    </div>
+                  )}
+
+                  <div className="onboarding-footer">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(3)}
+                      className="onboarding-btn-secondary"
+                    >
+                      <IconArrowLeft size={16} />
+                      <span>Back</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(5)}
+                      className="onboarding-btn-primary"
+                    >
+                      <span>Continue to Final Review</span>
+                      <IconArrowRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              ) : totpSetupMode && totpData ? (
+                <div className="space-y-5">
+                  <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-subtle)] p-5 space-y-4">
+                    <div className="flex flex-col sm:flex-row items-center gap-6">
+                      {totpData.qr_code && (
+                        <div className="p-3 bg-white rounded-xl border border-slate-200 shadow-sm shrink-0">
+                          <img
+                            src={totpData.qr_code}
+                            alt="TOTP QR Code"
+                            className="w-44 h-44 object-contain"
+                          />
+                        </div>
+                      )}
+                      <div className="space-y-3 text-xs text-[var(--ink-secondary)]">
+                        <div>
+                          <strong className="text-sm font-bold text-[var(--ink)] block mb-1">
+                            Step 1: Scan QR Code
+                          </strong>
+                          <p>Open Google Authenticator, Microsoft Authenticator, or 2FAS on your mobile device and scan this QR code.</p>
+                        </div>
+
+                        <div>
+                          <span className="font-semibold block mb-1">Manual Setup Key:</span>
+                          <div className="flex items-center gap-2">
+                            <code className="bg-white px-2.5 py-1 rounded border border-slate-300 font-mono text-xs font-bold text-indigo-700 select-all">
+                              {totpData.secret}
+                            </code>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-[var(--line)] pt-4">
+                      <strong className="text-sm font-bold text-[var(--ink)] block mb-2">
+                        Step 2: Enter 6-Digit Authenticator Code
+                      </strong>
+                      <div className="flex flex-col sm:flex-row gap-3 max-w-md">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={6}
+                          value={totpCode}
+                          onChange={e => setTotpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          placeholder="••••••"
+                          className="input font-mono text-center tracking-[0.25em] text-lg font-bold"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleConfirmTotp}
+                          disabled={totpLoading || totpCode.length !== 6}
+                          className="btn-primary shrink-0"
+                        >
+                          {totpLoading ? 'Verifying…' : 'Verify & Enable 2FA'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="onboarding-footer">
+                    <button
+                      type="button"
+                      onClick={() => setTotpSetupMode(false)}
+                      className="onboarding-btn-secondary"
+                    >
+                      <IconArrowLeft size={16} />
+                      <span>Back</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(5)}
+                      className="text-xs text-slate-500 hover:text-slate-800 underline font-medium"
+                    >
+                      Skip &amp; Set Up Later
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50/40 p-5 flex flex-col justify-between hover:border-indigo-400 transition-colors">
+                      <div className="space-y-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold">
+                          <IconShieldCheck size={22} />
+                        </div>
+                        <h3 className="font-bold text-sm text-slate-900">Enable Google Authenticator (Recommended)</h3>
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                          Secure your store with 6-digit one-time passcodes from your phone. Blocks unauthorized logins even if someone knows your password.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleStartTotpSetup}
+                        disabled={totpLoading}
+                        className="btn-primary w-full mt-4 flex items-center justify-center gap-1.5"
+                      >
+                        <IconDeviceMobile size={16} />
+                        <span>{totpLoading ? 'Initiating…' : 'Configure Authenticator Now'}</span>
+                      </button>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-5 flex flex-col justify-between">
+                      <div className="space-y-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-600 flex items-center justify-center font-bold">
+                          <IconKey size={20} />
+                        </div>
+                        <h3 className="font-bold text-sm text-slate-900">Set Up Later in Settings</h3>
+                        <p className="text-xs text-slate-500 leading-relaxed">
+                          You can always activate two-factor authentication at any time from your account Settings menu.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setCurrentStep(5)}
+                        className="btn-secondary w-full mt-4"
+                      >
+                        <span>Skip &amp; Continue Later</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="onboarding-footer">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(3)}
+                      className="onboarding-btn-secondary"
+                    >
+                      <IconArrowLeft size={16} />
+                      <span>Back</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(5)}
+                      className="onboarding-btn-primary"
+                    >
+                      <span>Continue to Final Review</span>
+                      <IconArrowRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* STEP 5: REVIEW & CONFIRM */}
+          {currentStep === 5 && (
+            <section aria-labelledby="step5-title">
+              <div className="onboarding-title-area">
+                <h2 id="step5-title">Review and launch your store</h2>
                 <p>Verify your details before launching your live business workspace.</p>
               </div>
 
@@ -968,10 +1215,37 @@ export default function Onboarding() {
                 </div>
               </div>
 
+              {/* Review Card 4: Account Security */}
+              <div className="onboarding-review-card">
+                <div className="onboarding-review-header">
+                  <div className="onboarding-review-title">
+                    <IconShieldCheck size={16} className="text-[#0057B8]" />
+                    <span>Account Security (2FA)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(4)}
+                    className="onboarding-review-edit"
+                  >
+                    Edit
+                  </button>
+                </div>
+                <div className="text-xs text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold uppercase ${
+                    totpEnabled ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                  }`}>
+                    {totpEnabled ? 'Google Authenticator: Enabled' : 'Google Authenticator: Not Set Up'}
+                  </span>
+                  <span className="text-slate-500 text-[11px]">
+                    {totpEnabled ? 'Secured with 6-digit TOTP passcodes.' : 'Can be activated anytime in Settings.'}
+                  </span>
+                </div>
+              </div>
+
               <div className="onboarding-footer">
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(3)}
+                  onClick={() => setCurrentStep(4)}
                   className="onboarding-btn-secondary"
                 >
                   <IconArrowLeft size={16} />
@@ -994,4 +1268,3 @@ export default function Onboarding() {
     </div>
   )
 }
-

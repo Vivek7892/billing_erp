@@ -52,6 +52,22 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write(self.style.MIGRATE_HEADING('Starting comprehensive Billing ERP data seed...'))
 
+        # Database schema safety for PostgreSQL/SQLite
+        from django.db import connection
+        with connection.cursor() as cursor:
+            if connection.vendor == 'postgresql':
+                for stmt in [
+                    "ALTER TABLE api_user ALTER COLUMN pin_failed_attempts DROP NOT NULL;",
+                    "ALTER TABLE api_user ALTER COLUMN pin_failed_attempts SET DEFAULT 0;",
+                    "ALTER TABLE api_user ALTER COLUMN pin_hash DROP NOT NULL;",
+                    "ALTER TABLE api_user ALTER COLUMN pin_hash SET DEFAULT '';",
+                    "ALTER TABLE api_user ALTER COLUMN phone DROP NOT NULL;",
+                ]:
+                    try:
+                        cursor.execute(stmt)
+                    except Exception:
+                        pass
+
         # ============================================================
         # 1. BUSINESS
         # ============================================================
@@ -76,6 +92,9 @@ class Command(BaseCommand):
         business.mobile = '+91 98765 43210'
         business.email = 'contact@balajistore.com'
         business.currency = '₹'
+        if not getattr(business, 'shop_id', None):
+            from api.models import generate_unique_shop_id
+            business.shop_id = generate_unique_shop_id()
         business.save()
 
         # ============================================================
@@ -165,54 +184,77 @@ class Command(BaseCommand):
             )
 
         # ============================================================
-        # 3. USERS
+        # 3. USERS (Mobile-First Authentication & Multi-Tenant Roles)
         # ============================================================
-        self.stdout.write('Configuring system users...')
-        admin_user, _ = User.objects.get_or_create(
-            username='admin',
-            defaults={
-                'email': 'admin@balajistore.com',
-                'role': 'admin',
-                'first_name': 'Admin',
-                'last_name': 'User',
-            }
-        )
-        admin_user.role = 'admin'
+        self.stdout.write('Configuring system users with mobile authentication and RBAC...')
+
+        # 1. Shop Owner (Full Ownership & Administration)
+        admin_user = User.objects.filter(phone='+919876543210').first() or User.objects.filter(username='admin').first()
+        if not admin_user:
+            admin_user = User(username='admin', phone='+919876543210')
+        admin_user.username = 'admin'
+        admin_user.email = 'admin@balajistore.com'
+        admin_user.first_name = 'Rajesh'
+        admin_user.last_name = 'Kumar'
+        admin_user.role = 'owner'
+        admin_user.phone = '+919876543210'
+        admin_user.employee_id = 'EMP-100'
+        admin_user.department = 'Management'
         admin_user.is_staff = True
         admin_user.is_superuser = True
         admin_user.is_active = True
+        admin_user.is_verified = True
+        admin_user.onboarding_completed = True
+        admin_user.onboarding_step = 'completed'
         admin_user.business = business
         admin_user.set_password('admin123')
+        admin_user.set_pos_pin('1234')
         admin_user.save()
 
-        cashier_user, _ = User.objects.get_or_create(
-            username='cashier',
-            defaults={
-                'email': 'cashier@balajistore.com',
-                'role': 'cashier',
-                'first_name': 'Karthik',
-                'last_name': 'Raman',
-            }
-        )
+        # 2. Cashier (POS Counter Operations)
+        cashier_user = User.objects.filter(phone='+919876543212').first() or User.objects.filter(username='cashier').first()
+        if not cashier_user:
+            cashier_user = User(username='cashier', phone='+919876543212')
+        cashier_user.username = 'cashier'
+        cashier_user.email = 'cashier@balajistore.com'
+        cashier_user.first_name = 'Karthik'
+        cashier_user.last_name = 'Raman'
         cashier_user.role = 'cashier'
+        cashier_user.phone = '+919876543212'
+        cashier_user.employee_id = 'EMP-102'
+        cashier_user.department = 'Billing Counter 1'
+        cashier_user.is_staff = False
+        cashier_user.is_superuser = False
         cashier_user.is_active = True
+        cashier_user.is_verified = True
+        cashier_user.onboarding_completed = True
+        cashier_user.onboarding_step = 'completed'
         cashier_user.business = business
         cashier_user.set_password('cashier123')
+        cashier_user.set_pos_pin('1122')
         cashier_user.save()
 
-        manager_user, _ = User.objects.get_or_create(
-            username='manager',
-            defaults={
-                'email': 'manager@balajistore.com',
-                'role': 'admin',
-                'first_name': 'Sundar',
-                'last_name': 'Murthy',
-            }
-        )
+        # 3. Store Admin / Manager
+        manager_user = User.objects.filter(phone='+919876543211').first() or User.objects.filter(username='manager').first()
+        if not manager_user:
+            manager_user = User(username='manager', phone='+919876543211')
+        manager_user.username = 'manager'
+        manager_user.email = 'manager@balajistore.com'
+        manager_user.first_name = 'Sundar'
+        manager_user.last_name = 'Murthy'
         manager_user.role = 'admin'
+        manager_user.phone = '+919876543211'
+        manager_user.employee_id = 'EMP-101'
+        manager_user.department = 'Store Operations'
+        manager_user.is_staff = True
+        manager_user.is_superuser = False
         manager_user.is_active = True
+        manager_user.is_verified = True
+        manager_user.onboarding_completed = True
+        manager_user.onboarding_step = 'completed'
         manager_user.business = business
         manager_user.set_password('manager123')
+        manager_user.set_pos_pin('2345')
         manager_user.save()
 
         User.objects.filter(business__isnull=True).update(business=business)
@@ -733,9 +775,22 @@ class Command(BaseCommand):
         self.stdout.write(f'- Expenses: {Expense.objects.filter(business=business).count()}')
         self.stdout.write(f'- Reconciliation Txns: {RazorpayTransaction.objects.filter(invoice__business=business).count()}')
         self.stdout.write(f'- Audit Logs: {AuditLog.objects.filter(business=business).count()}')
+        self.stdout.write(f'- Shop ID: {getattr(business, "shop_id", "DWKT2618")}')
         self.stdout.write('--------------------------------------------------------')
-        self.stdout.write('Default Credentials:')
-        self.stdout.write('  Admin:    admin   / admin123')
-        self.stdout.write('  Cashier:  cashier / cashier123')
-        self.stdout.write('  Manager:  manager / manager123')
+        self.stdout.write('Multi-Tenant SaaS Mobile & Password Credentials:')
+        self.stdout.write('  1. Shop Owner (Full Ownership & Settings):')
+        self.stdout.write('     - Mobile:   +91 98765 43210  (or 9876543210)')
+        self.stdout.write('     - Password: admin123')
+        self.stdout.write('     - Role:     owner')
+        self.stdout.write('     - POS PIN:  1234')
+        self.stdout.write('  2. Store Admin (Staff & Store Operations):')
+        self.stdout.write('     - Mobile:   +91 98765 43211  (or 9876543211)')
+        self.stdout.write('     - Password: manager123')
+        self.stdout.write('     - Role:     admin')
+        self.stdout.write('     - POS PIN:  2345')
+        self.stdout.write('  3. Cashier (POS Billing Counters & Receipts):')
+        self.stdout.write('     - Mobile:   +91 98765 43212  (or 9876543212)')
+        self.stdout.write('     - Password: cashier123')
+        self.stdout.write('     - Role:     cashier')
+        self.stdout.write('     - POS PIN:  1122 (Fast 4-Digit Counter Login)')
         self.stdout.write('========================================================')

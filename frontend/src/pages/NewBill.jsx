@@ -2926,10 +2926,11 @@ export default function NewBill() {
               <>
                 <button
                   type="button"
-                  className="px-3 py-2 rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition"
+                  className="pb-floating-cart-btn"
                   onClick={() => setMobileTab('cart')}
                 >
-                  View Cart
+                  <IconShoppingCart size={16} />
+                  Cart
                 </button>
                 <button
                   type="button"

@@ -162,9 +162,13 @@ export default function TemplateCustomizerModal({
       grand_total: 1052.0,
       paid_amount: 1052.0,
       balance_due: 0.0,
+      customer_balance: 1450.0,
+      created_by_name: 'Cashier (Vivek)',
       items: [
         {
           product_name: 'India Gate Basmati Rice 5kg',
+          description: 'Premium aged long-grain basmati rice',
+          expiry_date: '2026-12-31',
           sku: 'RICE-001',
           barcode: '890123456789',
           hsn_code: '100630',
@@ -180,6 +184,8 @@ export default function TemplateCustomizerModal({
         },
         {
           product_name: 'Fortune Sunflower Oil 1L Pouch',
+          description: 'Refined sunflower cooking oil',
+          expiry_date: '2026-08-20',
           sku: 'OIL-002',
           barcode: '890987654321',
           hsn_code: '151219',
@@ -195,6 +201,8 @@ export default function TemplateCustomizerModal({
         },
         {
           product_name: 'Tata Salt Iodized 1kg',
+          description: 'Vacuum evaporated iodized table salt',
+          expiry_date: '2027-01-15',
           sku: 'SALT-001',
           barcode: '890456123789',
           hsn_code: '250100',
@@ -430,15 +438,15 @@ export default function TemplateCustomizerModal({
                       />
                     </div>
 
-                    <div className="space-y-3 pt-2 border-t border-[#DCE3EC] ">
+                    <div className="space-y-3 pt-2 border-t border-[var(--line)]">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700  mb-1">
+                        <label className="block text-xs font-semibold text-[var(--ink)] mb-1">
                           Header Layout Style
                         </label>
                         <select
                           value={biz.header_layout || 'logo_left'}
                           onChange={e => updateSection('business_info', 'header_layout', e.target.value)}
-                          className="w-full text-xs rounded-lg border border-[#DCE3EC]  bg-white  text-slate-900  p-2 focus:ring-1 focus:ring-[#1E3A5F]"
+                          className="w-full text-xs rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] p-2 focus:ring-1 focus:ring-[#1E3A5F]"
                         >
                           <option value="logo_left">Logo on Left, Details on Right</option>
                           <option value="logo_right">Details on Left, Logo on Right</option>
@@ -448,7 +456,7 @@ export default function TemplateCustomizerModal({
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700  mb-1">
+                        <label className="block text-xs font-semibold text-[var(--ink)] mb-1">
                           Store Name Override (Optional)
                         </label>
                         <input
@@ -456,12 +464,12 @@ export default function TemplateCustomizerModal({
                           value={biz.store_name_override || ''}
                           onChange={e => updateSection('business_info', 'store_name_override', e.target.value)}
                           placeholder={globalSettings.shop_name || 'Leave blank to use global business name'}
-                          className="w-full text-xs rounded-lg border border-[#DCE3EC]  bg-white  text-slate-900  p-2 focus:ring-1 focus:ring-[#1E3A5F]"
+                          className="w-full text-xs rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] p-2 focus:ring-1 focus:ring-[#1E3A5F]"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700  mb-1">
+                        <label className="block text-xs font-semibold text-[var(--ink)] mb-1">
                           Address Override (Optional)
                         </label>
                         <textarea
@@ -469,7 +477,7 @@ export default function TemplateCustomizerModal({
                           value={biz.address_override || ''}
                           onChange={e => updateSection('business_info', 'address_override', e.target.value)}
                           placeholder="Leave blank to use global business address"
-                          className="w-full text-xs rounded-lg border border-[#DCE3EC]  bg-white  text-slate-900  p-2 focus:ring-1 focus:ring-[#1E3A5F]"
+                          className="w-full text-xs rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] p-2 focus:ring-1 focus:ring-[#1E3A5F]"
                         />
                       </div>
                     </div>
@@ -583,13 +591,13 @@ export default function TemplateCustomizerModal({
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700  mb-1">
+                        <label className="block text-xs font-semibold text-[var(--ink)] mb-1">
                           Font Family
                         </label>
                         <select
                           value={lay.font_family || 'inter'}
                           onChange={e => updateSection('layout', 'font_family', e.target.value)}
-                          className="w-full text-xs rounded-lg border border-[#DCE3EC]  bg-white  text-slate-900  p-2"
+                          className="w-full text-xs rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] p-2"
                         >
                           <option value="inter">Inter / Clean Sans (Recommended)</option>
                           <option value="roboto">Roboto (Formal ERP)</option>
@@ -599,13 +607,13 @@ export default function TemplateCustomizerModal({
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700  mb-1">
+                        <label className="block text-xs font-semibold text-[var(--ink)] mb-1">
                           Font Size Scaling
                         </label>
                         <select
                           value={String(lay.font_size_scale || 1.0)}
                           onChange={e => updateSection('layout', 'font_size_scale', parseFloat(e.target.value))}
-                          className="w-full text-xs rounded-lg border border-[#DCE3EC]  bg-white  text-slate-900  p-2"
+                          className="w-full text-xs rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] p-2"
                         >
                           <option value="0.9">Compact (0.9x)</option>
                           <option value="1.0">Standard Regular (1.0x)</option>
@@ -630,8 +638,8 @@ export default function TemplateCustomizerModal({
                       />
                     </div>
 
-                    <div className="pt-2 border-t border-[#DCE3EC] ">
-                      <label className="block text-xs font-semibold text-slate-700  mb-1">
+                    <div className="pt-2 border-t border-[var(--line)]">
+                      <label className="block text-xs font-semibold text-[var(--ink)] mb-1">
                         Header Alignment
                       </label>
                       <div className="grid grid-cols-3 gap-2">
@@ -642,8 +650,8 @@ export default function TemplateCustomizerModal({
                             onClick={() => updateSection('layout', 'header_alignment', align)}
                             className={`py-1.5 text-xs font-semibold rounded-lg border capitalize transition-colors ${
                               (lay.header_alignment || 'left') === align
-                                ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]  '
-                                : 'bg-white  text-slate-700  border-[#DCE3EC] '
+                                ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
+                                : 'bg-[var(--surface-elevated)] text-[var(--ink)] border-[var(--line)]'
                             }`}
                           >
                             {align}
@@ -652,21 +660,21 @@ export default function TemplateCustomizerModal({
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-[#DCE3EC] ">
-                      <div className="text-xs font-semibold text-slate-700  mb-2">
+                    <div className="pt-2 border-t border-[var(--line)]">
+                      <div className="text-xs font-semibold text-[var(--ink)] mb-2">
                         Page Margins (mm)
                       </div>
                       <div className="grid grid-cols-4 gap-2">
                         {['top', 'bottom', 'left', 'right'].map(side => (
                           <div key={side}>
-                            <span className="text-[10px] uppercase font-bold text-slate-400">{side}</span>
+                            <span className="text-[10px] uppercase font-bold text-[var(--muted)]">{side}</span>
                             <input
                               type="number"
                               min="0"
                               max="30"
                               value={lay[`margin_${side}_mm`] ?? 8}
                               onChange={e => updateSection('layout', `margin_${side}_mm`, parseInt(e.target.value) || 0)}
-                              className="w-full text-xs rounded-lg border border-[#DCE3EC]  bg-white  text-slate-900  p-1.5 text-center mt-0.5"
+                              className="w-full text-xs rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] p-1.5 text-center mt-0.5"
                             />
                           </div>
                         ))}
@@ -775,7 +783,7 @@ export default function TemplateCustomizerModal({
 
                     <div className="space-y-3 pt-2 border-t border-[#DCE3EC] ">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700  mb-1">
+                        <label className="block text-xs font-semibold text-[var(--ink)] mb-1">
                           Terms Override for this Template (Optional)
                         </label>
                         <textarea
@@ -783,12 +791,12 @@ export default function TemplateCustomizerModal({
                           value={pay.terms_override || ''}
                           onChange={e => updateSection('payment', 'terms_override', e.target.value)}
                           placeholder={globalSettings.invoice_terms || 'Leave blank to use global terms & conditions'}
-                          className="w-full text-xs rounded-lg border border-[#DCE3EC]  bg-white  text-slate-900  p-2"
+                          className="w-full text-xs rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] p-2"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700  mb-1">
+                        <label className="block text-xs font-semibold text-[var(--ink)] mb-1">
                           Footer Greeting Override (Optional)
                         </label>
                         <input
@@ -796,7 +804,7 @@ export default function TemplateCustomizerModal({
                           value={pay.footer_text_override || ''}
                           onChange={e => updateSection('payment', 'footer_text_override', e.target.value)}
                           placeholder={globalSettings.invoice_footer || 'THANK YOU FOR SHOPPING WITH US! VISIT AGAIN.'}
-                          className="w-full text-xs rounded-lg border border-[#DCE3EC]  bg-white  text-slate-900  p-2"
+                          className="w-full text-xs rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] p-2"
                         />
                       </div>
                     </div>
@@ -806,19 +814,19 @@ export default function TemplateCustomizerModal({
                 {/* 6. Page & Printing Tab */}
                 {activeTab === 'page' && (
                   <div className="space-y-4">
-                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <div className="text-xs font-bold text-[var(--muted)] uppercase tracking-wider">
                       Page Size &amp; Printer Layout
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700  mb-1">
+                        <label className="block text-xs font-semibold text-[var(--ink)] mb-1">
                           Paper Dimensions
                         </label>
                         <select
                           value={pg.page_size || 'a4'}
                           onChange={e => updateSection('page', 'page_size', e.target.value)}
-                          className="w-full text-xs rounded-lg border border-[#DCE3EC]  bg-white  text-slate-900  p-2"
+                          className="w-full text-xs rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] p-2"
                         >
                           <option value="a4">A4 Full Sheet (210 × 297 mm)</option>
                           <option value="a5">A5 Half Sheet (148 × 210 mm)</option>
@@ -828,13 +836,13 @@ export default function TemplateCustomizerModal({
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700  mb-1">
+                        <label className="block text-xs font-semibold text-[var(--ink)] mb-1">
                           Orientation
                         </label>
                         <select
                           value={pg.orientation || 'portrait'}
                           onChange={e => updateSection('page', 'orientation', e.target.value)}
-                          className="w-full text-xs rounded-lg border border-[#DCE3EC]  bg-white  text-slate-900  p-2"
+                          className="w-full text-xs rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)] text-[var(--ink)] p-2"
                         >
                           <option value="portrait">Portrait (Vertical)</option>
                           <option value="landscape">Landscape (Horizontal)</option>
@@ -844,7 +852,7 @@ export default function TemplateCustomizerModal({
 
                     {templateId.startsWith('thermal') && (
                       <div>
-                        <label className="block text-xs font-semibold text-slate-700  mb-1">
+                        <label className="block text-xs font-semibold text-[var(--ink)] mb-1">
                           Thermal POS Roll Width
                         </label>
                         <div className="grid grid-cols-2 gap-2">
@@ -855,8 +863,8 @@ export default function TemplateCustomizerModal({
                               onClick={() => updateSection('page', 'thermal_roll_width', w)}
                               className={`py-2 text-xs font-semibold rounded-lg border transition-colors ${
                                 (pg.thermal_roll_width || (templateId === 'thermal_58' ? '58mm' : '80mm')) === w
-                                  ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]  '
-                                  : 'bg-white  text-slate-700  border-[#DCE3EC] '
+                                  ? 'bg-[#1E3A5F] text-white border-[#1E3A5F]'
+                                  : 'bg-[var(--surface-elevated)] text-[var(--ink)] border-[var(--line)]'
                               }`}
                             >
                               {w} Roll Width
@@ -1002,20 +1010,20 @@ export default function TemplateCustomizerModal({
 
 function ToggleItem({ label, description, checked, onChange, disabled = false }) {
   return (
-    <label className={`flex items-start gap-2.5 p-2 rounded-lg border border-[#DCE3EC]/70 transition-colors select-none ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:bg-slate-50 cursor-pointer'}`}>
+    <label className={`flex items-start gap-2.5 p-2 rounded-lg border border-[var(--line)] transition-colors select-none ${disabled ? 'opacity-50 cursor-not-allowed bg-[var(--surface-subtle)]' : 'hover:bg-[var(--surface-hover)] cursor-pointer'}`}>
       <input
         type="checkbox"
         checked={Boolean(checked)}
         onChange={e => !disabled && onChange(e.target.checked)}
         disabled={disabled}
-        className="mt-0.5 rounded text-[#1E3A5F] focus:ring-[#1E3A5F]"
+        className="mt-0.5 rounded text-[#1E3A5F] focus:ring-[#1E3A5F] accent-[#1E3A5F]"
       />
       <div className="min-w-0">
-        <div className="text-xs font-semibold text-slate-800  leading-tight">
+        <div className="text-xs font-semibold text-[var(--ink)] leading-tight">
           {label}
         </div>
         {description && (
-          <div className="text-[10.5px] text-slate-500  leading-tight mt-0.5">
+          <div className="text-[10.5px] text-[var(--muted)] leading-tight mt-0.5">
             {description}
           </div>
         )}

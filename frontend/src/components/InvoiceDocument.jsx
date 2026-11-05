@@ -211,11 +211,11 @@ export default function InvoiceDocument({
   const showLogo = showShopDetails && showLogoSetting && Boolean(shopLogo)
     && (tBiz.header_layout || s.invoice_header_layout) !== 'name_only'
   const isCorporateA4 = effectiveMode === 'a4' && ((tBiz.header_layout || s.invoice_header_layout) === 'corporate_bar' || mode === 'professional' || mode === 'stylish' || s.invoice_template === 'professional' || s.invoice_template === 'stylish')
-  const showAddress = showShopDetails && (tBiz.show_address !== undefined ? Boolean(tBiz.show_address) : isTrue(s.show_business_address, true)) && Boolean(shopAddress)
-  const showPhone = showShopDetails && (tBiz.show_phone !== undefined ? Boolean(tBiz.show_phone) : isTrue(s.show_business_phone, true)) && Boolean(shopPhone)
-  const showEmail = showShopDetails && (tBiz.show_email !== undefined ? Boolean(tBiz.show_email) : isTrue(s.show_business_email, true)) && Boolean(shopEmail)
-  const showGstin = showShopDetails && (tBiz.show_gstin !== undefined ? Boolean(tBiz.show_gstin) : isTrue(s.show_business_gstin, true)) && Boolean(shopGstin)
-  const showPan = showShopDetails && (tBiz.show_pan !== undefined ? Boolean(tBiz.show_pan) : isTrue(s.show_business_pan, true)) && Boolean(shopPan)
+  const showAddress = showShopDetails && (tBiz.show_address !== undefined ? isTrue(tBiz.show_address) : isTrue(s.show_business_address, true)) && Boolean(shopAddress)
+  const showPhone = showShopDetails && (tBiz.show_phone !== undefined ? isTrue(tBiz.show_phone) : isTrue(s.show_business_phone, true)) && Boolean(shopPhone)
+  const showEmail = showShopDetails && (tBiz.show_email !== undefined ? isTrue(tBiz.show_email) : isTrue(s.show_business_email, true)) && Boolean(shopEmail)
+  const showGstin = showShopDetails && (tBiz.show_gstin !== undefined ? isTrue(tBiz.show_gstin) : isTrue(s.show_business_gstin, true)) && Boolean(shopGstin)
+  const showPan = showShopDetails && (tBiz.show_pan !== undefined ? isTrue(tBiz.show_pan) : isTrue(s.show_business_pan, true)) && Boolean(shopPan)
   const showFssai = showShopDetails && isTrue(s.show_fssai_on_invoice, false) && Boolean(fssai)
   const showCin = showShopDetails && isTrue(s.show_cin_on_invoice, false) && Boolean(cin)
 
@@ -225,10 +225,11 @@ export default function InvoiceDocument({
   const custAddress = inv.customer_address || inv.customer?.address || ''
   const custGstin = inv.customer_gstin || inv.customer?.gstin || ''
 
-  const showCustName = isTrue(tFields.show_customer_name, true)
-  const showCustPhone = (tFields.show_customer_phone !== undefined ? tFields.show_customer_phone : isTrue(s.show_customer_phone, true)) && Boolean(custPhone)
-  const showCustAddress = (tFields.show_customer_address !== undefined ? tFields.show_customer_address : isTrue(s.show_customer_address, true)) && Boolean(custAddress)
-  const showCustGstin = (tFields.show_customer_gstin !== undefined ? tFields.show_customer_gstin : isTrue(s.show_customer_gstin, true)) && Boolean(custGstin)
+  const showCustName = isTrue(tFields.show_customer_name !== undefined ? tFields.show_customer_name : s.show_customer_name, true)
+  const showCustPhone = isTrue(tFields.show_customer_phone !== undefined ? tFields.show_customer_phone : s.show_customer_phone, true) && Boolean(custPhone)
+  const showCustAddress = isTrue(tFields.show_customer_address !== undefined ? tFields.show_customer_address : s.show_customer_address, true) && Boolean(custAddress)
+  const showCustGstin = isTrue(tFields.show_customer_gstin !== undefined ? tFields.show_customer_gstin : s.show_customer_gstin, true) && Boolean(custGstin)
+  const hasAnyCustomerInfo = (showCustName && custName) || showCustAddress || showCustPhone || showCustGstin
 
   // Invoice specifics
   const invoiceNo = inv.invoice_number || `${s.invoice_prefix || 'INV-'}${s.invoice_start_number || '1001'}`
@@ -265,6 +266,7 @@ export default function InvoiceDocument({
         return {
           ...i,
           name: i.product_name || i.name || i.product?.name || 'Item',
+          description: i.description || i.desc || i.product?.description || '',
           sku: i.sku || i.product?.sku || '',
           barcode: i.barcode || i.product?.barcode || '',
           hsn: i.hsn_code || i.hsn || i.product?.hsn_code || '',
@@ -299,19 +301,20 @@ export default function InvoiceDocument({
   const balanceDue = Number(inv.balance_due ?? Math.max(0, grandTotal - paidAmount))
 
   // Column toggles
-  const showSkuCol = (tFields.show_sku !== undefined ? tFields.show_sku : isTrue(s.show_sku_col, false)) && items.some(i => Boolean(i.sku))
+  const showSkuCol = isTrue(tFields.show_sku !== undefined ? tFields.show_sku : s.show_sku_col, false) && items.some(i => Boolean(i.sku))
   const showBarcodeCol = isTrue(s.show_barcode_col, false) && items.some(i => Boolean(i.barcode))
-  const showHsnCol = (tFields.show_hsn !== undefined ? tFields.show_hsn : isTrue(s.show_hsn_col, true)) && items.some(i => Boolean(i.hsn))
-  const showUnitCol = (tFields.show_unit !== undefined ? tFields.show_unit : isTrue(s.show_unit_col, false)) && items.some(i => Boolean(i.unit))
-  const showBatchCol = (tFields.show_batch !== undefined ? tFields.show_batch : isTrue(s.show_batch_col, false)) && items.some(i => Boolean(i.batch))
-  const showExpiryCol = isTrue(s.show_expiry_col, false) && items.some(i => Boolean(i.expiry))
+  const showHsnCol = isTrue(tFields.show_hsn !== undefined ? tFields.show_hsn : s.show_hsn_col, true) && items.some(i => Boolean(i.hsn))
+  const showUnitCol = isTrue(tFields.show_unit !== undefined ? tFields.show_unit : s.show_unit_col, true) && items.some(i => Boolean(i.unit))
+  const showBatchCol = isTrue(tFields.show_batch !== undefined ? tFields.show_batch : s.show_batch_col, false) && items.some(i => Boolean(i.batch))
+  const showExpiryCol = isTrue(tFields.show_expiry !== undefined ? tFields.show_expiry : s.show_expiry_col, false) && items.some(i => Boolean(i.expiry))
   const showMfgCol = isTrue(s.show_mfg_date, false) && items.some(i => Boolean(i.manufacturing))
-  const showMrpCol = isTrue(s.show_mrp_col, false) && items.some(i => Number(i.mrp) > 0)
-  const showDiscCol = (tFields.show_discount !== undefined ? tFields.show_discount : isTrue(s.show_discount_col, true)) && items.some(i => Number(i.disc) > 0)
-  const showTaxCols = (tFields.show_tax_breakup !== undefined ? tFields.show_tax_breakup : isTrue(s.show_tax_cols, true)) && s.gst_reg_type !== 'unregistered'
+  const showMrpCol = (isTrue(s.show_mrp_col, false) || isTrue(s.show_price_history, false)) && items.some(i => Number(i.mrp) > 0)
+  const showDiscCol = isTrue(tFields.show_discount !== undefined ? tFields.show_discount : s.show_discount_col, true) && items.some(i => Number(i.disc) > 0)
+  const showTaxCols = isTrue(tFields.show_tax_breakup !== undefined ? tFields.show_tax_breakup : s.show_tax_cols, true) && s.gst_reg_type !== 'unregistered'
   const thermal = effectiveMode === 'thermal'
   const showSerialCol = isTrue(tFields.show_sr_no !== undefined ? tFields.show_sr_no : s.show_sr_no, true)
   const showItemName = isTrue(tFields.show_item_name !== undefined ? tFields.show_item_name : s.show_item_name, true)
+  const showItemDescription = isTrue(tFields.show_item_description !== undefined ? tFields.show_item_description : s.show_item_description, false)
   const showQtyCol = thermal
     ? isTrue(s.thermal_show_qty, true)
     : isTrue(tFields.show_qty !== undefined ? tFields.show_qty : s.show_qty_col, true)
@@ -327,11 +330,11 @@ export default function InvoiceDocument({
   const showCessCol = isTrue(s.cess_enabled, false) && cessAmount > 0
 
   // Tax breakdown flags
-  const showSubtotal = isTrue(tTax.show_subtotal, true)
-  const showDiscountTotal = isTrue(tTax.show_discount_total, true)
-  const showTaxSummary = isTrue(tTax.show_tax_summary, true)
-  const showRoundOff = tTax.show_round_off !== undefined ? tTax.show_round_off : isTrue(s.round_off, true)
-  const showWords = (tTax.show_amount_in_words !== undefined ? tTax.show_amount_in_words : isTrue(s.show_amount_in_words, true))
+  const showSubtotal = isTrue(tTax.show_subtotal, isTrue(s.show_subtotal, true))
+  const showDiscountTotal = isTrue(tTax.show_discount_total, isTrue(s.show_discount_total, true))
+  const showTaxSummary = isTrue(tTax.show_tax_summary, isTrue(s.show_tax_summary, isTrue(s.show_tax_breakdown, true)))
+  const showRoundOff = tTax.show_round_off !== undefined ? isTrue(tTax.show_round_off) : isTrue(s.show_round_off, isTrue(s.round_off, true))
+  const showWords = isTrue(tTax.show_amount_in_words !== undefined ? tTax.show_amount_in_words : s.show_amount_in_words, true)
 
   // Payment, QR & Bank
   const showPaymentSummary = isTrue(tPayment.show_payment_summary, isTrue(s.show_payment_summary, true))
@@ -397,6 +400,7 @@ export default function InvoiceDocument({
           <ThermalReceipt
             invoice={inv}
             settings={s}
+            templateConfig={activeTplConfig || templateConfig}
             mode={targetMode}
             isPreview={false}
           />
@@ -458,41 +462,59 @@ export default function InvoiceDocument({
             }}
           >
             {/* Header: Shop info left, invoice metadata right */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, gap: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, gap: 14 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 {showShopDetails && (
-                  <>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: (tBiz.header_layout || s.invoice_header_layout) === 'center' || (tBiz.header_layout || s.invoice_header_layout) === 'logo_top' ? 'center' : 'flex-start',
+                    flexDirection: (tBiz.header_layout || s.invoice_header_layout) === 'center' || (tBiz.header_layout || s.invoice_header_layout) === 'logo_top' ? 'column' : (tBiz.header_layout || s.invoice_header_layout) === 'logo_right' ? 'row-reverse' : 'row',
+                    justifyContent: (tBiz.header_layout || s.invoice_header_layout) === 'logo_right' ? 'flex-end' : undefined,
+                    textAlign: (tBiz.header_layout || s.invoice_header_layout) === 'center' || (tBiz.header_layout || s.invoice_header_layout) === 'logo_top' ? 'center' : 'left',
+                    gap: 12,
+                  }}>
                     {showLogo && (
-                      <img
-                        src={shopLogo}
-                        alt="Store Logo"
-                        style={{ maxHeight: 28, maxWidth: 84, objectFit: 'contain', marginBottom: 8 }}
-                      />
-                    )}
-                    {showShopName && shopName && (
-                      <div style={{ fontWeight: '800', fontSize: 14.5, textTransform: 'uppercase', color: accentColor, letterSpacing: '0.02em', lineHeight: 1.2 }}>
-                        {shopName}
+                      <div style={{ flexShrink: 0, display: 'flex', alignItems: 'flex-start' }}>
+                        <img
+                          src={shopLogo}
+                          alt="Store Logo"
+                          style={{
+                            maxHeight: 52,
+                            maxWidth: 110,
+                            width: 'auto',
+                            height: 'auto',
+                            objectFit: 'contain',
+                            display: 'block',
+                          }}
+                        />
                       </div>
                     )}
-                    {showAddress && shopAddress && shopAddress.split('\n').map((line, idx) => (
-                      <div key={idx} style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}>{line}</div>
-                    ))}
-                    {(showPhone || showEmail) && (
-                      <div style={{ fontSize: 8.5, color: '#475569', marginTop: 1 }}>
-                        {showPhone && `Ph: ${shopPhone}`}
-                        {showPhone && showEmail && ' | '}
-                        {showEmail && shopEmail}
-                      </div>
-                    )}
-                    {(showGstin || showPan || showFssai || showCin) && (
-                      <div style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}>
-                        {showGstin && <span><b>GSTIN:</b> {shopGstin} </span>}
-                        {showPan && <span>| <b>PAN:</b> {shopPan} </span>}
-                        {showFssai && <span>| <b>FSSAI:</b> {fssai}</span>}
-                        {showCin && <span>| <b>CIN:</b> {cin}</span>}
-                      </div>
-                    )}
-                  </>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {showShopName && shopName && (
+                        <div style={{ fontWeight: '800', fontSize: 14.5, textTransform: 'uppercase', color: accentColor, letterSpacing: '0.02em', lineHeight: 1.2 }}>
+                          {shopName}
+                        </div>
+                      )}
+                      {showAddress && shopAddress && shopAddress.split('\n').map((line, idx) => (
+                        <div key={idx} style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}>{line}</div>
+                      ))}
+                      {(showPhone || showEmail) && (
+                        <div style={{ fontSize: 8.5, color: '#475569', marginTop: 1 }}>
+                          {showPhone && `Ph: ${shopPhone}`}
+                          {showPhone && showEmail && ' | '}
+                          {showEmail && shopEmail}
+                        </div>
+                      )}
+                      {(showGstin || showPan || showFssai || showCin) && (
+                        <div style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}>
+                          {showGstin && <span><b>GSTIN:</b> {shopGstin} </span>}
+                          {showPan && <span>| <b>PAN:</b> {shopPan} </span>}
+                          {showFssai && <span>| <b>FSSAI:</b> {fssai}</span>}
+                          {showCin && <span>| <b>CIN:</b> {cin}</span>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -538,30 +560,36 @@ export default function InvoiceDocument({
             <div style={{ borderTop: `1px ${invoiceBorderStyle === 'dashed' ? 'dashed' : 'solid'} ${secondaryColor}66`, marginBottom: 8 }} />
 
             {/* Bill To Customer Section */}
+            {(hasAnyCustomerInfo || (showPlaceOfSupply && placeOfSupply)) && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 10 }}>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontSize: 8.5, fontWeight: '700', textTransform: 'uppercase', color: '#475569', letterSpacing: '0.04em' }}>
-                  BILL TO
+              {hasAnyCustomerInfo ? (
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 8.5, fontWeight: '700', textTransform: 'uppercase', color: '#475569', letterSpacing: '0.04em' }}>
+                    BILL TO
+                  </div>
+                  {showCustName && custName && (
+                    <div style={{ fontWeight: '700', fontSize: 11.5, color: '#0F172A' }}>
+                      {custName}
+                    </div>
+                  )}
+                  {showCustAddress && custAddress && (
+                    <div style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}>{custAddress}</div>
+                  )}
+                  {showCustPhone && custPhone && (
+                    <div style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}>Mobile: {custPhone}</div>
+                  )}
+                  {showCustGstin && custGstin && (
+                    <div style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}><b>GSTIN:</b> {custGstin}</div>
+                  )}
                 </div>
-                <div style={{ fontWeight: '700', fontSize: 11.5, color: '#0F172A' }}>
-                  {custName}
-                </div>
-                {showCustAddress && (
-                  <div style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}>{custAddress}</div>
-                )}
-                {showCustPhone && (
-                  <div style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}>Mobile: {custPhone}</div>
-                )}
-                {showCustGstin && (
-                  <div style={{ fontSize: 8.5, color: '#334155', marginTop: 1 }}><b>GSTIN:</b> {custGstin}</div>
-                )}
-              </div>
+              ) : <div style={{ flex: 1 }} />}
               {showPlaceOfSupply && placeOfSupply && (
                 <div style={{ textAlign: 'right', fontSize: 8.5, color: '#475569', shrink: 0 }}>
                   <b>Place of Supply:</b> {placeOfSupply}
                 </div>
               )}
             </div>
+            )}
 
             {/* Items Table */}
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 8.5, marginTop: 2, tableLayout: 'fixed' }}>
@@ -589,6 +617,9 @@ export default function InvoiceDocument({
                     {showSerialCol && <td style={{ padding: '4px 3px', textAlign: 'center', fontSize: 8.5, color: '#64748B', whiteSpace: 'nowrap' }}>{idx + 1}</td>}
                     {showItemName && <td style={{ padding: '4px 4px', fontSize: 8.5, color: '#0F172A', fontWeight: '500', wordBreak: 'break-word', whiteSpace: 'normal', overflowWrap: 'break-word' }}>
                       <div style={{ wordBreak: 'break-word', whiteSpace: 'normal', lineHeight: 1.25 }}>{item.name}</div>
+                      {showItemDescription && item.description && (
+                        <div style={{ fontSize: 7.5, color: '#64748B', fontStyle: 'italic', marginTop: 1, lineHeight: 1.2 }}>{item.description}</div>
+                      )}
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 6px', marginTop: 2, fontSize: 7.5, color: '#64748B' }}>
                         {item.sku && showSkuCol && <span>SKU: {item.sku}</span>}
                         {item.barcode && showBarcodeCol && <span>Bar: {item.barcode}</span>}
@@ -650,17 +681,19 @@ export default function InvoiceDocument({
 
               {/* Accounting Totals */}
               <div style={{ minWidth: 190 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1.5px 0', fontSize: 9.5, color: '#334155' }}>
-                  <span>Subtotal</span>
-                  <span style={{ fontWeight: '600', color: '#0F172A' }}>{fmt(subtotal)}</span>
-                </div>
-                {discountAmount > 0 && (
+                {showSubtotal && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1.5px 0', fontSize: 9.5, color: '#334155' }}>
+                    <span>Subtotal</span>
+                    <span style={{ fontWeight: '600', color: '#0F172A' }}>{fmt(subtotal)}</span>
+                  </div>
+                )}
+                {showDiscountTotal && discountAmount > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1.5px 0', fontSize: 9.5, color: '#334155' }}>
                     <span>Discount</span>
                     <span style={{ fontWeight: '600', color: '#DC2626' }}>-{fmt(discountAmount)}</span>
                   </div>
                 )}
-                {showTaxCols && taxAmount > 0 && (
+                {showTaxSummary && showTaxCols && taxAmount > 0 && (
                   <>
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1.5px 0', fontSize: 9, color: '#334155' }}>
                       <span>SGST</span>
@@ -678,7 +711,7 @@ export default function InvoiceDocument({
                     <span style={{ fontWeight: '600', color: '#0F172A' }}>{fmt(cessAmount)}</span>
                   </div>
                 )}
-                {roundOff !== 0 && (
+                {showRoundOff && roundOff !== 0 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '1.5px 0', fontSize: 9, color: '#334155' }}>
                     <span>Round Off</span>
                     <span style={{ fontWeight: '600', color: '#0F172A' }}>{fmt(roundOff)}</span>
@@ -889,45 +922,63 @@ export default function InvoiceDocument({
               borderRadius: isCorporateA4 ? 4 : undefined,
             }}
           >
-            <div style={{ flex: 1, paddingRight: 20 }}>
+            <div style={{ flex: 1, paddingRight: 16, minWidth: 0 }}>
               {showShopDetails && (
-                <>
+                <div style={{
+                  display: 'flex',
+                  alignItems: (tBiz.header_layout || s.invoice_header_layout) === 'center' || (tBiz.header_layout || s.invoice_header_layout) === 'logo_top' ? 'center' : 'flex-start',
+                  flexDirection: (tBiz.header_layout || s.invoice_header_layout) === 'center' || (tBiz.header_layout || s.invoice_header_layout) === 'logo_top' ? 'column' : (tBiz.header_layout || s.invoice_header_layout) === 'logo_right' ? 'row-reverse' : 'row',
+                  justifyContent: (tBiz.header_layout || s.invoice_header_layout) === 'logo_right' ? 'flex-end' : undefined,
+                  textAlign: (tBiz.header_layout || s.invoice_header_layout) === 'center' || (tBiz.header_layout || s.invoice_header_layout) === 'logo_top' ? 'center' : 'left',
+                  gap: 14,
+                }}>
                   {showLogo && (
-                    <img
-                      src={shopLogo}
-                      alt="Business Logo"
-                      style={{ maxHeight: 32, maxWidth: 100, objectFit: 'contain', marginBottom: 8 }}
-                    />
-                  )}
-                  {showShopName && shopName && (
-                    <div style={{ fontWeight: '800', fontSize: 17, textTransform: 'uppercase', color: '#0F172A', letterSpacing: '0.02em' }}>
-                      {shopName}
+                    <div style={{ flexShrink: 0, display: 'flex', alignItems: 'flex-start' }}>
+                      <img
+                        src={shopLogo}
+                        alt="Business Logo"
+                        style={{
+                          maxHeight: isCorporateA4 ? 64 : 58,
+                          maxWidth: 140,
+                          width: 'auto',
+                          height: 'auto',
+                          objectFit: 'contain',
+                          display: 'block',
+                        }}
+                      />
                     </div>
                   )}
-                  {showAddress && shopAddress && shopAddress.split('\n').map((line, idx) => (
-                    <div key={idx} style={{ fontSize: 9.5, color: '#334155', marginTop: 1 }}>{line}</div>
-                  ))}
-                  {(showPhone || showEmail) && (
-                    <div style={{ fontSize: 9.5, color: '#475569', marginTop: 2 }}>
-                      {showPhone && `Mobile: ${shopPhone}`}
-                      {showPhone && showEmail && '  |  '}
-                      {showEmail && `Email: ${shopEmail}`}
-                    </div>
-                  )}
-                  {(showGstin || showPan || showFssai || showCin) && (
-                    <div style={{ fontSize: 9.5, color: '#334155', marginTop: 2 }}>
-                      {showGstin && <span><b>GSTIN:</b> {shopGstin}</span>}
-                      {showGstin && showPan && '  |  '}
-                      {showPan && <span><b>PAN:</b> {shopPan}</span>}
-                      {showFssai && <span>  |  <b>FSSAI:</b> {fssai}</span>}
-                      {showCin && <span>  |  <b>CIN:</b> {cin}</span>}
-                    </div>
-                  )}
-                </>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {showShopName && shopName && (
+                      <div style={{ fontWeight: '800', fontSize: 17, textTransform: 'uppercase', color: '#0F172A', letterSpacing: '0.02em', lineHeight: 1.25 }}>
+                        {shopName}
+                      </div>
+                    )}
+                    {showAddress && shopAddress && shopAddress.split('\n').map((line, idx) => (
+                      <div key={idx} style={{ fontSize: 9.5, color: '#334155', marginTop: 1 }}>{line}</div>
+                    ))}
+                    {(showPhone || showEmail) && (
+                      <div style={{ fontSize: 9.5, color: '#475569', marginTop: 2 }}>
+                        {showPhone && `Mobile: ${shopPhone}`}
+                        {showPhone && showEmail && '  |  '}
+                        {showEmail && `Email: ${shopEmail}`}
+                      </div>
+                    )}
+                    {(showGstin || showPan || showFssai || showCin) && (
+                      <div style={{ fontSize: 9.5, color: '#334155', marginTop: 2 }}>
+                        {showGstin && <span><b>GSTIN:</b> {shopGstin}</span>}
+                        {showGstin && showPan && '  |  '}
+                        {showPan && <span><b>PAN:</b> {shopPan}</span>}
+                        {showFssai && <span>  |  <b>FSSAI:</b> {fssai}</span>}
+                        {showCin && <span>  |  <b>CIN:</b> {cin}</span>}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
 
-            <div style={{ textAlign: 'right', minWidth: 230 }}>
+            <div style={{ textAlign: 'right', minWidth: 220, flexShrink: 0 }}>
               <div style={{
                 fontWeight: '800',
                 fontSize: 18,
@@ -966,24 +1017,29 @@ export default function InvoiceDocument({
           <div style={{ borderTop: `1px solid ${secondaryColor}`, marginBottom: 10 }} />
 
           {/* 2. BILL TO CUSTOMER SECTION */}
+          {(hasAnyCustomerInfo || (showPlaceOfSupply && placeOfSupply) || inv.shipping_address) && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, gap: 16 }}>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 9, fontWeight: '700', textTransform: 'uppercase', color: '#475569', letterSpacing: '0.04em', marginBottom: 2 }}>
-                BILL TO
+            {hasAnyCustomerInfo ? (
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: 9, fontWeight: '700', textTransform: 'uppercase', color: '#475569', letterSpacing: '0.04em', marginBottom: 2 }}>
+                  BILL TO
+                </div>
+                {showCustName && custName && (
+                  <div style={{ fontWeight: '700', fontSize: 12.5, color: '#0F172A' }}>
+                    {custName}
+                  </div>
+                )}
+                {showCustAddress && custAddress && (
+                  <div style={{ fontSize: 9.5, color: '#334155', marginTop: 1 }}>{custAddress}</div>
+                )}
+                {showCustPhone && custPhone && (
+                  <div style={{ fontSize: 9.5, color: '#334155', marginTop: 1 }}>Mobile: {custPhone}</div>
+                )}
+                {showCustGstin && custGstin && (
+                  <div style={{ fontSize: 9.5, color: '#334155', marginTop: 1 }}><b>GSTIN:</b> {custGstin}</div>
+                )}
               </div>
-              <div style={{ fontWeight: '700', fontSize: 12.5, color: '#0F172A' }}>
-                {custName}
-              </div>
-              {showCustAddress && (
-                <div style={{ fontSize: 9.5, color: '#334155', marginTop: 1 }}>{custAddress}</div>
-              )}
-              {showCustPhone && (
-                <div style={{ fontSize: 9.5, color: '#334155', marginTop: 1 }}>Mobile: {custPhone}</div>
-              )}
-              {showCustGstin && (
-                <div style={{ fontSize: 9.5, color: '#334155', marginTop: 1 }}><b>GSTIN:</b> {custGstin}</div>
-              )}
-            </div>
+            ) : <div style={{ flex: 1 }} />}
 
             <div style={{ textAlign: 'right', fontSize: 9.5, color: '#475569', flexShrink: 0 }}>
               {showPlaceOfSupply && placeOfSupply && (
@@ -994,6 +1050,7 @@ export default function InvoiceDocument({
               )}
             </div>
           </div>
+          )}
 
           {/* 3. DYNAMIC ITEM TABLE WITH LIGHT SHADED HEADER */}
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: a4FontSize, marginTop: 4, tableLayout: 'fixed' }}>
@@ -1042,7 +1099,12 @@ export default function InvoiceDocument({
                     <td style={{ padding: `${a4PadY}px 4px`, textAlign: 'center', fontSize: a4FontSize, color: '#475569', whiteSpace: 'nowrap' }}>{item.sku || '—'}</td>
                   )}
                   {showBarcodeCol && <td style={{ padding: `${a4PadY}px 4px`, textAlign: 'center', fontSize: a4FontSize, color: '#64748B', whiteSpace: 'nowrap' }}>{item.barcode || '—'}</td>}
-                  {showItemName && <td style={{ padding: `${a4PadY}px 6px`, fontSize: a4FontSize, color: '#0F172A', fontWeight: '500', wordBreak: 'break-word', whiteSpace: 'normal', overflowWrap: 'break-word', lineHeight: 1.3 }}>{item.name}</td>}
+                  {showItemName && <td style={{ padding: `${a4PadY}px 6px`, fontSize: a4FontSize, color: '#0F172A', fontWeight: '500', wordBreak: 'break-word', whiteSpace: 'normal', overflowWrap: 'break-word', lineHeight: 1.3 }}>
+                    <div>{item.name}</div>
+                    {showItemDescription && item.description && (
+                      <div style={{ fontSize: a4FontSize - 1, color: '#64748B', fontStyle: 'italic', marginTop: 1, lineHeight: 1.25 }}>{item.description}</div>
+                    )}
+                  </td>}
                   {showHsnCol && (
                     <td style={{ padding: `${a4PadY}px 4px`, textAlign: 'center', fontSize: a4FontSize, color: '#64748B', whiteSpace: 'nowrap' }}>{item.hsn || '—'}</td>
                   )}
@@ -1116,17 +1178,19 @@ export default function InvoiceDocument({
 
             {/* Accounting totals */}
             <div style={{ minWidth: 240 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: 10.5, color: '#334155' }}>
-                <span>Sub Total</span>
-                <span style={{ fontWeight: '600', color: '#0F172A' }}>{fmt(subtotal)}</span>
-              </div>
-              {discountAmount > 0 && (
+              {showSubtotal && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: 10.5, color: '#334155' }}>
+                  <span>Sub Total</span>
+                  <span style={{ fontWeight: '600', color: '#0F172A' }}>{fmt(subtotal)}</span>
+                </div>
+              )}
+              {showDiscountTotal && discountAmount > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: 10.5, color: '#334155' }}>
                   <span>Discount</span>
                   <span style={{ fontWeight: '600', color: '#DC2626' }}>-{fmt(discountAmount)}</span>
                 </div>
               )}
-              {showTaxCols && taxAmount > 0 && (
+              {showTaxSummary && showTaxCols && taxAmount > 0 && (
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: 10.5, color: '#334155' }}>
                     <span>SGST</span>
@@ -1144,7 +1208,7 @@ export default function InvoiceDocument({
                   <span style={{ fontWeight: '600', color: '#0F172A' }}>{fmt(cessAmount)}</span>
                 </div>
               )}
-              {roundOff !== 0 && (
+              {showRoundOff && roundOff !== 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0', fontSize: 10.5, color: '#334155' }}>
                   <span>Round Off</span>
                   <span style={{ fontWeight: '600', color: '#0F172A' }}>{fmt(roundOff)}</span>

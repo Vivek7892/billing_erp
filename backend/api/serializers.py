@@ -18,60 +18,94 @@ GSTIN_REGEX = re.compile(r'^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]
 PHONE_REGEX = re.compile(r'^(\+91[\-\s]?)?[6789]\d{9}$')
 
 
-def normalize_phone_number(val):
-    if not val:
-        return ''
-    digits = re.sub(r'\D', '', str(val))
-    if digits.startswith('91') and len(digits) == 12:
-        digits = digits[2:]
-    return digits
+from .models import normalize_phone_number
 
 
 class RegisterSerializer(serializers.Serializer):
+    business_name = serializers.CharField(max_length=200, required=False, allow_blank=True)
     full_name = serializers.CharField(max_length=200, required=False, allow_blank=True)
-    username = serializers.CharField(max_length=150, min_length=3)
-    email = serializers.EmailField()
-    phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
-    password = serializers.CharField(write_only=True, min_length=8)
-    confirm_password = serializers.CharField(write_only=True, min_length=8)
-    terms_accepted = serializers.BooleanField(required=True)
-
-    def validate_username(self, value):
-        val = value.strip().lower()
-        if not re.match(r'^[a-z0-9_.]+$', val):
-            raise serializers.ValidationError('Username can only contain lowercase letters, numbers, dots, and underscores.')
-        if User.objects.filter(username__iexact=val).exists():
-            raise serializers.ValidationError('This username is already taken.')
-        return val
-
-    def validate_email(self, value):
-        val = value.strip().lower()
-        if User.objects.filter(email__iexact=val).exists():
-            raise serializers.ValidationError('An account with this email already exists.')
-        return val
-
-    def validate_phone(self, value):
-        val = value.strip()
-        if not val:
-            return ''
-        normalized = normalize_phone_number(val)
-        if len(normalized) != 10 or not normalized.isdigit():
-            raise serializers.ValidationError('Enter a valid 10-digit Indian mobile number.')
-        return normalized
-
-    def validate_terms_accepted(self, value):
-        if not value:
-            raise serializers.ValidationError('You must accept the terms and conditions to register.')
-        return value
+    mobile = serializers.CharField(max_length=30, required=False, allow_blank=True)
+    phone = serializers.CharField(max_length=30, required=False, allow_blank=True)
+    username = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True, min_length=6)
+    confirm_password = serializers.CharField(write_only=True, min_length=6, required=False, allow_blank=True)
+    terms_accepted = serializers.BooleanField(required=False, default=True)
 
     def validate(self, attrs):
         password = attrs.get('password')
         confirm = attrs.get('confirm_password')
-        if password != confirm:
+        if confirm and password != confirm:
             raise serializers.ValidationError({'confirm_password': 'Passwords do not match.'})
-        if not re.search(r'[A-Za-z]', password) or not re.search(r'\d', password):
-            raise serializers.ValidationError({'password': 'Password must contain at least one letter and one number.'})
+
+        # Resolve mobile number
+        raw_phone = attrs.get('mobile') or attrs.get('phone') or attrs.get('username')
+        if not raw_phone:
+            raise serializers.ValidationError({'mobile': 'Mobile number is required.'})
+
+        try:
+            normalized_phone = normalize_phone_number(raw_phone)
+        except ValueError as exc:
+            raise serializers.ValidationError({'mobile': str(exc)})
+
+        # Check if an active, verified user already exists with this mobile
+        if User.objects.filter(phone=normalized_phone, is_verified=True).exists():
+            raise serializers.ValidationError({'mobile': 'An account with this mobile number already exists.'})
+
+        attrs['normalized_phone'] = normalized_phone
+        business_name = (attrs.get('business_name') or '').strip()
+        if not business_name:
+            full_name = (attrs.get('full_name') or '').strip()
+            attrs['business_name'] = f"{full_name}'s Shop" if full_name else f"Shop {normalized_phone[-4:]}"
+        else:
+            attrs['business_name'] = business_name
+
         return attrs
+
+
+class LoginSerializer(serializers.Serializer):
+    identifier = serializers.CharField(required=False, allow_blank=True)
+    mobile = serializers.CharField(required=False, allow_blank=True)
+    phone = serializers.CharField(required=False, allow_blank=True)
+    email = serializers.CharField(required=False, allow_blank=True)
+    username = serializers.CharField(required=False, allow_blank=True)
+    password = serializers.CharField(required=True)
+    remember_me = serializers.BooleanField(required=False, default=False)
+
+
+class PINLoginSerializer(serializers.Serializer):
+    mobile = serializers.CharField(required=False, allow_blank=True)
+    phone = serializers.CharField(required=False, allow_blank=True)
+    username = serializers.CharField(required=False, allow_blank=True)
+    pin = serializers.CharField(required=True, min_length=4, max_length=8)
+
+
+class Verify2FASerializer(serializers.Serializer):
+    temp_token = serializers.CharField(required=True)
+    code = serializers.CharField(required=False, allow_blank=True, default='')
+    recovery_code = serializers.CharField(required=False, allow_blank=True, default='')
+    remember_me = serializers.BooleanField(required=False, default=False)
+
+    def validate(self, attrs):
+        code = attrs.get('code', '').strip()
+        recovery = attrs.get('recovery_code', '').strip()
+        if not code and not recovery:
+            raise serializers.ValidationError('Please provide a 6-digit authenticator code or backup recovery code.')
+        return attrs
+
+
+class Confirm2FASerializer(serializers.Serializer):
+    code = serializers.CharField(required=True, min_length=6, max_length=6)
+
+
+class Disable2FASerializer(serializers.Serializer):
+    password = serializers.CharField(required=True)
+    code = serializers.CharField(required=True)
+
+
+class RegenerateRecoveryCodesSerializer(serializers.Serializer):
+    password = serializers.CharField(required=True)
+    code = serializers.CharField(required=True)
 
 
 class OnboardingBusinessStepSerializer(serializers.Serializer):
@@ -101,8 +135,9 @@ class OnboardingBusinessStepSerializer(serializers.Serializer):
         val = value.strip()
         if not val:
             return ''
-        normalized = normalize_phone_number(val)
-        if len(normalized) != 10:
+        try:
+            normalized = normalize_phone_number(val)
+        except ValueError as exc:
             raise serializers.ValidationError('Enter a valid 10-digit mobile number.')
         return normalized
 
@@ -174,33 +209,83 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, required=False)
+    password = serializers.CharField(write_only=True, required=False, min_length=6)
+    pos_pin = serializers.CharField(write_only=True, required=False, min_length=4, max_length=8)
     business_name = serializers.CharField(source='business.name', read_only=True)
     business_shop_id = serializers.CharField(source='business.shop_id', read_only=True)
     onboarding_completed = serializers.BooleanField(source='has_completed_onboarding', read_only=True)
     onboarding_step = serializers.CharField(read_only=True)
+    effective_permissions = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role', 'phone',
-                  'is_active', 'password', 'business', 'business_name', 'business_shop_id', 'is_verified',
-                  'onboarding_completed', 'onboarding_step']
-        read_only_fields = ['business', 'business_shop_id', 'is_verified', 'onboarding_completed', 'onboarding_step']
+        fields = [
+            'id', 'phone', 'username', 'email', 'first_name', 'last_name',
+            'role', 'is_active', 'is_verified', 'password', 'pos_pin',
+            'business', 'business_name', 'business_shop_id',
+            'employee_id', 'department', 'custom_permissions',
+            'effective_permissions', 'pos_pin_enabled',
+            'onboarding_completed', 'onboarding_step', 'totp_enabled',
+        ]
+        read_only_fields = [
+            'id', 'username', 'business', 'business_name', 'business_shop_id',
+            'is_verified', 'onboarding_completed', 'onboarding_step', 'totp_enabled',
+            'effective_permissions', 'pos_pin_enabled',
+        ]
+
+    def get_effective_permissions(self, obj):
+        return obj.get_effective_permissions()
+
+    def validate_phone(self, value):
+        if not value:
+            return None
+        try:
+            normalized = normalize_phone_number(value)
+        except ValueError as exc:
+            raise serializers.ValidationError(str(exc))
+        qs = User.objects.filter(phone=normalized)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('A user with this mobile number already exists.')
+        return normalized
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            role = attrs.get('role')
+            if role == 'owner' and request.user.role != 'owner' and not request.user.is_superuser:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied('Only the shop owner can assign the owner role.')
+        return attrs
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
+        pos_pin = validated_data.pop('pos_pin', None)
+        phone = validated_data.get('phone')
+        if phone and not validated_data.get('username'):
+            validated_data['username'] = phone
         user = User(**validated_data)
         if password:
             user.set_password(password)
+        if pos_pin:
+            user.set_pos_pin(pos_pin)
         user.save()
         return user
 
     def update(self, instance, validated_data):
         password = validated_data.pop('password', None)
+        pos_pin = validated_data.pop('pos_pin', None)
+        validated_data.pop('business', None)
+        validated_data.pop('is_verified', None)
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         if password:
             instance.set_password(password)
+            instance.rotate_session_stamp()
+        if pos_pin is not None:
+            instance.set_pos_pin(pos_pin)
         instance.save()
         return instance
 

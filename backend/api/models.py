@@ -1,3 +1,5 @@
+import re
+import hmac
 import uuid
 import hashlib
 import secrets
@@ -160,6 +162,98 @@ def retire_business_shop_id_on_delete(sender, instance, **kwargs):
         )
 
 
+ALL_PERMISSIONS = [
+    'invoice.create',
+    'invoice.view',
+    'invoice.edit',
+    'invoice.cancel',
+    'payment.collect',
+    'payment.refund',
+    'product.view',
+    'product.create',
+    'product.update',
+    'stock.view',
+    'stock.adjust',
+    'customer.view',
+    'customer.create',
+    'customer.update',
+    'purchase.view',
+    'purchase.create',
+    'expenses.view',
+    'expenses.create',
+    'reports.view',
+    'reports.profit',
+    'users.view',
+    'users.manage',
+    'settings.view',
+    'settings.manage',
+    'audit.view',
+]
+
+ROLE_DEFAULT_PERMISSIONS = {
+    'owner': ALL_PERMISSIONS,
+    'admin': [
+        'invoice.create', 'invoice.view', 'invoice.edit', 'invoice.cancel',
+        'payment.collect', 'payment.refund',
+        'product.view', 'product.create', 'product.update',
+        'stock.view', 'stock.adjust',
+        'customer.view', 'customer.create', 'customer.update',
+        'purchase.view', 'purchase.create',
+        'expenses.view', 'expenses.create',
+        'reports.view',
+        'users.view', 'users.manage',
+        'settings.view',
+        'audit.view',
+    ],
+    'cashier': [
+        'invoice.create',
+        'invoice.view',
+        'payment.collect',
+        'product.view',
+        'customer.view',
+        'customer.create',
+        'settings.view',
+    ],
+}
+
+
+def normalize_phone_number(val, default_country_code='+91'):
+    """
+    Normalize mobile numbers into standard E.164 format.
+    Accepts:
+      - 10-digit Indian numbers: '9876543210' -> '+919876543210'
+      - Numbers with leading 0: '09876543210' -> '+919876543210'
+      - Numbers with country code: '+919876543210', '+14155552671'
+      - Numbers with spaces/dashes: '+91 98765-43210'
+    Returns E.164 string: '+919876543210'.
+    Raises ValueError on invalid formats.
+    """
+    if not val:
+        return ''
+    s = str(val).strip()
+    if not s:
+        return ''
+    cleaned = re.sub(r'[\s\-\(\)\.]', '', s)
+    if cleaned.startswith('00'):
+        cleaned = '+' + cleaned[2:]
+    if cleaned.startswith('+'):
+        digits = cleaned[1:]
+        if not digits.isdigit() or len(digits) < 8 or len(digits) > 15:
+            raise ValueError('Invalid international mobile number format.')
+        return '+' + digits
+    digits = re.sub(r'\D', '', cleaned)
+    if digits.startswith('0') and len(digits) == 11:
+        digits = digits[1:]
+    if len(digits) == 10:
+        cc = default_country_code.lstrip('+')
+        return f'+{cc}{digits}'
+    elif len(digits) == 12 and digits.startswith('91'):
+        return f'+{digits}'
+    elif 8 <= len(digits) <= 15:
+        return f'+{digits}'
+    else:
+        raise ValueError('Enter a valid 10-digit mobile number.')
+
 class User(AbstractUser):
     ROLE_CHOICES = [
         ('owner', 'Owner'),
@@ -167,7 +261,7 @@ class User(AbstractUser):
         ('cashier', 'Cashier'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='cashier')
-    phone = models.CharField(max_length=15, blank=True)
+    phone = models.CharField(max_length=20, unique=True, null=True, blank=True, db_index=True)
     is_active = models.BooleanField(default=True)
     business = models.ForeignKey(Business, on_delete=models.CASCADE, null=True, blank=True, related_name='members')
     failed_login_attempts = models.PositiveSmallIntegerField(default=0)
@@ -175,6 +269,26 @@ class User(AbstractUser):
     is_verified = models.BooleanField(default=False)
     onboarding_completed = models.BooleanField(default=False)
     onboarding_step = models.CharField(max_length=50, default='business')
+
+    # Staff & Permissions fields
+    custom_permissions = models.JSONField(default=list, blank=True)
+    employee_id = models.CharField(max_length=50, blank=True, default='')
+    department = models.CharField(max_length=100, blank=True, default='')
+    created_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='created_staff')
+    pos_pin_hash = models.CharField(max_length=128, blank=True, default='')
+    pos_pin_enabled = models.BooleanField(default=False)
+    failed_pin_attempts = models.PositiveSmallIntegerField(default=0)
+    last_failed_pin = models.DateTimeField(null=True, blank=True)
+    session_security_stamp = models.CharField(max_length=64, default=secrets.token_hex)
+
+    # 2FA (Google Authenticator / RFC 6238 TOTP) fields
+    totp_enabled = models.BooleanField(default=False)
+    totp_secret = models.CharField(max_length=255, blank=True, default='')
+    totp_confirmed_at = models.DateTimeField(null=True, blank=True)
+    totp_recovery_codes = models.JSONField(default=list, blank=True)
+    last_totp_timestep = models.BigIntegerField(null=True, blank=True)
+    failed_totp_attempts = models.PositiveSmallIntegerField(default=0)
+    last_failed_totp = models.DateTimeField(null=True, blank=True)
 
     @property
     def has_completed_onboarding(self):
@@ -184,8 +298,144 @@ class User(AbstractUser):
             return True
         return False
 
+    def get_effective_permissions(self):
+        if not self.is_active:
+            return []
+        if self.is_superuser or self.role == 'owner':
+            return list(ALL_PERMISSIONS)
+        perms = set(ROLE_DEFAULT_PERMISSIONS.get(self.role, []))
+        if isinstance(self.custom_permissions, list):
+            perms.update(self.custom_permissions)
+        elif isinstance(self.custom_permissions, dict):
+            perms.update(self.custom_permissions.get('granted', []))
+            for p in self.custom_permissions.get('revoked', []):
+                perms.discard(p)
+        return sorted(list(perms))
+
+    def has_permission(self, perm_name):
+        if not self.is_active:
+            return False
+        if self.is_superuser or self.role == 'owner':
+            return True
+        return perm_name in self.get_effective_permissions()
+
+    def set_pos_pin(self, pin):
+        if not pin:
+            self.pos_pin_hash = ''
+            self.pos_pin_enabled = False
+        else:
+            self.pos_pin_hash = hashlib.sha256(str(pin).strip().encode()).hexdigest()
+            self.pos_pin_enabled = True
+        self.failed_pin_attempts = 0
+
+    def verify_pos_pin(self, pin):
+        if not self.pos_pin_enabled or not self.pos_pin_hash:
+            return False
+        if not self.is_active:
+            return False
+        return hmac.compare_digest(self.pos_pin_hash, hashlib.sha256(str(pin).strip().encode()).hexdigest())
+
+    def rotate_session_stamp(self):
+        self.session_security_stamp = secrets.token_hex(16)
+
+    def set_totp_secret(self, secret):
+        if not secret:
+            self.totp_secret = ''
+        else:
+            from cryptography.fernet import Fernet
+            from django.conf import settings
+            import base64
+            key = base64.urlsafe_b64encode(hashlib.sha256(settings.SECRET_KEY.encode()).digest())
+            self.totp_secret = Fernet(key).encrypt(secret.encode()).decode()
+
+    def get_totp_secret(self):
+        if not self.totp_secret:
+            return None
+        try:
+            from cryptography.fernet import Fernet
+            from django.conf import settings
+            import base64
+            key = base64.urlsafe_b64encode(hashlib.sha256(settings.SECRET_KEY.encode()).digest())
+            return Fernet(key).decrypt(self.totp_secret.encode()).decode()
+        except Exception:
+            return None
+
+    def verify_totp(self, code):
+        if not self.totp_enabled:
+            return False
+        secret = self.get_totp_secret()
+        if not secret:
+            return False
+        code_str = str(code).strip()
+        if not code_str.isdigit() or len(code_str) != 6:
+            return False
+        import pyotp, time
+        totp = pyotp.TOTP(secret, interval=30, digits=6)
+        now_ts = int(time.time() // 30)
+        matched_step = None
+        for offset in [0, -1, 1]:
+            step = now_ts + offset
+            if totp.at(step * 30) == code_str:
+                matched_step = step
+                break
+        if matched_step is None:
+            self.failed_totp_attempts = getattr(self, 'failed_totp_attempts', 0) + 1
+            self.last_failed_totp = timezone.now()
+            self.save(update_fields=['failed_totp_attempts', 'last_failed_totp'])
+            return False
+        if self.last_totp_timestep is not None and matched_step <= self.last_totp_timestep:
+            return False
+        self.last_totp_timestep = matched_step
+        self.failed_totp_attempts = 0
+        self.save(update_fields=['last_totp_timestep', 'failed_totp_attempts'])
+        return True
+
+    def generate_recovery_codes(self):
+        from django.contrib.auth.hashers import make_password
+        plain_codes = []
+        hashed_codes = []
+        for _ in range(10):
+            p1 = secrets.token_hex(2).upper()
+            p2 = secrets.token_hex(2).upper()
+            code = f'{p1}-{p2}'
+            plain_codes.append(code)
+            hashed_codes.append(make_password(code))
+        self.totp_recovery_codes = hashed_codes
+        return plain_codes
+
+    def verify_and_consume_recovery_code(self, code):
+        if not self.totp_enabled or not self.totp_recovery_codes:
+            return False
+        from django.contrib.auth.hashers import check_password
+        clean_code = str(code).strip().upper()
+        found_idx = -1
+        for idx, hashed in enumerate(self.totp_recovery_codes):
+            if check_password(clean_code, hashed):
+                found_idx = idx
+                break
+        if found_idx >= 0:
+            updated = list(self.totp_recovery_codes)
+            updated.pop(found_idx)
+            self.totp_recovery_codes = updated
+            self.save(update_fields=['totp_recovery_codes'])
+            return True
+        return False
+
+    def disable_totp(self):
+        self.totp_enabled = False
+        self.totp_secret = ''
+        self.totp_confirmed_at = None
+        self.totp_recovery_codes = []
+        self.last_totp_timestep = None
+        self.rotate_session_stamp()
+        self.save(update_fields=[
+            'totp_enabled', 'totp_secret', 'totp_confirmed_at',
+            'totp_recovery_codes', 'last_totp_timestep', 'session_security_stamp'
+        ])
+
     def __str__(self):
-        return f"{self.username} ({self.role})"
+        ident = self.phone or self.username
+        return f"{ident} ({self.role})" 
 
 
 class OTPRecord(models.Model):

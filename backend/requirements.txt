@@ -18,3 +18,5 @@ httpx
 whitenoise[brotli]
 twilio>=8.0.0
 razorpay
+pyotp>=2.9.0
+cryptography>=41.0.0

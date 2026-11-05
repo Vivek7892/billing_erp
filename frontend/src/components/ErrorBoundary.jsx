@@ -60,15 +60,6 @@ export class ErrorBoundary extends React.Component {
               Something unexpected happened while preparing this screen. Please try again or return to the main dashboard.
             </p>
 
-            {this.state.error && (
-              <div className="mt-4 p-3 bg-red-50 text-red-700 text-left text-xs font-mono overflow-auto rounded-lg border border-red-200 max-h-48">
-                <p className="font-bold text-red-800">{String(this.state.error?.message || this.state.error)}</p>
-                {this.state.error?.stack && (
-                  <pre className="mt-1 text-[10px] text-red-600 whitespace-pre-wrap">{this.state.error.stack}</pre>
-                )}
-              </div>
-            )}
-
             <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-2.5">
               <button
                 type="button"

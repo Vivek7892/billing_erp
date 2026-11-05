@@ -21,6 +21,7 @@ import {
   IconShoppingCart,
   IconFileText,
   IconPackage,
+  IconUser,
   IconUsers,
   IconChartBar,
   IconUserCog,
@@ -127,7 +128,7 @@ const NAV_GROUPS = [
 
 const SIDEBAR_UTILITY_ITEMS = [
   { to: '/settings', icon: IconSettings, label: 'Settings' },
-  { to: '/audit-trail', icon: IconShieldCheck, label: 'Business Activity' },
+  { to: '/audit-trail', icon: IconShieldCheck, label: 'Business Activity', adminOnly: true },
 ]
 
 const PAGE_META = NAV_GROUPS.reduce((acc, group) => {
@@ -368,14 +369,14 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, s
                       collapsed && !mobile ? 'justify-center px-2' : 'gap-3 px-3'
                     } ${isActive
                       ? 'bg-sky-700 text-white font-semibold shadow-xs'
-                      : 'text-slate-600 hover:bg-sky-100 hover:text-sky-900'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-sky-100 dark:hover:bg-slate-800 hover:text-sky-900 dark:hover:text-white'
                     }`}
                   >
-                    <Icon size={16} strokeWidth={1.8} className={`shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                    <Icon size={16} strokeWidth={1.8} className={`shrink-0 ${isActive ? 'text-white' : 'text-slate-400 dark:text-slate-400'}`} />
                     {(!collapsed || mobile) && (
                       <>
                         <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">{label}</span>
-                        {badge && <span className={`max-w-24 truncate rounded px-1.5 py-0.5 text-[9px] ${isActive ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-500'}`}>{badge}</span>}
+                        {badge && <span className={`max-w-24 truncate rounded px-1.5 py-0.5 text-[9px] ${isActive ? 'bg-sky-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>{badge}</span>}
                       </>
                     )}
                   </NavLink>
@@ -385,11 +386,15 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, s
           </div>
         ) : NAV_GROUPS.map(group => (
           <NavGroup key={group.label} group={group} collapsed={collapsed && !mobile} mobile={mobile} user={user} onNav={onNav} />
-        )).concat(!settingsMode && canAccessUtility ? [
+        )).concat(!settingsMode ? [
           <div key="settings-security" className={`mt-1.5 border-t border-white/10 pt-1.5 ${collapsed && !mobile ? 'px-2' : 'px-2.5'}`}>
-            {(!collapsed || mobile) && <p className="mb-1 px-2 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">Settings &amp; Security</p>}
+            {(!collapsed || mobile) && <p className="mb-1 px-2 text-[9px] font-bold uppercase tracking-[0.14em] text-slate-500">Settings</p>}
             <div className="space-y-0.5">
-              {SIDEBAR_UTILITY_ITEMS.map(({ to, icon: Icon, label }) => (
+              {SIDEBAR_UTILITY_ITEMS.filter(item => !item.adminOnly || canAccessUtility).map(({ to, icon: Icon, label }) => {
+                const isCashierRole = String(user?.role || '').toLowerCase() === 'cashier'
+                const displayLabel = (to === '/settings' && isCashierRole) ? 'My Profile & Settings' : label
+                const DisplayIcon = (to === '/settings' && isCashierRole) ? IconUser : Icon
+                return (
                 <NavLink
                   key={to}
                   to={to}
@@ -402,10 +407,11 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, s
                     : 'text-slate-300 hover:bg-[var(--sidebar-hover)] hover:text-white'
                   }`}
                 >
-                  <Icon size={15} className="shrink-0 text-slate-400" />
-                  {(!collapsed || mobile) && <span className="min-w-0 whitespace-normal break-words leading-snug">{label}</span>}
+                  <DisplayIcon size={15} className="shrink-0 text-slate-400" />
+                  {(!collapsed || mobile) && <span className="min-w-0 whitespace-normal break-words leading-snug">{displayLabel}</span>}
                 </NavLink>
-              ))}
+              )
+              })}
             </div>
           </div>,
         ] : [])}
@@ -416,7 +422,7 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, s
           <button
             type="button"
             onClick={onLogout}
-            className="flex min-h-9 w-full items-center gap-2 rounded-full px-3 text-xs font-medium text-slate-600 transition-colors hover:bg-rose-50 hover:text-rose-700"
+            className="flex min-h-9 w-full items-center gap-2 rounded-full px-3 text-xs font-medium text-slate-600 dark:text-slate-300 transition-colors hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-700 dark:hover:text-rose-400"
           >
             <IconLogout size={15} />
             <span>Logout</span>
@@ -436,7 +442,7 @@ function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, s
               </a>
             </div>
           </div>
-          <p className="mt-2 text-[10px] text-slate-400">App version {APP_VERSION}</p>
+          <p className="mt-2 text-[10px] text-slate-400 dark:text-slate-500">App version {APP_VERSION}</p>
         </div>
       )}
 
@@ -1287,7 +1293,8 @@ export default function Layout({ children }) {
   }, [location.pathname])
 
   const logoSrc = shopLogo || logoImg
-  const settingsMode = location.pathname === '/settings' || location.pathname.startsWith('/settings/')
+  const isCashier = String(user?.role || '').toLowerCase() === 'cashier'
+  const settingsMode = (location.pathname === '/settings' || location.pathname.startsWith('/settings/')) && !isCashier
   const settingsTabParam = location.pathname.startsWith('/settings/')
     ? location.pathname.split('/')[2]
     : new URLSearchParams(location.search).get('tab')
@@ -1407,8 +1414,8 @@ export default function Layout({ children }) {
           </header>
 
           {/* Page Body */}
-          <main ref={mainRef} className={`min-w-0 min-h-0 flex-1 flex flex-col ${fixedPreviewSettingsMode ? 'overflow-y-auto xl:overflow-hidden' : location.pathname.startsWith('/billing/new') ? 'overflow-y-auto md:overflow-hidden' : 'overflow-y-auto'} bg-[var(--app-bg)]`}>
-            <div className={location.pathname.startsWith('/billing/new') ? 'flex-1 flex flex-col p-1.5 sm:p-3 w-full max-w-none min-w-0 min-h-0' : invoiceSettingsMode ? 'flex-1 flex flex-col px-1.5 pt-0 pb-1 sm:px-2.5 md:px-2 max-w-none w-full min-w-0 min-h-0 xl:overflow-hidden page-enter' : printSettingsMode ? 'flex-1 flex flex-col px-1.5 pt-0 pb-1 sm:px-2.5 md:px-3 max-w-[1600px] w-full min-w-0 min-h-0 mx-auto xl:overflow-hidden page-enter' : settingsMode ? 'flex-1 p-1.5 sm:p-2.5 md:p-4 max-w-[1600px] w-full min-w-0 mx-auto page-enter' : 'flex-1 p-2.5 sm:p-4 md:p-6 max-w-[1600px] w-full min-w-0 mx-auto page-enter'}>
+          <main ref={mainRef} className={`min-w-0 min-h-0 flex-1 flex flex-col ${fixedPreviewSettingsMode ? 'overflow-y-auto lg:overflow-hidden' : location.pathname.startsWith('/billing/new') ? 'overflow-y-auto md:overflow-hidden' : 'overflow-y-auto'} bg-[var(--app-bg)]`}>
+            <div className={location.pathname.startsWith('/billing/new') ? 'flex-1 flex flex-col p-1.5 sm:p-3 w-full max-w-none min-w-0 min-h-0' : invoiceSettingsMode ? 'flex-1 flex flex-col px-1.5 pt-0 pb-20 sm:px-2.5 md:px-2 lg:pb-1 max-w-none w-full min-w-0 min-h-0 lg:overflow-hidden page-enter' : printSettingsMode ? 'flex-1 flex flex-col px-1.5 pt-0 pb-20 sm:px-2.5 md:px-3 lg:pb-1 max-w-[1600px] w-full min-w-0 min-h-0 mx-auto lg:overflow-hidden page-enter' : settingsMode ? 'flex-1 p-1.5 pb-20 sm:p-2.5 md:p-4 lg:pb-4 max-w-[1600px] w-full min-w-0 mx-auto page-enter' : 'flex-1 p-2.5 sm:p-4 md:p-6 max-w-[1600px] w-full min-w-0 mx-auto page-enter'}>
               <PageLoadingContext.Provider value={registerPageLoader}>
                 {children}
               </PageLoadingContext.Provider>

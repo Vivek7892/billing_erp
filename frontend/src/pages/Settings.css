@@ -33,176 +33,43 @@
   color-scheme: inherit;
 }
 
-.dark .settings-page {
-  background-color: var(--app-bg);
-  color: var(--ink);
+:is(.dark, [data-theme="dark"]) .settings-page {
+  background-color: var(--app-bg, #121316);
+  color: var(--ink, #f3f4f6);
 }
 
-.dark .settings-page :not(.invoice-document-root *)[class~="bg-white"],
-.dark .settings-page :not(.invoice-document-root *)[class~="bg-slate-50"],
-.dark .settings-page :not(.invoice-document-root *)[class~="bg-slate-100"] {
-  background-color: var(--surface) !important;
+/* Ensure Live Preview Stage Canvas provides high contrast dark slate desk in dark mode */
+:is(.dark, [data-theme="dark"]) .settings-page .settings-print-preview-stage {
+  background-color: #090d16 !important;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 0);
+  background-size: 16px 16px;
 }
 
-.dark .settings-page :not(.invoice-document-root *)[class~="bg-slate-200"] {
-  background-color: var(--surface-hover) !important;
-}
-
-.dark .settings-page :not(.invoice-document-root *)[class*="bg-slate-50"],
-.dark .settings-page :not(.invoice-document-root *)[class*="bg-slate-100"],
-.dark .settings-page :not(.invoice-document-root *)[class*="bg-slate-200"] {
-  background-color: var(--surface) !important;
-}
-
-.dark .settings-page :not(.invoice-document-root *)[class*="bg-indigo-50"],
-.dark .settings-page :not(.invoice-document-root *)[class*="bg-indigo-100"] {
-  background-color: rgba(37, 99, 235, 0.18) !important;
-}
-
-.dark .settings-page :not(.invoice-document-root *)[class*="bg-teal-50"],
-.dark .settings-page :not(.invoice-document-root *)[class*="bg-emerald-50"] {
-  background-color: rgba(20, 184, 166, 0.15) !important;
-}
-
-.dark .settings-page :not(.invoice-document-root *)[class~="text-slate-900"],
-.dark .settings-page :not(.invoice-document-root *)[class~="text-slate-800"],
-.dark .settings-page :not(.invoice-document-root *)[class~="text-slate-700"] {
-  color: #e2e8f0 !important;
-}
-
-.dark .settings-page :not(.invoice-document-root *)[class~="text-slate-600"],
-.dark .settings-page :not(.invoice-document-root *)[class~="text-slate-500"] {
-  color: #a7b4c6 !important;
-}
-
-.dark .settings-page :not(.invoice-document-root *)[class~="text-slate-400"] {
-  color: #94a3b8 !important;
-}
-
-.dark .settings-page :not(.invoice-document-root *)[class*="text-indigo-600"],
-.dark .settings-page :not(.invoice-document-root *)[class*="text-indigo-700"] {
-  color: #a5b4fc !important;
-}
-
-.dark .settings-page :not(.invoice-document-root *)[class*="text-teal-600"],
-.dark .settings-page :not(.invoice-document-root *)[class*="text-emerald-600"] {
-  color: #5eead4 !important;
-}
-
-.dark .settings-page :not(.invoice-document-root *)[class~="border-slate-200"],
-.dark .settings-page :not(.invoice-document-root *)[class~="border-slate-300"],
-.dark .settings-page :not(.invoice-document-root *)[class~="border-[#DCE3EC]"] {
-  border-color: var(--line-strong) !important;
-}
-
-.dark .settings-page input:not([type="checkbox"]),
-.dark .settings-page select,
-.dark .settings-page textarea {
-  background-color: #111827;
-  color: #f8fafc;
-  border-color: #475569;
-  color-scheme: dark;
-}
-
-.dark .settings-page input::placeholder,
-.dark .settings-page textarea::placeholder {
-  color: #94a3b8;
-  opacity: 1;
-}
-
-.dark .settings-page option {
-  color: #f8fafc;
-  background: #111827;
-}
-
-.dark .settings-page :not(.invoice-document-root *)[class~="hover:bg-slate-50"]:hover,
-.dark .settings-page :not(.invoice-document-root *)[class~="hover:bg-slate-100"]:hover,
-.dark .settings-page :not(.invoice-document-root *)[class~="hover:bg-slate-200"]:hover {
-  background-color: #263244 !important;
-}
-
-.dark .settings-page .invoice-document-root,
-.dark .settings-page .invoice-document-root * {
-  color-scheme: light;
-}
-
-.dark .settings-page .invoice-document-root [class~="bg-white"],
-.settings-page .settings-template-miniature,
-.settings-page .settings-template-miniature * {
-  background-color: #fff;
-}
-
-.dark .settings-page .settings-print-preview-paper[class~="bg-white"] {
-  color-scheme: light;
-  background-color: #fff !important;
-  color: #0f172a !important;
-  border-color: #cbd5e1 !important;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
-}
-
-.dark .settings-page .settings-template-thumb-paper[class~="bg-white"] {
-  color-scheme: light;
-  background-color: #fff !important;
-}
-
-.dark .settings-page .thermal-live-preview-paper.settings-print-invoice-target[class~="bg-white"],
-.dark .settings-page .barcode-live-preview-paper.settings-print-preview-paper[class~="bg-white"] {
-  color-scheme: light;
-  background: #fff !important;
-  color: #0f172a !important;
-  border-color: #cbd5e1 !important;
-}
-
-.dark .settings-page .thermal-live-preview-paper,
-.dark .settings-page .thermal-live-preview-paper .thermal-receipt {
-  background-color: #fff !important;
-  color: #000 !important;
+/* Live Invoice and Thermal Paper Previews strictly preserve real-world white paper rendering */
+.settings-page .settings-print-invoice-target,
+.settings-page .settings-print-invoice-target *,
+.settings-page .invoice-document-root,
+.settings-page .invoice-document-root *,
+.settings-page .thermal-live-preview-paper,
+.settings-page .thermal-live-preview-paper *,
+.settings-page .barcode-live-preview-paper,
+.settings-page .barcode-live-preview-paper * {
   color-scheme: light !important;
 }
 
-.dark .settings-page .thermal-live-preview-paper .thermal-receipt,
-.dark .settings-page .thermal-live-preview-paper .thermal-receipt * {
-  color: #000 !important;
-  color-scheme: light !important;
-}
-
-.dark .settings-page .thermal-live-preview-paper .thermal-receipt [class~="bg-white"] {
-  background-color: #fff !important;
-}
-
-.dark .settings-page .thermal-live-preview-paper.settings-print-invoice-target .invoice-document-root .thermal-receipt {
-  background: #fff !important;
-  color: #000 !important;
-}
-
-.dark .settings-page .settings-print-preview-stage[class*="bg-slate-100"] {
-  background-color: var(--app-bg) !important;
-}
-
-.dark .settings-page .settings-print-preview-paper [class~="text-slate-900"] {
+:is(.dark, [data-theme="dark"]) .settings-page .settings-print-invoice-target,
+:is(.dark, [data-theme="dark"]) .settings-page .thermal-live-preview-paper,
+:is(.dark, [data-theme="dark"]) .settings-page .barcode-live-preview-paper {
+  background-color: #ffffff !important;
   color: #0f172a !important;
+  border-color: #334155 !important;
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.5), 0 8px 16px -6px rgba(0, 0, 0, 0.4) !important;
 }
 
-.dark .settings-page .settings-print-preview-paper [class~="text-slate-800"] {
-  color: #1e293b !important;
+:is(.dark, [data-theme="dark"]) .settings-page .settings-template-thumb-paper {
+  background-color: #090d16 !important;
+  border-color: #1e293b !important;
 }
-
-.dark .settings-page .settings-print-preview-paper [class~="text-slate-700"] {
-  color: #334155 !important;
-}
-
-.dark .settings-page .settings-print-preview-paper [class~="text-slate-600"] {
-  color: #475569 !important;
-}
-
-.dark .settings-page .settings-print-preview-paper [class~="text-slate-500"] {
-  color: #64748b !important;
-}
-
-.dark .settings-page .settings-print-preview-paper [class~="text-slate-400"] {
-  color: #94a3b8 !important;
-}
-
 
 @media print {
   body.settings-invoice-print > * {
@@ -238,20 +105,259 @@
   }
 }
 
-.thermal-live-preview-paper {
-  background: #ffffff !important;
-  color: #000000 !important;
-  color-scheme: light !important;
+/* Dark theme for Settings controls and content cards. Keep printed previews white. */
+:is(.dark, [data-theme="dark"]) .settings-page {
+  --settings-panel: #1b2029;
+  --settings-panel-raised: #232a35;
+  --settings-border: #394454;
+  --settings-text: #f1f5f9;
+  --settings-muted: #b1bdcc;
+  color: var(--settings-text);
 }
 
-.thermal-live-preview-paper *,
-.thermal-live-preview-paper *::before,
-.thermal-live-preview-paper *::after {
-  color-scheme: light !important;
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *
+).text-slate-900,
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *).text-slate-800,
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *).text-slate-700 {
+  color: var(--settings-text) !important;
 }
 
-.thermal-live-preview-paper [class*="dark\\:"],
-.thermal-live-preview-paper [class*="dark\\:bg-"],
-.thermal-live-preview-paper [class*="dark\\:text-"] {
-  /* Keep the actual receipt preview light */
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *).text-slate-600,
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *).text-slate-500 {
+  color: var(--settings-muted) !important;
+}
+
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *).bg-white {
+  background-color: var(--settings-panel) !important;
+}
+
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *).bg-slate-50,
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *).bg-slate-100,
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *).bg-slate-200\/80 {
+  background-color: var(--settings-panel-raised) !important;
+}
+
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *).border-slate-100,
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *).border-slate-200,
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *).border-slate-300 {
+  border-color: var(--settings-border) !important;
+}
+
+:is(.dark, [data-theme="dark"]) .settings-page input:not([type="checkbox"]):not([type="radio"]),
+:is(.dark, [data-theme="dark"]) .settings-page select,
+:is(.dark, [data-theme="dark"]) .settings-page textarea {
+  color-scheme: dark;
+  background-color: var(--settings-panel-raised);
+  color: var(--settings-text);
+  border-color: var(--settings-border);
+}
+
+:is(.dark, [data-theme="dark"]) .settings-page input::placeholder,
+:is(.dark, [data-theme="dark"]) .settings-page textarea::placeholder {
+  color: #8f9bad;
+}
+
+:is(.dark, [data-theme="dark"]) .settings-page button:not(:disabled):focus-visible,
+:is(.dark, [data-theme="dark"]) .settings-page a:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *
+).text-indigo-700,
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *
+).text-indigo-600 {
+  color: #a5b4fc !important;
+}
+
+:is(.dark, [data-theme="dark"]) .settings-page .hover\:bg-slate-50:hover,
+:is(.dark, [data-theme="dark"]) .settings-page .hover\:bg-slate-100:hover {
+  background-color: #303a48 !important;
+}
+
+/* Cover Tailwind opacity variants and colored controls used throughout Settings. */
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *
+)[class*="bg-slate-50"],
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *
+)[class*="bg-slate-100"],
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *
+)[class*="bg-slate-200"] {
+  background-color: var(--settings-panel-raised) !important;
+}
+
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *
+)[class*="bg-indigo-50"],
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *
+)[class*="bg-blue-50"] {
+  background-color: rgba(59, 91, 160, 0.22) !important;
+}
+
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *
+)[class*="bg-rose-50"],
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *
+)[class*="bg-red-50"] {
+  background-color: rgba(127, 29, 29, 0.24) !important;
+}
+
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *
+)[class*="text-indigo-"],
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *
+)[class*="text-blue-"] {
+  color: #b9c8ff !important;
+}
+
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *
+)[class*="text-rose-"],
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *
+)[class*="text-red-"] {
+  color: #fda4af !important;
+}
+
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *
+)[class*="border-slate-"],
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *
+)[class*="border-blue-"],
+:is(.dark, [data-theme="dark"]) .settings-page :not(
+  .settings-print-invoice-target, .settings-print-invoice-target *,
+  .invoice-document-root, .invoice-document-root *,
+  .thermal-live-preview-paper, .thermal-live-preview-paper *,
+  .barcode-live-preview-paper, .barcode-live-preview-paper *,
+  .settings-template-miniature, .settings-template-miniature *
+)[class*="border-indigo-"] {
+  border-color: var(--settings-border) !important;
 }

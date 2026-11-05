@@ -34,6 +34,8 @@ const Expenses = lazy(() => import('./pages/Expenses'))
 const Reports = lazy(() => import('./pages/Reports'))
 const Users = lazy(() => import('./pages/Users'))
 const Settings = lazy(() => import('./pages/Settings'))
+const CashierSettings = lazy(() => import('./pages/CashierSettings'))
+const SecuritySettings = lazy(() => import('./pages/SecuritySettings'))
 const Support = lazy(() => import('./pages/Support'))
 const TransactionLedger = lazy(() => import('./pages/TransactionLedger'))
 const Notifications = lazy(() => import('./pages/Notifications'))
@@ -320,6 +322,11 @@ function AppRoutes() {
       ------------------------------------------------- */}
 
       <Route
+        path="/security"
+        element={<Navigate to="/settings?tab=security" replace />}
+      />
+
+      <Route
         path="/users"
         element={
           <Guard adminOnly>
@@ -331,16 +338,16 @@ function AppRoutes() {
       <Route
         path="/settings"
         element={
-          <Guard adminOnly>
-            <Settings />
+          <Guard>
+            <SettingsRouter />
           </Guard>
         }
       />
       <Route
         path="/settings/:tab"
         element={
-          <Guard adminOnly>
-            <Settings />
+          <Guard>
+            <SettingsRouter />
           </Guard>
         }
       />
@@ -553,6 +560,15 @@ function AppRoutes() {
 /* -------------------------------------------------------
    Root Application
 ------------------------------------------------------- */
+
+
+function SettingsRouter() {
+  const { user } = useAuth()
+  if (user?.role === 'cashier') {
+    return <CashierSettings />
+  }
+  return <Settings />
+}
 
 export default function App() {
   return (

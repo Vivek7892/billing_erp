@@ -1,140 +1,77 @@
-import { useId, useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   IconEye,
   IconEyeOff,
-  IconUserPlus,
+  IconBuildingStore,
+  IconPhone,
+  IconLock,
+  IconArrowRight,
   IconShieldCheck,
-  IconCheck,
-  IconSparkles,
 } from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../AuthContext'
 import { LoginIllustration } from '../components/visuals'
 import './Login.css'
 
-function calculateStrength(pwd) {
-  if (!pwd) return { score: 0, label: '', color: '' }
-  let score = 0
-  if (pwd.length >= 8) score += 1
-  if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) score += 1
-  if (/\d/.test(pwd)) score += 1
-  if (/[^a-zA-Z0-9]/.test(pwd)) score += 1
-
-  if (score === 1) return { score: 1, label: 'Weak', className: 'strength-weak' }
-  if (score === 2) return { score: 2, label: 'Fair', className: 'strength-fair' }
-  if (score === 3) return { score: 3, label: 'Good', className: 'strength-good' }
-  if (score >= 4) return { score: 4, label: 'Strong', className: 'strength-strong' }
-  return { score: 1, label: 'Too short', className: 'strength-weak' }
-}
-
 export default function Register() {
-  const [form, setForm] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    username: '',
-    password: '',
-    confirmPassword: '',
-    termsAccepted: false,
-  })
+  const [businessName, setBusinessName] = useState('')
+  const [mobile, setMobile] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
-  const [usernameManuallyEdited, setUsernameManuallyEdited] = useState(false)
 
   const { user, register } = useAuth()
   const navigate = useNavigate()
-  const passwordErrorId = useId()
 
-  // Redirect authenticated users away from register
   useEffect(() => {
     if (user) {
-      if (!user.onboarding_completed) {
-        navigate('/onboarding', { replace: true })
-      } else {
-        navigate('/', { replace: true })
-      }
+      navigate('/', { replace: true })
     }
   }, [user, navigate])
 
-  const updateField = (field, value) => {
-    setForm(prev => {
-      const next = { ...prev, [field]: value }
-
-      // Auto-suggest username from email prefix or name if not manually changed
-      if (field === 'email' && !usernameManuallyEdited) {
-        const prefix = value.split('@')[0].toLowerCase().replace(/[^a-z0-9_.]/g, '')
-        if (prefix.length >= 3) {
-          next.username = prefix
-        }
-      }
-
-      return next
-    })
-
-    if (field === 'username') {
-      setUsernameManuallyEdited(true)
+  const handleMobileChange = e => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 10)
+    setMobile(digits)
+    if (errors.mobile) {
+      setErrors(prev => ({ ...prev, mobile: undefined }))
     }
-
-    setErrors(prev => {
-      if (!prev[field]) return prev
-      const next = { ...prev }
-      delete next[field]
-      return next
-    })
   }
 
-  const strength = calculateStrength(form.password)
-
-  const submit = async event => {
-    event.preventDefault()
+  const handleSubmit = async e => {
+    e.preventDefault()
     if (loading) return
 
     const nextErrors = {}
-    if (!form.fullName.trim()) nextErrors.fullName = 'Full name is required'
-    if (!form.email.trim()) {
-      nextErrors.email = 'Email address is required'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      nextErrors.email = 'Please enter a valid email address'
+    const trimmedBusiness = businessName.trim()
+    const cleanDigits = mobile.replace(/\D/g, '')
+
+    if (!trimmedBusiness) {
+      nextErrors.businessName = 'Shop or business name is required'
     }
 
-    if (form.phone.trim()) {
-      const cleanPhone = form.phone.replace(/\D/g, '')
-      if (cleanPhone.length !== 10) {
-        nextErrors.phone = 'Enter a valid 10-digit Indian mobile number'
-      }
+    if (!cleanDigits) {
+      nextErrors.mobile = 'Mobile number is required'
+    } else if (cleanDigits.length !== 10) {
+      nextErrors.mobile = 'Enter a valid 10-digit mobile number'
     }
 
-    const cleanUsername = form.username.trim().toLowerCase()
-    if (!cleanUsername) {
-      nextErrors.username = 'Username is required'
-    } else if (cleanUsername.length < 3) {
-      nextErrors.username = 'Username must be at least 3 characters'
-    } else if (!/^[a-z0-9_.]+$/.test(cleanUsername)) {
-      nextErrors.username = 'Only lowercase letters, numbers, dots, and underscores allowed'
-    }
-
-    if (!form.password) {
+    if (!password) {
       nextErrors.password = 'Password is required'
-    } else if (form.password.length < 8) {
-      nextErrors.password = 'Password must be at least 8 characters'
-    } else if (!/[A-Za-z]/.test(form.password) || !/\d/.test(form.password)) {
-      nextErrors.password = 'Password must contain at least one letter and one number'
+    } else if (password.length < 6) {
+      nextErrors.password = 'Password must be at least 6 characters'
     }
 
-    if (form.password !== form.confirmPassword) {
+    if (password && confirmPassword && password !== confirmPassword) {
       nextErrors.confirmPassword = 'Passwords do not match'
-    }
-
-    if (!form.termsAccepted) {
-      nextErrors.termsAccepted = 'You must accept the terms and conditions'
     }
 
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors)
-      toast.error('Please check the registration form errors')
+      toast.error('Please complete all required fields')
       return
     }
 
@@ -142,35 +79,34 @@ export default function Register() {
     setErrors({})
 
     try {
-      const payload = {
-        full_name: form.fullName.trim(),
-        email: form.email.trim().toLowerCase(),
-        phone: form.phone.trim().replace(/\D/g, ''),
-        username: cleanUsername,
-        password: form.password,
-        confirm_password: form.confirmPassword,
-        terms_accepted: true,
+      const fullPhone = `+91${cleanDigits}`
+      await register({
+        business_name: trimmedBusiness,
+        mobile: fullPhone,
+        password: password,
+        confirm_password: confirmPassword || password,
+      })
+
+      toast.success('Shop registered successfully! Welcome to DreamWithTech.')
+      navigate('/onboarding', { replace: true })
+    } catch (err) {
+      const errData = err?.response?.data
+      let message = 'Registration failed. Please check your details.'
+
+      if (typeof errData === 'string') {
+        message = errData
+      } else if (errData?.error) {
+        message = errData.error
+      } else if (errData?.mobile) {
+        message = Array.isArray(errData.mobile) ? errData.mobile[0] : errData.mobile
+      } else if (errData?.password) {
+        message = Array.isArray(errData.password) ? errData.password[0] : errData.password
+      } else if (errData?.business_name) {
+        message = Array.isArray(errData.business_name) ? errData.business_name[0] : errData.business_name
       }
 
-      await register(payload)
-      toast.success('Account created! Welcome to Dreamwithtech.')
-      navigate('/onboarding', { replace: true })
-    } catch (error) {
-      const data = error?.response?.data
-      if (data && typeof data === 'object') {
-        const fieldErrors = {}
-        Object.entries(data).forEach(([key, val]) => {
-          fieldErrors[key] = Array.isArray(val) ? val[0] : String(val)
-        })
-        setErrors(fieldErrors)
-        toast.error(fieldErrors.detail || fieldErrors.error || 'Registration failed. Please review errors.')
-      } else {
-        const msg = !error?.response
-          ? 'Unable to reach the server. Please check your connection.'
-          : 'Registration failed. Please try again.'
-        setErrors({ form: msg })
-        toast.error(msg)
-      }
+      setErrors({ form: message })
+      toast.error(message)
     } finally {
       setLoading(false)
     }
@@ -188,172 +124,122 @@ export default function Register() {
             </span>
           </div>
 
-          <div className="login-content !max-w-[440px] my-6">
-            <div className="login-heading mb-5">
+          <div className="login-content">
+            <div className="login-heading">
               <span className="login-heading-icon" aria-hidden="true">
-                <IconUserPlus size={18} />
+                <IconBuildingStore size={22} />
               </span>
-              <h1 id="register-title">Create your account</h1>
-              <p>Set up your business workspace in under two minutes.</p>
+              <h1 id="register-title">Register Your Shop</h1>
+              <p>Create your shop account and start generating bills in seconds.</p>
             </div>
 
-            {errors.form && <div className="login-form-error" role="alert">{errors.form}</div>}
-
-            <form onSubmit={submit} noValidate className="login-form flex flex-col gap-3.5">
-              {/* Full Name */}
-              <div className="login-field">
-                <label htmlFor="fullName">Full Name</label>
-                <input
-                  id="fullName"
-                  name="fullName"
-                  type="text"
-                  value={form.fullName}
-                  placeholder="e.g. Ramesh Kumar"
-                  autoComplete="name"
-                  autoFocus
-                  disabled={loading}
-                  aria-invalid={Boolean(errors.fullName)}
-                  onChange={e => updateField('fullName', e.target.value)}
-                />
-                {errors.fullName && <p className="login-field-error">{errors.fullName}</p>}
+            {errors.form && (
+              <div className="login-form-error" role="alert">
+                {errors.form}
               </div>
+            )}
 
-              {/* Email Address */}
+            <form onSubmit={handleSubmit} noValidate className="login-form">
+              {/* Business / Shop Name */}
               <div className="login-field">
-                <label htmlFor="email">Email Address</label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={form.email}
-                  placeholder="name@company.com"
-                  autoComplete="email"
-                  disabled={loading}
-                  aria-invalid={Boolean(errors.email)}
-                  onChange={e => updateField('email', e.target.value)}
-                />
-                {errors.email && <p className="login-field-error">{errors.email}</p>}
-              </div>
-
-              {/* Mobile Number with Indian Country Code */}
-              <div className="login-field">
-                <label htmlFor="phone">Mobile Number</label>
-                <div className="login-phone-wrap">
-                  <span className="login-phone-prefix">🇮🇳 +91</span>
+                <label htmlFor="businessName">Shop / Business Name *</label>
+                <div className="login-input-wrap">
+                  <span className="login-input-icon">
+                    <IconBuildingStore size={18} aria-hidden="true" />
+                  </span>
                   <input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    value={form.phone}
-                    placeholder="98765 43210"
-                    autoComplete="tel-national"
-                    maxLength={10}
+                    id="businessName"
+                    type="text"
+                    value={businessName}
+                    onChange={e => {
+                      setBusinessName(e.target.value)
+                      if (errors.businessName) setErrors(prev => ({ ...prev, businessName: undefined }))
+                    }}
+                    placeholder="e.g. Sri Balaji Supermarket"
+                    autoFocus
                     disabled={loading}
-                    aria-invalid={Boolean(errors.phone)}
-                    onChange={e => updateField('phone', e.target.value.replace(/\D/g, ''))}
                   />
                 </div>
-                {errors.phone && <p className="login-field-error">{errors.phone}</p>}
+                {errors.businessName && <p className="login-field-error">{errors.businessName}</p>}
               </div>
 
-              {/* Username */}
+              {/* Mobile Number with Fixed +91 Badge */}
               <div className="login-field">
-                <label htmlFor="username">Username</label>
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  value={form.username}
-                  placeholder="e.g. ramesh_store"
-                  autoComplete="username"
-                  disabled={loading}
-                  aria-invalid={Boolean(errors.username)}
-                  onChange={e => updateField('username', e.target.value.toLowerCase())}
-                />
-                {errors.username && <p className="login-field-error">{errors.username}</p>}
+                <label htmlFor="reg-mobile">Registered Mobile Number *</label>
+                <div className="login-phone-group">
+                  <div className="login-phone-badge">
+                    🇮🇳 +91
+                  </div>
+                  <div className="login-input-wrap">
+                    <span className="login-input-icon">
+                      <IconPhone size={18} aria-hidden="true" />
+                    </span>
+                    <input
+                      id="reg-mobile"
+                      type="tel"
+                      value={mobile}
+                      onChange={handleMobileChange}
+                      placeholder="98765 43210"
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+                {errors.mobile && <p className="login-field-error">{errors.mobile}</p>}
               </div>
 
               {/* Password */}
               <div className="login-field">
-                <label htmlFor="password">Password</label>
+                <label htmlFor="reg-password">Password (min 6 characters) *</label>
                 <div className="login-password-wrap">
+                  <span className="login-input-icon">
+                    <IconLock size={18} aria-hidden="true" />
+                  </span>
                   <input
-                    id="password"
-                    name="password"
+                    id="reg-password"
                     type={showPassword ? 'text' : 'password'}
-                    value={form.password}
-                    placeholder="Minimum 8 characters"
-                    autoComplete="new-password"
+                    value={password}
+                    onChange={e => {
+                      setPassword(e.target.value)
+                      if (errors.password) setErrors(prev => ({ ...prev, password: undefined }))
+                    }}
+                    placeholder="••••••••"
                     disabled={loading}
-                    aria-invalid={Boolean(errors.password)}
-                    aria-describedby={errors.password ? passwordErrorId : undefined}
-                    onChange={e => updateField('password', e.target.value)}
                   />
                   <button
                     type="button"
                     className="login-password-toggle"
-                    onClick={() => setShowPassword(v => !v)}
-                    disabled={loading}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => setShowPassword(v => !v)}
                   >
                     {showPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
                   </button>
                 </div>
-                {/* Password strength feedback */}
-                {form.password && (
-                  <div className="password-strength-container">
-                    <div className="password-strength-bars">
-                      {[1, 2, 3, 4].map(step => (
-                        <div
-                          key={step}
-                          className={`password-strength-segment ${
-                            step <= strength.score ? strength.className : ''
-                          }`}
-                          style={{
-                            backgroundColor:
-                              step <= strength.score
-                                ? strength.score === 1
-                                  ? '#EF4444'
-                                  : strength.score === 2
-                                    ? '#F59E0B'
-                                    : strength.score === 3
-                                      ? '#10B981'
-                                      : '#0057B8'
-                                : '#E2E8F0',
-                          }}
-                        />
-                      ))}
-                    </div>
-                    <div className="password-strength-label">
-                      <span className={strength.className}>Strength: {strength.label}</span>
-                      <span className="text-[11px] text-slate-400">At least 8 chars &amp; 1 number</span>
-                    </div>
-                  </div>
-                )}
-                {errors.password && <p className="login-field-error" id={passwordErrorId}>{errors.password}</p>}
+                {errors.password && <p className="login-field-error">{errors.password}</p>}
               </div>
 
               {/* Confirm Password */}
               <div className="login-field">
-                <label htmlFor="confirmPassword">Confirm Password</label>
+                <label htmlFor="reg-confirm-password">Confirm Password *</label>
                 <div className="login-password-wrap">
+                  <span className="login-input-icon">
+                    <IconLock size={18} aria-hidden="true" />
+                  </span>
                   <input
-                    id="confirmPassword"
-                    name="confirmPassword"
+                    id="reg-confirm-password"
                     type={showConfirmPassword ? 'text' : 'password'}
-                    value={form.confirmPassword}
-                    placeholder="Re-enter your password"
-                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={e => {
+                      setConfirmPassword(e.target.value)
+                      if (errors.confirmPassword) setErrors(prev => ({ ...prev, confirmPassword: undefined }))
+                    }}
+                    placeholder="••••••••"
                     disabled={loading}
-                    aria-invalid={Boolean(errors.confirmPassword)}
-                    onChange={e => updateField('confirmPassword', e.target.value)}
                   />
                   <button
                     type="button"
                     className="login-password-toggle"
-                    onClick={() => setShowConfirmPassword(v => !v)}
-                    disabled={loading}
                     aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => setShowConfirmPassword(v => !v)}
                   >
                     {showConfirmPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
                   </button>
@@ -361,72 +247,57 @@ export default function Register() {
                 {errors.confirmPassword && <p className="login-field-error">{errors.confirmPassword}</p>}
               </div>
 
-              {/* Terms and Privacy Consent */}
-              <label className="login-consent-label">
-                <input
-                  type="checkbox"
-                  checked={form.termsAccepted}
-                  onChange={e => updateField('termsAccepted', e.target.checked)}
-                  disabled={loading}
-                />
-                <span>
-                  I agree to Dreamwithtech's{' '}
-                  <Link to="/terms-and-conditions" target="_blank" rel="noopener noreferrer">
-                    Terms of Service
-                  </Link>{' '}
-                  and Privacy Policy.
-                </span>
-              </label>
-              {errors.termsAccepted && <p className="login-field-error">{errors.termsAccepted}</p>}
-
-              {/* Submit Button */}
-              <button type="submit" className="login-submit mt-2" disabled={loading}>
+              <button type="submit" className="login-submit-btn" disabled={loading}>
                 {loading ? (
-                  <>
+                  <span className="login-submit-loading">
                     <span className="login-spinner" aria-hidden="true" />
-                    Creating account...
-                  </>
+                    Registering…
+                  </span>
                 ) : (
-                  'Create Account'
+                  <span className="flex items-center justify-center gap-2">
+                    <span>Create Shop Account</span>
+                    <IconArrowRight size={16} />
+                  </span>
                 )}
               </button>
-
-              <div className="login-switch-action">
-                <span>Already have an account?</span>{' '}
-                <Link to="/login" className="login-switch-link">
-                  Sign in
-                </Link>
-              </div>
             </form>
 
             <div className="login-security-note">
-              <IconShieldCheck size={15} aria-hidden="true" />
-              <span>Bank-grade encryption &amp; multi-tenant data isolation</span>
+              <IconShieldCheck size={16} aria-hidden="true" />
+              <span>Instant setup • No credit card required • GST ready</span>
+            </div>
+
+            <div className="login-footer">
+              <p>
+                Already have an account?{' '}
+                <Link to="/login" className="login-link font-semibold">
+                  Sign in
+                </Link>
+              </p>
             </div>
           </div>
 
-          <footer className="login-footer">
+          <footer className="login-footer-bottom">
             <span>© {new Date().getFullYear()} Dreamwithtech</span>
             <Link to="/terms-and-conditions">Terms &amp; Conditions</Link>
           </footer>
         </div>
       </section>
 
+      {/* Professional Visual Sidebar with Login Illustration */}
       <aside className="login-visual" aria-label="Dreamwithtech Billing ERP System">
         <div className="login-visual-artwork !p-0">
           <LoginIllustration />
         </div>
         <div className="login-visual-caption">
-          <span>START YOUR BUSINESS JOURNEY</span>
-          <h2>All-in-one ERP built for retail &amp; commerce.</h2>
+          <span>START YOUR BUSINESS</span>
+          <h2>Everything you need to sell &amp; grow.</h2>
           <p>
-            Join modern businesses managing POS counter checkout, automated tax calculations, inventory stock tracking, and financial analytics.
+            Register your store in seconds. Instant GST invoices, thermal barcode billing, inventory tracking, and payment processing.
           </p>
           <small>Dreamwithtech Enterprise Technologies &copy; {new Date().getFullYear()}</small>
-          <a href="mailto:connectwithvvivek@gmail.com">Need help? Contact support</a>
         </div>
       </aside>
     </main>
   )
 }
-

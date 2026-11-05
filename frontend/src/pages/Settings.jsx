@@ -56,6 +56,7 @@ import paytmLogo from '../assets/paytm.svg'
 import upiLogo from '../assets/upi.svg'
 import { Spinner } from '../components/UI'
 import { SETTINGS_TABS } from '../components/SettingsNavigation'
+import SecuritySettings from './SecuritySettings'
 import TemplateCustomizerModal from '../components/TemplateCustomizerModal'
 import './Settings.css'
 
@@ -3359,6 +3360,15 @@ export default function Settings() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* ============================================================
+            TAB: SECURITY & 2FA (Google Authenticator TOTP)
+        ============================================================ */}
+        {activeTab === 'security' && (
+          <div className="flex-1 flex flex-col min-h-0 p-2.5 sm:p-4 max-w-4xl w-full mx-auto">
+            <SecuritySettings />
           </div>
         )}
       </div>

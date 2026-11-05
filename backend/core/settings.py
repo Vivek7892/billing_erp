@@ -196,8 +196,9 @@ TEMPLATES = [
 #
 # ============================================================
 
-USE_SQLITE = config('USE_SQLITE', default=False, cast=bool)
-USE_LOCAL_PG = config('USE_LOCAL_PG', default=False, cast=bool)
+IS_TESTING = 'test' in sys.argv
+USE_SQLITE = config('USE_SQLITE', default=False, cast=bool) or IS_TESTING
+USE_LOCAL_PG = (config('USE_LOCAL_PG', default=False, cast=bool) and not IS_TESTING)
 
 
 if USE_SQLITE:

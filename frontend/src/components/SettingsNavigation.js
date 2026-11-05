@@ -23,6 +23,7 @@ export const SETTINGS_TABS = [
   { id: 'inventory', label: 'Inventory & Batches', icon: IconTag },
   { id: 'reminders', label: 'Reminders', icon: IconBell },
   { id: 'account', label: 'Account', icon: IconUserCheck },
+  { id: 'security', label: 'Security & 2FA', icon: IconShieldCheck },
   { id: 'pricing', label: 'Pricing', icon: IconTag },
   { id: 'refer', label: 'Refer & Earn', icon: IconGift },
   { id: 'support', label: 'Help & Support', icon: IconHelpCircle },

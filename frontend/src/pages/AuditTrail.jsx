@@ -1,17 +1,11 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import api from '../api'
 import { PageHeader, Spinner, Modal, Pagination, SearchInput } from '../components/UI'
-import { MobileKpiGrid } from '../components/MobileUI'
 import toast from 'react-hot-toast'
 import {
   formatCurrency,
-  formatNumber,
-  formatDecimal,
-  formatPercent,
-  formatQuantity,
   formatDate,
   formatDateTime,
-  formatTime,
 } from '../utils/formatters'
 
 import {
@@ -34,8 +28,6 @@ import {
   IconCopy,
   IconCheck,
   IconAlertTriangle,
-  IconChevronDown,
-  IconChevronUp,
   IconCreditCard,
   IconSettings,
   IconActivity,
@@ -189,10 +181,8 @@ function getStructuredChanges(log) {
 
 export default function AuditTrail() {
   const [logs, setLogs] = useState([])
-  const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
-  const [showDistribution, setShowDistribution] = useState(false)
   const [selectedLog, setSelectedLog] = useState(null)
   const [copiedKey, setCopiedKey] = useState(null)
 
@@ -292,29 +282,6 @@ export default function AuditTrail() {
     return count
   }, [search, moduleFilter, actionFilter, resultFilter, operatorFilter, entityFilter, dateFrom, dateTo, highImpactOnly])
 
-  // Fetch summary from backend
-  const fetchSummary = useCallback(async () => {
-    try {
-      const params = {}
-      if (dateFrom) params.date_from = dateFrom
-      if (dateTo) params.date_to = dateTo
-      if (moduleFilter !== 'ALL') params.module = moduleFilter
-      if (actionFilter !== 'ALL') params.action = actionFilter
-      if (resultFilter !== 'ALL') params.result = resultFilter
-      if (operatorFilter !== 'ALL') params.operator = operatorFilter
-      if (entityFilter !== 'ALL') params.entity = entityFilter
-      if (highImpactOnly) params.high_impact = 'true'
-      if (search.trim()) params.search = search.trim()
-
-      const res = await api.get('/audit-logs/summary/', { params })
-      if (res.data) {
-        setSummary(res.data)
-      }
-    } catch {
-      // Quiet fallback, local stats will compute
-    }
-  }, [dateFrom, dateTo, moduleFilter, actionFilter, resultFilter, operatorFilter, entityFilter, highImpactOnly, search])
-
   // Fetch logs from backend
   const fetchLogs = useCallback(async () => {
     setLoading(true)
@@ -333,13 +300,12 @@ export default function AuditTrail() {
       const res = await api.get('/audit-logs/', { params })
       let data = Array.isArray(res.data) ? res.data : [...(res.data.results || [])]
       setLogs(data)
-      fetchSummary()
     } catch {
       toast.error('Failed to load audit trail events.')
     } finally {
       setLoading(false)
     }
-  }, [dateFrom, dateTo, moduleFilter, actionFilter, resultFilter, operatorFilter, entityFilter, highImpactOnly, search, fetchSummary])
+  }, [dateFrom, dateTo, moduleFilter, actionFilter, resultFilter, operatorFilter, entityFilter, highImpactOnly, search])
 
   useEffect(() => {
     fetchLogs()
@@ -417,26 +383,8 @@ export default function AuditTrail() {
     return filteredLogs.slice(start, start + pageSize)
   }, [filteredLogs, currentPage, pageSize])
 
-  // Real KPI Metrics
-  const metrics = useMemo(() => {
-    const totalMatching = summary?.total_matching ?? filteredLogs.length
-    const totalOverall = summary?.total_overall ?? logs.length
-    const successCount = summary?.successful_count ?? filteredLogs.filter(l => l.result === 'success').length
-    const failCount = summary?.failed_count ?? filteredLogs.filter(l => l.result === 'failure').length
-    const operatorsCount = summary?.unique_operators ?? uniqueOperators.length
-    const highImpactCount = summary?.high_impact_count ?? filteredLogs.filter(l => HIGH_IMPACT_ACTIONS.has(l.action)).length
-    const successRate = totalMatching > 0 ? ((successCount / totalMatching) * 100).toFixed(1) : '100'
-
-    return {
-      totalMatching,
-      totalOverall,
-      successCount,
-      failCount,
-      operatorsCount,
-      highImpactCount,
-      successRate,
-    }
-  }, [summary, filteredLogs, logs, uniqueOperators])
+  const failedEventCount = filteredLogs.filter(log => log.result === 'failure').length
+  const highImpactEventCount = filteredLogs.filter(log => HIGH_IMPACT_ACTIONS.has(log.action)).length
 
   // Copy to clipboard helper
   const copyToClipboard = (text, key) => {
@@ -674,256 +622,41 @@ export default function AuditTrail() {
   return (
     <div className="audit-trail-page w-full min-w-0 space-y-4 pb-16 text-[var(--ink)]">
       
-      {/* Top Page Header with Title, Subtitle and Export CSV */}
+      {/* Page heading and activity export */}
       <header className="flex flex-col justify-between gap-3 border-b border-[var(--line)] pb-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Audit Trail</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">Track system events, data mutations, security actions, and user activities.</p>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Business Activity</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">Review who changed what and when. Search, filter, and inspect recorded activity.</p>
         </div>
-      
-      </header>
-
-      {/* Audit health summary */}
-      <section className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 shadow-xs space-y-2.5" aria-label="Audit health">
-        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-[var(--muted)]">
-          <IconShieldCheck size={14} className="text-[var(--ink-secondary)]" /> Audit health
-          {metrics.failCount === 0 && <span className="normal-case tracking-normal font-medium text-emerald-700 dark:text-emerald-400">· No failures detected</span>}
-        </div>
-
-        {/* Mobile KPI Grid (Displays 4 initially with Show more for 5th) */}
-        <MobileKpiGrid
-          title="Audit Metrics"
-          allKpis={[
-            {
-              label: 'Failed events',
-              value: metrics.failCount,
-              icon: IconCircleX,
-              sub: metrics.failCount ? 'Review required' : 'No failures',
-              onClick: () => setResultFilter('failure'),
-            },
-            {
-              label: 'High-impact',
-              value: metrics.highImpactCount,
-              icon: IconAlertTriangle,
-              sub: 'Recorded changes',
-              onClick: () => setHighImpactOnly(true),
-            },
-            {
-              label: 'Matching events',
-              value: Number(metrics.totalMatching) ? Number(metrics.totalMatching).toLocaleString() : metrics.totalMatching,
-              icon: IconFileText,
-              sub: `of ${metrics.totalOverall.toLocaleString()} total`,
-            },
-            {
-              label: 'Success rate',
-              value: `${metrics.successRate}%`,
-              icon: IconCircleCheck,
-              sub: `${metrics.successCount.toLocaleString()} successful`,
-            },
-            {
-              label: 'Unique actors',
-              value: metrics.operatorsCount,
-              icon: IconUser,
-              sub: 'Operators recorded',
-            },
-          ]}
-        />
-
-        {/* Desktop/Tablet Metric Grid (all 5) */}
-        <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-5 gap-2">
-          {[
-            { label: 'Failed events', value: metrics.failCount, icon: IconCircleX, tone: metrics.failCount ? 'text-rose-700 dark:text-rose-300' : 'text-[var(--ink)]', hint: metrics.failCount ? 'Review required' : 'No failures' },
-            { label: 'High-impact', value: metrics.highImpactCount, icon: IconAlertTriangle, tone: 'text-amber-700 dark:text-amber-300', hint: 'Recorded changes' },
-            { label: 'Matching events', value: metrics.totalMatching, icon: IconFileText, tone: 'text-[var(--ink)]', hint: `of ${metrics.totalOverall.toLocaleString()} total` },
-            { label: 'Success rate', value: `${metrics.successRate}%`, icon: IconCircleCheck, tone: 'text-emerald-700 dark:text-emerald-300', hint: `${metrics.successCount.toLocaleString()} successful` },
-            { label: 'Unique actors', value: metrics.operatorsCount, icon: IconUser, tone: 'text-[var(--ink)]', hint: 'Operators recorded' },
-          ].map(item => {
-            const Icon = item.icon
-            const Tag = item.label === 'High-impact' || item.label === 'Failed events' ? 'button' : 'div'
-            return <Tag key={item.label} type={Tag === 'button' ? 'button' : undefined} onClick={item.label === 'High-impact' ? () => setHighImpactOnly(true) : item.label === 'Failed events' ? () => setResultFilter('failure') : undefined} className={`min-w-0 rounded-md border px-3 py-2 text-left ${item.label === 'Failed events' && metrics.failCount ? 'border-rose-300 bg-rose-50/70 dark:border-rose-900 dark:bg-rose-950/20' : 'border-[var(--line-subtle)] bg-[var(--surface)]'} ${Tag === 'button' ? 'cursor-pointer hover:bg-[var(--surface-elevated)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]' : ''}`}>
-              <div className="flex items-center gap-1.5 text-[10px] font-semibold text-[var(--muted)]"><Icon size={12} className={item.tone} />{item.label}</div>
-              <div className={`mt-0.5 text-xl font-bold tabular-nums ${item.tone}`}>{Number(item.value) ? Number(item.value).toLocaleString() : item.value}</div>
-              <div className="truncate text-[10px] text-[var(--muted)]">{item.hint}</div>
-            </Tag>
-          })}
-        </div>
-      </section>
-
-      {/* Investigation shortcuts */}
-      <div className="flex flex-col gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-xs text-xs">
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)] mr-1 shrink-0">Investigate:</span>
-          <button type="button" onClick={() => { setResultFilter('ALL'); setHighImpactOnly(false); setActionFilter('ALL'); setModuleFilter('ALL') }} className="rounded-md border border-[var(--line)] px-2.5 py-1 text-xs font-semibold text-[var(--ink-secondary)] hover:bg-[var(--surface-elevated)]">All Events</button>
-
-          <button
-            type="button"
-            onClick={() => {
-              if (resultFilter === 'failure') {
-                setResultFilter('ALL')
-              } else {
-                setResultFilter('failure')
-              }
-            }}
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition border ${
-              resultFilter === 'failure'
-                ? 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/60 dark:text-rose-200 dark:border-rose-700 shadow-xs'
-                : 'bg-[var(--surface-elevated)] text-[var(--ink-secondary)] border-[var(--line)] hover:border-rose-300 hover:text-rose-700'
-            }`}
-          >
-            <IconCircleX size={12} className={resultFilter === 'failure' ? 'text-rose-600' : 'text-slate-400'} />
-            <span>Failed</span>
-            {metrics.failCount > 0 && (
-              <span className="ml-1 rounded-full bg-rose-600 text-white text-[10px] px-1.5 py-0.2">
-                {metrics.failCount}
-              </span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setHighImpactOnly(!highImpactOnly)}
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition border ${
-              highImpactOnly
-                ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/60 dark:text-amber-200 dark:border-amber-700 shadow-xs'
-                : 'bg-[var(--surface-elevated)] text-[var(--ink-secondary)] border-[var(--line)] hover:border-amber-300 hover:text-amber-700'
-            }`}
-          >
-            <IconAlertTriangle size={12} className={highImpactOnly ? 'text-amber-600' : 'text-slate-400'} />
-            <span>High Impact</span>
-            {metrics.highImpactCount > 0 && (
-              <span className="ml-1 rounded-full bg-amber-600 text-white text-[10px] px-1.5 py-0.2">
-                {metrics.highImpactCount}
-              </span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActionFilter(actionFilter === 'PRICE_CHANGED' ? 'ALL' : 'PRICE_CHANGED')
-            }}
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition border ${
-              actionFilter === 'PRICE_CHANGED'
-                ? 'bg-teal-100 text-teal-800 border-teal-300 dark:bg-teal-950/60 dark:text-teal-200 dark:border-teal-700 shadow-xs'
-                : 'bg-[var(--surface-elevated)] text-[var(--ink-secondary)] border-[var(--line)] hover:border-teal-300 hover:text-teal-700'
-            }`}
-          >
-            <IconTag size={12} className={actionFilter === 'PRICE_CHANGED' ? 'text-teal-600' : 'text-slate-400'} />
-            <span>Price Changes</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setModuleFilter(moduleFilter === 'user' ? 'ALL' : 'user')
-            }}
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition border ${
-              moduleFilter === 'user'
-                ? 'bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-950/60 dark:text-indigo-200 dark:border-indigo-700 shadow-xs'
-                : 'bg-[var(--surface-elevated)] text-[var(--ink-secondary)] border-[var(--line)] hover:border-indigo-300 hover:text-indigo-700'
-            }`}
-          >
-            <IconUser size={12} className={moduleFilter === 'user' ? 'text-indigo-600' : 'text-slate-400'} />
-            <span>Security & Users</span>
-          </button>
-        </div>
-
         <button
           type="button"
-          onClick={() => setShowDistribution(!showDistribution)}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-[#1E3A5F] hover:text-[#162F4D] dark:text-sky-300"
+          onClick={handleExportCsv}
+          disabled={exporting || loading || filteredLogs.length === 0}
+          className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-semibold text-[var(--ink)] transition hover:bg-[var(--surface-elevated)] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
-          <IconActivity size={13} />
-          <span>{showDistribution ? 'Hide Activity Distribution' : 'Activity Distribution'}</span>
-          {showDistribution ? <IconChevronUp size={13} /> : <IconChevronDown size={13} />}
+          <IconDownload size={15} />
+          {exporting ? 'Exporting...' : 'Export activity'}
         </button>
-      </div>
+      </header>
 
-      {/* Collapsible Activity Distribution Strip */}
-      {showDistribution && summary && (
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 shadow-xs space-y-3 transition">
-          <div className="flex items-center justify-between border-b border-[var(--line-subtle)] pb-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)] flex items-center gap-1.5">
-              <IconActivity size={14} className="text-[#1E3A5F] dark:text-sky-400" />
-              Event Volume Distribution Breakdown
-            </h4>
-            <span className="text-[11px] text-[var(--muted)]">Based on currently matching audit logs</span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Top Modules */}
-            <div className="space-y-2">
-              <p className="text-[11px] font-semibold text-[var(--ink-secondary)] uppercase">Top Modules</p>
-              <div className="space-y-1.5">
-                {(summary.by_module || []).slice(0, 5).map(m => {
-                  const pct = metrics.totalMatching > 0 ? ((m.count / metrics.totalMatching) * 100).toFixed(0) : 0
-                  return (
-                    <div key={m.module} className="text-xs space-y-0.5">
-                      <div className="flex justify-between text-[11px]">
-                        <span className="font-medium capitalize text-[var(--ink)]">{m.module || 'Unknown'}</span>
-                        <span className="font-mono text-[var(--muted)]">
-                          {m.count} ({pct}%)
-                        </span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-[var(--line-subtle)] overflow-hidden">
-                        <div className="h-full bg-[#1E3A5F] rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Top Actions */}
-            <div className="space-y-2">
-              <p className="text-[11px] font-semibold text-[var(--ink-secondary)] uppercase">Top Actions</p>
-              <div className="space-y-1.5">
-                {(summary.by_action || []).slice(0, 5).map(a => {
-                  const pct = metrics.totalMatching > 0 ? ((a.count / metrics.totalMatching) * 100).toFixed(0) : 0
-                  return (
-                    <div key={a.action} className="text-xs space-y-0.5">
-                      <div className="flex justify-between text-[11px]">
-                        <span className="font-mono text-[10px] text-[var(--ink)] truncate max-w-[150px]">{a.action}</span>
-                        <span className="font-mono text-[var(--muted)]">
-                          {a.count} ({pct}%)
-                        </span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-[var(--line-subtle)] overflow-hidden">
-                        <div className="h-full bg-teal-600 rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Top Operators */}
-            <div className="space-y-2">
-              <p className="text-[11px] font-semibold text-[var(--ink-secondary)] uppercase">Top Operators</p>
-              <div className="space-y-1.5">
-                {(summary.by_operator || []).slice(0, 5).map(u => {
-                  const pct = metrics.totalMatching > 0 ? ((u.count / metrics.totalMatching) * 100).toFixed(0) : 0
-                  return (
-                    <div key={u.user__username} className="text-xs space-y-0.5">
-                      <div className="flex justify-between text-[11px]">
-                        <span className="font-medium text-[var(--ink)]">{u.user__username || 'System'}</span>
-                        <span className="font-mono text-[var(--muted)]">
-                          {u.count} ({pct}%)
-                        </span>
-                      </div>
-                      <div className="h-1.5 w-full rounded-full bg-[var(--line-subtle)] overflow-hidden">
-                        <div className="h-full bg-indigo-600 rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Comprehensive Filter Toolbar (Section C) */}
+      {/* Quick activity filters */}
+      <nav aria-label="Quick activity filters" className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3">
+        <span className="mr-1 text-xs font-semibold text-[var(--muted)]">Quick filters</span>
+        <button type="button" onClick={() => { setResultFilter('ALL'); setHighImpactOnly(false); setActionFilter('ALL'); setModuleFilter('ALL') }} className="min-h-9 rounded-md border border-[var(--line)] px-3 text-xs font-semibold text-[var(--ink-secondary)] hover:bg-[var(--surface-elevated)]">All events</button>
+        <button type="button" onClick={() => setResultFilter(resultFilter === 'failure' ? 'ALL' : 'failure')} className={`min-h-9 rounded-md border px-3 text-xs font-semibold ${resultFilter === 'failure' ? 'border-rose-700 bg-rose-950/60 text-rose-200' : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-elevated)]'}`}>
+          Failed{failedEventCount > 0 ? ` (${failedEventCount})` : ''}
+        </button>
+        <button type="button" onClick={() => setHighImpactOnly(value => !value)} className={`min-h-9 rounded-md border px-3 text-xs font-semibold ${highImpactOnly ? 'border-amber-700 bg-amber-950/60 text-amber-200' : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-elevated)]'}`}>
+          High impact{highImpactEventCount > 0 ? ` (${highImpactEventCount})` : ''}
+        </button>
+        <button type="button" onClick={() => setActionFilter(actionFilter === 'PRICE_CHANGED' ? 'ALL' : 'PRICE_CHANGED')} className={`min-h-9 rounded-md border px-3 text-xs font-semibold ${actionFilter === 'PRICE_CHANGED' ? 'border-teal-700 bg-teal-950/60 text-teal-200' : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-elevated)]'}`}>
+          Price changes
+        </button>
+        <button type="button" onClick={() => setModuleFilter(moduleFilter === 'user' ? 'ALL' : 'user')} className={`min-h-9 rounded-md border px-3 text-xs font-semibold ${moduleFilter === 'user' ? 'border-indigo-700 bg-indigo-950/60 text-indigo-200' : 'border-[var(--line)] bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-elevated)]'}`}>
+          Security &amp; users
+        </button>
+      </nav>
+      {/* Search and filters */}
       <div className="erp-filter-panel rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:p-3.5 shadow-xs space-y-3">
         {/* Quick Search bar + Mobile Filters Toggle */}
         <div className="flex items-center gap-2">

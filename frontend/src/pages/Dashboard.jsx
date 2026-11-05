@@ -18,6 +18,7 @@ import {
   IconPlus,
   IconRefresh,
   IconRoute,
+  IconShieldCheck,
   IconX,
 } from '@tabler/icons-react'
 import {
@@ -33,6 +34,7 @@ import api from '../api'
 import { Badge, Spinner } from '../components/UI'
 import { MobileKpiGrid, MobileFAB } from '../components/MobileUI'
 import { useShop } from '../components/Layout'
+import { useAuth } from '../AuthContext'
 import DashboardBannerCarousel from './DashboardBannerCarousel'
 import FirstUseChecklist from '../components/FirstUseChecklist'
 import {
@@ -134,6 +136,16 @@ const getInvoiceRowClass = status => {
 export default function Dashboard() {
   const navigate = useNavigate()
   const { shopName } = useShop()
+  const { user } = useAuth()
+
+  const [totpBannerDismissed, setTotpBannerDismissed] = useState(() => {
+    return sessionStorage.getItem('dismiss_totp_reminder') === 'true'
+  })
+
+  const handleDismissTotpBanner = () => {
+    setTotpBannerDismissed(true)
+    sessionStorage.setItem('dismiss_totp_reminder', 'true')
+  }
 
   const [data, setData] = useState(EMPTY)
   const [loading, setLoading] = useState(true)
@@ -369,6 +381,49 @@ export default function Dashboard() {
   return (
     <div className="dashboard-page min-w-0 space-y-4 pb-6">
       
+      {/* 2FA Security Reminder Banner (Mobile-Friendly & Dismissable) */}
+      {!user?.totp_enabled && !totpBannerDismissed && (
+        <div className="relative overflow-hidden rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50/90 via-sky-50/70 to-white dark:border-indigo-900/50 dark:from-indigo-950/40 dark:via-slate-900/40 dark:to-slate-900/40 p-3 sm:p-3.5 shadow-xs transition-all">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pr-7 sm:pr-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-indigo-600/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                <IconShieldCheck size={18} strokeWidth={2.2} />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">Protect Your Account with 2FA</span>
+                  <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">Recommended</span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-1 sm:line-clamp-none mt-0.5">
+                  Enable Google Authenticator (TOTP) to secure store logins and staff access.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                onClick={() => navigate(user?.role === 'cashier' ? '/settings' : '/settings?tab=security')}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-colors flex items-center gap-1.5 shrink-0"
+              >
+                <span>Enable 2FA</span>
+                <IconArrowUpRight size={13} />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDismissTotpBanner}
+                title="Dismiss reminder"
+                aria-label="Dismiss 2FA reminder"
+                className="absolute sm:static top-2.5 right-2.5 p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
+              >
+                <IconX size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* -------------------------------------------------------------
           TOP BAR: Store Name, Live IST Clock, Action Controls & Filter Symbol
       -------------------------------------------------------------- */}

@@ -40,6 +40,14 @@ def reverse_populate(apps, schema_editor):
     pass
 
 
+def drop_indexes_safely(apps, schema_editor):
+    connection = schema_editor.connection
+    with connection.cursor() as cursor:
+        if connection.vendor == 'postgresql':
+            cursor.execute("DROP INDEX IF EXISTS api_business_shop_id_c35711f3_like;")
+            cursor.execute("DROP INDEX IF EXISTS api_business_shop_id_key;")
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -73,10 +81,7 @@ class Migration(migrations.Migration):
             ),
         ),
         migrations.RunPython(populate_existing_shop_ids, reverse_populate),
-        migrations.RunSQL(
-            sql="DROP INDEX IF EXISTS api_business_shop_id_c35711f3_like; DROP INDEX IF EXISTS api_business_shop_id_key;",
-            reverse_sql="",
-        ),
+        migrations.RunPython(drop_indexes_safely, reverse_code=migrations.RunPython.noop),
         migrations.AlterField(
             model_name='business',
             name='shop_id',
