@@ -11,40 +11,48 @@ def add_columns_safely(apps, schema_editor):
     connection = schema_editor.connection
     with connection.cursor() as cursor:
         if connection.vendor == 'postgresql':
-            # Use IF NOT EXISTS and try/except to prevent DuplicateColumn on re-runs
-            statements = [
-                "ALTER TABLE api_user ADD COLUMN IF NOT EXISTS created_by_id bigint NULL REFERENCES api_user(id) ON DELETE SET NULL;",
-                "ALTER TABLE api_user ADD COLUMN IF NOT EXISTS custom_permissions jsonb NOT NULL DEFAULT '[]'::jsonb;",
-                "ALTER TABLE api_user ADD COLUMN IF NOT EXISTS department varchar(100) NOT NULL DEFAULT '';",
-                "ALTER TABLE api_user ADD COLUMN IF NOT EXISTS employee_id varchar(50) NOT NULL DEFAULT '';",
-                "ALTER TABLE api_user ADD COLUMN IF NOT EXISTS failed_pin_attempts smallint NOT NULL DEFAULT 0;",
-                "ALTER TABLE api_user ADD COLUMN IF NOT EXISTS last_failed_pin timestamp with time zone NULL;",
-                "ALTER TABLE api_user ADD COLUMN IF NOT EXISTS pos_pin_enabled boolean NOT NULL DEFAULT false;",
-                "ALTER TABLE api_user ADD COLUMN IF NOT EXISTS pos_pin_hash varchar(128) NOT NULL DEFAULT '';",
-                "ALTER TABLE api_user ADD COLUMN IF NOT EXISTS session_security_stamp varchar(64) NOT NULL DEFAULT '';",
-                "ALTER TABLE api_user ALTER COLUMN phone DROP NOT NULL;",
-            ]
-            for stmt in statements:
-                try:
-                    cursor.execute(stmt)
-                except Exception:
-                    pass
+            cursor.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE LOWER(table_name) = 'api_user';
+            """)
+            existing_cols = {row[0].lower() for row in cursor.fetchall()}
 
-            legacy_cleanups = [
-                "ALTER TABLE api_user ALTER COLUMN pin_failed_attempts DROP NOT NULL;",
-                "ALTER TABLE api_user ALTER COLUMN pin_failed_attempts SET DEFAULT 0;",
-                "ALTER TABLE api_user ALTER COLUMN pin_hash DROP NOT NULL;",
-                "ALTER TABLE api_user ALTER COLUMN pin_hash SET DEFAULT '';",
-            ]
-            for stmt in legacy_cleanups:
-                try:
-                    cursor.execute(stmt)
-                except Exception:
-                    pass
+            if 'created_by_id' not in existing_cols:
+                cursor.execute("ALTER TABLE api_user ADD COLUMN created_by_id bigint NULL REFERENCES api_user(id) ON DELETE SET NULL;")
+            if 'custom_permissions' not in existing_cols:
+                cursor.execute("ALTER TABLE api_user ADD COLUMN custom_permissions jsonb NOT NULL DEFAULT '[]'::jsonb;")
+            if 'department' not in existing_cols:
+                cursor.execute("ALTER TABLE api_user ADD COLUMN department varchar(100) NOT NULL DEFAULT '';")
+            if 'employee_id' not in existing_cols:
+                cursor.execute("ALTER TABLE api_user ADD COLUMN employee_id varchar(50) NOT NULL DEFAULT '';")
+            if 'failed_pin_attempts' not in existing_cols:
+                cursor.execute("ALTER TABLE api_user ADD COLUMN failed_pin_attempts smallint NOT NULL DEFAULT 0;")
+            if 'last_failed_pin' not in existing_cols:
+                cursor.execute("ALTER TABLE api_user ADD COLUMN last_failed_pin timestamp with time zone NULL;")
+            if 'pos_pin_enabled' not in existing_cols:
+                cursor.execute("ALTER TABLE api_user ADD COLUMN pos_pin_enabled boolean NOT NULL DEFAULT false;")
+            if 'pos_pin_hash' not in existing_cols:
+                cursor.execute("ALTER TABLE api_user ADD COLUMN pos_pin_hash varchar(128) NOT NULL DEFAULT '';")
+            if 'session_security_stamp' not in existing_cols:
+                cursor.execute("ALTER TABLE api_user ADD COLUMN session_security_stamp varchar(64) NOT NULL DEFAULT '';")
+
+            if 'phone' in existing_cols:
+                cursor.execute("ALTER TABLE api_user ALTER COLUMN phone DROP NOT NULL;")
+                cursor.execute("ALTER TABLE api_user DROP CONSTRAINT IF EXISTS api_user_phone_key;")
+                cursor.execute("DROP INDEX IF EXISTS api_user_phone_key;")
+                cursor.execute("DROP INDEX IF EXISTS api_user_phone_like;")
+
+            if 'pin_failed_attempts' in existing_cols:
+                cursor.execute("ALTER TABLE api_user ALTER COLUMN pin_failed_attempts DROP NOT NULL;")
+                cursor.execute("ALTER TABLE api_user ALTER COLUMN pin_failed_attempts SET DEFAULT 0;")
+
+            if 'pin_hash' in existing_cols:
+                cursor.execute("ALTER TABLE api_user ALTER COLUMN pin_hash DROP NOT NULL;")
+                cursor.execute("ALTER TABLE api_user ALTER COLUMN pin_hash SET DEFAULT '';")
 
         elif connection.vendor == 'sqlite':
             cursor.execute("PRAGMA table_info(api_user);")
-            existing_cols = {row[1] for row in cursor.fetchall()}
+            existing_cols = {row[1].lower() for row in cursor.fetchall()}
             if 'created_by_id' not in existing_cols:
                 cursor.execute("ALTER TABLE api_user ADD COLUMN created_by_id integer NULL REFERENCES api_user(id);")
             if 'custom_permissions' not in existing_cols:
