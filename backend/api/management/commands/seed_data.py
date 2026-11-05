@@ -443,10 +443,10 @@ class Command(BaseCommand):
         active_products = [p for p in products_map.values() if p.status == 'active']
         all_purchases = []
 
-        if Purchase.objects.filter(business=business).count() < 5:
-            # Create 8 purchases across last 45 days
-            for p_idx in range(8):
-                days_ago = random.randint(5, 45)
+        if Purchase.objects.filter(business=business).count() < 12:
+            # Create 12 purchases across last 75 days
+            for p_idx in range(12):
+                days_ago = random.randint(1, 75)
                 supplier = sup_objs[p_idx % len(sup_objs)]
                 p_date = timezone.now() - timedelta(days=days_ago)
 
@@ -481,7 +481,7 @@ class Command(BaseCommand):
                     },
                     items_data=items_data,
                     business=business,
-                    created_by=admin_user,
+                    created_by=random.choice([admin_user, manager_user]),
                 )
 
                 # Backdate created_at timestamp
@@ -513,9 +513,9 @@ class Command(BaseCommand):
         # ============================================================
         self.stdout.write('Seeding retail & credit invoices via InvoiceService...')
         all_invoices = []
-        if Invoice.objects.filter(business=business).count() < 10:
-            for inv_i in range(26):
-                days_ago = random.randint(0, 30)
+        if Invoice.objects.filter(business=business).count() < 40:
+            for inv_i in range(36):
+                days_ago = random.randint(0, 85)
                 inv_date = timezone.now() - timedelta(days=days_ago)
 
                 customer = random.choice(customers_list)
@@ -567,7 +567,7 @@ class Command(BaseCommand):
                     payments_data=payments_payload,
                     bill_discount=Decimal('0'),
                     business=business,
-                    created_by=random.choice([admin_user, cashier_user]),
+                    created_by=random.choice([admin_user, cashier_user, manager_user]),
                 )
 
                 # Backdate invoice & payments

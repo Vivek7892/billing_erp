@@ -142,10 +142,31 @@ const pick = (arr, i) => arr[i % arr.length]
 const day = i => `${String(((i * 2) % 28) + 1).padStart(2, '0')} Oct 2026`
 
 /* ------------------------------------------------------------------
-   Static Sample Fallback Datasets (used when offline or empty)
+   Updated Comprehensive Seed Data with User & Operator Details
 ------------------------------------------------------------------- */
-const CUSTOMERS = ['Lakshmi Stores', 'Ravi Kumar', 'Anita Traders', 'Sri Balaji Mart', 'Mohammed Iqbal', 'Meena Provisions', 'Walk-in Customer', 'Suresh & Sons', 'Priya Bakery', 'Green Leaf Mart']
-const SUPPLIERS = ['Hindustan Distributors', 'Sai Wholesale', 'Karnataka Agro', 'Metro Traders', 'Fresh Farms Pvt Ltd', 'Annapurna Suppliers']
+const CUSTOMERS_SEED = [
+  { name: 'Lakshmi Stores', phone: '9845012345', gstin: '29AABCL1234F1Z1', role: 'Retailer' },
+  { name: 'Ravi Kumar', phone: '9886067890', gstin: 'URP', role: 'Customer' },
+  { name: 'Anita Traders', phone: '9448034567', gstin: '29ABCDE5678G2Z2', role: 'Wholesaler' },
+  { name: 'Sri Balaji Mart', phone: '9741099882', gstin: '29XYZAB4321C4Z8', role: 'Retailer' },
+  { name: 'Mohammed Iqbal', phone: '9900044551', gstin: 'URP', role: 'Customer' },
+  { name: 'Meena Provisions', phone: '9880122334', gstin: '29KLMNO9012J5Z3', role: 'Retailer' },
+  { name: 'Walk-in Customer', phone: 'Cash Counter', gstin: 'URP', role: 'Walk-in' },
+  { name: 'Suresh & Sons', phone: '9844055667', gstin: '29PQRST9876Q3Z2', role: 'Distributor' },
+  { name: 'Priya Bakery', phone: '9739088776', gstin: '29DEFGH3344K6Z0', role: 'Commercial' },
+  { name: 'Green Leaf Mart', phone: '9916022113', gstin: '29AABCG8899M1Z9', role: 'Supermarket' },
+]
+
+const SUPPLIERS_SEED = [
+  { name: 'Hindustan Distributors', phone: '080-22334455', gstin: '29AAACH1234D1Z2' },
+  { name: 'Sai Wholesale Agros', phone: '9845112233', gstin: '29AABCS5544B1Z9' },
+  { name: 'Karnataka Agro Agency', phone: '9886223344', gstin: '29AAACK7788P1Z4' },
+  { name: 'Metro Traders Depot', phone: '080-41223344', gstin: '29AAACM9900C1Z7' },
+  { name: 'Fresh Farms Pvt Ltd', phone: '9900334455', gstin: '29AAACF1122E1Z3' },
+  { name: 'Annapurna Suppliers', phone: '9741445566', gstin: '29AAACA3344F1Z8' },
+]
+
+const OPERATORS_SEED = ['Karthik R. (Cashier)', 'Rajesh K. (Owner)', 'Sundar M. (Admin)', 'Karthik R. (Cashier)']
 const ITEMS = ['Basmati Rice 5kg', 'Sunflower Oil 1L', 'Toor Dal 1kg', 'Sugar 1kg', 'Tata Salt 1kg', 'Wheat Atta 10kg', 'Tea Powder 500g', 'Milk 500ml', 'Biscuits Family Pack', 'Detergent 1kg']
 const MODES = ['UPI', 'Cash', 'Card', 'Bank']
 const STATUS_SALES = ['Paid', 'Paid', 'Partial', 'Paid', 'Due']
@@ -159,10 +180,13 @@ const DEFAULT_TREND = Array.from({ length: 30 }, (_, i) => {
 const salesRows = Array.from({ length: 24 }, (_, i) => {
   const taxable = 1800 + ((i * 937) % 9200)
   const gst = Math.round(taxable * 0.12)
+  const cust = pick(CUSTOMERS_SEED, i * 3)
   return {
     invoice: `INV-${2410 + i}`,
     date: day(i),
-    customer: pick(CUSTOMERS, i * 3),
+    customer: cust.name,
+    mobile: cust.phone,
+    user: pick(OPERATORS_SEED, i),
     mode: pick(MODES, i),
     taxable,
     gst,
@@ -174,10 +198,13 @@ const salesRows = Array.from({ length: 24 }, (_, i) => {
 const purchaseRows = Array.from({ length: 18 }, (_, i) => {
   const amount = 14000 + ((i * 4871) % 61000)
   const paid = i % 4 === 0 ? 0 : i % 3 === 0 ? Math.round(amount / 2) : amount
+  const sup = pick(SUPPLIERS_SEED, i)
   return {
     bill: `PB-${880 + i}`,
     date: day(i),
-    supplier: pick(SUPPLIERS, i),
+    supplier: sup.name,
+    mobile: sup.phone,
+    user: 'Rajesh K. (Owner)',
     items: 4 + ((i * 3) % 17),
     amount,
     paid,
@@ -208,10 +235,13 @@ const bookRows = (() => {
     const credit = i % 3 === 0 ? 0 : 2500 + ((i * 1331) % 14000)
     const debit = i % 3 === 0 ? 1800 + ((i * 977) % 9000) : 0
     bal += credit - debit
+    const partyObj = credit ? pick(CUSTOMERS_SEED, i) : pick(SUPPLIERS_SEED, i)
     return {
       date: day(i),
       voucher: `${credit ? 'RCT' : 'PMT'}-${300 + i}`,
-      particulars: credit ? `Sales receipt · ${pick(CUSTOMERS, i)}` : `Payment · ${pick(SUPPLIERS, i)}`,
+      particulars: partyObj.name,
+      mobile: partyObj.phone,
+      user: pick(OPERATORS_SEED, i),
       mode: pick(MODES, i),
       debit,
       credit,
@@ -225,9 +255,11 @@ const ledgerRows = Array.from({ length: 16 }, (_, i) => {
   const received = Math.round(billed * (0.35 + ((i * 11) % 55) / 100))
   const out = billed - received
   const age = 6 + ((i * 13) % 80)
+  const cust = pick(CUSTOMERS_SEED, i)
   return {
-    party: pick(CUSTOMERS, i),
-    mobile: `98${String(45000000 + i * 183749).slice(0, 8)}`,
+    party: cust.name,
+    mobile: cust.phone,
+    role: cust.role,
     invoices: 3 + (i % 9),
     billed,
     received,
@@ -262,6 +294,7 @@ const FALLBACK_DATASETS = {
       { key: 'invoice', label: 'Invoice' },
       { key: 'date', label: 'Date' },
       { key: 'customer', label: 'Customer' },
+      { key: 'user', label: 'Billed By' },
       { key: 'mode', label: 'Mode' },
       { key: 'taxable', label: 'Taxable', money: true },
       { key: 'gst', label: 'GST', money: true },
@@ -328,6 +361,7 @@ const FALLBACK_DATASETS = {
       { key: 'date', label: 'Date' },
       { key: 'voucher', label: 'Voucher' },
       { key: 'particulars', label: 'Particulars' },
+      { key: 'user', label: 'Operator' },
       { key: 'mode', label: 'Mode' },
       { key: 'debit', label: 'Debit', money: true, total: true },
       { key: 'credit', label: 'Credit', money: true, total: true },
@@ -346,8 +380,7 @@ const FALLBACK_DATASETS = {
     breakdownTitle: 'Receivables aging',
     breakdown: [['0–30 days', 48], ['31–60 days', 29], ['61–90 days', 15], ['90+ days', 8]],
     columns: [
-      { key: 'party', label: 'Party' },
-      { key: 'mobile', label: 'Mobile' },
+      { key: 'party', label: 'Customer / Party' },
       { key: 'invoices', label: 'Invoices', num: true },
       { key: 'billed', label: 'Billed', money: true, total: true },
       { key: 'received', label: 'Received', money: true, total: true },
@@ -416,6 +449,26 @@ const isNumericCol = h => {
     s.includes('items') ||
     s.includes('invoices') ||
     s.includes('stock')
+  )
+}
+
+const isUserOrPartyCol = (c, r) => {
+  const label = String(c.label || '').toLowerCase()
+  const key = String(c.key || '').toLowerCase()
+  return (
+    label.includes('customer') ||
+    label.includes('party') ||
+    label.includes('supplier') ||
+    label.includes('user') ||
+    label.includes('cashier') ||
+    label.includes('operator') ||
+    label.includes('particulars') ||
+    label.includes('billed by') ||
+    key.includes('customer') ||
+    key.includes('party') ||
+    key.includes('supplier') ||
+    key.includes('user') ||
+    Boolean(r.mobile || r.phone || r.gstin)
   )
 }
 
@@ -557,18 +610,34 @@ function DataTable({ columns, rows, loading }) {
     setSort(s => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }))
 
   const isRight = c => c.money || c.num
-  const cell = (c, r) => {
+
+  const renderCellContent = (c, r) => {
     const v = r[c.key]
     if (c.badge) return <Badge value={String(v ?? '—')} />
     if (c.money) return inr(v)
     if (c.num && typeof v === 'number') return num(v)
+
+    // User or Party Row Information enhancement
+    if (isUserOrPartyCol(c, r)) {
+      const sub = r.mobile || r.phone || r.gstin || r.role || ''
+      return (
+        <div className="flex flex-col min-w-0 py-0.5">
+          <span className="font-medium text-[var(--ink)] truncate">{String(v ?? '—')}</span>
+          {sub && (
+            <span className="text-[11px] text-[var(--muted)] font-mono truncate">{sub}</span>
+          )}
+        </div>
+      )
+    }
+
     return String(v ?? '—')
   }
+
   const hasTotals = columns.some(c => c.total)
 
   return (
     <section>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="text-sm font-semibold">
           Detailed statement{' '}
           <span className="ml-1 font-normal text-[var(--muted)]">
@@ -588,20 +657,20 @@ function DataTable({ columns, rows, loading }) {
             }}
             placeholder="Search records"
             aria-label="Search records"
-            className="h-9 w-full rounded-md border border-[var(--line)] bg-transparent pl-8 pr-3 text-[13px] outline-none placeholder:text-[var(--muted)] focus:border-[#0057B8]"
+            className="h-8.5 sm:h-9 w-full rounded-md border border-[var(--line)] bg-transparent pl-8 pr-3 text-xs sm:text-[13px] outline-none placeholder:text-[var(--muted)] focus:border-[#0057B8]"
           />
         </label>
       </div>
 
-      <div className="mt-3 overflow-x-auto border-y border-[var(--line)]">
-        <table className="w-full min-w-[720px] border-collapse text-[13px]">
+      <div className="mt-3 overflow-x-auto border-y border-[var(--line)] scrollbar-thin">
+        <table className="w-full min-w-[640px] sm:min-w-[720px] border-collapse text-xs sm:text-[13px]">
           <thead>
             <tr className="border-b border-[var(--line)] text-[var(--muted)] bg-[var(--table-header-bg,rgba(100,116,139,0.03))]">
               {columns.map(c => (
                 <th
                   key={c.key}
                   scope="col"
-                  className={`whitespace-nowrap px-3 py-2.5 text-xs font-medium ${
+                  className={`whitespace-nowrap px-2.5 sm:px-3 py-2 sm:py-2.5 text-[11px] sm:text-xs font-medium ${
                     isRight(c) ? 'text-right' : 'text-left'
                   }`}
                 >
@@ -622,14 +691,14 @@ function DataTable({ columns, rows, loading }) {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={columns.length} className="px-3 py-12 text-center text-xs text-[var(--muted)]">
+                <td colSpan={columns.length} className="px-3 py-10 text-center text-xs text-[var(--muted)]">
                   <div className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-solid border-[#0057B8] border-r-transparent"></div>
                   <p className="mt-2 font-medium">Loading live report data…</p>
                 </td>
               </tr>
             ) : visible.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-3 py-10 text-center text-[var(--muted)]">
+                <td colSpan={columns.length} className="px-3 py-8 text-center text-xs text-[var(--muted)]">
                   {query ? 'No records match your search query.' : 'No transaction records found for the selected period.'}
                 </td>
               </tr>
@@ -642,11 +711,11 @@ function DataTable({ columns, rows, loading }) {
                   {columns.map(c => (
                     <td
                       key={c.key}
-                      className={`whitespace-nowrap px-3 py-2.5 ${
+                      className={`whitespace-nowrap px-2.5 sm:px-3 py-2 sm:py-2.5 ${
                         isRight(c) ? 'text-right font-mono tabular-nums' : 'text-left'
-                      } ${c.key === columns[0].key ? 'font-medium' : ''}`}
+                      } ${c.key === columns[0].key ? 'font-mono font-medium text-[var(--ink)]' : ''}`}
                     >
-                      {cell(c, r)}
+                      {renderCellContent(c, r)}
                     </td>
                   ))}
                 </tr>
@@ -659,7 +728,7 @@ function DataTable({ columns, rows, loading }) {
                 {columns.map((c, i) => (
                   <td
                     key={c.key}
-                    className={`whitespace-nowrap px-3 py-2.5 ${
+                    className={`whitespace-nowrap px-2.5 sm:px-3 py-2 sm:py-2.5 ${
                       isRight(c) ? 'text-right font-mono tabular-nums text-[#0057B8]' : 'text-left'
                     }`}
                   >
@@ -689,11 +758,11 @@ function DataTable({ columns, rows, loading }) {
             onClick={() => setPage(current - 1)}
             disabled={current === 1}
             aria-label="Previous page"
-            className="grid h-8 w-8 place-items-center rounded-md border border-[var(--line)] text-[var(--ink)] disabled:opacity-40 cursor-pointer"
+            className="grid h-7 w-7 sm:h-8 sm:w-8 place-items-center rounded-md border border-[var(--line)] text-[var(--ink)] disabled:opacity-40 cursor-pointer"
           >
-            <IconChevronLeft size={15} />
+            <IconChevronLeft size={14} />
           </button>
-          <span className="px-2 font-mono tabular-nums text-[var(--ink)]">
+          <span className="px-2 font-mono tabular-nums text-[var(--ink)] text-xs">
             {current} / {pages}
           </span>
           <button
@@ -701,9 +770,9 @@ function DataTable({ columns, rows, loading }) {
             onClick={() => setPage(current + 1)}
             disabled={current === pages}
             aria-label="Next page"
-            className="grid h-8 w-8 place-items-center rounded-md border border-[var(--line)] text-[var(--ink)] disabled:opacity-40 cursor-pointer"
+            className="grid h-7 w-7 sm:h-8 sm:w-8 place-items-center rounded-md border border-[var(--line)] text-[var(--ink)] disabled:opacity-40 cursor-pointer"
           >
-            <IconChevronRight size={15} />
+            <IconChevronRight size={14} />
           </button>
         </div>
       </div>
@@ -712,13 +781,14 @@ function DataTable({ columns, rows, loading }) {
 }
 
 /* ------------------------------------------------------------------
-   Page Component with Full Live Backend Flow
+   Page Component with Full Live Backend Flow & Mobile Optimization
 ------------------------------------------------------------------- */
 export default function Reports() {
   const [reportKey, setReportKey] = useState('sales')
   const [preset, setPreset] = useState('This Month')
   const [startDate, setStartDate] = useState(getMonthStart())
   const [endDate, setEndDate] = useState(getToday())
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false)
 
   // Backend state
   const [backendData, setBackendData] = useState(null)
@@ -990,18 +1060,18 @@ export default function Reports() {
   }
 
   const btn =
-    'inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--line)] px-3 text-[13px] font-medium text-[var(--ink)] transition-colors hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] cursor-pointer'
+    'inline-flex h-8 sm:h-9 items-center gap-1.5 rounded-md border border-[var(--line)] px-2.5 sm:px-3 text-xs sm:text-[13px] font-medium text-[var(--ink)] transition-colors hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] cursor-pointer'
 
   return (
     <div className="w-full min-w-0 pb-12 text-[var(--ink)]">
       {/* Header */}
-      <header className="flex flex-col gap-4 border-b border-[var(--line)] pb-5 md:flex-row md:items-end md:justify-between">
+      <header className="flex flex-col gap-3.5 border-b border-[var(--line)] pb-4 sm:pb-5 md:flex-row md:items-end md:justify-between">
         <div className="min-w-0">
-          <p className="text-xs text-[var(--muted)]">
+          <p className="text-[11px] sm:text-xs text-[var(--muted)]">
             Reports <span className="mx-1">/</span> {category?.label}
           </p>
-          <div className="mt-1 flex items-center gap-2.5">
-            <h1 className="text-2xl font-semibold tracking-tight">{report.label}</h1>
+          <div className="mt-1 flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">{report.label}</h1>
             {loading && (
               <span className="inline-flex items-center gap-1 text-[11px] text-[var(--muted)] font-mono">
                 <IconRefresh size={12} className="animate-spin text-[#0057B8]" />
@@ -1009,29 +1079,29 @@ export default function Reports() {
               </span>
             )}
           </div>
-          <p className="mt-1 text-sm text-[var(--muted)]">{report.desc}</p>
+          <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-[var(--muted)]">{report.desc}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <button type="button" onClick={() => exportAs('PDF')} className={btn}>
-            <IconFileTypePdf size={16} className="text-rose-600" /> PDF
+            <IconFileTypePdf size={15} className="text-rose-600" /> <span className="hidden xs:inline">PDF</span>
           </button>
           <button type="button" onClick={() => exportAs('Excel')} className={btn}>
-            <IconFileSpreadsheet size={16} className="text-emerald-600" /> Excel
+            <IconFileSpreadsheet size={15} className="text-emerald-600" /> <span className="hidden xs:inline">Excel</span>
           </button>
           <button type="button" onClick={() => exportAs('CSV')} className={btn}>
-            <IconDownload size={16} /> CSV
+            <IconDownload size={15} /> <span className="hidden xs:inline">CSV</span>
           </button>
           <button
             type="button"
             onClick={() => exportAs('Print')}
-            className="inline-flex h-9 items-center gap-1.5 rounded-md bg-[#0057B8] px-3.5 text-[13px] font-medium text-white hover:bg-[#004a9c] cursor-pointer"
+            className="inline-flex h-8 sm:h-9 items-center gap-1.5 rounded-md bg-[#0057B8] px-3 sm:px-3.5 text-xs sm:text-[13px] font-medium text-white hover:bg-[#004a9c] cursor-pointer"
           >
-            <IconPrinter size={16} /> Print
+            <IconPrinter size={15} /> Print
           </button>
         </div>
       </header>
 
-      <div className="mt-6 grid gap-8 lg:grid-cols-[216px_minmax(0,1fr)]">
+      <div className="mt-4 sm:mt-6 grid gap-6 sm:gap-8 lg:grid-cols-[216px_minmax(0,1fr)]">
         {/* Navigator: desktop list */}
         <aside className="hidden lg:block">
           <div className="sticky top-4 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2 scrollbar-thin">
@@ -1039,17 +1109,17 @@ export default function Reports() {
           </div>
         </aside>
 
-        <div className="min-w-0 space-y-8">
+        <div className="min-w-0 space-y-6 sm:space-y-8">
           {/* Mobile / tablet report picker */}
           <div className="lg:hidden">
-            <label htmlFor="report-select" className="mb-1.5 block text-xs font-medium text-[var(--muted)]">
-              Report
+            <label htmlFor="report-select" className="mb-1 block text-xs font-medium text-[var(--muted)]">
+              Select Report
             </label>
             <select
               id="report-select"
               value={reportKey}
               onChange={e => setReportKey(e.target.value)}
-              className="h-10 w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[#0057B8]"
+              className="h-9 sm:h-10 w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs sm:text-sm outline-none focus:border-[#0057B8]"
             >
               {NAV_CATEGORIES.map(cat => (
                 <optgroup key={cat.key} label={cat.label}>
@@ -1063,57 +1133,136 @@ export default function Reports() {
             </select>
           </div>
 
-          {/* Filters */}
-          <section className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div
-              role="tablist"
-              aria-label="Date range"
-              className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 xl:pb-0"
-            >
-              {PRESETS.map(p => (
+          {/* =====================================================
+              FILTERS: Simple text-based button on Mobile & clean bar on Desktop
+          ====================================================== */}
+          <section className="space-y-2">
+            {/* Mobile Simple Text-Based Filter Button */}
+            <div className="sm:hidden flex items-center justify-between border-b border-[var(--line-subtle)] pb-2 text-xs">
+              {!isSnapshot ? (
                 <button
-                  key={p}
                   type="button"
-                  role="tab"
-                  aria-selected={preset === p}
-                  onClick={() => handlePresetChange(p)}
-                  className={`h-8 shrink-0 rounded-md px-3 text-[13px] transition-colors cursor-pointer ${
-                    preset === p
-                      ? 'bg-[#0057B8] font-semibold text-white'
-                      : 'text-[var(--muted)] hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] hover:text-[var(--ink)]'
-                  }`}
+                  onClick={() => setMobileFilterOpen(v => !v)}
+                  className="inline-flex items-center gap-1.5 font-semibold text-[#0057B8] hover:underline cursor-pointer"
                 >
-                  {p}
+                  <IconCalendar size={14} />
+                  <span>Period: {preset}</span>
+                  <span className="text-[11px] text-[var(--muted)] font-normal">
+                    {mobileFilterOpen ? '· (Hide filter)' : '· (Change)'}
+                  </span>
                 </button>
-              ))}
+              ) : (
+                <span className="text-[11px] text-[var(--muted)] font-mono">Live Snapshot as of Today</span>
+              )}
+              <span className="font-mono text-[11px] text-[var(--muted)]">
+                {isSnapshot ? 'Live' : `${startDate.slice(5)} – ${endDate.slice(5)}`}
+              </span>
             </div>
-            {!isSnapshot ? (
-              <div className="flex flex-wrap items-center gap-2 text-[13px]">
-                <IconCalendar size={16} className="text-[var(--muted)]" />
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={e => setStartDate(e.target.value)}
-                  aria-label="From date"
-                  className="h-9 rounded-md border border-[var(--line)] bg-transparent px-2.5 font-mono text-xs outline-none focus:border-[#0057B8]"
-                />
-                <span className="text-[var(--muted)]">to</span>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={e => setEndDate(e.target.value)}
-                  aria-label="To date"
-                  className="h-9 rounded-md border border-[var(--line)] bg-transparent px-2.5 font-mono text-xs outline-none focus:border-[#0057B8]"
-                />
-                <button type="button" onClick={handleApplyCustomDates} className={btn}>
-                  Apply
-                </button>
-              </div>
-            ) : (
-              <div className="text-xs text-[var(--muted)] font-mono">
-                Live Snapshot as of Today (Date filtering not applicable)
+
+            {/* Mobile Expanded Filter Box */}
+            {mobileFilterOpen && !isSnapshot && (
+              <div className="sm:hidden rounded-lg border border-[var(--line)] bg-[var(--surface-elevated,rgba(100,116,139,0.04))] p-3 space-y-2.5 animate-in fade-in duration-150">
+                <div className="flex flex-wrap gap-1">
+                  {PRESETS.map(p => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => {
+                        handlePresetChange(p)
+                        setMobileFilterOpen(false)
+                      }}
+                      className={`h-7 px-2.5 text-xs rounded transition-colors cursor-pointer ${
+                        preset === p
+                          ? 'bg-[#0057B8] font-semibold text-white'
+                          : 'bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)]'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2 pt-1 text-xs">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={e => setStartDate(e.target.value)}
+                    className="h-8 flex-1 rounded border border-[var(--line)] bg-[var(--surface)] px-2 font-mono text-xs outline-none"
+                  />
+                  <span className="text-[var(--muted)]">to</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={e => setEndDate(e.target.value)}
+                    className="h-8 flex-1 rounded border border-[var(--line)] bg-[var(--surface)] px-2 font-mono text-xs outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleApplyCustomDates()
+                      setMobileFilterOpen(false)
+                    }}
+                    className="h-8 px-3 rounded bg-[#0057B8] text-xs font-semibold text-white cursor-pointer"
+                  >
+                    Apply
+                  </button>
+                </div>
               </div>
             )}
+
+            {/* Desktop Filters (Visible on sm screens and up) */}
+            <div className="hidden sm:flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+              <div
+                role="tablist"
+                aria-label="Date range"
+                className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 xl:pb-0 scrollbar-thin"
+              >
+                {PRESETS.map(p => (
+                  <button
+                    key={p}
+                    type="button"
+                    role="tab"
+                    aria-selected={preset === p}
+                    onClick={() => handlePresetChange(p)}
+                    className={`h-8 shrink-0 rounded-md px-3 text-[13px] transition-colors cursor-pointer ${
+                      preset === p
+                        ? 'bg-[#0057B8] font-semibold text-white'
+                        : 'text-[var(--muted)] hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] hover:text-[var(--ink)]'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+
+              {!isSnapshot ? (
+                <div className="flex flex-wrap items-center gap-2 text-[13px]">
+                  <IconCalendar size={16} className="text-[var(--muted)]" />
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={e => setStartDate(e.target.value)}
+                    aria-label="From date"
+                    className="h-9 rounded-md border border-[var(--line)] bg-transparent px-2.5 font-mono text-xs outline-none focus:border-[#0057B8]"
+                  />
+                  <span className="text-[var(--muted)]">to</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={e => setEndDate(e.target.value)}
+                    aria-label="To date"
+                    className="h-9 rounded-md border border-[var(--line)] bg-transparent px-2.5 font-mono text-xs outline-none focus:border-[#0057B8]"
+                  />
+                  <button type="button" onClick={handleApplyCustomDates} className={btn}>
+                    Apply
+                  </button>
+                </div>
+              ) : (
+                <div className="text-xs text-[var(--muted)] font-mono">
+                  Live Snapshot as of Today (Date filtering not applicable)
+                </div>
+              )}
+            </div>
           </section>
 
           {/* KPI strip */}
@@ -1124,28 +1273,28 @@ export default function Reports() {
             {data.kpis.map((k, i) => (
               <div
                 key={k.label}
-                className={`px-1 py-4 sm:px-5 ${i > 0 ? 'lg:border-l lg:border-[var(--line)]' : ''} ${
+                className={`p-3 sm:py-4 sm:px-5 ${i > 0 ? 'lg:border-l lg:border-[var(--line)]' : ''} ${
                   i % 2 === 1 ? 'border-l border-[var(--line)] lg:border-l' : ''
                 } ${i >= 2 ? 'border-t border-[var(--line)] lg:border-t-0' : ''} ${i === 0 ? 'sm:pl-0' : ''}`}
               >
-                <p className="text-xs text-[var(--muted)]">{k.label}</p>
-                <p className="mt-1.5 truncate font-mono text-xl font-semibold tabular-nums sm:text-2xl">
+                <p className="text-[11px] sm:text-xs text-[var(--muted)] truncate">{k.label}</p>
+                <p className="mt-1 truncate font-mono text-lg sm:text-2xl font-semibold tabular-nums">
                   {k.value}
                 </p>
                 <div className="mt-1 flex items-center gap-1.5">
                   <Delta value={k.delta} invert={k.invert} />
-                  <span className="text-xs text-[var(--muted)]">vs prev. period</span>
+                  <span className="text-[10px] sm:text-xs text-[var(--muted)] hidden xs:inline">vs prev. period</span>
                 </div>
               </div>
             ))}
           </section>
 
           {/* Chart + breakdown */}
-          <section className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_280px]">
+          <section className="grid gap-6 sm:gap-8 xl:grid-cols-[minmax(0,1fr)_280px]">
             <div className="min-w-0">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">{data.chartTitle}</h3>
-                <div className="flex items-center gap-4 text-xs text-[var(--muted)]">
+                <h3 className="text-xs sm:text-sm font-semibold">{data.chartTitle}</h3>
+                <div className="flex items-center gap-3 sm:gap-4 text-xs text-[var(--muted)]">
                   <span className="inline-flex items-center gap-1.5">
                     <span className="h-0.5 w-3 bg-[#0057B8]" /> Primary
                   </span>
@@ -1154,7 +1303,7 @@ export default function Reports() {
                   </span>
                 </div>
               </div>
-              <div className="mt-4 h-60 w-full sm:h-72">
+              <div className="mt-3 sm:mt-4 h-48 sm:h-64 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={data.chartData || DEFAULT_TREND} margin={{ top: 6, right: 4, left: -8, bottom: 0 }}>
                     <CartesianGrid vertical={false} stroke="var(--line, #e2e8f0)" strokeDasharray="3 3" />
@@ -1163,14 +1312,14 @@ export default function Reports() {
                       tickLine={false}
                       axisLine={false}
                       interval={4}
-                      tick={{ fontSize: 11, fill: 'var(--muted, #64748b)' }}
+                      tick={{ fontSize: 10, fill: 'var(--muted, #64748b)' }}
                     />
                     <YAxis
                       tickLine={false}
                       axisLine={false}
-                      width={52}
+                      width={48}
                       tickFormatter={v => `₹${Math.round(v / 1000)}k`}
-                      tick={{ fontSize: 11, fill: 'var(--muted, #64748b)' }}
+                      tick={{ fontSize: 10, fill: 'var(--muted, #64748b)' }}
                     />
                     <Tooltip
                       formatter={(v, n) => [inr(v), n === 'revenue' ? 'Primary' : 'Secondary']}
