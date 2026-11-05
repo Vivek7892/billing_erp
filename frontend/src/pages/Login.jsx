@@ -13,7 +13,12 @@ import {
 } from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../AuthContext'
-import { getRememberMePreference } from '../services/tokenStorage'
+import {
+  getAccessToken,
+  getAuthValue,
+  getRememberMePreference,
+  setCrossDomainAuthCookie,
+} from '../services/tokenStorage'
 import { LoginIllustration } from '../components/visuals'
 import './Login.css'
 
@@ -39,8 +44,9 @@ export default function Login() {
   const location = useLocation()
 
   const handleRedirectAfterLogin = loggedUser => {
+    let targetPath = '/'
     if (loggedUser && !loggedUser.onboarding_completed) {
-      navigate('/onboarding', { replace: true })
+      targetPath = '/onboarding'
     } else {
       const params = new URLSearchParams(location.search)
       const redirect = params.get('redirect')
@@ -51,15 +57,39 @@ export default function Login() {
         !redirect.includes('/login') &&
         !redirect.includes('/register')
       ) {
-        navigate(redirect, { replace: true })
+        targetPath = redirect
       } else {
         if (loggedUser?.role === 'cashier') {
-          navigate('/new-bill', { replace: true })
+          targetPath = '/new-bill'
         } else {
-          navigate('/', { replace: true })
+          targetPath = '/'
         }
       }
     }
+
+    // Check if user is logging in from accounts.dreamwithtech.dev
+    const hostname = window.location.hostname.toLowerCase()
+    const isAccountsDomain = hostname === 'accounts.dreamwithtech.dev' || hostname.startsWith('accounts.')
+
+    if (isAccountsDomain) {
+      const access = getAccessToken()
+      const refresh = getAuthValue('refresh_token')
+      const remember = getRememberMePreference()
+
+      // 1. Set cross-domain session transfer cookie on .dreamwithtech.dev
+      setCrossDomainAuthCookie({ access, refresh, user: loggedUser }, remember)
+
+      // 2. Redirect to app.dreamwithtech.dev with hash transfer for guaranteed cross-subdomain SSO
+      const appBase = 'https://app.dreamwithtech.dev'
+      const hash = access && refresh
+        ? `#access_token=${encodeURIComponent(access)}&refresh_token=${encodeURIComponent(refresh)}&remember=${remember ? '1' : '0'}`
+        : ''
+      const destination = `${appBase}${targetPath}${hash}`
+      window.location.replace(destination)
+      return
+    }
+
+    navigate(targetPath, { replace: true })
   }
 
   // Redirect authenticated users away from login

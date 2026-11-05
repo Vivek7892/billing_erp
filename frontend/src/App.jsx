@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from './AuthContext'
 import { ThemeProvider } from './ThemeContext'
 import { NetworkStatusProvider } from './context/NetworkStatusContext'
 import { ROLES } from './constants'
+import { getAccessToken, getAuthValue, getRememberMePreference } from './services/tokenStorage'
 
 import Layout from './components/Layout'
 import { InlineSpinner, Spinner } from './components/UI'
@@ -136,13 +137,33 @@ function ErrorPageLayout({ children }) {
 ------------------------------------------------------- */
 
 function AppRoutes() {
-  if (
-    typeof window !== 'undefined' &&
-    window.location.hostname === 'share.dreamwithtech.dev' &&
-    (window.location.pathname === '/' || window.location.pathname === '')
-  ) {
-    window.location.replace('https://accounts.dreamwithtech.dev')
-    return null
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname.toLowerCase()
+    const pathname = window.location.pathname
+
+    // 1. Root on share.dreamwithtech.dev redirects to app.dreamwithtech.dev
+    if (
+      hostname === 'share.dreamwithtech.dev' &&
+      (pathname === '/' || pathname === '')
+    ) {
+      window.location.replace('https://app.dreamwithtech.dev')
+      return null
+    }
+
+    // 2. On accounts.dreamwithtech.dev, redirect authenticated users to app.dreamwithtech.dev
+    if (hostname === 'accounts.dreamwithtech.dev' || hostname.startsWith('accounts.')) {
+      const token = getAccessToken()
+      const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password'].includes(pathname)
+
+      if (token && (!isAuthPage || pathname === '/login')) {
+        const refresh = getAuthValue('refresh_token') || ''
+        const remember = getRememberMePreference()
+        const hash = `#access_token=${encodeURIComponent(token)}&refresh_token=${encodeURIComponent(refresh)}&remember=${remember ? '1' : '0'}`
+        const target = pathname === '/login' || pathname === '/' ? '/' : pathname
+        window.location.replace(`https://app.dreamwithtech.dev${target}${window.location.search}${hash}`)
+        return null
+      }
+    }
   }
 
   return (

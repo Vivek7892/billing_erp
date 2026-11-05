@@ -11,6 +11,12 @@ import {
 } from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../AuthContext'
+import {
+  getAccessToken,
+  getAuthValue,
+  getRememberMePreference,
+  setCrossDomainAuthCookie,
+} from '../services/tokenStorage'
 import { LoginIllustration } from '../components/visuals'
 import './Login.css'
 
@@ -27,11 +33,32 @@ export default function Register() {
   const { user, register } = useAuth()
   const navigate = useNavigate()
 
+  const redirectToApp = (path = '/') => {
+    const hostname = window.location.hostname.toLowerCase()
+    const isAccountsDomain = hostname === 'accounts.dreamwithtech.dev' || hostname.startsWith('accounts.')
+
+    if (isAccountsDomain) {
+      const access = getAccessToken()
+      const refresh = getAuthValue('refresh_token')
+      const remember = getRememberMePreference()
+
+      setCrossDomainAuthCookie({ access, refresh, user }, remember)
+      const appBase = 'https://app.dreamwithtech.dev'
+      const hash = access && refresh
+        ? `#access_token=${encodeURIComponent(access)}&refresh_token=${encodeURIComponent(refresh)}&remember=${remember ? '1' : '0'}`
+        : ''
+      window.location.replace(`${appBase}${path}${hash}`)
+      return
+    }
+
+    navigate(path, { replace: true })
+  }
+
   useEffect(() => {
     if (user) {
-      navigate('/', { replace: true })
+      redirectToApp('/')
     }
-  }, [user, navigate])
+  }, [user])
 
   const handleMobileChange = e => {
     const digits = e.target.value.replace(/\D/g, '').slice(0, 10)
@@ -88,7 +115,7 @@ export default function Register() {
       })
 
       toast.success('Shop registered successfully! Welcome to DreamWithTech.')
-      navigate('/onboarding', { replace: true })
+      redirectToApp('/onboarding')
     } catch (err) {
       const errData = err?.response?.data
       let message = 'Registration failed. Please check your details.'
