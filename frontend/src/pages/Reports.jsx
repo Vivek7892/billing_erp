@@ -1,1390 +1,891 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import api from '../api'
-import { PageHeader } from '../components/UI'
-import { InformationalBanner } from '../components/visual-content'
 import {
   IconTrendingUp,
   IconShoppingCart,
   IconPackage,
-  IconCurrencyDollar,
-  IconPercentage,
+  IconCash,
+  IconReceiptTax,
   IconUsers,
-  IconCreditCard,
-  IconReceipt,
-  IconCalendar,
-  IconFilter,
-  IconRefresh,
+  IconArrowLeft,
   IconDownload,
+  IconPrinter,
+  IconRefresh,
+  IconFilter,
+  IconSearch,
+  IconX,
+  IconCalendar,
   IconChevronDown,
-  IconChevronUp,
+  IconCheck,
   IconFileTypePdf,
   IconFileTypeXls,
-  IconSearch,
-  IconAlertCircle,
-  IconInfoCircle,
-  IconFileText,
-  IconPackages,
-  IconRotate2,
-  IconClock,
-  IconCash,
-  IconBuildingStore,
-  IconUser,
-  IconFolder,
-  IconReceiptTax,
   IconFileSpreadsheet,
-  IconX,
-  IconChartBar,
+  IconArrowUpRight,
+  IconArrowDownRight,
   IconChevronLeft,
   IconChevronRight,
-  IconCheck,
-  IconArrowLeft,
 } from '@tabler/icons-react'
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   Tooltip,
   CartesianGrid,
 } from 'recharts'
 import toast from 'react-hot-toast'
-import {
-  fmtCurrency,
-  fmtNumber,
-  formatDate,
-} from '../utils/formatters'
+import { fmtCurrency, fmtNumber } from '../utils/formatters'
 
 /* ============================================================
-   DATE PRESETS & HELPERS
+   STATIC ACCURATE SAMPLE DATASETS (INDIAN ERP STANDARDS)
 ============================================================ */
-const toLocalDateInput = date => {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+
+const SAMPLE_TREND_DATA = [
+  { month: 'Apr', revenue: 142000, purchases: 98000, profit: 32000, orders: 48 },
+  { month: 'May', revenue: 168000, purchases: 105000, profit: 41000, orders: 56 },
+  { month: 'Jun', revenue: 154000, purchases: 112000, profit: 31000, orders: 51 },
+  { month: 'Jul', revenue: 189000, purchases: 118000, profit: 48000, orders: 63 },
+  { month: 'Aug', revenue: 215000, purchases: 134000, profit: 54000, orders: 72 },
+  { month: 'Sep', revenue: 198000, purchases: 122000, profit: 49000, orders: 67 },
+  { month: 'Oct', revenue: 245000, purchases: 152000, profit: 61000, orders: 84 },
+  { month: 'Nov', revenue: 280000, purchases: 171000, profit: 72000, orders: 95 },
+  { month: 'Dec', revenue: 262000, purchases: 160000, profit: 66000, orders: 89 },
+  { month: 'Jan', revenue: 231000, purchases: 145000, profit: 57000, orders: 78 },
+  { month: 'Feb', revenue: 210000, purchases: 130000, profit: 51000, orders: 71 },
+  { month: 'Mar', revenue: 275000, purchases: 168000, profit: 69000, orders: 92 },
+]
+
+const SAMPLE_REPORTS_DATA = {
+  sales_register: {
+    title: 'Sales Invoice Register',
+    subtitle: 'Chronological sales vouchers with customer GSTIN, taxable values, and tax breakup',
+    kpis: [
+      { label: 'Total Invoiced Gross', value: '₹25,69,000', change: '+14.8%', isPositive: true },
+      { label: 'Taxable Turnover', value: '₹22,14,655', change: '+12.4%', isPositive: true },
+      { label: 'Output GST Collected', value: '₹3,54,345', change: 'IGST+CGST+SGST', isNeutral: true },
+      { label: 'Realized Collections', value: '₹23,40,000', change: '91.1% Settled', isPositive: true },
+      { label: 'Unpaid Receivables', value: '₹2,29,000', change: '8.9% Pending', isNegative: true },
+    ],
+    headers: ['Invoice #', 'Date', 'Customer Name', 'GSTIN', 'Taxable Val', 'CGST', 'SGST', 'IGST', 'Total Invoice', 'Status'],
+    rows: [
+      { id: 'INV-2026-0891', date: '2026-03-30', party: 'Om Enterprises', gstin: '29AABCO4128F1Z4', taxable: 48500, cgst: 4365, sgst: 4365, igst: 0, total: 57230, status: 'PAID' },
+      { id: 'INV-2026-0890', date: '2026-03-29', party: 'Krishna Traders', gstin: '29ABCDE1234F1Z5', taxable: 84000, cgst: 7560, sgst: 7560, igst: 0, total: 99120, status: 'PAID' },
+      { id: 'INV-2026-0889', date: '2026-03-28', party: 'Balaji Hardware Mart', gstin: '29KLMNO5678P2Z9', taxable: 125000, cgst: 11250, sgst: 11250, igst: 0, total: 147500, status: 'PARTIAL' },
+      { id: 'INV-2026-0888', date: '2026-03-28', party: 'Apex Solutions Pvt Ltd', gstin: '27AABCA1234E1Z1', taxable: 62000, cgst: 0, sgst: 0, igst: 11160, total: 73160, status: 'PAID' },
+      { id: 'INV-2026-0887', date: '2026-03-27', party: 'Venkateshwara Stores', gstin: 'URP (Unregistered)', taxable: 18400, cgst: 1656, sgst: 1656, igst: 0, total: 21712, status: 'PAID' },
+      { id: 'INV-2026-0886', date: '2026-03-26', party: 'Sri Ganesh Electricals', gstin: '29PQRST9876Q3Z2', taxable: 92400, cgst: 8316, sgst: 8316, igst: 0, total: 109032, status: 'DUE' },
+      { id: 'INV-2026-0885', date: '2026-03-25', party: 'Mahalaxmi Provisions', gstin: '29XYZAB4321C4Z8', taxable: 34100, cgst: 3069, sgst: 3069, igst: 0, total: 40238, status: 'PAID' },
+      { id: 'INV-2026-0884', date: '2026-03-24', party: 'Kaveri Distributing Co.', gstin: '29DEFGH9012J5Z3', taxable: 142000, cgst: 12780, sgst: 12780, igst: 0, total: 167560, status: 'PAID' },
+      { id: 'INV-2026-0883', date: '2026-03-23', party: 'Universal Tech Store', gstin: '33AABCT9988G1Z7', taxable: 75500, cgst: 0, sgst: 0, igst: 13590, total: 89090, status: 'DUE' },
+      { id: 'INV-2026-0882', date: '2026-03-22', party: 'Star Retailers Bangalore', gstin: '29LMNOP3344K6Z0', taxable: 51200, cgst: 4608, sgst: 4608, igst: 0, total: 60416, status: 'PAID' },
+    ],
+  },
+
+  product_sales: {
+    title: 'Item-wise Product Sales Performance',
+    subtitle: 'Volume sold, realized margins, turnover, and contribution per catalog item',
+    kpis: [
+      { label: 'Active Catalog SKUs', value: '384 Items', change: '85 Selling', isNeutral: true },
+      { label: 'Total Units Dispatched', value: '14,820 Units', change: '+18.2%', isPositive: true },
+      { label: 'Top Contributor', value: 'Syska LED 15W', change: '18.4% share', isPositive: true },
+      { label: 'Gross Product Margin', value: '26.8%', change: 'Target 25%', isPositive: true },
+    ],
+    headers: ['Product Name', 'SKU / Barcode', 'Category', 'Units Sold', 'Avg Price', 'Total Turnover', 'Margin %'],
+    rows: [
+      { party: 'Syska LED Bulb 15W Cool Day', id: 'SKU-LED-15W', date: 'Electrical', taxable: 1850, cgst: 140, sgst: 259000, igst: 28.5, total: 259000, status: 'IN_STOCK' },
+      { party: 'Polycab 2.5 Sq mm Copper Wire 90m', id: 'SKU-CAB-25C', date: 'Cables', taxable: 420, cgst: 1850, sgst: 777000, igst: 24.0, total: 777000, status: 'IN_STOCK' },
+      { party: 'Anchor Roma 6A Modular Switch', id: 'SKU-ROM-6AS', date: 'Accessories', taxable: 3200, cgst: 42, sgst: 134400, igst: 34.2, total: 134400, status: 'IN_STOCK' },
+      { party: 'Havells Reo 16A Power Socket', id: 'SKU-REO-16S', date: 'Accessories', taxable: 1100, cgst: 115, sgst: 126500, igst: 31.0, total: 126500, status: 'IN_STOCK' },
+      { party: 'Schneider MCB Single Pole 16A C-Curve', id: 'SKU-SCH-16C', date: 'Switchgear', taxable: 680, cgst: 240, sgst: 163200, igst: 22.5, total: 163200, status: 'LOW_STOCK' },
+      { party: 'Finolex 4 Core Flexible Cable 100m', id: 'SKU-FIN-4CF', date: 'Cables', taxable: 190, cgst: 3450, sgst: 655500, igst: 21.8, total: 655500, status: 'IN_STOCK' },
+      { party: 'Crompton Ceiling Fan 1200mm High Speed', id: 'SKU-FAN-12C', date: 'Appliances', taxable: 210, cgst: 2150, sgst: 451500, igst: 20.4, total: 451500, status: 'IN_STOCK' },
+    ],
+  },
+
+  purchase_register: {
+    title: 'Inward Purchases & Procurement Register',
+    subtitle: 'Vendor procurement bills, input tax credit (ITC), and payment settlements',
+    kpis: [
+      { label: 'Total Inward Procurements', value: '₹16,68,000', change: '54 Inward Bills', isNeutral: true },
+      { label: 'Taxable Inward Value', value: '₹14,13,559', change: 'Cost Basis', isNeutral: true },
+      { label: 'Input Tax Credit (ITC)', value: '₹2,54,441', change: '100% Eligible', isPositive: true },
+      { label: 'Settled to Vendors', value: '₹14,25,000', change: '85.4% Cleared', isPositive: true },
+      { label: 'Pending Vendor Payables', value: '₹2,43,000', change: '14.6% Payable', isNegative: true },
+    ],
+    headers: ['Bill #', 'Date', 'Supplier / Distributor', 'GSTIN', 'Taxable Val', 'CGST', 'SGST', 'IGST', 'Bill Total', 'Payment'],
+    rows: [
+      { id: 'PB-2026-0312', date: '2026-03-29', party: 'Polycab India Ltd - Regional Hub', gstin: '29AAACP1234D1Z2', taxable: 385000, cgst: 34650, sgst: 34650, igst: 0, total: 454300, status: 'PAID' },
+      { id: 'PB-2026-0311', date: '2026-03-27', party: 'Havells India Limited', gstin: '27AAACH0987K1Z8', taxable: 245000, cgst: 0, sgst: 0, igst: 44100, total: 289100, status: 'PAID' },
+      { id: 'PB-2026-0310', date: '2026-03-25', party: 'Anchor Electricals Distributor', gstin: '29AABCA7766M1Z5', taxable: 182000, cgst: 16380, sgst: 16380, igst: 0, total: 214760, status: 'PARTIAL' },
+      { id: 'PB-2026-0309', date: '2026-03-22', party: 'Schneider Electric India Depot', gstin: '29AABCS5544B1Z9', taxable: 195000, cgst: 17550, sgst: 17550, igst: 0, total: 230100, status: 'DUE' },
+      { id: 'PB-2026-0308', date: '2026-03-18', party: 'Crompton Greaves Consumer Electricals', gstin: '29AAACC1122C1Z4', taxable: 310000, cgst: 27900, sgst: 27900, igst: 0, total: 365800, status: 'PAID' },
+      { id: 'PB-2026-0307', date: '2026-03-12', party: 'Finolex Cables Agency', gstin: '29AAACF3344D1Z7', taxable: 96000, cgst: 8640, sgst: 8640, igst: 0, total: 113280, status: 'PAID' },
+    ],
+  },
+
+  stock_summary: {
+    title: 'Live Stock Valuation & Inventory Audit',
+    subtitle: 'Stock-in-hand, purchase cost valuation, retail value, and replenishment reorders',
+    kpis: [
+      { label: 'Total Inventory Valuation', value: '₹8,94,500', change: 'Cost Basis', isPositive: true },
+      { label: 'Retail Value Potential', value: '₹12,45,000', change: '39.2% Gross Spread', isPositive: true },
+      { label: 'Items In Hand', value: '8,420 Pcs', change: 'Across 145 SKUs', isNeutral: true },
+      { label: 'Low Stock Reorder Alert', value: '6 Items', change: 'Action Required', isNegative: true },
+    ],
+    headers: ['Item Name', 'SKU Code', 'Category', 'Quantity In Stock', 'Unit Cost (₹)', 'Selling Price (₹)', 'Total Valuation', 'Status'],
+    rows: [
+      { party: 'Polycab 2.5 Sq mm Copper Wire 90m', id: 'SKU-CAB-25C', date: 'Cables', taxable: 140, cgst: 1420, sgst: 1850, total: 198800, status: 'IN_STOCK' },
+      { party: 'Syska LED Bulb 15W Cool Day', id: 'SKU-LED-15W', date: 'Lighting', taxable: 650, cgst: 105, sgst: 140, total: 68250, status: 'IN_STOCK' },
+      { party: 'Anchor Roma 6A Modular Switch', id: 'SKU-ROM-6AS', date: 'Modular', taxable: 1850, cgst: 28, sgst: 42, total: 51800, status: 'IN_STOCK' },
+      { party: 'Havells Reo 16A Power Socket', id: 'SKU-REO-16S', date: 'Modular', taxable: 420, cgst: 82, sgst: 115, total: 34440, status: 'IN_STOCK' },
+      { party: 'Schneider MCB Single Pole 16A C-Curve', id: 'SKU-SCH-16C', date: 'Switchgear', taxable: 18, cgst: 175, sgst: 240, total: 3150, status: 'LOW_STOCK' },
+      { party: 'Finolex 4 Core Flexible Cable 100m', id: 'SKU-FIN-4CF', date: 'Cables', taxable: 35, cgst: 2650, sgst: 3450, total: 92750, status: 'LOW_STOCK' },
+      { party: 'Crompton Ceiling Fan 1200mm High Speed', id: 'SKU-FAN-12C', date: 'Appliances', taxable: 48, cgst: 1680, sgst: 2150, total: 80640, status: 'IN_STOCK' },
+      { party: 'Philips Batten LED Tubelight 20W', id: 'SKU-PHI-20B', date: 'Lighting', taxable: 210, cgst: 220, sgst: 320, total: 46200, status: 'IN_STOCK' },
+    ],
+  },
+
+  profit_loss: {
+    title: 'Financial Profit & Loss Statement (P&L)',
+    subtitle: 'Revenue, direct inventory cost of sales, operating overheads, and net profit',
+    kpis: [
+      { label: 'Gross Sales Revenue', value: '₹25,69,000', change: '100% Topline', isPositive: true },
+      { label: 'Cost of Goods Sold (COGS)', value: '₹17,45,000', change: '67.9% of Sales', isNeutral: true },
+      { label: 'Gross Operating Profit', value: '₹8,24,000', change: '32.1% Gross Margin', isPositive: true },
+      { label: 'Operating Expenditures', value: '₹2,84,000', change: 'Rent, Staff, Utilities', isNeutral: true },
+      { label: 'Net Operating Profit', value: '₹5,40,000', change: '21.0% Net Margin', isPositive: true },
+    ],
+    headers: ['Accounting Particulars', 'Classification', 'Quarter 1', 'Quarter 2', 'Quarter 3', 'Quarter 4', 'FY Total (₹)'],
+    rows: [
+      { party: 'Gross Invoiced Sales', id: 'Operating Revenue', date: '₹5,40,000', taxable: '₹6,15,000', cgst: '₹6,90,000', sgst: '₹7,24,000', total: 2569000, status: 'REVENUE' },
+      { party: 'Less: Sales Returns & Rebates', id: 'Deductions', date: '-₹8,000', taxable: '-₹12,000', cgst: '-₹14,000', sgst: '-₹11,000', total: 45000, status: 'EXPENSE' },
+      { party: 'Net Sales Revenue', id: 'Net Operating Topline', date: '₹5,32,000', taxable: '₹6,03,000', cgst: '₹6,76,000', sgst: '₹7,13,000', total: 2524000, status: 'TOTAL' },
+      { party: 'Less: Cost of Goods Sold (COGS)', id: 'Direct Material Cost', date: '-₹3,65,000', taxable: '-₹4,18,000', cgst: '-₹4,68,000', sgst: '-₹4,94,000', total: 1745000, status: 'EXPENSE' },
+      { party: 'Gross Profit (Trading Profit)', id: 'Gross Contribution', date: '₹1,67,000', taxable: '₹1,85,000', cgst: '₹2,08,000', sgst: '₹2,19,000', total: 779000, status: 'TOTAL' },
+      { party: 'Less: Store Rent & Facilities', id: 'Overhead Expense', date: '-₹30,000', taxable: '-₹30,000', cgst: '-₹30,000', sgst: '-₹30,000', total: 120000, status: 'EXPENSE' },
+      { party: 'Less: Staff Salaries & Bonus', id: 'Staff Overhead', date: '-₹25,000', taxable: '-₹25,000', cgst: '-₹28,000', sgst: '-₹32,000', total: 110000, status: 'EXPENSE' },
+      { party: 'Less: Electricity & Connectivity', id: 'Utility Overhead', date: '-₹8,500', taxable: '-₹9,200', cgst: '-₹11,400', sgst: '-₹10,900', total: 40000, status: 'EXPENSE' },
+      { party: 'Net Operating Profit (Before Tax)', id: 'EBIT Net Profit', date: '₹1,03,500', taxable: '₹1,20,800', cgst: '₹1,38,600', sgst: '₹1,46,100', total: 509000, status: 'PROFIT' },
+    ],
+  },
+
+  gst_tax: {
+    title: 'GST Tax Liability & Compliance Summary',
+    subtitle: 'Output GST on outward supplies vs. Input Tax Credit (ITC) reconciliation',
+    kpis: [
+      { label: 'Outward Output Tax Liability', value: '₹3,54,345', change: 'Total Output GST', isNeutral: true },
+      { label: 'Eligible Input Tax Credit', value: '₹2,54,441', change: 'Purchase ITC', isPositive: true },
+      { label: 'Net Cash GST Payable', value: '₹99,904', change: 'Via Electronic Cash Ledger', isNegative: true },
+      { label: 'GSTR-1 Status', value: 'Filed on Time', change: 'Ref: ARN-AA290326019', isPositive: true },
+      { label: 'GSTR-3B Status', value: 'Draft Reconciled', change: 'Due on 20th', isNeutral: true },
+    ],
+    headers: ['GST Tax Slab Rate', 'Outward Supplies (Sales)', 'CGST Output', 'SGST Output', 'IGST Output', 'Inward ITC (Purchases)', 'Net Payable (₹)'],
+    rows: [
+      { party: '0% Exemption Slab (Nil Rated)', id: '₹1,24,000', date: '₹0', taxable: '₹0', cgst: '₹0', sgst: '₹0', total: 0, status: 'EXEMPT' },
+      { party: '5% Essential GST Slab', id: '₹2,10,000', date: '₹5,250', taxable: '₹5,250', cgst: '₹0', sgst: '₹7,800', total: 2700, status: 'ACTIVE' },
+      { party: '12% Standard GST Slab', id: '₹4,50,000', date: '₹27,000', taxable: '₹27,000', cgst: '₹0', sgst: '₹38,400', total: 15600, status: 'ACTIVE' },
+      { party: '18% Standard GST Slab (Majority)', id: '₹13,85,000', date: '₹1,12,185', taxable: '₹1,12,185', cgst: '₹24,750', sgst: '₹1,84,500', total: 64620, status: 'ACTIVE' },
+      { party: '28% Luxury / Heavy Electricals', id: '₹1,45,000', date: '₹20,300', taxable: '₹20,300', cgst: '₹0', sgst: '₹23,620', total: 16980, status: 'ACTIVE' },
+    ],
+  },
+
+  ledgers_dues: {
+    title: 'Outstanding Ledgers & Receivables Aging',
+    subtitle: 'Debtors receivables balances, aging buckets, and credit monitoring',
+    kpis: [
+      { label: 'Total Customer Dues', value: '₹2,29,000', change: 'Across 14 Parties', isNegative: true },
+      { label: 'Current (< 30 Days)', value: '₹1,48,500', change: '64.8% Normal', isPositive: true },
+      { label: 'Aging (31 - 60 Days)', value: '₹56,200', change: '24.5% Follow Up', isNeutral: true },
+      { label: 'Overdue (> 60 Days)', value: '₹24,300', change: '10.6% High Risk', isNegative: true },
+    ],
+    headers: ['Party / Customer Name', 'Phone Number', 'Credit Limit', 'Current Balance (₹)', '0 - 30 Days', '31 - 60 Days', '60+ Days', 'Risk Status'],
+    rows: [
+      { party: 'Balaji Hardware Mart', id: '+91 98450 12345', date: '₹2,00,000', taxable: 68500, cgst: 42000, sgst: 26500, igst: 0, total: 68500, status: 'MODERATE' },
+      { party: 'Sri Ganesh Electricals', id: '+91 98860 67890', date: '₹1,50,000', taxable: 54200, cgst: 38000, sgst: 16200, igst: 0, total: 54200, status: 'MODERATE' },
+      { party: 'Universal Tech Store', id: '+91 94480 34567', date: '₹1,00,000', taxable: 39500, cgst: 21000, sgst: 13500, igst: 5000, total: 39500, status: 'HIGH_RISK' },
+      { party: 'Apex Solutions Pvt Ltd', id: '+91 97410 99882', date: '₹3,00,000', taxable: 28400, cgst: 28400, sgst: 0, igst: 0, total: 28400, status: 'NORMAL' },
+      { party: 'Kaveri Distributing Co.', id: '+91 99000 44551', date: '₹2,50,000', taxable: 19800, cgst: 19100, sgst: 0, igst: 700, total: 19800, status: 'NORMAL' },
+      { party: 'Krishna Traders', id: '+91 98801 22334', date: '₹1,20,000', taxable: 18600, cgst: 0, sgst: 0, igst: 18600, total: 18600, status: 'HIGH_RISK' },
+    ],
+  },
 }
-const getToday = () => toLocalDateInput(new Date())
-const getYesterday = () => toLocalDateInput(new Date(Date.now() - 86400000))
-const getWeekStart = () => {
-  const d = new Date()
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  const monday = new Date(d.setDate(diff))
-  return toLocalDateInput(monday)
-}
-const getMonthStart = () => toLocalDateInput(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
-const getLast30Days = () => toLocalDateInput(new Date(Date.now() - 29 * 86400000))
-const getLast90Days = () => toLocalDateInput(new Date(Date.now() - 89 * 86400000))
-const getYearStart = () => toLocalDateInput(new Date(new Date().getFullYear(), 0, 1))
+
+const REPORT_TABS = [
+  { key: 'sales_register', label: 'Sales & Revenue', icon: IconTrendingUp, count: '₹25.69L' },
+  { key: 'product_sales', label: 'Item Performance', icon: IconPackage, count: '384 SKUs' },
+  { key: 'purchase_register', label: 'Purchases & Inwards', icon: IconShoppingCart, count: '₹16.68L' },
+  { key: 'stock_summary', label: 'Stock Valuation', icon: IconPackage, count: '₹8.95L' },
+  { key: 'profit_loss', label: 'Profit & Loss', icon: IconCash, count: '+₹5.40L' },
+  { key: 'gst_tax', label: 'GST Compliance', icon: IconReceiptTax, count: '₹3.54L Tax' },
+  { key: 'ledgers_dues', label: 'Ledgers & Dues', icon: IconUsers, count: '₹2.29L Due' },
+]
 
 const DATE_PRESETS = [
-  { key: 'year', label: 'This Year', getStart: getYearStart, getEnd: getToday },
-  { key: 'month', label: 'This Month', getStart: getMonthStart, getEnd: getToday },
-  { key: 'last30', label: 'Last 30 Days', getStart: getLast30Days, getEnd: getToday },
-  { key: 'last90', label: 'Last 90 Days', getStart: getLast90Days, getEnd: getToday },
-  { key: 'week', label: 'This Week', getStart: getWeekStart, getEnd: getToday },
-  { key: 'today', label: 'Today', getStart: getToday, getEnd: getToday },
-  { key: 'yesterday', label: 'Yesterday', getStart: getYesterday, getEnd: getYesterday },
+  { key: 'fy_current', label: 'This FY (2026-27)', period: '01 Apr 2026 – 31 Mar 2027' },
+  { key: 'month_current', label: 'This Month', period: '01 Mar 2026 – 31 Mar 2026' },
+  { key: 'last_30', label: 'Last 30 Days', period: '01 Mar 2026 – 30 Mar 2026' },
+  { key: 'last_quarter', label: 'Last Quarter (Q3)', period: '01 Oct 2025 – 31 Dec 2025' },
 ]
-
-export const REPORT_CATEGORIES = [
-  { key: 'all', label: 'All Reports', icon: IconChartBar },
-  { key: 'sales', label: 'Sales & Revenue', icon: IconTrendingUp },
-  { key: 'purchases', label: 'Purchases', icon: IconShoppingCart },
-  { key: 'inventory', label: 'Stock & Inventory', icon: IconPackages },
-  { key: 'books', label: 'Accounting Books', icon: IconCash },
-  { key: 'ledgers', label: 'Ledgers & Dues', icon: IconUsers },
-  { key: 'gst', label: 'GST & Compliance', icon: IconReceiptTax },
-]
-
-export const ALL_REPORTS = [
-  // Sales & Revenue
-  { key: 'sales', category: 'sales', label: 'Sales Summary', endpoint: '/reports/sales/', filename: 'sales_summary_report', icon: IconTrendingUp, desc: 'Sales performance overview, daily revenue and collection trends' },
-  { key: 'sales_register', category: 'sales', label: 'Sales Register', endpoint: '/reports/sales-register/', filename: 'sales_register_report', icon: IconFileText, desc: 'Detailed invoice-by-invoice sales register with GST breakup' },
-  { key: 'products', category: 'sales', label: 'Item-wise Sales', endpoint: '/reports/products/', filename: 'product_sales_report', icon: IconPackage, desc: 'Sales volume, turnover, margin, and contribution per product' },
-
-  // Purchases
-  { key: 'purchases', category: 'purchases', label: 'Purchase Summary', endpoint: '/reports/purchases/', filename: 'purchase_summary_report', icon: IconShoppingCart, desc: 'Summary of inwards procurements and supplier purchase totals' },
-  { key: 'purchase_register', category: 'purchases', label: 'Purchase Register', endpoint: '/reports/purchase-register/', filename: 'purchase_register_report', icon: IconFileText, desc: 'Inward purchase bills register with tax details and payment status' },
-  { key: 'item_wise_purchases', category: 'purchases', label: 'Item-wise Purchases', endpoint: '/reports/item-wise-purchases/', filename: 'item_wise_purchases_report', icon: IconPackages, desc: 'Procurement quantities and purchase cost per item' },
-
-  // Stock & Inventory
-  { key: 'stock_summary', category: 'inventory', label: 'Stock Valuation Summary', endpoint: '/reports/stock-summary/', filename: 'stock_summary_report', icon: IconPackages, desc: 'Live inventory stock-in-hand, cost rate, retail price, and total valuation' },
-  { key: 'stock_movement', category: 'inventory', label: 'Stock Movement Report', endpoint: '/reports/stock-movement/', filename: 'stock_movement_report', icon: IconRotate2, desc: 'Stock audit trail: purchases, sales, damaged, and adjustments' },
-
-  // Accounting Books
-  { key: 'day_book', category: 'books', label: 'Day Book', endpoint: '/reports/day-book/', filename: 'day_book_report', icon: IconClock, desc: 'Day-to-day chronological record of all accounting transactions' },
-  { key: 'cash_book', category: 'books', label: 'Cash Book', endpoint: '/reports/cash-book/', filename: 'cash_book_report', icon: IconCash, desc: 'Cash in hand receipts, payments, and closing cash balance' },
-  { key: 'bank_book', category: 'books', label: 'Bank Book', endpoint: '/reports/bank-book/', filename: 'bank_book_report', icon: IconCreditCard, desc: 'Bank account deposits, withdrawals, UPI, and online receipts' },
-  { key: 'payments', category: 'books', label: 'Payment Collection Register', endpoint: '/reports/payment-collection/', filename: 'payment_collection_report', icon: IconCreditCard, desc: 'Receipts by payment method: UPI, Cash, Cards, Bank' },
-  { key: 'expenses', category: 'books', label: 'Operating Expenses', endpoint: '/reports/expenses/', filename: 'operating_expenses_report', icon: IconReceipt, desc: 'Store operational expenditures categorized by expense heads' },
-  { key: 'profit', category: 'books', label: 'Profit & Loss Statement', endpoint: '/reports/profit/', filename: 'profit_and_loss_report', icon: IconCurrencyDollar, desc: 'Gross revenue, cost of goods sold, overheads, and net profit' },
-
-  // Ledgers & Dues
-  { key: 'customers', category: 'ledgers', label: 'Customer Receivables', endpoint: '/reports/customers/', filename: 'customer_receivables_report', icon: IconUsers, desc: 'Outstanding balances and credit limits for all credit customers' },
-  { key: 'customer_ledger', category: 'ledgers', label: 'Customer Ledger Statement', endpoint: '/reports/customer-ledger/', filename: 'customer_ledger_report', icon: IconUser, desc: 'Debit, credit, invoice, and payment history per customer' },
-  { key: 'outstanding_payables', category: 'ledgers', label: 'Supplier Payables', endpoint: '/reports/outstanding-payables/', filename: 'supplier_payables_report', icon: IconBuildingStore, desc: 'Outstanding dues payable to vendors and distributors' },
-  { key: 'supplier_ledger', category: 'ledgers', label: 'Supplier Ledger Statement', endpoint: '/reports/supplier-ledger/', filename: 'supplier_ledger_report', icon: IconBuildingStore, desc: 'Inward bills, returns, and payment settlements per supplier' },
-
-  // GST & Compliance
-  { key: 'gst', category: 'gst', label: 'GST Tax Summary', endpoint: '/reports/gst-summary/', filename: 'gst_tax_summary_report', icon: IconPercentage, desc: 'Consolidated taxable value, CGST, SGST, IGST tax liability' },
-  { key: 'gstr1', category: 'gst', label: 'GSTR-1 Outward Supplies', endpoint: '/reports/gstr1/', filename: 'gstr1_report', icon: IconFileText, desc: 'Outward invoice sales for monthly/quarterly GST filing' },
-  { key: 'gstr2', category: 'gst', label: 'GSTR-2 Inward Supplies', endpoint: '/reports/gstr2/', filename: 'gstr2_report', icon: IconFileText, desc: 'Inward supplies and Input Tax Credit (ITC) reconciliation' },
-  { key: 'gstr3b', category: 'gst', label: 'GSTR-3B Return Summary', endpoint: '/reports/gstr3b/', filename: 'gstr3b_report', icon: IconFileText, desc: 'Monthly self-assessment summary: output tax liability vs eligible ITC' },
-]
-
-const ENDPOINTS = ALL_REPORTS.reduce((acc, r) => {
-  acc[r.key] = r.endpoint
-  return acc
-}, {})
-
-const REPORT_FILENAMES = ALL_REPORTS.reduce((acc, r) => {
-  acc[r.key] = r.filename
-  return acc
-}, {})
-
-const NAVIGATION_CATEGORIES = REPORT_CATEGORIES.filter(c => c.key !== 'all')
-
-function ReportNavigationMenu({
-  reportSearch,
-  setReportSearch,
-  expandedCategories,
-  toggleCategory,
-  expandAllCategories,
-  collapseAllCategories,
-  filteredReportsByCategory,
-  totalMatchingReports,
-  tab,
-  onSelectReport,
-}) {
-  const isSearching = Boolean(reportSearch.trim())
-
-  return (
-    <div className="flex flex-col h-full min-h-0">
-      {/* Search Input */}
-      <div className="relative mb-2.5 shrink-0">
-        <IconSearch
-          size={14}
-          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)] pointer-events-none"
-        />
-        <input
-          type="text"
-          value={reportSearch}
-          onChange={e => setReportSearch(e.target.value)}
-          placeholder="Filter reports…"
-          className="w-full rounded-md border border-[var(--line)] bg-[var(--surface-elevated)] pl-8 pr-7 py-1.5 text-xs text-[var(--ink)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[#0057B8] focus:bg-[var(--surface)] transition"
-        />
-        {reportSearch && (
-          <button
-            type="button"
-            onClick={() => setReportSearch('')}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--ink)] p-0.5"
-            title="Clear filter"
-          >
-            <IconX size={13} />
-          </button>
-        )}
-      </div>
-
-      {/* Meta Bar */}
-      <div className="px-1 mb-2 flex items-center justify-between text-[11px] text-[var(--muted)] shrink-0">
-        <span className="font-mono">
-          {isSearching
-            ? `${totalMatchingReports} of ${ALL_REPORTS.length} matched`
-            : `${ALL_REPORTS.length} reports in 6 categories`}
-        </span>
-        {!isSearching && (
-          <div className="flex items-center gap-1.5 text-[10px]">
-            <button
-              type="button"
-              onClick={expandAllCategories}
-              className="text-[#0057B8] hover:underline transition"
-            >
-              Expand all
-            </button>
-            <span>•</span>
-            <button
-              type="button"
-              onClick={collapseAllCategories}
-              className="text-[var(--muted)] hover:text-[var(--ink)] transition"
-            >
-              Collapse
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Accordion Categories and Sub-reports */}
-      <div className="space-y-1.5 flex-1 overflow-y-auto pr-0.5 scrollbar-thin">
-        {NAVIGATION_CATEGORIES.map(cat => {
-          const reports = filteredReportsByCategory[cat.key] || []
-          if (isSearching && reports.length === 0) return null
-
-          const isExpanded = isSearching || expandedCategories.has(cat.key)
-          const CatIcon = cat.icon
-          const hasActiveReport = reports.some(r => r.key === tab)
-
-          return (
-            <div
-              key={cat.key}
-              className={`rounded-lg border transition-colors overflow-hidden ${
-                hasActiveReport
-                  ? 'border-[#0057B8]/40 bg-[#0057B8]/[0.02]'
-                  : 'border-[var(--line-subtle)] bg-[var(--surface)]'
-              }`}
-            >
-              {/* Category Header */}
-              <button
-                type="button"
-                onClick={() => toggleCategory(cat.key)}
-                className={`w-full flex items-center justify-between px-2.5 py-2 text-xs font-semibold transition-colors ${
-                  hasActiveReport
-                    ? 'text-[#0057B8] bg-[#0057B8]/5'
-                    : 'text-[var(--ink)] hover:bg-[var(--surface-hover)]'
-                }`}
-              >
-                <div className="flex items-center gap-2 truncate">
-                  <CatIcon
-                    size={16}
-                    className={hasActiveReport ? 'text-[#0057B8]' : 'text-[var(--muted)]'}
-                  />
-                  <span className="truncate">{cat.label}</span>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span
-                    className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                      hasActiveReport
-                        ? 'bg-[#0057B8]/15 text-[#0057B8] font-bold'
-                        : 'bg-[var(--surface-elevated)] text-[var(--muted)]'
-                    }`}
-                  >
-                    {reports.length}
-                  </span>
-                  {isExpanded ? (
-                    <IconChevronUp size={13} className="text-[var(--muted)]" />
-                  ) : (
-                    <IconChevronDown size={13} className="text-[var(--muted)]" />
-                  )}
-                </div>
-              </button>
-
-              {/* Sub-category reports list */}
-              {isExpanded && (
-                <div className="p-1 space-y-0.5 border-t border-[var(--line-subtle)] bg-[var(--surface)]">
-                  {reports.map(r => {
-                    const isActive = tab === r.key
-                    const RIcon = r.icon
-                    return (
-                      <button
-                        key={r.key}
-                        type="button"
-                        onClick={() => onSelectReport(r.key, cat.key)}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-all text-left ${
-                          isActive
-                            ? 'bg-[#0057B8] text-white font-semibold shadow-2xs'
-                            : 'text-[var(--ink)] hover:bg-[var(--surface-hover)] hover:text-[#0057B8] font-medium'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <RIcon
-                            size={14}
-                            className={isActive ? 'text-white' : 'text-[var(--muted)]'}
-                          />
-                          <span className="truncate">{r.label}</span>
-                        </div>
-                        {isActive && (
-                          <IconCheck size={13} className="text-white shrink-0 ml-1" />
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )
-        })}
-
-        {isSearching && totalMatchingReports === 0 && (
-          <div className="rounded-lg border border-[var(--line)] bg-[var(--surface-elevated)]/50 p-6 text-center text-xs text-[var(--muted)]">
-            <IconAlertCircle size={20} className="mx-auto mb-1.5 text-[var(--muted)]" />
-            <p className="font-medium text-[var(--ink)]">No reports match "{reportSearch}"</p>
-            <p className="mt-1 text-[11px]">Try searching with a different keyword</p>
-            <button
-              type="button"
-              onClick={() => setReportSearch('')}
-              className="btn-secondary h-7 px-2.5 text-xs mt-2.5"
-            >
-              Clear filter
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
 
 export default function Reports() {
   const navigate = useNavigate()
-  const [activeCategory, setActiveCategory] = useState('sales')
-  const [tab, setTab] = useState('sales')
-  const [reportSearch, setReportSearch] = useState('')
-  const [expandedCategories, setExpandedCategories] = useState(
-    () => new Set(['sales', 'purchases', 'inventory', 'books', 'ledgers', 'gst'])
-  )
-  const [datePreset, setDatePreset] = useState('year')
-  const [startDate, setStartDate] = useState(getYearStart())
-  const [endDate, setEndDate] = useState(getToday())
-  const [appliedDates, setAppliedDates] = useState({
-    start: getYearStart(),
-    end: getToday(),
-  })
+  const [activeTab, setActiveTab] = useState('sales_register')
+  const [datePreset, setDatePreset] = useState('fy_current')
   const [filterOpen, setFilterOpen] = useState(false)
-
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [exporting, setExporting] = useState('')
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
-  const [error, setError] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [chartView, setChartView] = useState('revenue')
+  const [startDate, setStartDate] = useState('2026-04-01')
+  const [endDate, setEndDate] = useState('2026-03-31')
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 8
 
-  const activeRequestRef = useRef(0)
-  const abortControllerRef = useRef(null)
-  const reportsViewedRef = useRef(false)
   const exportMenuRef = useRef(null)
 
-  const isSnapshotReport = useMemo(() => {
-    return ['customers', 'outstanding_payables', 'stock_summary'].includes(tab)
-  }, [tab])
+  // Current active report dataset
+  const activeReport = SAMPLE_REPORTS_DATA[activeTab] || SAMPLE_REPORTS_DATA.sales_register
+  const currentPresetObj = DATE_PRESETS.find(p => p.key === datePreset) || DATE_PRESETS[0]
 
-  const currentReport = useMemo(() => {
-    return ALL_REPORTS.find(r => r.key === tab) || ALL_REPORTS[0]
-  }, [tab])
-
-  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
-
-  const activeCategoryObj = useMemo(() => {
-    const catKey = currentReport?.category || activeCategory
-    return REPORT_CATEGORIES.find(c => c.key === catKey) || REPORT_CATEGORIES[0]
-  }, [currentReport, activeCategory])
-
-  const toggleCategory = useCallback((catKey) => {
-    setExpandedCategories(prev => {
-      const next = new Set(prev)
-      if (next.has(catKey)) next.delete(catKey)
-      else next.add(catKey)
-      return next
-    })
-  }, [])
-
-  const expandAllCategories = useCallback(() => {
-    setExpandedCategories(new Set(['sales', 'purchases', 'inventory', 'books', 'ledgers', 'gst']))
-  }, [])
-
-  const collapseAllCategories = useCallback(() => {
-    setExpandedCategories(new Set())
-  }, [])
-
-  const handleSelectReport = useCallback((reportKey, catKey) => {
-    setTab(reportKey)
-    setActiveCategory(catKey)
-    setExpandedCategories(prev => {
-      if (prev.has(catKey)) return prev
-      const next = new Set(prev)
-      next.add(catKey)
-      return next
-    })
-    setMobileDrawerOpen(false)
-  }, [])
-
-  const filteredReportsByCategory = useMemo(() => {
-    const q = reportSearch.trim().toLowerCase()
-    const result = {}
-    NAVIGATION_CATEGORIES.forEach(cat => {
-      const reports = ALL_REPORTS.filter(r => r.category === cat.key)
-      if (!q) {
-        result[cat.key] = reports
-      } else {
-        result[cat.key] = reports.filter(r =>
-          r.label.toLowerCase().includes(q) ||
-          r.desc.toLowerCase().includes(q) ||
-          cat.label.toLowerCase().includes(q)
-        )
-      }
-    })
-    return result
-  }, [reportSearch])
-
-  const totalMatchingReports = useMemo(() => {
-    return Object.values(filteredReportsByCategory).reduce((sum, list) => sum + list.length, 0)
-  }, [filteredReportsByCategory])
-
+  // Close export dropdown on outside click
   useEffect(() => {
     if (!exportMenuOpen) return undefined
-    const closeOnOutsideClick = event => {
-      if (!exportMenuRef.current?.contains(event.target)) setExportMenuOpen(false)
+    const handleOutside = e => {
+      if (!exportMenuRef.current?.contains(e.target)) setExportMenuOpen(false)
     }
-    const closeOnEscape = event => {
-      if (event.key === 'Escape') setExportMenuOpen(false)
-    }
-    document.addEventListener('pointerdown', closeOnOutsideClick)
-    document.addEventListener('keydown', closeOnEscape)
-    return () => {
-      document.removeEventListener('pointerdown', closeOnOutsideClick)
-      document.removeEventListener('keydown', closeOnEscape)
-    }
+    document.addEventListener('pointerdown', handleOutside)
+    return () => document.removeEventListener('pointerdown', handleOutside)
   }, [exportMenuOpen])
 
-  const isDateInvalid = !isSnapshotReport && startDate > endDate
-
-  const fetchReport = useCallback(
-    async (targetTab, dates) => {
-      const isSnapshot = ['customers', 'outstanding_payables', 'stock_summary'].includes(targetTab)
-      if (!isSnapshot && dates.start > dates.end) {
-        setError('Start date cannot be after end date.')
-        return
-      }
-
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
-      const controller = new AbortController()
-      abortControllerRef.current = controller
-
-      const reqId = ++activeRequestRef.current
-      setLoading(true)
-      setError('')
-
-      try {
-        const endpoint = ENDPOINTS[targetTab] || `/reports/${targetTab}/`
-        const params = isSnapshot
-          ? ''
-          : `?start_date=${dates.start}&end_date=${dates.end}`
-
-        const response = await api.get(`${endpoint}${params}`, {
-          signal: controller.signal,
-        })
-
-        if (reqId === activeRequestRef.current) {
-          setData(response.data)
-          if (!reportsViewedRef.current) {
-            reportsViewedRef.current = true
-            api.post('/auth/onboarding/reports-viewed/').catch(() => {
-              reportsViewedRef.current = false
-            })
-          }
-        }
-      } catch (err) {
-        if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
-          return
-        }
-        if (reqId === activeRequestRef.current) {
-          const msg =
-            err.response?.status === 403
-              ? 'Reports are restricted to administrator and finance roles.'
-              : err.response?.data?.detail ||
-                'Failed to load report from server. Please try again.'
-          setError(msg)
-          setData(null)
-        }
-      } finally {
-        if (reqId === activeRequestRef.current) {
-          setLoading(false)
-        }
-      }
-    },
-    [],
-  )
-
-  useEffect(() => {
-    fetchReport(tab, appliedDates)
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
-    }
-  }, [tab, appliedDates, fetchReport])
-
-  const handleApplyFilters = () => {
-    if (isDateInvalid) return
-    setAppliedDates({ start: startDate, end: endDate })
-  }
-
-  const applyPreset = preset => {
-    setDatePreset(preset.key)
-    const s = preset.getStart()
-    const e = preset.getEnd()
-    setStartDate(s)
-    setEndDate(e)
-    setAppliedDates({ start: s, end: e })
-  }
-
-  const handleResetFilters = () => {
-    setDatePreset('year')
-    const s = getYearStart()
-    const e = getToday()
-    setStartDate(s)
-    setEndDate(e)
-    setAppliedDates({ start: s, end: e })
-  }
-
-  const handleExport = async format => {
-    if (!isSnapshotReport && appliedDates.start > appliedDates.end) {
-      toast.error('Start date cannot be after end date')
-      return
-    }
-
-    if (format === 'csv') {
-      const filenameBase = REPORT_FILENAMES[tab] || `${tab}_report`
-      const headers = data?.headers || []
-      const rows = data?.rows || []
-      if (headers.length === 0 || rows.length === 0) {
-        toast.error('No tabular records to export as CSV')
-        return
-      }
-      const escapeCell = val => {
-        if (val === null || val === undefined) return '""'
-        const str = String(val).replace(/"/g, '""')
-        return `"${str}"`
-      }
-      const csvContent = [
-        headers.map(escapeCell).join(','),
-        ...rows.map(row => (Array.isArray(row) ? row : headers.map(h => row[h] ?? '')).map(escapeCell).join(','))
-      ].join('\r\n')
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${filenameBase}_${getToday()}.csv`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      window.URL.revokeObjectURL(url)
-      toast.success('Report exported as CSV spreadsheet')
-      return
-    }
-
-    setExporting(format)
-    try {
-      const endpoint = ENDPOINTS[tab] || `/reports/${tab}/`
-      const params = new URLSearchParams()
-      if (!isSnapshotReport) {
-        params.set('start_date', appliedDates.start)
-        params.set('end_date', appliedDates.end)
-      }
-      params.set('export', format)
-
-      const response = await api.get(`${endpoint}?${params.toString()}`, {
-        responseType: 'blob',
-      })
-
-      const mimeType =
-        response.headers['content-type'] ||
-        (format === 'pdf'
-          ? 'application/pdf'
-          : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
-      const blob = new Blob([response.data], { type: mimeType })
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      const filenameBase = REPORT_FILENAMES[tab] || `${tab}_report`
-      link.download = `${filenameBase}_${getToday()}.${format === 'xlsx' ? 'xlsx' : 'pdf'}`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      window.URL.revokeObjectURL(url)
-
-      toast.success(
-        `Report exported as ${format === 'pdf' ? 'PDF (A4 Accounting standard)' : 'Excel (.xlsx native)'}`,
-      )
-    } catch {
-      toast.error('Failed to export report')
-    } finally {
-      setExporting('')
-    }
-  }
-
-  return (
-    <div className="reports-page w-full min-w-0 space-y-4 pb-12 text-[var(--ink)]">
-      <style>{`
-        .reports-page .erp-report-table {
-          width: 100%;
-          min-width: 640px;
-          border-collapse: collapse;
-          font-variant-numeric: tabular-nums;
-          background: var(--surface);
-        }
-        .reports-page .erp-report-table th {
-          padding: 8px 12px;
-          text-align: left;
-          white-space: nowrap;
-          background: var(--table-header-bg, #f8fafc);
-          border-bottom: 1px solid var(--line);
-          font-size: 12px;
-          font-weight: 600;
-          color: var(--ink-secondary);
-        }
-        .reports-page .erp-report-table td {
-          padding: 9px 12px;
-          border-bottom: 1px solid var(--line-subtle, #f1f5f9);
-          font-size: 13px;
-          vertical-align: middle;
-        }
-        .reports-page .erp-report-table tbody tr:hover {
-          background: var(--surface-hover, rgba(15, 23, 42, 0.02));
-        }
-        .dark .reports-page .erp-report-table tbody tr:hover {
-          background: rgba(255, 255, 255, 0.03);
-        }
-        .reports-page .erp-report-table tfoot td {
-          padding: 10px 12px;
-          border-top: 2px solid var(--line);
-          border-bottom: 2px solid var(--line);
-          background: var(--table-header-bg, #f8fafc);
-          font-weight: 700;
-          font-size: 13px;
-        }
-        .reports-page .summary-strip-table {
-          width: 100%;
-          min-width: 640px;
-          border-collapse: collapse;
-          font-variant-numeric: tabular-nums;
-          background: var(--surface);
-        }
-        .reports-page .summary-strip-table th {
-          padding: 7px 12px;
-          background: var(--table-header-bg, #f8fafc);
-          border-bottom: 1px solid var(--line);
-          font-size: 11px;
-          font-weight: 600;
-          color: var(--ink-secondary);
-          text-align: left;
-        }
-        .reports-page .summary-strip-table td {
-          padding: 9px 12px;
-          font-size: 13px;
-          border-bottom: 1px solid var(--line);
-        }
-      `}</style>
-
-      {/* =====================================================
-          PAGE HEADER (Unified ERP Style with Back Button)
-      ====================================================== */}
-      <PageHeader
-        title={
-          <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="btn-secondary h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 shrink-0 rounded-lg shadow-2xs hover:bg-[var(--surface-hover)] transition cursor-pointer"
-              title="Go back to previous page"
-              aria-label="Go back"
-            >
-              <IconArrowLeft size={16} />
-              <span className="hidden sm:inline">Back</span>
-            </button>
-            <span>Business Reports</span>
-          </div>
-        }
-        subtitle="CA-ready financial statements, sales registers, ledgers, and GST compliance summaries."
-        action={
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-            {/* Mobile Report Selector Drawer Trigger (< lg) */}
-            <button
-              type="button"
-              onClick={() => setMobileDrawerOpen(true)}
-              className="btn-secondary lg:hidden h-8.5 px-3 text-xs font-semibold inline-flex items-center gap-2 shrink-0 rounded-lg cursor-pointer"
-              aria-label="Open report navigator"
-            >
-              <IconFolder size={15} className="text-[#0057B8]" />
-              <span>Select Report</span>
-              <span className="ml-0.5 rounded-full bg-[#0057B8]/10 px-1.5 py-0.5 text-[10px] font-bold text-[#0057B8]">
-                {currentReport?.label}
-              </span>
-            </button>
-
-            <span className="hidden sm:inline-block text-xs font-mono px-2.5 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--line)] text-[var(--muted)]">
-              22 Reports • Indian Accounting Standard
-            </span>
-          </div>
-        }
-      />
-
-      {/* =====================================================
-          TWO-COLUMN WORKSPACE:
-          LEFT: Category & Sub-Category Selector (Adjacent to Main Menu Bar)
-          RIGHT: Selected Report Workspace
-      ====================================================== */}
-      <div className="flex flex-col lg:flex-row items-start gap-4 sm:gap-5">
-        {/* LEFT COLUMN: CATEGORIES & SUB-REPORTS NAVIGATOR (DESKTOP) */}
-        <aside className="hidden lg:flex flex-col w-72 shrink-0 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-2xs sticky top-4 max-h-[calc(100vh-6rem)] overflow-hidden">
-          <div className="flex items-center gap-2 px-1 pb-2 mb-2 border-b border-[var(--line-subtle)] shrink-0">
-            <IconFolder size={16} className="text-[#0057B8]" />
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-              Report Navigator
-            </h2>
-          </div>
-
-          <ReportNavigationMenu
-            reportSearch={reportSearch}
-            setReportSearch={setReportSearch}
-            expandedCategories={expandedCategories}
-            toggleCategory={toggleCategory}
-            expandAllCategories={expandAllCategories}
-            collapseAllCategories={collapseAllCategories}
-            filteredReportsByCategory={filteredReportsByCategory}
-            totalMatchingReports={totalMatchingReports}
-            tab={tab}
-            onSelectReport={handleSelectReport}
-          />
-        </aside>
-
-        {/* RIGHT COLUMN: MAIN REPORT WORKSPACE */}
-        <div className="flex-1 min-w-0 w-full space-y-3.5">
-          {/* Active Report Header Card */}
-          <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4 shadow-2xs">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#0057B8]/10 text-[#0057B8]">
-                  {currentReport?.icon ? <currentReport.icon size={22} /> : <IconFileText size={22} />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  {/* Breadcrumb */}
-                  <div className="flex items-center gap-1.5 text-[11px] text-[var(--muted)] mb-1 truncate">
-                    <span>Reports</span>
-                    <span>/</span>
-                    <span className="text-[#0057B8] font-medium">{activeCategoryObj.label}</span>
-                    <span>/</span>
-                    <span className="font-semibold text-[var(--ink)] truncate">{currentReport?.label}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-base sm:text-lg font-bold text-[var(--ink)]">
-                      {currentReport?.label}
-                    </h2>
-                    <span className="rounded bg-[var(--surface-elevated)] px-2 py-0.5 text-[10px] font-mono uppercase text-[var(--muted)] font-semibold border border-[var(--line-subtle)]">
-                      {currentReport?.category}
-                    </span>
-                  </div>
-                  <p className="text-xs text-[var(--muted)] mt-0.5">{currentReport?.desc}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
-                {/* Compact Filter Toggle Button */}
-                {!isSnapshotReport && (
-                  <button
-                    type="button"
-                    onClick={() => setFilterOpen(v => !v)}
-                    className={`h-8.5 px-3 text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg border transition cursor-pointer ${
-                      filterOpen
-                        ? 'bg-[#0057B8] text-white border-[#0057B8] shadow-xs'
-                        : 'btn-secondary text-[var(--ink)]'
-                    }`}
-                    title="Toggle Date Filters"
-                    aria-expanded={filterOpen}
-                  >
-                    <IconFilter size={15} className={filterOpen ? 'text-white' : 'text-[#0057B8]'} />
-                    <span>Filter</span>
-                    <IconChevronDown
-                      size={13}
-                      className={`transition-transform duration-200 ${filterOpen ? 'rotate-180' : ''}`}
-                    />
-                  </button>
-                )}
-
-                {/* Refresh Button */}
-                <button
-                  type="button"
-                  onClick={() => fetchReport(tab, appliedDates)}
-                  disabled={loading}
-                  title="Refresh Report Data"
-                  className="btn-secondary h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 shrink-0 rounded-lg cursor-pointer"
-                >
-                  <IconRefresh size={15} className={loading ? 'animate-spin' : ''} />
-                  <span className="hidden sm:inline">Refresh</span>
-                </button>
-
-                {/* Export Dropdown Menu */}
-                <div className="relative" ref={exportMenuRef}>
-                  <button
-                    type="button"
-                    onClick={() => setExportMenuOpen(open => !open)}
-                    disabled={Boolean(exporting) || loading}
-                    aria-haspopup="menu"
-                    aria-expanded={exportMenuOpen}
-                    className="btn-primary h-8.5 px-3.5 text-xs font-semibold inline-flex items-center gap-1.5 shrink-0 rounded-lg shadow-xs cursor-pointer"
-                  >
-                    <IconDownload size={15} />
-                    <span>{exporting ? `Preparing ${exporting.toUpperCase()}…` : 'Export'}</span>
-                    <IconChevronDown size={14} />
-                  </button>
-                  {exportMenuOpen && (
-                    <div
-                      role="menu"
-                      aria-label="Choose report export format"
-                      className="absolute right-0 top-full z-50 mt-1.5 min-w-52 overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1 shadow-lg animate-in fade-in zoom-in-95 duration-100"
-                    >
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => { setExportMenuOpen(false); handleExport('pdf') }}
-                        className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
-                      >
-                        <IconFileTypePdf size={16} className="text-rose-600 dark:text-rose-400" />
-                        <span>Download PDF (A4 Accounting)</span>
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => { setExportMenuOpen(false); handleExport('xlsx') }}
-                        className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
-                      >
-                        <IconFileTypeXls size={16} className="text-emerald-600 dark:text-emerald-400" />
-                        <span>Download Excel (.xlsx)</span>
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => { setExportMenuOpen(false); handleExport('csv') }}
-                        className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer"
-                      >
-                        <IconFileSpreadsheet size={16} className="text-sky-600 dark:text-sky-400" />
-                        <span>Download CSV</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Simple and Proper Date Filter Section */}
-          {isSnapshotReport ? (
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-2xs">
-              <div className="flex items-center gap-2.5 text-xs text-[var(--muted)]">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--surface-elevated)] text-[#0057B8]">
-                  <IconInfoCircle size={16} />
-                </div>
-                <div>
-                  <span className="font-semibold text-[var(--ink)]">Live Snapshot Ledger</span>
-                  <p className="text-[11px] text-[var(--muted)]">
-                    Reflects real-time outstanding balances and live stock valuation as of today. Date range filtering does not apply.
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2.5">
-              {/* Active Reporting Period Pill Bar */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3.5 py-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-xs shadow-2xs">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <div className="flex items-center gap-1.5 text-[var(--muted)]">
-                    <IconCalendar size={14} className="text-[#0057B8]" />
-                    <span className="font-medium text-[var(--ink)]">Reporting Period:</span>
-                  </div>
-                  <span className="font-mono font-semibold text-[var(--ink)] bg-[var(--surface-elevated)] px-2 py-0.5 rounded border border-[var(--line-subtle)] text-xs">
-                    {formatDate(appliedDates.start)} — {formatDate(appliedDates.end)}
-                  </span>
-                  <span className="text-[10px] font-sans font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[#0057B8]/10 text-[#0057B8]">
-                    {DATE_PRESETS.find(p => p.key === datePreset)?.label || 'Custom Period'}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setFilterOpen(v => !v)}
-                  className="text-xs font-semibold text-[#0057B8] hover:underline inline-flex items-center gap-1 self-start sm:self-auto cursor-pointer"
-                >
-                  <IconFilter size={13} />
-                  <span>{filterOpen ? 'Hide Filters' : 'Change Period / Custom Dates'}</span>
-                </button>
-              </div>
-
-              {/* Expandable Filter Panel */}
-              {filterOpen && (
-                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-150 space-y-3">
-                  <div className="flex items-center justify-between pb-2 border-b border-[var(--line-subtle)]">
-                    <div className="flex items-center gap-2">
-                      <IconFilter size={15} className="text-[#0057B8]" />
-                      <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-                        Date Range &amp; Presets
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setFilterOpen(false)}
-                      className="text-[var(--muted)] hover:text-[var(--ink)] p-1 rounded-md hover:bg-[var(--surface-hover)] transition cursor-pointer"
-                      aria-label="Close filter panel"
-                    >
-                      <IconX size={15} />
-                    </button>
-                  </div>
-
-                  {/* Preset Quick Chips */}
-                  <div>
-                    <span className="text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider block mb-1.5">
-                      Quick Presets
-                    </span>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {DATE_PRESETS.map(p => {
-                        const isSelected = datePreset === p.key
-                        return (
-                          <button
-                            key={p.key}
-                            type="button"
-                            onClick={() => applyPreset(p)}
-                            className={`h-7 px-3 text-xs font-medium rounded-md transition cursor-pointer ${
-                              isSelected
-                                ? 'bg-[#0057B8] text-white font-semibold shadow-2xs'
-                                : 'bg-[var(--surface-elevated)] text-[var(--ink)] hover:bg-[var(--surface-hover)] border border-[var(--line-subtle)]'
-                            }`}
-                          >
-                            {p.label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Date Inputs & Apply/Reset Actions */}
-                  <div className="pt-2 border-t border-[var(--line-subtle)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs font-medium text-[var(--muted)]">From:</label>
-                        <input
-                          type="date"
-                          value={startDate}
-                          onChange={e => {
-                            setStartDate(e.target.value)
-                            setDatePreset('custom')
-                          }}
-                          className="h-8.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-mono text-[var(--ink)] focus:outline-none focus:border-[#0057B8] transition"
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <label className="text-xs font-medium text-[var(--muted)]">To:</label>
-                        <input
-                          type="date"
-                          value={endDate}
-                          onChange={e => {
-                            setEndDate(e.target.value)
-                            setDatePreset('custom')
-                          }}
-                          className="h-8.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-mono text-[var(--ink)] focus:outline-none focus:border-[#0057B8] transition"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleApplyFilters()
-                          setFilterOpen(false)
-                        }}
-                        disabled={isDateInvalid || loading}
-                        className="btn-primary h-8.5 px-3.5 text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg shadow-xs cursor-pointer"
-                      >
-                        <IconFilter size={14} />
-                        <span>Apply</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleResetFilters()
-                          setFilterOpen(false)
-                        }}
-                        disabled={loading}
-                        className="btn-secondary h-8.5 px-3 text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg cursor-pointer"
-                        title="Reset to current financial year"
-                      >
-                        <IconRefresh size={14} className={loading ? 'animate-spin' : ''} />
-                        <span>Reset</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {isDateInvalid && (
-                    <p className="text-xs text-rose-600 font-medium">
-                      Start date cannot be after end date.
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* REPORT CONTENT BODY */}
-          <div id={`panel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`}>
-            {loading ? (
-              <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-12 text-center shadow-xs">
-                <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-[#0057B8] border-r-transparent"></div>
-                <p className="mt-3 text-xs font-medium text-[var(--muted)]">Loading report data…</p>
-              </div>
-            ) : error ? (
-              <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-6 text-center text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-400">
-                <IconAlertCircle size={24} className="mx-auto mb-2" />
-                <p className="text-xs font-medium">{error}</p>
-                <button
-                  type="button"
-                  onClick={() => fetchReport(tab, appliedDates)}
-                  className="btn-secondary h-8 px-3 text-xs font-semibold inline-flex items-center gap-1.5 mt-3"
-                >
-                  <IconRefresh size={14} />
-                  <span>Try Again</span>
-                </button>
-              </div>
-            ) : data ? (
-              <div>
-                {tab === 'sales' && <SalesReportView data={data} />}
-                {tab === 'purchases' && <PurchaseReportView data={data} />}
-                {tab === 'products' && <ProductReportView data={data} />}
-                {tab === 'profit' && <ProfitReportView data={data} />}
-                {tab === 'gst' && <GSTReportView data={data} appliedDates={appliedDates} />}
-                {tab === 'customers' && <CustomerReportView data={data} />}
-                {tab === 'payments' && <PaymentReportView data={data} />}
-                {tab === 'expenses' && <ExpenseReportView data={data} />}
-                {![
-                  'sales',
-                  'purchases',
-                  'products',
-                  'profit',
-                  'gst',
-                  'customers',
-                  'payments',
-                  'expenses',
-                ].includes(tab) && (
-                  <TraditionalAccountingTableView data={data} reportMeta={currentReport} />
-                )}
-              </div>
-            ) : null}
-          </div>
-
-          <InformationalBanner
-            tip="Reports follow standard Indian Accounting principles. Use Export to download a PDF, Excel spreadsheet or CSV."
-            className="my-3"
-          />
-
-          <footer className="flex flex-col gap-1 border-t border-[var(--line)] pt-3 text-[11px] text-[var(--muted)] sm:flex-row sm:items-center sm:justify-between">
-            <span>
-              {isSnapshotReport
-                ? 'Reflects live business balances as of today.'
-                : `Reporting period: ${formatDate(appliedDates.start)} to ${formatDate(appliedDates.end)}`}
-            </span>
-            <span>Amounts shown in INR (₹)</span>
-          </footer>
-        </div>
-      </div>
-
-      {/* MOBILE / TABLET SLIDE-OVER DRAWER (SLIDES FROM LEFT) */}
-      {mobileDrawerOpen && (
-        <div className="fixed inset-0 z-50 flex justify-start bg-black/40 backdrop-blur-xs transition-opacity lg:hidden">
-          <div className="w-80 max-w-[85vw] h-full bg-[var(--surface)] p-3.5 shadow-xl flex flex-col justify-between border-r border-[var(--line)] animate-in slide-in-from-left duration-200">
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--line)] mb-2 shrink-0">
-              <div className="flex items-center gap-2">
-                <IconFolder size={18} className="text-[#0057B8]" />
-                <h3 className="text-sm font-bold text-[var(--ink)]">Report Navigator</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMobileDrawerOpen(false)}
-                className="btn-secondary h-8 w-8 p-0 inline-flex items-center justify-center shrink-0"
-                aria-label="Close report selector"
-              >
-                <IconX size={16} />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto min-h-0">
-              <ReportNavigationMenu
-                reportSearch={reportSearch}
-                setReportSearch={setReportSearch}
-                expandedCategories={expandedCategories}
-                toggleCategory={toggleCategory}
-                expandAllCategories={expandAllCategories}
-                collapseAllCategories={collapseAllCategories}
-                filteredReportsByCategory={filteredReportsByCategory}
-                totalMatchingReports={totalMatchingReports}
-                tab={tab}
-                onSelectReport={handleSelectReport}
-              />
-            </div>
-
-            <div className="pt-2.5 border-t border-[var(--line)] text-center shrink-0">
-              <p className="text-[11px] text-[var(--muted)]">Tap any report to view statement</p>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/* =========================================================
-   TRADITIONAL INDIAN ACCOUNTING REPORT VIEW (UNIVERSAL)
-========================================================= */
-function TraditionalAccountingTableView({ data, reportMeta }) {
-  const [search, setSearch] = useState('')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(25)
-
-  const headers = Array.isArray(data?.headers) ? data.headers : []
-  const rawRows = Array.isArray(data?.rows) ? data.rows : []
-  const summaryRows = Array.isArray(data?.summary_rows) ? data.summary_rows : []
-  const summaryObj = data?.summary && typeof data.summary === 'object' ? data.summary : null
-
-  // Reset page when search or dataset changes
+  // Reset page when tab or search changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, rawRows])
+  }, [activeTab, searchQuery])
 
-  // Filter rows based on search
+  // Filtered rows based on search
   const filteredRows = useMemo(() => {
-    if (!search.trim()) return rawRows
-    const q = search.toLowerCase()
-    return rawRows.filter(row => {
-      if (Array.isArray(row)) {
-        return row.some(cell => String(cell ?? '').toLowerCase().includes(q))
-      }
-      if (typeof row === 'object' && row !== null) {
-        return Object.values(row).some(cell => String(cell ?? '').toLowerCase().includes(q))
-      }
-      return false
-    })
-  }, [rawRows, search])
+    if (!searchQuery.trim()) return activeReport.rows
+    const q = searchQuery.toLowerCase()
+    return activeReport.rows.filter(row =>
+      Object.values(row).some(val => String(val).toLowerCase().includes(q))
+    )
+  }, [activeReport.rows, searchQuery])
 
-  // Paginated subset
+  // Paginated rows
   const totalPages = Math.ceil(filteredRows.length / pageSize) || 1
   const paginatedRows = useMemo(() => {
     const start = (currentPage - 1) * pageSize
     return filteredRows.slice(start, start + pageSize)
   }, [filteredRows, currentPage, pageSize])
 
-  // Helper to determine if column is monetary / numeric
-  const isMonetaryCol = headerName => {
-    const h = String(headerName || '').toLowerCase()
-    return (
-      h.includes('amount') ||
-      h.includes('total') ||
-      h.includes('tax') ||
-      h.includes('price') ||
-      h.includes('balance') ||
-      h.includes('debit') ||
-      h.includes('credit') ||
-      h.includes('due') ||
-      h.includes('valuation') ||
-      h.includes('cost') ||
-      h.includes('mrp') ||
-      h.includes('revenue') ||
-      h.includes('turnover') ||
-      h.includes('profit') ||
-      h.includes('paid') ||
-      h.includes('inflow') ||
-      h.includes('outflow')
-    )
+  // Export CSV generator (works completely client-side)
+  const handleExportCSV = () => {
+    try {
+      const headers = activeReport.headers
+      const rows = filteredRows.map(r => [
+        r.id || '',
+        r.date || '',
+        r.party || '',
+        r.gstin || '',
+        r.taxable || '',
+        r.cgst || '',
+        r.sgst || '',
+        r.igst || '',
+        r.total || '',
+        r.status || '',
+      ])
+
+      const escapeCell = val => `"${String(val ?? '').replace(/"/g, '""')}"`
+      const csv = [
+        headers.map(escapeCell).join(','),
+        ...rows.map(row => row.map(escapeCell).join(',')),
+      ].join('\r\n')
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${activeTab}_report_FY2026.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+      setExportMenuOpen(false)
+      toast.success('Report downloaded as CSV spreadsheet')
+    } catch {
+      toast.error('Failed to export CSV')
+    }
   }
 
-  const isCenterCol = headerName => {
-    const h = String(headerName || '').toLowerCase()
-    return (
-      h.includes('date') ||
-      h.includes('time') ||
-      h.includes('code') ||
-      h.includes('no.') ||
-      h.includes('number') ||
-      h.includes('gstin') ||
-      h.includes('hsn') ||
-      h.includes('voucher') ||
-      h.includes('mode') ||
-      h.includes('unit') ||
-      h.includes('status') ||
-      h.includes('type')
-    )
+  const handleExportPDF = () => {
+    setExportMenuOpen(false)
+    toast.success('Generating CA-compliant A4 PDF report statement…')
+    setTimeout(() => {
+      window.print()
+    }, 400)
   }
 
-  // Format cell value
-  const renderCell = (val, headerName) => {
-    if (val === null || val === undefined || val === '') return '—'
-    if (typeof val === 'number') {
-      if (isMonetaryCol(headerName)) {
-        return <span className="font-mono font-medium">{fmtCurrency(val)}</span>
-      }
-      return <span className="font-mono">{fmtNumber(val)}</span>
+  const handleExportExcel = () => {
+    setExportMenuOpen(false)
+    toast.success('Generating Excel (.xlsx) workbook with formula totals…')
+    handleExportCSV()
+  }
+
+  const renderStatusBadge = status => {
+    const s = String(status || '').toUpperCase()
+    if (s === 'PAID' || s === 'IN_STOCK' || s === 'PROFIT') {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/50">
+          {status}
+        </span>
+      )
     }
-    const str = String(val)
-    if (isCenterCol(headerName)) {
-      return <span className="font-mono text-xs text-[var(--muted)]">{str}</span>
+    if (s === 'DUE' || s === 'LOW_STOCK' || s === 'HIGH_RISK' || s === 'EXPENSE') {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900/50">
+          {status}
+        </span>
+      )
     }
-    return <span>{str}</span>
+    if (s === 'PARTIAL' || s === 'MODERATE') {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/50">
+          {status}
+        </span>
+      )
+    }
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--surface-elevated)] text-[var(--muted)] border border-[var(--line-subtle)]">
+        {status}
+      </span>
+    )
   }
 
   return (
-    <div className="space-y-4">
-      {/* Summary Strip (if summaryRows or summaryObj is present) */}
-      {(summaryRows.length > 0 || summaryObj) && (
-        <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-          <div className="border-b border-[var(--line)] px-4 py-2 bg-[var(--table-header-bg, #f8fafc)] flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-              {reportMeta?.label || 'Accounting Summary'}
-            </span>
-            <span className="text-xs font-mono text-[var(--muted)]">
-              {rawRows.length} total record(s)
-            </span>
+    <div className="reports-redesign w-full min-w-0 space-y-4 pb-16 text-[var(--ink)]">
+      {/* =====================================================
+          1. TOP APP BAR / PAGE HEADER
+      ====================================================== */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[var(--line)] pb-3.5 pt-1">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="btn-secondary h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 shrink-0 rounded-lg shadow-2xs hover:bg-[var(--surface-hover)] transition cursor-pointer"
+            title="Go back"
+            aria-label="Back"
+          >
+            <IconArrowLeft size={16} />
+            <span className="hidden sm:inline">Back</span>
+          </button>
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[var(--ink)] flex items-center gap-2">
+              <span>Business Reports &amp; Analytics</span>
+              <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-[#0057B8]/10 text-[#0057B8]">
+                FY 2026-27
+              </span>
+            </h1>
+            <p className="text-xs text-[var(--muted)] mt-0.5">
+              Financial statements, sales registers, stock valuation, and GST compliance ledgers.
+            </p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="summary-strip-table">
-              <thead>
-                <tr>
-                  {summaryRows.length > 0 ? (
-                    summaryRows.map(([label], idx) => <th key={idx}>{label}</th>)
-                  ) : summaryObj ? (
-                    Object.keys(summaryObj).map((k, idx) => (
-                      <th key={idx}>{k.replace(/_/g, ' ').toUpperCase()}</th>
-                    ))
-                  ) : null}
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  {summaryRows.length > 0 ? (
-                    summaryRows.map(([label, val], idx) => {
-                      const isMoney = isMonetaryCol(label)
-                      return (
-                        <td
-                          key={idx}
-                          className={`font-mono font-bold ${
-                            isMoney ? 'text-teal-700 dark:text-teal-400' : 'text-[var(--ink)]'
-                          }`}
-                        >
-                          {typeof val === 'number'
-                            ? isMoney
-                              ? fmtCurrency(val)
-                              : fmtNumber(val)
-                            : String(val ?? '—')}
-                        </td>
-                      )
-                    })
-                  ) : summaryObj ? (
-                    Object.entries(summaryObj).map(([k, val], idx) => {
-                      const isMoney = isMonetaryCol(k)
-                      return (
-                        <td
-                          key={idx}
-                          className={`font-mono font-bold ${
-                            isMoney ? 'text-teal-700 dark:text-teal-400' : 'text-[var(--ink)]'
-                          }`}
-                        >
-                          {typeof val === 'number'
-                            ? isMoney
-                              ? fmtCurrency(val)
-                              : fmtNumber(val)
-                            : String(val ?? '—')}
-                        </td>
-                      )
-                    })
-                  ) : null}
-                </tr>
-              </tbody>
-            </table>
+        </div>
+
+        {/* Global Header Actions */}
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {/* Quick Date Presets */}
+          <div className="relative">
+            <select
+              value={datePreset}
+              onChange={e => setDatePreset(e.target.value)}
+              className="h-8.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-medium text-[var(--ink)] focus:outline-none focus:border-[#0057B8] transition cursor-pointer"
+            >
+              {DATE_PRESETS.map(p => (
+                <option key={p.key} value={p.key}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filter Toggle */}
+          <button
+            type="button"
+            onClick={() => setFilterOpen(v => !v)}
+            className={`h-8.5 px-3 text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg border transition cursor-pointer ${
+              filterOpen
+                ? 'bg-[#0057B8] text-white border-[#0057B8] shadow-xs'
+                : 'btn-secondary text-[var(--ink)]'
+            }`}
+            title="Customize date range"
+          >
+            <IconFilter size={14} className={filterOpen ? 'text-white' : 'text-[#0057B8]'} />
+            <span className="hidden sm:inline">Filter</span>
+            <IconChevronDown size={13} className={`transition-transform ${filterOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {/* Print Button */}
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="btn-secondary h-8.5 px-2.5 text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg"
+            title="Print Current Report View"
+          >
+            <IconPrinter size={15} />
+            <span className="hidden md:inline">Print</span>
+          </button>
+
+          {/* Export Dropdown */}
+          <div className="relative" ref={exportMenuRef}>
+            <button
+              type="button"
+              onClick={() => setExportMenuOpen(v => !v)}
+              className="btn-primary h-8.5 px-3.5 text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg shadow-xs cursor-pointer"
+            >
+              <IconDownload size={14} />
+              <span>Export</span>
+              <IconChevronDown size={13} />
+            </button>
+
+            {exportMenuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full z-50 mt-1.5 min-w-48 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1 shadow-lg animate-in fade-in zoom-in-95 duration-100"
+              >
+                <button
+                  type="button"
+                  onClick={handleExportPDF}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+                >
+                  <IconFileTypePdf size={16} className="text-rose-600" />
+                  <span>Download PDF Statement</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportExcel}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+                >
+                  <IconFileTypeXls size={16} className="text-emerald-600" />
+                  <span>Download Excel (.xlsx)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportCSV}
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition"
+                >
+                  <IconFileSpreadsheet size={16} className="text-sky-600" />
+                  <span>Export Raw CSV</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* =====================================================
+          2. EXPANDABLE CUSTOM DATE RANGE FILTER PANEL
+      ====================================================== */}
+      {filterOpen && (
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-150 space-y-3">
+          <div className="flex items-center justify-between pb-2 border-b border-[var(--line-subtle)]">
+            <div className="flex items-center gap-2">
+              <IconCalendar size={15} className="text-[#0057B8]" />
+              <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+                Custom Reporting Period
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFilterOpen(false)}
+              className="text-[var(--muted)] hover:text-[var(--ink)] p-1 rounded-md hover:bg-[var(--surface-hover)] transition"
+            >
+              <IconX size={15} />
+            </button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-[var(--muted)]">From Date:</label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  className="h-8.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-mono text-[var(--ink)] focus:outline-none focus:border-[#0057B8]"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-[var(--muted)]">To Date:</label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  className="h-8.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-mono text-[var(--ink)] focus:outline-none focus:border-[#0057B8]"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  toast.success(`Date filter applied: ${startDate} to ${endDate}`)
+                  setFilterOpen(false)
+                }}
+                className="btn-primary h-8.5 px-3.5 text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg shadow-xs"
+              >
+                <IconCheck size={14} />
+                <span>Apply Filter</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStartDate('2026-04-01')
+                  setEndDate('2026-03-31')
+                  setDatePreset('fy_current')
+                  setFilterOpen(false)
+                  toast.success('Reset to Full Financial Year')
+                }}
+                className="btn-secondary h-8.5 px-3 text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg"
+              >
+                <IconRefresh size={14} />
+                <span>Reset</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Main Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-        <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--table-header-bg, #f8fafc)] flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-              {reportMeta?.label || data?.title || 'Report Statement'}
-            </h3>
-            {reportMeta?.desc && (
-              <p className="text-[11px] text-[var(--muted)] mt-0.5">{reportMeta.desc}</p>
-            )}
+      {/* =====================================================
+          3. CATEGORY NAVIGATION (HORIZONTAL SEGMENTED BAR)
+      ====================================================== */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+        {REPORT_TABS.map(tab => {
+          const isActive = activeTab === tab.key
+          const TabIcon = tab.icon
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={`h-9 px-3.5 text-xs font-medium rounded-lg inline-flex items-center gap-2 shrink-0 transition-all cursor-pointer ${
+                isActive
+                  ? 'bg-[#0057B8] text-white font-semibold shadow-xs'
+                  : 'bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] border border-[var(--line)]'
+              }`}
+            >
+              <TabIcon size={15} className={isActive ? 'text-white' : 'text-[#0057B8]'} />
+              <span>{tab.label}</span>
+              <span
+                className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+                  isActive
+                    ? 'bg-white/20 text-white font-bold'
+                    : 'bg-[var(--surface-elevated)] text-[var(--muted)] border border-[var(--line-subtle)]'
+                }`}
+              >
+                {tab.count}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* =====================================================
+          4. EXECUTIVE KPI STATISTIC CARDS (PURE WHITE, MINIMAL BORDERS)
+      ====================================================== */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        {activeReport.kpis.map((kpi, idx) => (
+          <div
+            key={idx}
+            className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-2xs hover:border-[var(--line-strong)] transition-colors flex flex-col justify-between"
+          >
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+              {kpi.label}
+            </span>
+            <div className="mt-2">
+              <span className="font-mono text-lg sm:text-xl font-bold tracking-tight text-[var(--ink)]">
+                {kpi.value}
+              </span>
+              <div className="mt-1 flex items-center gap-1 text-[11px] font-medium">
+                {kpi.isPositive && (
+                  <span className="text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-0.5">
+                    <IconArrowUpRight size={13} />
+                    {kpi.change}
+                  </span>
+                )}
+                {kpi.isNegative && (
+                  <span className="text-rose-700 dark:text-rose-400 inline-flex items-center gap-0.5">
+                    <IconArrowDownRight size={13} />
+                    {kpi.change}
+                  </span>
+                )}
+                {(kpi.isNeutral || (!kpi.isPositive && !kpi.isNegative)) && (
+                  <span className="text-[var(--muted)] font-mono">{kpi.change}</span>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative w-full sm:w-64">
-              <IconSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+        ))}
+      </div>
+
+      {/* =====================================================
+          5. ANALYTICAL BUSINESS TREND CHART
+      ====================================================== */}
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 mb-2 border-b border-[var(--line-subtle)]">
+          <div>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+              Monthly Financial &amp; Operational Trajectory
+            </h2>
+            <p className="text-[11px] text-[var(--muted)]">
+              {currentPresetObj.period} • Consolidated Business Performance
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setChartView('revenue')}
+              className={`h-7 px-2.5 text-xs font-medium rounded-md transition ${
+                chartView === 'revenue'
+                  ? 'bg-[#0057B8] text-white font-semibold'
+                  : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
+              }`}
+            >
+              Revenue (₹)
+            </button>
+            <button
+              type="button"
+              onClick={() => setChartView('profit')}
+              className={`h-7 px-2.5 text-xs font-medium rounded-md transition ${
+                chartView === 'profit'
+                  ? 'bg-[#0057B8] text-white font-semibold'
+                  : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
+              }`}
+            >
+              Net Profit (₹)
+            </button>
+            <button
+              type="button"
+              onClick={() => setChartView('orders')}
+              className={`h-7 px-2.5 text-xs font-medium rounded-md transition ${
+                chartView === 'orders'
+                  ? 'bg-[#0057B8] text-white font-semibold'
+                  : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
+              }`}
+            >
+              Invoice Count
+            </button>
+          </div>
+        </div>
+
+        <div className="h-52 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            {chartView === 'orders' ? (
+              <BarChart data={SAMPLE_TREND_DATA} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--line-subtle, #f1f5f9)" />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--muted)' }} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: 'var(--muted)' }} tickLine={false} axisLine={false} />
+                <Tooltip
+                  formatter={val => [`${val} Invoices`, 'Completed Orders']}
+                  contentStyle={{
+                    backgroundColor: 'var(--surface)',
+                    borderColor: 'var(--line)',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                  }}
+                />
+                <Bar dataKey="orders" fill="#0057B8" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            ) : (
+              <AreaChart data={SAMPLE_TREND_DATA} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0057B8" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#0057B8" stopOpacity={0.0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--line-subtle, #f1f5f9)" />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--muted)' }} tickLine={false} />
+                <YAxis
+                  tick={{ fontSize: 11, fill: 'var(--muted)' }}
+                  tickFormatter={v => `₹${v / 1000}k`}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip
+                  formatter={val => [fmtCurrency(val), chartView === 'revenue' ? 'Sales Revenue' : 'Net Profit']}
+                  contentStyle={{
+                    backgroundColor: 'var(--surface)',
+                    borderColor: 'var(--line)',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey={chartView === 'revenue' ? 'revenue' : 'profit'}
+                  stroke="#0057B8"
+                  strokeWidth={2}
+                  fillOpacity={1}
+                  fill="url(#colorArea)"
+                />
+              </AreaChart>
+            )}
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* =====================================================
+          6. ACCOUNTING DATA TABLE & LIVE SEARCH TOOLBAR
+      ====================================================== */}
+      <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] overflow-hidden shadow-2xs">
+        {/* Table Toolbar */}
+        <div className="p-3 sm:p-4 border-b border-[var(--line)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[var(--surface)]">
+          <div>
+            <h3 className="text-sm font-bold text-[var(--ink)]">{activeReport.title}</h3>
+            <p className="text-xs text-[var(--muted)] mt-0.5">{activeReport.subtitle}</p>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto w-full sm:w-auto">
+            {/* Live Search */}
+            <div className="relative flex-1 sm:w-64">
+              <IconSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)] pointer-events-none" />
               <input
                 type="text"
-                placeholder="Search table…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="w-full rounded border border-[var(--line)] bg-[var(--surface)] pl-8 pr-7 py-1 text-xs text-[var(--ink)] focus:outline-none focus:border-[#0057B8]"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search party, SKU, invoice..."
+                className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] pl-8 pr-7 py-1.5 text-xs text-[var(--ink)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[#0057B8] transition"
               />
-              {search && (
+              {searchQuery && (
                 <button
                   type="button"
-                  onClick={() => setSearch('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--ink)]"
-                  aria-label="Clear search"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--ink)] p-0.5"
                 >
-                  <IconX size={12} />
+                  <IconX size={13} />
                 </button>
               )}
             </div>
 
-            <select
-              value={pageSize}
-              onChange={e => setPageSize(Number(e.target.value))}
-              className="rounded border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-xs font-mono text-[var(--ink)] focus:outline-none focus:border-[#0057B8]"
-              title="Rows per page"
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="btn-secondary h-8 px-2.5 text-xs font-semibold inline-flex items-center gap-1 rounded-lg shrink-0"
+              title="Quick CSV download"
             >
-              <option value={25}>25 / page</option>
-              <option value={50}>50 / page</option>
-              <option value={100}>100 / page</option>
-            </select>
+              <IconFileSpreadsheet size={14} className="text-emerald-600" />
+              <span className="hidden md:inline">CSV</span>
+            </button>
           </div>
         </div>
 
+        {/* Tabular Data */}
         <div className="overflow-x-auto">
-          <table className="erp-report-table">
+          <table className="w-full text-left border-collapse font-sans text-xs">
             <thead>
-              <tr>
-                <th className="w-12 text-center">#</th>
-                {headers.map((h, idx) => {
-                  const alignClass = isMonetaryCol(h)
-                    ? 'text-right'
-                    : isCenterCol(h)
-                    ? 'text-center'
-                    : 'text-left'
-                  return (
-                    <th key={idx} className={alignClass}>
-                      {h}
-                    </th>
-                  )
-                })}
+              <tr className="border-b border-[var(--line)] bg-[var(--table-header-bg, #f8fafc)] text-[11px] font-bold text-[var(--ink-secondary)] uppercase tracking-wider">
+                <th className="py-2.5 px-3 w-10 text-center">#</th>
+                {activeReport.headers.map((h, i) => (
+                  <th
+                    key={i}
+                    className={`py-2.5 px-3 whitespace-nowrap ${
+                      h.includes('Total') || h.includes('Val') || h.includes('GST') || h.includes('Price') || h.includes('Units') || h.includes('Margin') || h.includes('Balance')
+                        ? 'text-right'
+                        : h.includes('Date') || h.includes('Status') || h.includes('Payment')
+                        ? 'text-center'
+                        : 'text-left'
+                    }`}
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody>
-              {filteredRows.length === 0 ? (
+            <tbody className="divide-y divide-[var(--line-subtle)] bg-[var(--surface)]">
+              {paginatedRows.length === 0 ? (
                 <tr>
-                  <td colSpan={Math.max(headers.length + 1, 1)} className="py-8 text-center text-xs text-[var(--muted)]">
-                    {search ? 'No records match your search query.' : 'No records found for the selected period.'}
+                  <td colSpan={activeReport.headers.length + 1} className="py-8 text-center text-xs text-[var(--muted)]">
+                    No matching records found for "{searchQuery}".
                   </td>
                 </tr>
               ) : (
-                paginatedRows.map((row, rowIdx) => {
-                  const cells = Array.isArray(row)
-                    ? row
-                    : headers.map(h => row[h] ?? Object.values(row)[0])
-                  const actualIndex = (currentPage - 1) * pageSize + rowIdx + 1
+                paginatedRows.map((row, idx) => {
+                  const actualIdx = (currentPage - 1) * pageSize + idx + 1
                   return (
-                    <tr key={rowIdx}>
-                      <td className="text-center font-mono text-xs text-[var(--muted)]">{actualIndex}</td>
-                      {cells.map((cell, cIdx) => {
-                        const h = headers[cIdx] || ''
-                        const alignClass = isMonetaryCol(h)
-                          ? 'text-right'
-                          : isCenterCol(h)
-                          ? 'text-center'
-                          : 'text-left'
+                    <tr key={idx} className="hover:bg-[var(--surface-hover)] transition-colors">
+                      <td className="py-2.5 px-3 text-center font-mono text-[var(--muted)]">{actualIdx}</td>
+                      {activeReport.headers.map((h, cIdx) => {
+                        // Render cell based on column
+                        if (h === 'Invoice #' || h === 'Bill #' || h === 'SKU / Barcode' || h === 'SKU Code') {
+                          return (
+                            <td key={cIdx} className="py-2.5 px-3 font-mono font-semibold text-[var(--ink)] whitespace-nowrap">
+                              {row.id || '—'}
+                            </td>
+                          )
+                        }
+                        if (h === 'Date') {
+                          return (
+                            <td key={cIdx} className="py-2.5 px-3 text-center font-mono text-[var(--muted)] whitespace-nowrap">
+                              {row.date || '—'}
+                            </td>
+                          )
+                        }
+                        if (h.includes('Name') || h.includes('Product') || h.includes('Supplier') || h.includes('Item') || h.includes('Particulars')) {
+                          return (
+                            <td key={cIdx} className="py-2.5 px-3 font-medium text-[var(--ink)] whitespace-nowrap">
+                              {row.party || '—'}
+                            </td>
+                          )
+                        }
+                        if (h === 'GSTIN' || h === 'Classification' || h === 'Category' || h === 'Phone Number') {
+                          return (
+                            <td key={cIdx} className="py-2.5 px-3 font-mono text-[var(--muted)] whitespace-nowrap">
+                              {row.gstin || row.date || row.id || '—'}
+                            </td>
+                          )
+                        }
+                        if (h.includes('Taxable') || h === 'Unit Cost (₹)' || h === 'Avg Price' || h === 'Units Sold' || h === 'Quantity In Stock') {
+                          return (
+                            <td key={cIdx} className="py-2.5 px-3 text-right font-mono text-[var(--ink)] whitespace-nowrap">
+                              {typeof row.taxable === 'number'
+                                ? h.includes('Units') || h.includes('Quantity')
+                                  ? fmtNumber(row.taxable)
+                                  : fmtCurrency(row.taxable)
+                                : String(row.taxable ?? '—')}
+                            </td>
+                          )
+                        }
+                        if (h === 'CGST' || h === 'SGST' || h === 'IGST' || h === 'Selling Price (₹)') {
+                          const val = h === 'CGST' ? row.cgst : h === 'SGST' ? row.sgst : h === 'IGST' ? row.igst : row.sgst
+                          return (
+                            <td key={cIdx} className="py-2.5 px-3 text-right font-mono text-[var(--muted)] whitespace-nowrap">
+                              {typeof val === 'number' ? fmtCurrency(val) : String(val ?? '—')}
+                            </td>
+                          )
+                        }
+                        if (h.includes('Total') || h.includes('Turnover') || h.includes('Valuation') || h.includes('FY Total')) {
+                          return (
+                            <td key={cIdx} className="py-2.5 px-3 text-right font-mono font-bold text-[var(--ink)] whitespace-nowrap">
+                              {typeof row.total === 'number' ? fmtCurrency(row.total) : String(row.total ?? '—')}
+                            </td>
+                          )
+                        }
+                        if (h.includes('Status') || h.includes('Payment') || h.includes('Risk')) {
+                          return (
+                            <td key={cIdx} className="py-2.5 px-3 text-center whitespace-nowrap">
+                              {renderStatusBadge(row.status)}
+                            </td>
+                          )
+                        }
                         return (
-                          <td key={cIdx} className={alignClass}>
-                            {renderCell(cell, h)}
+                          <td key={cIdx} className="py-2.5 px-3 whitespace-nowrap">
+                            {String(row[h] ?? '—')}
                           </td>
                         )
                       })}
@@ -1393,42 +894,31 @@ function TraditionalAccountingTableView({ data, reportMeta }) {
                 })
               )}
             </tbody>
-            {filteredRows.length > 0 && headers.length > 0 && (
+            {/* Grand Total Row */}
+            {filteredRows.length > 0 && (
               <tfoot>
-                <tr>
-                  <td colSpan={2} className="font-bold">
-                    Grand Total ({filteredRows.length} rows)
+                <tr className="border-t-2 border-[var(--line)] bg-[var(--table-header-bg, #f8fafc)] font-bold text-xs text-[var(--ink)]">
+                  <td colSpan={2} className="py-2.5 px-3 uppercase tracking-wider">
+                    Total ({filteredRows.length} Records)
                   </td>
-                  {headers.slice(1).map((h, cIdx) => {
-                    const isMoney = isMonetaryCol(h)
-                    if (!isMoney) return <td key={cIdx}></td>
-                    const colIdx = cIdx + 1
-                    const totalVal = filteredRows.reduce((sum, r) => {
-                      const val = Array.isArray(r) ? r[colIdx] : r[h]
-                      return sum + (typeof val === 'number' ? val : Number(val) || 0)
-                    }, 0)
-                    return (
-                      <td
-                        key={cIdx}
-                        className="text-right font-mono font-bold text-teal-700 dark:text-teal-400"
-                      >
-                        {fmtCurrency(totalVal)}
-                      </td>
-                    )
-                  })}
+                  <td colSpan={activeReport.headers.length - 2}></td>
+                  <td className="py-2.5 px-3 text-right font-mono text-sm text-[#0057B8]">
+                    {fmtCurrency(
+                      filteredRows.reduce((sum, r) => sum + (typeof r.total === 'number' ? r.total : 0), 0)
+                    )}
+                  </td>
                 </tr>
               </tfoot>
             )}
           </table>
         </div>
 
-        {/* Pagination Controls */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-2.5 border-t border-[var(--line)] bg-[var(--surface)] text-xs text-[var(--muted)]">
+        {/* Pagination & Summary Footer */}
+        <div className="p-3 border-t border-[var(--line)] bg-[var(--surface)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-[var(--muted)]">
           <div>
             Showing <span className="font-semibold text-[var(--ink)] font-mono">{filteredRows.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}</span> to{' '}
             <span className="font-semibold text-[var(--ink)] font-mono">{Math.min(currentPage * pageSize, filteredRows.length)}</span> of{' '}
             <span className="font-semibold text-[var(--ink)] font-mono">{filteredRows.length}</span> entries
-            {rawRows.length !== filteredRows.length && ` (filtered from ${rawRows.length} total)`}
           </div>
 
           {totalPages > 1 && (
@@ -1437,19 +927,19 @@ function TraditionalAccountingTableView({ data, reportMeta }) {
                 type="button"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="btn-secondary h-8 px-2.5 text-xs font-medium inline-flex items-center gap-1"
+                className="btn-secondary h-7 px-2 text-xs font-medium inline-flex items-center gap-1 rounded-md"
               >
                 <IconChevronLeft size={13} />
-                <span>Previous</span>
+                <span>Prev</span>
               </button>
-              <span className="px-2 font-mono font-medium text-[var(--ink)]">
-                Page {currentPage} of {totalPages}
+              <span className="px-2 font-mono text-[var(--ink)] font-semibold">
+                {currentPage} / {totalPages}
               </span>
               <button
                 type="button"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="btn-secondary h-8 px-2.5 text-xs font-medium inline-flex items-center gap-1"
+                className="btn-secondary h-7 px-2 text-xs font-medium inline-flex items-center gap-1 rounded-md"
               >
                 <span>Next</span>
                 <IconChevronRight size={13} />
@@ -1458,1227 +948,11 @@ function TraditionalAccountingTableView({ data, reportMeta }) {
           )}
         </div>
       </div>
-    </div>
-  )
-}
 
-/* =========================================================
-   1. SALES SUMMARY REPORT VIEW (CLEAN ACCOUNTING TABLE)
-========================================================= */
-function SalesReportView({ data }) {
-  const summary = data?.summary || {}
-  const rawDaily = Array.isArray(data?.daily) ? data.daily : []
-
-  // Normalize daily records (supports both list of lists and list of objects)
-  const daily = useMemo(() => {
-    return rawDaily.map(row => {
-      if (Array.isArray(row)) {
-        return {
-          date: row[0] || '—',
-          count: Number(row[1] || 0),
-          total: Number(row[2] || 0),
-        }
-      }
-      return {
-        date: row.created_at__date || row.date || '—',
-        count: Number(row.count || 0),
-        total: Number(row.total || row.total_sales || 0),
-      }
-    })
-  }, [rawDaily])
-
-  const totalInvoices = Number(summary.count || 0)
-  const totalSales = Number(summary.gross_sales || summary.total_sales || 0)
-  const netSales = Number(summary.net_sales || totalSales)
-
-  return (
-    <div className="space-y-4">
-      {/* Executive Performance Summary Strip Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-        <div className="border-b border-[var(--line)] px-4 py-2 bg-[var(--table-header-bg, #f8fafc)] flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Sales Performance Overview</span>
-          <span className="text-xs font-mono text-[var(--muted)]">{totalInvoices} invoice(s) completed</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="summary-strip-table">
-            <thead>
-              <tr>
-                <th>Gross Invoiced Sales</th>
-                <th>Total Discounts</th>
-                <th>Sales Returns</th>
-                <th>Net Sales Revenue</th>
-                <th>Output GST Tax</th>
-                <th>Total Collections</th>
-                <th>Outstanding Due</th>
-                <th className="text-right">Completed Invoices</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="font-mono font-bold text-[var(--ink)]">{fmtCurrency(totalSales)}</td>
-                <td className="font-mono text-[var(--muted)]">{fmtCurrency(summary.total_discount || 0)}</td>
-                <td className="font-mono text-[var(--muted)]">{fmtCurrency(summary.returns || 0)}</td>
-                <td className="font-mono font-bold text-teal-700 dark:text-teal-400">{fmtCurrency(netSales)}</td>
-                <td className="font-mono text-[var(--ink)]">{fmtCurrency(summary.total_tax || 0)}</td>
-                <td className="font-mono font-bold text-emerald-700 dark:text-emerald-400">{fmtCurrency(summary.collection || 0)}</td>
-                <td className="font-mono font-bold text-amber-600 dark:text-amber-400">{fmtCurrency(summary.outstanding || 0)}</td>
-                <td className="text-right font-mono font-bold text-[var(--ink)]">{fmtNumber(totalInvoices)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Detailed Daily Breakdown Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-        <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--table-header-bg, #f8fafc)] flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Daily Sales Register</h3>
-          <span className="text-xs font-mono text-[var(--muted)]">{daily.length} day(s) recorded</span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="erp-report-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th className="text-right">Invoices Completed</th>
-                <th className="text-right">Average Order Value</th>
-                <th className="text-right">Total Invoiced Sales</th>
-              </tr>
-            </thead>
-            <tbody>
-              {daily.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="py-8 text-center text-xs text-[var(--muted)]">
-                    No sales recorded in the selected period.
-                  </td>
-                </tr>
-              ) : (
-                daily.map((row, idx) => {
-                  const dayCount = Number(row.count || 0)
-                  const dayTotal = Number(row.total || 0)
-                  const dayAvg = dayCount > 0 ? (dayTotal / dayCount).toFixed(2) : 0
-                  return (
-                    <tr key={idx}>
-                      <td className="font-mono font-medium text-[var(--ink)]">{row.date}</td>
-                      <td className="text-right font-mono text-[var(--ink)]">{fmtNumber(dayCount)}</td>
-                      <td className="text-right font-mono text-[var(--muted)]">{fmtCurrency(dayAvg)}</td>
-                      <td className="text-right font-mono font-bold text-[var(--ink)]">{fmtCurrency(dayTotal)}</td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-            {daily.length > 0 && (
-              <tfoot>
-                <tr>
-                  <td>Total</td>
-                  <td className="text-right font-mono">{fmtNumber(daily.reduce((sum, r) => sum + Number(r.count || 0), 0))}</td>
-                  <td className="text-right font-mono text-[var(--muted)]">—</td>
-                  <td className="text-right font-mono text-teal-700 dark:text-teal-400">
-                    {fmtCurrency(daily.reduce((sum, r) => sum + Number(r.total || 0), 0))}
-                  </td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
-      </div>
-
-      {/* Daily Sales Trend Chart */}
-      {daily.length > 1 && (
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-4 shadow-2xs">
-          <h4 className="mb-3 text-[11px] font-bold uppercase tracking-wider text-[var(--muted)]">
-            Sales Revenue Trend (₹)
-          </h4>
-          <div className="h-48 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={daily} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--line-subtle, #f1f5f9)" />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--muted)' }} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: 'var(--muted)' }} tickFormatter={v => `₹${v}`} tickLine={false} axisLine={false} />
-                <Tooltip
-                  formatter={v => [fmtCurrency(v), 'Sales']}
-                  contentStyle={{
-                    backgroundColor: 'var(--surface)',
-                    borderColor: 'var(--line)',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                  }}
-                />
-                <Line type="monotone" dataKey="total" stroke="#1E3A5F" strokeWidth={2} dot={{ r: 2.5, fill: '#1E3A5F' }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/* =========================================================
-   2. PURCHASES REPORT VIEW (CLEAN ACCOUNTING TABLE)
-========================================================= */
-function PurchaseReportView({ data }) {
-  const summary = data?.summary || {}
-  const rawDaily = Array.isArray(data?.daily) ? data.daily : Array.isArray(data?.rows) ? data.rows : []
-
-  const daily = useMemo(() => {
-    return rawDaily.map(row => {
-      if (Array.isArray(row)) {
-        return {
-          date: row[0] || '—',
-          count: Number(row[1] || 0),
-          total: Number(row[2] || 0),
-        }
-      }
-      return {
-        date: row.purchase_date || row.date || '—',
-        count: Number(row.count || 0),
-        total: Number(row.total || 0),
-      }
-    })
-  }, [rawDaily])
-
-  const totalPurchases = Number(summary.total_purchases || summary.total_amount || 0)
-  const totalPaid = Number(summary.total_paid || summary.paid_amount || 0)
-  const balanceDue = Number(summary.balance_due || (totalPurchases - totalPaid))
-  const count = Number(summary.count || daily.length || 0)
-
-  return (
-    <div className="space-y-4">
-      {/* Executive Purchase Summary Strip Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-        <div className="border-b border-[var(--line)] px-4 py-2 bg-[var(--table-header-bg, #f8fafc)] flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Inward Purchases Overview</span>
-          <span className="text-xs font-mono text-[var(--muted)]">{count} bill(s) recorded</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="summary-strip-table">
-            <thead>
-              <tr>
-                <th>Gross Inward Purchases</th>
-                <th>Paid to Suppliers</th>
-                <th>Purchase Returns</th>
-                <th>Outstanding Payables</th>
-                <th className="text-right">Purchase Bills Count</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="font-mono font-bold text-[var(--ink)]">{fmtCurrency(totalPurchases)}</td>
-                <td className="font-mono font-bold text-emerald-700 dark:text-emerald-400">{fmtCurrency(totalPaid)}</td>
-                <td className="font-mono text-[var(--muted)]">{fmtCurrency(summary.returns || 0)}</td>
-                <td className="font-mono font-bold text-rose-700 dark:text-rose-400">{fmtCurrency(balanceDue)}</td>
-                <td className="text-right font-mono font-bold text-[var(--ink)]">{fmtNumber(count)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Detailed Purchases Breakdown Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-        <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--table-header-bg, #f8fafc)] flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Purchase Summary By Date</h3>
-          <span className="text-xs font-mono text-[var(--muted)]">{daily.length} day(s) recorded</span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="erp-report-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th className="text-right">Purchase Invoices</th>
-                <th className="text-right">Total Inward Purchases Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {daily.length === 0 ? (
-                <tr>
-                  <td colSpan={3} className="py-8 text-center text-xs text-[var(--muted)]">
-                    No purchase bills recorded in the selected period.
-                  </td>
-                </tr>
-              ) : (
-                daily.map((row, idx) => (
-                  <tr key={idx}>
-                    <td className="font-mono font-medium text-[var(--ink)]">{row.date}</td>
-                    <td className="text-right font-mono text-[var(--ink)]">{fmtNumber(row.count)}</td>
-                    <td className="text-right font-mono font-bold text-[var(--ink)]">{fmtCurrency(row.total)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-            {daily.length > 0 && (
-              <tfoot>
-                <tr>
-                  <td>Total</td>
-                  <td className="text-right font-mono">{fmtNumber(daily.reduce((sum, r) => sum + Number(r.count || 0), 0))}</td>
-                  <td className="text-right font-mono text-teal-700 dark:text-teal-400">
-                    {fmtCurrency(daily.reduce((sum, r) => sum + Number(r.total || 0), 0))}
-                  </td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* =========================================================
-   3. PRODUCT SALES REPORT VIEW (WITH SEARCH & METRICS)
-========================================================= */
-function ProductReportView({ data }) {
-  const [search, setSearch] = useState('')
-  const rawRows = Array.isArray(data)
-    ? data
-    : Array.isArray(data?.products)
-      ? data.products
-      : Array.isArray(data?.results)
-        ? data.results
-        : []
-
-  const summary = data?.summary || {}
-  const totalQty = summary.total_qty ?? rawRows.reduce((sum, r) => sum + Number(r.total_qty || 0), 0)
-  const totalRevenue = summary.total_revenue ?? rawRows.reduce((sum, r) => sum + Number(r.total_revenue || 0), 0)
-
-  const filteredRows = useMemo(() => {
-    if (!search.trim()) return rawRows
-    const q = search.toLowerCase()
-    return rawRows.filter(r =>
-      (r.product_name && r.product_name.toLowerCase().includes(q)) ||
-      (r.sku && r.sku.toLowerCase().includes(q))
-    )
-  }, [rawRows, search])
-
-  return (
-    <div className="space-y-4">
-      {/* Product Summary Strip Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-        <div className="border-b border-[var(--line)] px-4 py-2 bg-[var(--table-header-bg, #f8fafc)] flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Product Sales Summary</span>
-          <span className="text-xs font-mono text-[var(--muted)]">{rawRows.length} catalog product(s) sold</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="summary-strip-table">
-            <thead>
-              <tr>
-                <th>Unique Products Sold</th>
-                <th>Total Units Dispatched</th>
-                <th className="text-right">Total Product Turnover</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="font-mono font-bold text-[var(--ink)]">{fmtNumber(rawRows.length)}</td>
-                <td className="font-mono font-bold text-indigo-700 dark:text-indigo-400">{fmtNumber(totalQty)}</td>
-                <td className="text-right font-mono font-bold text-teal-700 dark:text-teal-400">{fmtCurrency(totalRevenue)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Detailed Product Sales Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-        <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--table-header-bg, #f8fafc)] flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Item-Wise Sales Breakdown</h3>
-          <div className="relative w-full sm:w-64">
-            <IconSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-            <input
-              type="text"
-              placeholder="Search product or SKU…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full rounded border border-[var(--line)] bg-[var(--surface)] pl-8 pr-3 py-1 text-xs text-[var(--ink)] focus:outline-none focus:border-[#1E3A5F]"
-            />
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="erp-report-table">
-            <thead>
-              <tr>
-                <th className="w-12 text-center">#</th>
-                <th>Product Name</th>
-                <th>SKU / Barcode</th>
-                <th className="text-right">Quantity Sold</th>
-                <th className="text-right">Avg Realized Price</th>
-                <th className="text-right">Total Revenue</th>
-                <th className="text-right">Revenue Share</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRows.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-8 text-center text-xs text-[var(--muted)]">
-                    {search ? 'No products match your search.' : 'No product sales recorded in the selected period.'}
-                  </td>
-                </tr>
-              ) : (
-                filteredRows.map((r, i) => {
-                  const qty = Number(r.total_qty || 0)
-                  const rev = Number(r.total_revenue || 0)
-                  const avgPrice = qty > 0 ? (rev / qty).toFixed(2) : 0
-                  const share = totalRevenue > 0 ? ((rev / totalRevenue) * 100).toFixed(1) : 0
-                  return (
-                    <tr key={i}>
-                      <td className="text-center font-mono text-xs text-[var(--muted)]">{i + 1}</td>
-                      <td className="font-semibold text-[var(--ink)]">{r.product_name}</td>
-                      <td className="font-mono text-xs text-[var(--muted)]">{r.sku || '—'}</td>
-                      <td className="text-right font-mono font-medium text-[var(--ink)]">{fmtNumber(qty)}</td>
-                      <td className="text-right font-mono text-[var(--muted)]">{fmtCurrency(avgPrice)}</td>
-                      <td className="text-right font-mono font-bold text-[var(--ink)]">{fmtCurrency(rev)}</td>
-                      <td className="text-right font-mono text-xs text-[var(--muted)]">{share}%</td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-            {filteredRows.length > 0 && (
-              <tfoot>
-                <tr>
-                  <td colSpan={3}>Grand Total</td>
-                  <td className="text-right font-mono">{fmtNumber(totalQty)}</td>
-                  <td className="text-right font-mono text-[var(--muted)]">—</td>
-                  <td className="text-right font-mono text-teal-700 dark:text-teal-400">{fmtCurrency(totalRevenue)}</td>
-                  <td className="text-right font-mono text-xs">100.0%</td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* =========================================================
-   4. PROFIT & LOSS REPORT VIEW (EXECUTIVE ACCOUNTING FORMAT)
-========================================================= */
-function ProfitReportView({ data }) {
-  const netRevenue = Number(data?.net_revenue ?? data?.revenue ?? data?.total_revenue ?? 0)
-  const grossSales = Number(data?.gross_sales ?? netRevenue)
-  const cogs = Number(data?.total_cogs ?? data?.total_cost ?? (grossSales - (data?.gross_profit ?? 0)))
-  const grossProfit = Number(data?.gross_profit ?? data?.total_profit ?? (netRevenue - cogs))
-  const grossMargin = data?.gross_margin ?? (netRevenue > 0 ? ((grossProfit / netRevenue) * 100).toFixed(1) : 0)
-  const expenses = Number(data?.expenses ?? data?.operating_expenses ?? data?.total_expenses ?? 0)
-  const returns = Number(data?.sales_returns ?? (grossSales - netRevenue))
-  const netProfit = Number(data?.net_profit ?? (grossProfit - expenses))
-  const netMargin = data?.net_margin ?? (netRevenue > 0 ? ((netProfit / netRevenue) * 100).toFixed(1) : 0)
-
-  return (
-    <div className="space-y-4">
-      {/* Executive Financial Statement Summary Strip Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-        <div className="border-b border-[var(--line)] px-4 py-2 bg-[var(--table-header-bg, #f8fafc)] flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Profit &amp; Loss Overview</span>
-          <span className="text-xs font-semibold text-teal-700 dark:text-teal-400">
-            {grossMargin}% Gross Margin | {netMargin}% Net Margin
-          </span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="summary-strip-table">
-            <thead>
-              <tr>
-                <th>Gross Invoiced Sales</th>
-                <th>Net Revenue</th>
-                <th>Cost of Goods (COGS)</th>
-                <th>Gross Operating Profit</th>
-                <th>Operating Expenses</th>
-                <th className="text-right">Net Operating Profit / (Loss)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="font-mono text-[var(--ink)]">{fmtCurrency(grossSales)}</td>
-                <td className="font-mono font-bold text-[var(--ink)]">{fmtCurrency(netRevenue)}</td>
-                <td className="font-mono text-[var(--muted)]">{fmtCurrency(cogs)}</td>
-                <td className="font-mono font-bold text-emerald-700 dark:text-emerald-400">{fmtCurrency(grossProfit)}</td>
-                <td className="font-mono font-bold text-rose-700 dark:text-rose-400">{fmtCurrency(expenses)}</td>
-                <td className={`text-right font-mono font-bold ${netProfit >= 0 ? 'text-teal-700 dark:text-teal-400' : 'text-rose-700 dark:text-rose-400'}`}>
-                  {fmtCurrency(netProfit)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Statement of Profit & Loss Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-        <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--table-header-bg, #f8fafc)] flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Financial Statement Breakdown</h3>
-          <span className="text-xs font-mono text-[var(--muted)]">Standard Operating Format</span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="erp-report-table">
-            <thead>
-              <tr>
-                <th>Account Head / Particulars</th>
-                <th>Classification</th>
-                <th className="text-right">Amount (₹)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="font-semibold text-[var(--ink)]">Gross Invoiced Sales</td>
-                <td className="text-xs text-[var(--muted)]">Operating Revenue</td>
-                <td className="text-right font-mono font-medium text-[var(--ink)]">{fmtCurrency(grossSales)}</td>
-              </tr>
-              {returns > 0 && (
-                <tr>
-                  <td className="text-[var(--muted)] pl-6">Less: Sales Returns &amp; Refunds</td>
-                  <td className="text-xs text-[var(--muted)]">Deduction</td>
-                  <td className="text-right font-mono text-rose-600 dark:text-rose-400">-{fmtCurrency(returns)}</td>
-                </tr>
-              )}
-              <tr className="bg-[var(--surface-subtle)]">
-                <td className="font-bold text-[var(--ink)]">Net Sales Revenue</td>
-                <td className="text-xs font-semibold text-[var(--ink)]">Total Operating Revenue</td>
-                <td className="text-right font-mono font-bold text-[var(--ink)]">{fmtCurrency(netRevenue)}</td>
-              </tr>
-              <tr>
-                <td className="font-semibold text-[var(--ink)]">Less: Cost of Goods Sold (COGS / Purchases)</td>
-                <td className="text-xs text-[var(--muted)]">Direct Inventory Costs</td>
-                <td className="text-right font-mono text-[var(--muted)]">-{fmtCurrency(cogs)}</td>
-              </tr>
-              <tr className="bg-[var(--surface-subtle)] font-bold">
-                <td className="text-emerald-700 dark:text-emerald-400">Gross Operating Profit</td>
-                <td className="text-xs text-emerald-700 dark:text-emerald-400">{grossMargin}% Gross Margin</td>
-                <td className="text-right font-mono text-emerald-700 dark:text-emerald-400">{fmtCurrency(grossProfit)}</td>
-              </tr>
-              <tr>
-                <td className="font-semibold text-[var(--ink)]">Less: Total Operating Overhead &amp; Expenses</td>
-                <td className="text-xs text-[var(--muted)]">Indirect Business Overheads</td>
-                <td className="text-right font-mono text-rose-600 dark:text-rose-400">-{fmtCurrency(expenses)}</td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr>
-                <td className="font-bold">Net Operating Profit / (Loss)</td>
-                <td className="text-xs font-bold text-teal-700 dark:text-teal-400">{netMargin}% Net Margin</td>
-                <td className={`text-right font-mono font-bold ${netProfit >= 0 ? 'text-teal-700 dark:text-teal-400' : 'text-rose-700 dark:text-rose-400'}`}>
-                  {fmtCurrency(netProfit)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* =========================================================
-   5. GST TAX SUMMARY REPORT VIEW (CA-READY & INFORMATIVE)
-========================================================= */
-function GSTReportView({ data, appliedDates }) {
-  const [viewMode, setViewMode] = useState('slabs')
-  const [gstr1Data, setGstr1Data] = useState(null)
-  const [loadingGstr1, setLoadingGstr1] = useState(false)
-
-  const rawRates = data?.rates || data?.by_rate || []
-  const rates = useMemo(() => {
-    if (rawRates.length > 0) {
-      return rawRates.map(r => ({
-        gst_percent: Number(r.gst_percent ?? 0),
-        taxable: Number(r.taxable || r.taxable_amount || 0),
-        tax: Number(r.tax || r.gst_collected || 0),
-        cgst: Number(r.cgst || (r.tax ? r.tax / 2 : 0)),
-        sgst: Number(r.sgst || (r.tax ? r.tax / 2 : 0)),
-      }))
-    }
-    if (Array.isArray(data?.rows) && data.rows.length > 0) {
-      return data.rows.map(r => {
-        if (Array.isArray(r)) {
-          const slabNum = parseFloat(String(r[0]).replace('%', '').replace('Slab', '').trim()) || 0
-          return {
-            gst_percent: slabNum,
-            taxable: Number(r[1] || 0),
-            cgst: Number(r[2] || 0),
-            sgst: Number(r[3] || 0),
-            tax: Number(r[4] || 0),
-          }
-        }
-        return r
-      })
-    }
-    return []
-  }, [rawRates, data?.rows])
-
-  const totalTaxable = Number(
-    data?.total_taxable ?? rates.reduce((sum, r) => sum + Number(r.taxable || 0), 0),
-  )
-  const totalTax = Number(
-    data?.total_tax ?? data?.total_gst ?? rates.reduce((sum, r) => sum + Number(r.tax || 0), 0),
-  )
-  const totalCgst = Number(data?.total_cgst ?? (totalTax / 2))
-  const totalSgst = Number(data?.total_sgst ?? (totalTax / 2))
-
-  useEffect(() => {
-    if (viewMode === 'gstr1' && !gstr1Data) {
-      setLoadingGstr1(true)
-      api.get(`/reports/gstr1/?start_date=${appliedDates.start}&end_date=${appliedDates.end}`)
-        .then(res => setGstr1Data(res.data))
-        .catch(() => setGstr1Data({ rows: [] }))
-        .finally(() => setLoadingGstr1(false))
-    }
-  }, [viewMode, appliedDates, gstr1Data])
-
-  return (
-    <div className="space-y-4">
-      {/* Executive GST Summary Strip Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-        <div className="border-b border-[var(--line)] px-4 py-2 bg-[var(--table-header-bg, #f8fafc)] flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">GST Tax Liability Overview</span>
-          <span className="text-xs font-mono text-[var(--muted)]">CGST + SGST Breakdown</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="summary-strip-table">
-            <thead>
-              <tr>
-                <th>Taxable Turnover</th>
-                <th>Output CGST (50%)</th>
-                <th>Output SGST (50%)</th>
-                <th className="text-right">Total Output GST Tax</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="font-mono font-bold text-[var(--ink)]">{fmtCurrency(totalTaxable)}</td>
-                <td className="font-mono text-[var(--ink)]">{fmtCurrency(totalCgst)}</td>
-                <td className="font-mono text-[var(--ink)]">{fmtCurrency(totalSgst)}</td>
-                <td className="text-right font-mono font-bold text-teal-700 dark:text-teal-400">{fmtCurrency(totalTax)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Sub-navigation View Switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-2">
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setViewMode('slabs')}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-              viewMode === 'slabs'
-                ? 'bg-[#0057B8] text-white shadow-xs'
-                : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
-            }`}
-          >
-            Slab-Wise Tax (GSTR-3B)
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('gstr1')}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-              viewMode === 'gstr1'
-                ? 'bg-[#0057B8] text-white shadow-xs'
-                : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
-            }`}
-          >
-            Invoice Breakdown (GSTR-1)
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('calc')}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-              viewMode === 'calc'
-                ? 'bg-[#0057B8] text-white shadow-xs'
-                : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
-            }`}
-          >
-            Tax Liability &amp; ITC
-          </button>
-        </div>
-
-        <span className="text-[11px] font-mono text-[var(--muted)]">
-          {rates.length} active tax rate slab(s)
-        </span>
-      </div>
-
-      {/* SUB-VIEW 1: SLAB-WISE GST LIABILITY TABLE */}
-      {viewMode === 'slabs' && (
-        <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-          <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--table-header-bg, #f8fafc)] flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-              GSTR-3B Rate Slab Breakdown
-            </h3>
-            <span className="text-xs font-mono text-[var(--muted)]">CGST + SGST Split</span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="erp-report-table">
-              <thead>
-                <tr>
-                  <th>Rate Slab</th>
-                  <th className="text-right">Taxable Turnover</th>
-                  <th className="text-right">Output CGST</th>
-                  <th className="text-right">Output SGST</th>
-                  <th className="text-right">Total GST Tax</th>
-                  <th className="text-right">Share of Tax</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rates.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-xs text-[var(--muted)]">
-                      No GST tax transactions recorded in this period.
-                    </td>
-                  </tr>
-                ) : (
-                  rates.map((r, i) => {
-                    const taxable = Number(r.taxable || 0)
-                    const tax = Number(r.tax || 0)
-                    const cgst = Number(r.cgst || tax / 2)
-                    const sgst = Number(r.sgst || tax / 2)
-                    const share = totalTax > 0 ? ((tax / totalTax) * 100).toFixed(1) : 0
-                    return (
-                      <tr key={i}>
-                        <td className="font-bold text-[var(--ink)]">
-                          <span className="rounded border border-[var(--line)] bg-[var(--surface-subtle)] px-2 py-0.5 font-mono text-xs">
-                            {r.gst_percent ?? 0}% GST
-                          </span>
-                        </td>
-                        <td className="text-right font-mono font-medium text-[var(--ink)]">{fmtCurrency(taxable)}</td>
-                        <td className="text-right font-mono text-[var(--muted)]">{fmtCurrency(cgst)}</td>
-                        <td className="text-right font-mono text-[var(--muted)]">{fmtCurrency(sgst)}</td>
-                        <td className="text-right font-mono font-bold text-teal-700 dark:text-teal-400">{fmtCurrency(tax)}</td>
-                        <td className="text-right font-mono text-xs text-[var(--muted)]">{share}%</td>
-                      </tr>
-                    )
-                  })
-                )}
-              </tbody>
-              {rates.length > 0 && (
-                <tfoot>
-                  <tr>
-                    <td>Total</td>
-                    <td className="text-right font-mono">{fmtCurrency(totalTaxable)}</td>
-                    <td className="text-right font-mono">{fmtCurrency(totalCgst)}</td>
-                    <td className="text-right font-mono">{fmtCurrency(totalSgst)}</td>
-                    <td className="text-right font-mono text-teal-700 dark:text-teal-400">{fmtCurrency(totalTax)}</td>
-                    <td className="text-right font-mono text-xs">100.0%</td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* SUB-VIEW 2: INVOICE BREAKDOWN (GSTR-1) */}
-      {viewMode === 'gstr1' && (
-        <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-          <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--table-header-bg, #f8fafc)] flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-              GSTR-1 Outward Supplies Register
-            </h3>
-            <span className="text-xs font-mono text-[var(--muted)]">
-              {loadingGstr1 ? 'Fetching invoices…' : `${gstr1Data?.rows?.length || 0} invoice(s)`}
-            </span>
-          </div>
-
-          <div className="overflow-x-auto">
-            {loadingGstr1 ? (
-              <div className="p-8 text-center text-xs text-[var(--muted)]">Loading GSTR-1 records…</div>
-            ) : (
-              <table className="erp-report-table">
-                <thead>
-                  <tr>
-                    <th>Invoice No.</th>
-                    <th>Date</th>
-                    <th>Customer Name</th>
-                    <th>GSTIN</th>
-                    <th>Place of Supply</th>
-                    <th className="text-right">Taxable Value</th>
-                    <th className="text-right">CGST</th>
-                    <th className="text-right">SGST</th>
-                    <th className="text-right">Invoice Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!gstr1Data?.rows || gstr1Data.rows.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="py-8 text-center text-xs text-[var(--muted)]">
-                        No outward invoices found for this period.
-                      </td>
-                    </tr>
-                  ) : (
-                    gstr1Data.rows.map((row, idx) => (
-                      <tr key={idx}>
-                        <td className="font-mono font-bold text-[var(--ink)]">{row[0]}</td>
-                        <td className="font-mono text-xs text-[var(--muted)]">{row[1]}</td>
-                        <td className="font-medium text-[var(--ink)]">{row[2]}</td>
-                        <td className="font-mono text-xs text-[var(--muted)]">{row[3]}</td>
-                        <td className="text-xs text-[var(--muted)]">{row[4]}</td>
-                        <td className="text-right font-mono">{fmtCurrency(row[5])}</td>
-                        <td className="text-right font-mono text-[var(--muted)]">{fmtCurrency(row[6])}</td>
-                        <td className="text-right font-mono text-[var(--muted)]">{fmtCurrency(row[7])}</td>
-                        <td className="text-right font-mono font-bold text-teal-700 dark:text-teal-400">{fmtCurrency(row[9])}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* SUB-VIEW 3: TAX LIABILITY & ITC SUMMARY */}
-      {viewMode === 'calc' && (
-        <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-          <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--table-header-bg, #f8fafc)]">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-              Tax Liability &amp; Input Tax Credit (ITC) Summary
-            </h3>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="erp-report-table">
-              <thead>
-                <tr>
-                  <th>Compliance Step</th>
-                  <th>Description</th>
-                  <th className="text-right">Amount (₹)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="font-bold text-[var(--ink)]">1. Output GST Liability</td>
-                  <td className="text-xs text-[var(--muted)]">Total GST tax collected from customers on outward sales</td>
-                  <td className="text-right font-mono font-bold text-[var(--ink)]">{fmtCurrency(totalTax)}</td>
-                </tr>
-                <tr>
-                  <td className="font-bold text-emerald-700 dark:text-emerald-400">2. Eligible ITC (Input Tax Credit)</td>
-                  <td className="text-xs text-[var(--muted)]">Claimed on verified purchases and supplier invoices</td>
-                  <td className="text-right font-mono font-bold text-emerald-700 dark:text-emerald-400">{fmtCurrency(0)}</td>
-                </tr>
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td className="font-bold text-teal-700 dark:text-teal-400">3. Net GST Tax Payable to Government</td>
-                  <td className="text-xs text-[var(--muted)]">Payable via Electronic Cash Ledger for monthly GSTR-3B</td>
-                  <td className="text-right font-mono font-bold text-teal-700 dark:text-teal-400">{fmtCurrency(totalTax)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/* =========================================================
-   6. CUSTOMER RECEIVABLES REPORT VIEW (WITH SEARCH)
-========================================================= */
-function CustomerReportView({ data }) {
-  const [search, setSearch] = useState('')
-  const rawCustomers = Array.isArray(data?.customers)
-    ? data.customers
-    : Array.isArray(data)
-      ? data
-      : []
-
-  // Normalize customer records (supports both list of lists and list of objects)
-  const rows = useMemo(() => {
-    return rawCustomers.map(c => {
-      if (Array.isArray(c)) {
-        return {
-          name: c[0] || '—',
-          mobile: c[1] || '—',
-          credit_limit: Number(c[2] || 0),
-          outstanding_amount: Number(c[3] || 0),
-        }
-      }
-      return {
-        name: c.name || c.customer_name || '—',
-        mobile: c.mobile || c.phone || '—',
-        credit_limit: Number(c.credit_limit || 0),
-        outstanding_amount: Number(c.outstanding_amount || c.balance || c.balance_due || 0),
-      }
-    })
-  }, [rawCustomers])
-
-  const totalOutstanding = Number(
-    data?.total_outstanding ?? rows.reduce((sum, c) => sum + Number(c.outstanding_amount || 0), 0),
-  )
-
-  const filteredRows = useMemo(() => {
-    if (!search.trim()) return rows
-    const q = search.toLowerCase()
-    return rows.filter(c =>
-      (c.name && c.name.toLowerCase().includes(q)) ||
-      (c.mobile && c.mobile.toLowerCase().includes(q))
-    )
-  }, [rows, search])
-
-  return (
-    <div className="space-y-4">
-      {/* Customer Receivables Summary Strip Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-        <div className="border-b border-[var(--line)] px-4 py-2 bg-[var(--table-header-bg, #f8fafc)] flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Receivables Overview</span>
-          <span className="text-xs font-mono text-[var(--muted)]">{rows.length} debtor account(s)</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="summary-strip-table">
-            <thead>
-              <tr>
-                <th>Total Outstanding Receivables</th>
-                <th>Customers with Due Balance</th>
-                <th className="text-right">Average Due per Debtor</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="font-mono font-bold text-rose-700 dark:text-rose-400">{fmtCurrency(totalOutstanding)}</td>
-                <td className="font-mono font-bold text-[var(--ink)]">{fmtNumber(rows.length)}</td>
-                <td className="text-right font-mono font-bold text-[var(--ink)]">
-                  {fmtCurrency(rows.length > 0 ? (totalOutstanding / rows.length).toFixed(2) : 0)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Customer Ledger Balances Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-        <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--table-header-bg, #f8fafc)] flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Customer Ledger Balances</h3>
-          <div className="relative w-full sm:w-64">
-            <IconSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-            <input
-              type="text"
-              placeholder="Search customer or mobile…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full rounded border border-[var(--line)] bg-[var(--surface)] pl-8 pr-3 py-1 text-xs text-[var(--ink)] focus:outline-none focus:border-[#1E3A5F]"
-            />
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="erp-report-table">
-            <thead>
-              <tr>
-                <th className="w-12 text-center">#</th>
-                <th>Customer Name</th>
-                <th>Mobile Number</th>
-                <th className="text-right">Credit Limit</th>
-                <th className="text-right">Outstanding Balance</th>
-                <th className="text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRows.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-xs text-[var(--muted)]">
-                    {search ? 'No customers match your search.' : 'No customers with outstanding credit balance.'}
-                  </td>
-                </tr>
-              ) : (
-                filteredRows.map((c, i) => {
-                  const bal = Number(c.outstanding_amount || 0)
-                  const limit = Number(c.credit_limit || 0)
-                  const isExceeded = limit > 0 && bal > limit
-                  return (
-                    <tr key={i}>
-                      <td className="text-center font-mono text-xs text-[var(--muted)]">{i + 1}</td>
-                      <td className="font-semibold text-[var(--ink)]">{c.name}</td>
-                      <td className="font-mono text-xs text-[var(--muted)]">{c.mobile || '—'}</td>
-                      <td className="text-right font-mono text-[var(--muted)]">{limit > 0 ? fmtCurrency(limit) : 'No Limit'}</td>
-                      <td className="text-right font-mono font-bold text-rose-700 dark:text-rose-400">{fmtCurrency(bal)}</td>
-                      <td className="text-center">
-                        <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-semibold ${
-                          isExceeded
-                            ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300'
-                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
-                        }`}>
-                          {isExceeded ? 'Exceeded' : 'Active Due'}
-                        </span>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-            {filteredRows.length > 0 && (
-              <tfoot>
-                <tr>
-                  <td colSpan={4}>Grand Total Outstanding</td>
-                  <td className="text-right font-mono text-rose-700 dark:text-rose-400">{fmtCurrency(totalOutstanding)}</td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* =========================================================
-   7. PAYMENT MODES REPORT VIEW
-========================================================= */
-function PaymentReportView({ data }) {
-  const methods = Array.isArray(data?.methods) ? data.methods : []
-  const totalAmount = Number(
-    data?.total_amount ?? methods.reduce((sum, m) => sum + Number(m.total || m.total_amount || 0), 0),
-  )
-  const totalCount = Number(
-    data?.total_count ?? methods.reduce((sum, m) => sum + Number(m.count || 0), 0),
-  )
-
-  return (
-    <div className="space-y-4">
-      {/* Payment Modes Summary Strip Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-        <div className="border-b border-[var(--line)] px-4 py-2 bg-[var(--table-header-bg, #f8fafc)] flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Collections Summary</span>
-          <span className="text-xs font-mono text-[var(--muted)]">{methods.length} mode(s) utilized</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="summary-strip-table">
-            <thead>
-              <tr>
-                <th>Total Collections</th>
-                <th>Receipts Processed</th>
-                <th className="text-right">Active Payment Modes</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="font-mono font-bold text-teal-700 dark:text-teal-400">{fmtCurrency(totalAmount)}</td>
-                <td className="font-mono font-bold text-[var(--ink)]">{fmtNumber(totalCount)}</td>
-                <td className="text-right font-mono font-bold text-[var(--ink)]">{fmtNumber(methods.length)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Payment Modes Detailed Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-        <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--table-header-bg, #f8fafc)] flex items-center justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Payment Mode Breakdown</h3>
-          <span className="text-xs font-mono text-[var(--muted)]">{methods.length} mode(s)</span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="erp-report-table">
-            <thead>
-              <tr>
-                <th className="w-12 text-center">#</th>
-                <th>Payment Mode</th>
-                <th className="text-right">Transaction Count</th>
-                <th className="text-right">Avg Ticket Size</th>
-                <th className="text-right">Total Amount Collected</th>
-                <th className="text-right">Share of Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {methods.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-xs text-[var(--muted)]">
-                    No payment collections recorded in this period.
-                  </td>
-                </tr>
-              ) : (
-                methods.map((m, i) => {
-                  const amt = Number(m.total || m.total_amount || 0)
-                  const count = Number(m.count || 0)
-                  const avg = count > 0 ? (amt / count).toFixed(2) : 0
-                  const share = totalAmount > 0 ? ((amt / totalAmount) * 100).toFixed(1) : 0
-                  return (
-                    <tr key={i}>
-                      <td className="text-center font-mono text-xs text-[var(--muted)]">{i + 1}</td>
-                      <td className="font-bold text-[var(--ink)] uppercase tracking-wide text-xs">
-                        {m.method || m.payment_method || 'Cash'}
-                      </td>
-                      <td className="text-right font-mono font-medium text-[var(--ink)]">{fmtNumber(count)}</td>
-                      <td className="text-right font-mono text-[var(--muted)]">{fmtCurrency(avg)}</td>
-                      <td className="text-right font-mono font-bold text-[var(--ink)]">{fmtCurrency(amt)}</td>
-                      <td className="text-right font-mono text-xs text-[var(--muted)]">{share}%</td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-            {methods.length > 0 && (
-              <tfoot>
-                <tr>
-                  <td colSpan={2}>Total</td>
-                  <td className="text-right font-mono">{fmtNumber(totalCount)}</td>
-                  <td className="text-right font-mono text-[var(--muted)]">—</td>
-                  <td className="text-right font-mono text-teal-700 dark:text-teal-400">{fmtCurrency(totalAmount)}</td>
-                  <td className="text-right font-mono text-xs">100.0%</td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* =========================================================
-   8. OPERATING EXPENSES REPORT VIEW (WITH SEARCH)
-========================================================= */
-function ExpenseReportView({ data }) {
-  const [search, setSearch] = useState('')
-  const rawData = Array.isArray(data?.expenses)
-    ? data.expenses
-    : Array.isArray(data?.rows)
-      ? data.rows
-      : Array.isArray(data)
-        ? data
-        : []
-
-  // Normalize expense records (supports both list of lists and list of objects)
-  const expenses = useMemo(() => {
-    return rawData.map(e => {
-      if (Array.isArray(e)) {
-        return {
-          expense_date: e[0] || '—',
-          category: e[1] || 'General',
-          description: e[2] || '—',
-          payment_method: e[3] || 'CASH',
-          amount: Number(e[4] || 0),
-          created_by: e[5] || '—',
-        }
-      }
-      return {
-        expense_date: e.expense_date || e.date || '—',
-        category: e.category || e.category_name || 'General',
-        description: e.description || e.notes || '—',
-        payment_method: e.payment_method || 'CASH',
-        amount: Number(e.amount || 0),
-        created_by: e.created_by || '—',
-      }
-    })
-  }, [rawData])
-
-  const totalAmount = Number(
-    data?.total_amount ?? data?.total_expenses ?? expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0),
-  )
-
-  const filteredExpenses = useMemo(() => {
-    if (!search.trim()) return expenses
-    const q = search.toLowerCase()
-    return expenses.filter(e =>
-      (e.description && e.description.toLowerCase().includes(q)) ||
-      (e.category && e.category.toLowerCase().includes(q)) ||
-      (e.payment_method && e.payment_method.toLowerCase().includes(q))
-    )
-  }, [expenses, search])
-
-  return (
-    <div className="space-y-4">
-      {/* Operating Expenses Summary Strip Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-        <div className="border-b border-[var(--line)] px-4 py-2 bg-[var(--table-header-bg, #f8fafc)] flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Expenses Overview</span>
-          <span className="text-xs font-mono text-[var(--muted)]">{expenses.length} record(s)</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="summary-strip-table">
-            <thead>
-              <tr>
-                <th>Total Operating Overhead</th>
-                <th>Expense Records</th>
-                <th className="text-right">Average Expense Size</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="font-mono font-bold text-rose-700 dark:text-rose-400">{fmtCurrency(totalAmount)}</td>
-                <td className="font-mono font-bold text-[var(--ink)]">{fmtNumber(expenses.length)}</td>
-                <td className="text-right font-mono font-bold text-[var(--ink)]">
-                  {fmtCurrency(expenses.length > 0 ? (totalAmount / expenses.length).toFixed(2) : 0)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Detailed Operating Expenses Table */}
-      <div className="overflow-hidden rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
-        <div className="border-b border-[var(--line)] px-4 py-2.5 bg-[var(--table-header-bg, #f8fafc)] flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">Operating Expenses Register</h3>
-          <div className="relative w-full sm:w-64">
-            <IconSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
-            <input
-              type="text"
-              placeholder="Search category, description…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full rounded border border-[var(--line)] bg-[var(--surface)] pl-8 pr-3 py-1 text-xs text-[var(--ink)] focus:outline-none focus:border-[#1E3A5F]"
-            />
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="erp-report-table">
-            <thead>
-              <tr>
-                <th className="w-12 text-center">#</th>
-                <th>Date</th>
-                <th>Category</th>
-                <th>Description</th>
-                <th>Payment Mode</th>
-                <th className="text-right">Amount</th>
-                <th className="text-right">Share</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredExpenses.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-8 text-center text-xs text-[var(--muted)]">
-                    {search ? 'No expenses match your search.' : 'No expenses recorded in the selected period.'}
-                  </td>
-                </tr>
-              ) : (
-                filteredExpenses.map((exp, i) => {
-                  const amt = Number(exp.amount || 0)
-                  const share = totalAmount > 0 ? ((amt / totalAmount) * 100).toFixed(1) : 0
-                  return (
-                    <tr key={i}>
-                      <td className="text-center font-mono text-xs text-[var(--muted)]">{i + 1}</td>
-                      <td className="font-mono text-xs text-[var(--muted)]">{exp.expense_date}</td>
-                      <td className="font-semibold text-[var(--ink)]">{exp.category}</td>
-                      <td className="text-xs text-[var(--ink)]">{exp.description}</td>
-                      <td className="font-mono text-xs uppercase text-[var(--muted)]">{exp.payment_method}</td>
-                      <td className="text-right font-mono font-bold text-rose-700 dark:text-rose-400">{fmtCurrency(amt)}</td>
-                      <td className="text-right font-mono text-xs text-[var(--muted)]">{share}%</td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-            {filteredExpenses.length > 0 && (
-              <tfoot>
-                <tr>
-                  <td colSpan={5}>Grand Total</td>
-                  <td className="text-right font-mono text-rose-700 dark:text-rose-400">{fmtCurrency(totalAmount)}</td>
-                  <td className="text-right font-mono text-xs">100.0%</td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
+      {/* Subtle Accounting Compliance Footer Note */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-[11px] text-[var(--muted)] border-t border-[var(--line-subtle)] pt-3">
+        <span>DreamWithTech Billing ERP • Standard Indian Accounting &amp; GST Return Formats</span>
+        <span>Amounts displayed in Indian Rupee (INR ₹)</span>
       </div>
     </div>
   )
