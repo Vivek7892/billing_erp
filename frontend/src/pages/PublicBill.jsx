@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { QRCodeSVG } from 'qrcode.react'
@@ -14,24 +14,18 @@ import {
   IconCopy,
   IconPhone,
   IconMail,
-  IconMapPin,
   IconShieldCheck,
   IconBrandWhatsapp,
-  IconShare,
   IconBuildingBank,
   IconQrcode,
   IconReceipt,
-  IconFileText,
   IconExternalLink,
-  IconArrowLeft,
   IconEye,
 } from '@tabler/icons-react'
 
 import invoiceService from '../features/billing/api/invoiceService'
 import {
   formatCurrency,
-  formatNumber,
-  formatDecimal,
   formatDate,
   formatTime,
 } from '../utils/formatters'
@@ -532,12 +526,11 @@ export default function PublicBill() {
 
   // Dynamic UPI Payment Link (NPCI Standard)
   const upiId = s.shop_upi_id || ''
-  const upiPayLink = useMemo(() => {
-    if (!upiId || due <= 0 || isCancelled) return ''
-    const cleanShop = encodeURIComponent(shopName.slice(0, 30))
-    const cleanNote = encodeURIComponent(`Invoice ${inv.invoice_number || ''}`.slice(0, 30))
-    return `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${cleanShop}&am=${due.toFixed(2)}&cu=INR&tn=${cleanNote}`
-  }, [upiId, due, isCancelled, shopName, inv.invoice_number])
+  const cleanShop = encodeURIComponent((shopName || 'Store').slice(0, 30))
+  const cleanNote = encodeURIComponent(`Invoice ${inv.invoice_number || ''}`.slice(0, 30))
+  const upiPayLink = (upiId && due > 0 && !isCancelled)
+    ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${cleanShop}&am=${due.toFixed(2)}&cu=INR&tn=${cleanNote}`
+    : ''
 
   const bankAccount = s.shop_bank_account || ''
   const bankIfsc = s.shop_bank_ifsc || ''
