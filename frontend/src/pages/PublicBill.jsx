@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { QRCodeSVG } from 'qrcode.react'
@@ -23,6 +23,8 @@ import {
   IconReceipt,
   IconFileText,
   IconExternalLink,
+  IconArrowLeft,
+  IconEye,
 } from '@tabler/icons-react'
 
 import invoiceService from '../features/billing/api/invoiceService'
@@ -36,6 +38,93 @@ import {
 import { API_BASE_URL } from '../api'
 
 const currency = (value) => formatCurrency(value)
+
+/* ============================================================
+   REALISTIC SAMPLE INVOICE DATA FOR PREVIEW / DEMO MODE
+============================================================ */
+const SAMPLE_INVOICE_DATA = {
+  invoice: {
+    id: 1001,
+    invoice_number: 'INV-2026-001',
+    public_token: 'preview-sample',
+    short_url: typeof window !== 'undefined' ? window.location.href : '',
+    created_at: new Date().toISOString(),
+    customer_name: 'Metro Retail Mart',
+    customer_phone: '+91 98765 43210',
+    customer_address: '42, Mount Road, Guindy, Chennai 600032',
+    customer_gstin: '33AABCS1429B1ZP',
+    subtotal: 1040.00,
+    discount_amount: 52.00,
+    tax_amount: 52.00,
+    round_off: 0.00,
+    grand_total: 1040.00,
+    paid_amount: 500.00,
+    balance_due: 540.00,
+    payment_method: 'UPI',
+    payment_status: 'PARTIAL',
+    status: 'COMPLETED',
+    notes: 'Thank you for shopping with us! Goods once sold can be exchanged within 7 days with original invoice.',
+    items: [
+      {
+        id: 1,
+        product_name: 'India Gate Basmati Rice 5kg',
+        hsn_code: '100630',
+        quantity: 2,
+        unit_price: 260.00,
+        discount_amount: 26.00,
+        gst_percent: 5,
+        total: 518.70,
+      },
+      {
+        id: 2,
+        product_name: 'Fortune Sunflower Oil 1L Pouch',
+        hsn_code: '151219',
+        quantity: 3,
+        unit_price: 180.00,
+        discount_amount: 26.00,
+        gst_percent: 5,
+        total: 521.30,
+      },
+    ],
+    payments: [
+      {
+        id: 1,
+        created_at: new Date().toISOString(),
+        amount: 500.00,
+        method: 'UPI',
+        reference: 'UPI/9876543210/1001',
+      },
+    ],
+  },
+  business: {
+    name: 'DreamWithTech Retail Mart',
+    owner_name: 'Store Manager',
+    mobile: '+91 98765 00000',
+    email: 'support@dreamwithtech.dev',
+    address: '100 Feet Road, Indiranagar, Bengaluru, Karnataka 560038',
+    gstin: '29ABCDE1234F1Z5',
+    pan: 'ABCDE1234F',
+    currency: '₹',
+    logo: '',
+  },
+  settings: {
+    shop_name: 'DreamWithTech Retail Mart',
+    shop_address: '100 Feet Road, Indiranagar, Bengaluru, Karnataka 560038',
+    shop_phone: '+91 98765 00000',
+    shop_email: 'support@dreamwithtech.dev',
+    shop_website: 'https://dreamwithtech.dev',
+    shop_gstin: '29ABCDE1234F1Z5',
+    shop_pan: 'ABCDE1234F',
+    shop_upi_id: 'dreamwithtech@icici',
+    shop_bank_name: 'HDFC Bank Ltd',
+    shop_bank_account: '50200012345678',
+    shop_bank_ifsc: 'HDFC0001234',
+    currency: '₹',
+    invoice_terms: '1. Goods once sold will be exchanged within 7 days with original invoice.\n2. Warranty claims directly handled by authorized service centers.',
+    invoice_notes: 'Thank you for shopping with us! Visit again.',
+    invoice_footer: 'Thank you for shopping with us! Visit again.',
+  },
+}
 
 /* ============================================================
    STATUS BADGE COMPONENT
@@ -111,10 +200,10 @@ function InvoiceLoadingSkeleton() {
 ============================================================ */
 export default function PublicBill() {
   const { token, id } = useParams()
-  const [resolvedToken, setResolvedToken] = useState(token || '')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [isPreview, setIsPreview] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
   const [copiedUpi, setCopiedUpi] = useState(false)
   const [copiedBank, setCopiedBank] = useState(false)
@@ -151,54 +240,81 @@ export default function PublicBill() {
     }
   }, [data])
 
-  // 3. Resolve public token if accessed by internal invoice ID
+  // 3. Fetch public invoice payload or load preview mode
   useEffect(() => {
     let active = true
-    if (token) {
-      setResolvedToken(token)
-      return () => { active = false }
-    }
-    if (!id) {
-      setError('Invalid invoice link.')
-      setLoading(false)
-      return () => { active = false }
-    }
-    invoiceService.getInvoice(id)
-      .then((invoice) => {
-        if (!active) return
-        if (!invoice?.public_token) {
-          throw new Error('This invoice does not have a public digital bill token.')
-        }
-        setResolvedToken(invoice.public_token)
-      })
-      .catch((err) => {
-        if (!active) return
-        setError(err.response?.data?.detail || err.message || 'This digital bill was not found or the link has expired.')
-        setLoading(false)
-      })
-    return () => { active = false }
-  }, [id, token, retryCount])
 
-  // 4. Fetch public invoice payload
-  useEffect(() => {
-    if (!resolvedToken) return undefined
-    let active = true
+    // Detect if this is preview/sample mode
+    const cleanToken = (token || '').trim()
+    const cleanId = (id || '').trim()
+    const isSampleRequest =
+      (!cleanToken && !cleanId) ||
+      cleanToken === 'preview' ||
+      cleanToken === 'sample' ||
+      cleanToken === 'demo' ||
+      cleanToken === 'sample-token-1001' ||
+      cleanToken === 'test'
+
+    if (isSampleRequest) {
+      setData(SAMPLE_INVOICE_DATA)
+      setIsPreview(true)
+      setLoading(false)
+      setError('')
+      return () => { active = false }
+    }
+
     setLoading(true)
     setError('')
+    setIsPreview(false)
 
-    axios.get(`${API_BASE_URL}/public/bill/${resolvedToken}/`)
-      .then((res) => {
+    const fetchPublicBill = async () => {
+      try {
+        let lookupToken = cleanToken
+
+        // If accessed by ID (e.g., /invoice/:id) or token is a pure integer ID
+        const isNumericId = cleanId || (/^\d+$/.test(cleanToken) ? cleanToken : null)
+
+        if (cleanId || (isNumericId && !lookupToken)) {
+          const targetId = cleanId || isNumericId
+          try {
+            const inv = await invoiceService.getInvoice(targetId)
+            if (inv?.public_token) {
+              lookupToken = inv.public_token
+            }
+          } catch {
+            lookupToken = targetId
+          }
+        }
+
+        const endpoint = `${API_BASE_URL}/public/bill/${lookupToken || cleanToken || cleanId}/`
+        const res = await axios.get(endpoint)
         if (!active) return
-        setData(res.data)
-        setLoading(false)
-      })
-      .catch((err) => {
+
+        if (res.data && res.data.invoice) {
+          setData(res.data)
+        } else {
+          throw new Error('Invoice data format unrecognized.')
+        }
+      } catch (err) {
         if (!active) return
-        setError(err.response?.data?.detail || 'This digital bill was not found or the link has expired.')
-        setLoading(false)
-      })
-    return () => { active = false }
-  }, [resolvedToken, retryCount])
+        console.error('Failed to load public bill:', err)
+        const msg =
+          err.response?.data?.detail ||
+          err.response?.data?.error ||
+          err.message ||
+          'This digital bill was not found or the link has expired.'
+        setError(msg)
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+
+    fetchPublicBill()
+
+    return () => {
+      active = false
+    }
+  }, [id, token, retryCount])
 
   const getBillUrl = () => {
     return data?.invoice?.short_url || window.location.href
@@ -259,9 +375,15 @@ export default function PublicBill() {
 
   // Download official PDF document
   const downloadPdf = async () => {
+    if (isPreview) {
+      window.print()
+      return
+    }
+
     try {
       setDownloading(true)
-      const response = await axios.get(`${API_BASE_URL}/public/bill/${resolvedToken}/document/`, {
+      const lookupToken = data?.invoice?.public_token || token || id
+      const response = await axios.get(`${API_BASE_URL}/public/bill/${lookupToken}/document/`, {
         params: { printer: 'a4', download: '1' },
         responseType: 'blob',
       })
@@ -279,7 +401,8 @@ export default function PublicBill() {
       toast.success('Invoice PDF downloaded')
     } catch (err) {
       console.error('Invoice PDF download failed:', err)
-      toast.error('Could not download invoice PDF. Please try again.')
+      toast.error('Could not download invoice PDF. Triggering print view instead.')
+      window.print()
     } finally {
       setDownloading(false)
     }
@@ -287,6 +410,11 @@ export default function PublicBill() {
 
   // Print invoice directly
   const printBill = async () => {
+    if (isPreview) {
+      window.print()
+      return
+    }
+
     const printWindow = window.open('', '_blank')
     if (!printWindow) {
       window.print()
@@ -294,7 +422,8 @@ export default function PublicBill() {
     }
 
     try {
-      const response = await axios.get(`${API_BASE_URL}/public/bill/${resolvedToken}/document/`, {
+      const lookupToken = data?.invoice?.public_token || token || id
+      const response = await axios.get(`${API_BASE_URL}/public/bill/${lookupToken}/document/`, {
         params: { printer: 'a4', download: '0' },
         responseType: 'blob',
       })
@@ -338,7 +467,13 @@ export default function PublicBill() {
     setRetryCount(count => count + 1)
   }
 
-  // Error State
+  const loadSamplePreview = () => {
+    setData(SAMPLE_INVOICE_DATA)
+    setIsPreview(true)
+    setError('')
+  }
+
+  // Error State with fallback
   if (error || !data) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -348,16 +483,24 @@ export default function PublicBill() {
           </div>
           <h1 className="mt-5 text-lg font-bold tracking-tight">Invoice Unavailable</h1>
           <p className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-            This digital bill was not found or the link may have expired. Please verify the URL or contact the store.
+            {error || 'This digital bill could not be found or the link may have expired.'}
           </p>
-          <div className="mt-6 flex justify-center">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
             <button
               type="button"
               onClick={retryLoad}
-              className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-xl bg-[#1E3A5F] px-5 text-xs font-semibold text-white shadow-xs transition hover:bg-[#162F4D] active:scale-[0.98]"
+              className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-xl bg-[#1E3A5F] px-4 text-xs font-semibold text-white shadow-xs transition hover:bg-[#162F4D] active:scale-[0.98]"
             >
               <IconRefresh size={14} />
               <span>Try again</span>
+            </button>
+            <button
+              type="button"
+              onClick={loadSamplePreview}
+              className="inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-4 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition active:scale-[0.98] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            >
+              <IconEye size={14} />
+              <span>View Sample Bill</span>
             </button>
           </div>
         </section>
@@ -403,6 +546,13 @@ export default function PublicBill() {
   return (
     <div className="min-h-screen bg-slate-50/70 pb-24 font-sans text-slate-800 antialiased sm:pb-16 dark:bg-slate-950 dark:text-slate-100">
       
+      {/* Sample / Preview Banner (if in demo mode) */}
+      {isPreview && (
+        <div className="bg-sky-600 text-white text-[11px] font-semibold text-center py-1 px-4 print:hidden">
+          Sample Digital Bill Preview • Real customer bills show verified merchant details
+        </div>
+      )}
+
       {/* ============================================================
           TOP ACTIONS HEADER BAR (Minimalist & Functional)
       ============================================================ */}

@@ -440,9 +440,17 @@ function AppRoutes() {
         }
       />
 
-      {/* Public Digital Bill Route (Customer Scanning QR Code / Share Link) */}
+      {/* Public Digital Bill Routes (Customer Scanning QR Code / Share Link) */}
+      <Route
+        path="/b"
+        element={<PublicBill />}
+      />
       <Route
         path="/b/:token"
+        element={<PublicBill />}
+      />
+      <Route
+        path="/bill"
         element={<PublicBill />}
       />
       <Route
@@ -451,6 +459,22 @@ function AppRoutes() {
       />
       <Route
         path="/s/:token"
+        element={<PublicBill />}
+      />
+      <Route
+        path="/public"
+        element={<PublicBill />}
+      />
+      <Route
+        path="/public-bill"
+        element={<PublicBill />}
+      />
+      <Route
+        path="/public-bill/:token"
+        element={<PublicBill />}
+      />
+      <Route
+        path="/public/bill/:token"
         element={<PublicBill />}
       />
 

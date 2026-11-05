@@ -5117,9 +5117,12 @@ class PublicBillDetailView(APIView):
     throttle_classes = [AnonRateThrottle]
 
     def get(self, request, token):
+        lookup = Q(public_token=token) | Q(short_links__code=token)
+        if str(token).isdigit():
+            lookup |= Q(id=int(token))
         invoice = Invoice.objects.select_related('customer', 'business', 'created_by').prefetch_related(
             'items__product', 'payments'
-        ).filter(Q(public_token=token) | Q(short_links__code=token)).distinct().first()
+        ).filter(lookup).distinct().first()
         if not invoice:
             raise Http404('This digital bill was not found or the link is invalid.')
 
@@ -5255,9 +5258,12 @@ class PublicBillDocumentView(APIView):
     throttle_classes = [AnonRateThrottle]
 
     def get(self, request, token):
+        lookup = Q(public_token=token) | Q(short_links__code=token)
+        if str(token).isdigit():
+            lookup |= Q(id=int(token))
         invoice = Invoice.objects.select_related('customer', 'business').prefetch_related(
             'items', 'payments'
-        ).filter(Q(public_token=token) | Q(short_links__code=token)).distinct().first()
+        ).filter(lookup).distinct().first()
         if not invoice:
             raise Http404('This digital bill was not found or the link is invalid.')
 
