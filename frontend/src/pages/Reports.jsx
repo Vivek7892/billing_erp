@@ -5,6 +5,7 @@ import {
   IconArrowDownRight,
   IconArrowUpRight,
   IconCalendar,
+  IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
   IconDownload,
@@ -789,6 +790,25 @@ export default function Reports() {
   const [startDate, setStartDate] = useState(getMonthStart())
   const [endDate, setEndDate] = useState(getToday())
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+  const exportRef = useRef(null)
+
+  // Close export dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = e => {
+      if (exportRef.current && !exportRef.current.contains(e.target)) {
+        setExportOpen(false)
+      }
+    }
+    if (exportOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('touchstart', handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('touchstart', handleClickOutside)
+    }
+  }, [exportOpen])
 
   // Backend state
   const [backendData, setBackendData] = useState(null)
@@ -1059,9 +1079,6 @@ export default function Reports() {
     }
   }
 
-  const btn =
-    'inline-flex h-8 sm:h-9 items-center gap-1.5 rounded-md border border-[var(--line)] px-2.5 sm:px-3 text-xs sm:text-[13px] font-medium text-[var(--ink)] transition-colors hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] cursor-pointer'
-
   return (
     <div className="w-full min-w-0 pb-12 text-[var(--ink)]">
       {/* Header */}
@@ -1081,23 +1098,76 @@ export default function Reports() {
           </div>
           <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-[var(--muted)]">{report.desc}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          <button type="button" onClick={() => exportAs('PDF')} className={btn}>
-            <IconFileTypePdf size={15} className="text-rose-600" /> <span className="hidden xs:inline">PDF</span>
-          </button>
-          <button type="button" onClick={() => exportAs('Excel')} className={btn}>
-            <IconFileSpreadsheet size={15} className="text-emerald-600" /> <span className="hidden xs:inline">Excel</span>
-          </button>
-          <button type="button" onClick={() => exportAs('CSV')} className={btn}>
-            <IconDownload size={15} /> <span className="hidden xs:inline">CSV</span>
-          </button>
+        {/* Simple Export Dropdown */}
+        <div className="relative inline-block text-left" ref={exportRef}>
           <button
             type="button"
-            onClick={() => exportAs('Print')}
-            className="inline-flex h-8 sm:h-9 items-center gap-1.5 rounded-md bg-[#0057B8] px-3 sm:px-3.5 text-xs sm:text-[13px] font-medium text-white hover:bg-[#004a9c] cursor-pointer"
+            onClick={() => setExportOpen(v => !v)}
+            aria-expanded={exportOpen}
+            aria-haspopup="true"
+            className="inline-flex h-8 sm:h-9 items-center gap-1.5 rounded-md border border-[var(--line)] bg-[var(--surface,#ffffff)] px-3 text-xs sm:text-[13px] font-medium text-[var(--ink)] shadow-xs transition-colors hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] cursor-pointer focus:outline-none"
           >
-            <IconPrinter size={15} /> Print
+            <IconDownload size={15} className="text-[#0057B8]" />
+            <span>Export</span>
+            <IconChevronDown
+              size={14}
+              className={`text-[var(--muted)] transition-transform duration-150 ${exportOpen ? 'rotate-180' : ''}`}
+            />
           </button>
+
+          {exportOpen && (
+            <div className="absolute right-0 z-30 mt-1.5 w-48 origin-top-right rounded-md border border-[var(--line)] bg-[var(--surface,#ffffff)] py-1 shadow-lg ring-1 ring-black/5 animate-in fade-in duration-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setExportOpen(false)
+                  exportAs('PDF')
+                }}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs sm:text-[13px] text-[var(--ink)] hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] cursor-pointer transition-colors"
+              >
+                <IconFileTypePdf size={16} className="text-rose-600 shrink-0" />
+                <span>PDF Document</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setExportOpen(false)
+                  exportAs('Excel')
+                }}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs sm:text-[13px] text-[var(--ink)] hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] cursor-pointer transition-colors"
+              >
+                <IconFileSpreadsheet size={16} className="text-emerald-600 shrink-0" />
+                <span>Excel Spreadsheet</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setExportOpen(false)
+                  exportAs('CSV')
+                }}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs sm:text-[13px] text-[var(--ink)] hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] cursor-pointer transition-colors"
+              >
+                <IconDownload size={16} className="text-[var(--muted)] shrink-0" />
+                <span>CSV File</span>
+              </button>
+
+              <div className="my-1 border-t border-[var(--line)]" />
+
+              <button
+                type="button"
+                onClick={() => {
+                  setExportOpen(false)
+                  exportAs('Print')
+                }}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs sm:text-[13px] text-[var(--ink)] hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] cursor-pointer transition-colors"
+              >
+                <IconPrinter size={16} className="text-[#0057B8] shrink-0" />
+                <span>Print Report</span>
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
