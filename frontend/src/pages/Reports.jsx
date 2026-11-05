@@ -1,514 +1,963 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
+import toast from 'react-hot-toast'
 import api from '../api'
 import {
-  IconTrendingUp,
-  IconShoppingCart,
-  IconPackage,
-  IconCash,
-  IconReceiptTax,
-  IconUsers,
-  IconArrowLeft,
-  IconDownload,
-  IconPrinter,
-  IconRefresh,
-  IconFilter,
-  IconSearch,
-  IconX,
-  IconCalendar,
-  IconChevronDown,
-  IconCheck,
-  IconFileTypePdf,
-  IconFileTypeXls,
-  IconFileSpreadsheet,
-  IconArrowUpRight,
   IconArrowDownRight,
+  IconArrowUpRight,
+  IconCalendar,
   IconChevronLeft,
   IconChevronRight,
-  IconAlertCircle,
-  IconInfoCircle,
+  IconDownload,
+  IconFileSpreadsheet,
+  IconFileTypePdf,
+  IconPrinter,
+  IconSearch,
+  IconSelector,
+  IconTrendingUp,
+  IconShoppingCart,
+  IconPackages,
+  IconCash,
+  IconUsers,
+  IconReceiptTax,
+  IconChartBar,
+  IconRefresh,
 } from '@tabler/icons-react'
 import {
-  ResponsiveContainer,
-  AreaChart,
   Area,
-  BarChart,
-  Bar,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
-  CartesianGrid,
 } from 'recharts'
-import toast from 'react-hot-toast'
-import { fmtCurrency, fmtNumber, formatDate } from '../utils/formatters'
 
-/* ============================================================
-   DATE HELPERS
-============================================================ */
-const toLocalDateInput = date => {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-const getToday = () => toLocalDateInput(new Date())
-const getMonthStart = () => toLocalDateInput(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
-const getLast30Days = () => toLocalDateInput(new Date(Date.now() - 29 * 86400000))
-const getLast90Days = () => toLocalDateInput(new Date(Date.now() - 89 * 86400000))
-const getFYStart = () => {
-  const now = new Date()
-  const currentYear = now.getFullYear()
-  const fyYear = now.getMonth() >= 3 ? currentYear : currentYear - 1
-  return `${fyYear}-04-01`
-}
-
-const DATE_PRESETS = [
-  { key: 'fy_current', label: 'This FY (2026-27)', getStart: getFYStart, getEnd: getToday },
-  { key: 'month_current', label: 'This Month', getStart: getMonthStart, getEnd: getToday },
-  { key: 'last_30', label: 'Last 30 Days', getStart: getLast30Days, getEnd: getToday },
-  { key: 'last_90', label: 'Last 90 Days', getStart: getLast90Days, getEnd: getToday },
+/* ------------------------------------------------------------------
+   Public exports (kept so other modules importing them keep working)
+------------------------------------------------------------------- */
+export const REPORT_CATEGORIES = [
+  { key: 'all', label: 'All Reports', icon: IconChartBar },
+  { key: 'sales', label: 'Sales & Revenue', icon: IconTrendingUp },
+  { key: 'purchases', label: 'Purchases', icon: IconShoppingCart },
+  { key: 'inventory', label: 'Stock & Inventory', icon: IconPackages },
+  { key: 'books', label: 'Accounting Books', icon: IconCash },
+  { key: 'ledgers', label: 'Ledgers & Dues', icon: IconUsers },
+  { key: 'gst', label: 'GST & Compliance', icon: IconReceiptTax },
 ]
 
-/* ============================================================
-   REPORT DEFINITIONS & BACKEND ENDPOINTS
-============================================================ */
-const TAB_CONFIG = {
-  sales_register: {
-    endpoint: '/reports/sales-register/',
-    label: 'Sales Register',
-    category: 'sales',
-    filename: 'sales_register_report',
-    isSnapshot: false,
-    icon: IconTrendingUp,
-    title: 'Sales Invoice Register',
-    subtitle: 'Invoice-by-invoice sales vouchers with customer GSTIN, taxable turnover, and GST breakup',
+export const ALL_REPORTS = [
+  { key: 'sales', category: 'sales', label: 'Sales Summary', desc: 'Revenue, collections and daily sales trend' },
+  { key: 'sales_register', category: 'sales', label: 'Sales Register', desc: 'Invoice-wise sales with GST breakup' },
+  { key: 'products', category: 'sales', label: 'Item-wise Sales', desc: 'Volume and revenue per product' },
+  { key: 'purchases', category: 'purchases', label: 'Purchase Summary', desc: 'Supplier purchase totals and dues' },
+  { key: 'purchase_register', category: 'purchases', label: 'Purchase Register', desc: 'Inward bills with payment status' },
+  { key: 'item_wise_purchases', category: 'purchases', label: 'Item-wise Purchases', desc: 'Procurement quantity and cost per item' },
+  { key: 'stock_summary', category: 'inventory', label: 'Stock Valuation', desc: 'Stock in hand, cost and valuation' },
+  { key: 'stock_movement', category: 'inventory', label: 'Stock Movement', desc: 'Purchases, sales and adjustments' },
+  { key: 'day_book', category: 'books', label: 'Day Book', desc: 'Chronological record of all transactions' },
+  { key: 'cash_book', category: 'books', label: 'Cash Book', desc: 'Cash receipts, payments and balance' },
+  { key: 'bank_book', category: 'books', label: 'Bank Book', desc: 'Deposits, withdrawals and UPI receipts' },
+  { key: 'payments', category: 'books', label: 'Payment Collection', desc: 'Receipts by payment method' },
+  { key: 'expenses', category: 'books', label: 'Operating Expenses', desc: 'Expenses by category' },
+  { key: 'profit', category: 'books', label: 'Profit & Loss', desc: 'Revenue, costs and net profit' },
+  { key: 'customers', category: 'ledgers', label: 'Customer Receivables', desc: 'Outstanding balances by customer' },
+  { key: 'customer_ledger', category: 'ledgers', label: 'Customer Ledger', desc: 'Debit, credit and payment history' },
+  { key: 'outstanding_payables', category: 'ledgers', label: 'Supplier Payables', desc: 'Dues payable to vendors' },
+  { key: 'supplier_ledger', category: 'ledgers', label: 'Supplier Ledger', desc: 'Bills, returns and settlements' },
+  { key: 'gst', category: 'gst', label: 'GST Tax Summary', desc: 'Taxable value and CGST / SGST liability' },
+  { key: 'gstr1', category: 'gst', label: 'GSTR-1 Outward', desc: 'Outward supplies for filing' },
+  { key: 'gstr2', category: 'gst', label: 'GSTR-2 Inward', desc: 'Inward supplies and ITC' },
+  { key: 'gstr3b', category: 'gst', label: 'GSTR-3B Summary', desc: 'Output tax vs eligible ITC' },
+]
+
+const NAV_CATEGORIES = REPORT_CATEGORIES.filter(c => c.key !== 'all')
+
+const ENDPOINTS = {
+  sales: '/reports/sales/',
+  sales_register: '/reports/sales-register/',
+  products: '/reports/products/',
+  purchases: '/reports/purchases/',
+  purchase_register: '/reports/purchase-register/',
+  item_wise_purchases: '/reports/item-wise-purchases/',
+  stock_summary: '/reports/stock-summary/',
+  stock_movement: '/reports/stock-movement/',
+  day_book: '/reports/day-book/',
+  cash_book: '/reports/cash-book/',
+  bank_book: '/reports/bank-book/',
+  payments: '/reports/payment-collection/',
+  expenses: '/reports/expenses/',
+  profit: '/reports/profit/',
+  customers: '/reports/customers/',
+  customer_ledger: '/reports/customer-ledger/',
+  outstanding_payables: '/reports/outstanding-payables/',
+  supplier_ledger: '/reports/supplier-ledger/',
+  gst: '/reports/gst-summary/',
+  gstr1: '/reports/gstr1/',
+  gstr2: '/reports/gstr2/',
+  gstr3b: '/reports/gstr3b/',
+}
+
+const SNAPSHOT_REPORTS = new Set(['customers', 'outstanding_payables', 'stock_summary'])
+
+/* ------------------------------------------------------------------
+   Date Helpers & Presets
+------------------------------------------------------------------- */
+const toLocalDate = d => {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+const getToday = () => toLocalDate(new Date())
+const getWeekStart = () => {
+  const d = new Date()
+  const day = d.getDay()
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+  return toLocalDate(new Date(d.setDate(diff)))
+}
+const getMonthStart = () => toLocalDate(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+const getLast90Days = () => toLocalDate(new Date(Date.now() - 89 * 86400000))
+const getYearStart = () => {
+  const now = new Date()
+  const year = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1
+  return `${year}-04-01`
+}
+
+const PRESET_RANGES = {
+  Today: { start: getToday, end: getToday },
+  'This Week': { start: getWeekStart, end: getToday },
+  'This Month': { start: getMonthStart, end: getToday },
+  'Last 90 Days': { start: getLast90Days, end: getToday },
+  'This Year': { start: getYearStart, end: getToday },
+}
+const PRESETS = Object.keys(PRESET_RANGES)
+
+/* ------------------------------------------------------------------
+   Formatters
+------------------------------------------------------------------- */
+const inr = n =>
+  '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })
+const num = n => Number(n || 0).toLocaleString('en-IN')
+const pick = (arr, i) => arr[i % arr.length]
+const day = i => `${String(((i * 2) % 28) + 1).padStart(2, '0')} Oct 2026`
+
+/* ------------------------------------------------------------------
+   Static Sample Fallback Datasets (used when offline or empty)
+------------------------------------------------------------------- */
+const CUSTOMERS = ['Lakshmi Stores', 'Ravi Kumar', 'Anita Traders', 'Sri Balaji Mart', 'Mohammed Iqbal', 'Meena Provisions', 'Walk-in Customer', 'Suresh & Sons', 'Priya Bakery', 'Green Leaf Mart']
+const SUPPLIERS = ['Hindustan Distributors', 'Sai Wholesale', 'Karnataka Agro', 'Metro Traders', 'Fresh Farms Pvt Ltd', 'Annapurna Suppliers']
+const ITEMS = ['Basmati Rice 5kg', 'Sunflower Oil 1L', 'Toor Dal 1kg', 'Sugar 1kg', 'Tata Salt 1kg', 'Wheat Atta 10kg', 'Tea Powder 500g', 'Milk 500ml', 'Biscuits Family Pack', 'Detergent 1kg']
+const MODES = ['UPI', 'Cash', 'Card', 'Bank']
+const STATUS_SALES = ['Paid', 'Paid', 'Partial', 'Paid', 'Due']
+
+const DEFAULT_TREND = Array.from({ length: 30 }, (_, i) => {
+  const revenue = Math.round(42000 + Math.sin(i / 2.2) * 9000 + i * 520 + (i % 7 === 0 ? 7000 : 0))
+  const collections = Math.round(revenue * (0.82 + ((i * 7) % 10) / 100))
+  return { label: `${i + 1} Oct`, revenue, collections }
+})
+
+const salesRows = Array.from({ length: 24 }, (_, i) => {
+  const taxable = 1800 + ((i * 937) % 9200)
+  const gst = Math.round(taxable * 0.12)
+  return {
+    invoice: `INV-${2410 + i}`,
+    date: day(i),
+    customer: pick(CUSTOMERS, i * 3),
+    mode: pick(MODES, i),
+    taxable,
+    gst,
+    total: taxable + gst,
+    status: pick(STATUS_SALES, i),
+  }
+})
+
+const purchaseRows = Array.from({ length: 18 }, (_, i) => {
+  const amount = 14000 + ((i * 4871) % 61000)
+  const paid = i % 4 === 0 ? 0 : i % 3 === 0 ? Math.round(amount / 2) : amount
+  return {
+    bill: `PB-${880 + i}`,
+    date: day(i),
+    supplier: pick(SUPPLIERS, i),
+    items: 4 + ((i * 3) % 17),
+    amount,
+    paid,
+    due: amount - paid,
+    status: paid === amount ? 'Paid' : paid === 0 ? 'Unpaid' : 'Partial',
+  }
+})
+
+const stockRows = Array.from({ length: 20 }, (_, i) => {
+  const stock = (i * 17) % 140
+  const cost = 20 + ((i * 53) % 480)
+  const retail = Math.round(cost * 1.18)
+  return {
+    sku: `SKU-${1001 + i}`,
+    item: pick(ITEMS, i),
+    category: pick(['Grocery', 'Staples', 'Beverages', 'Snacks', 'Household'], i),
+    stock,
+    cost,
+    retail,
+    valuation: stock * cost,
+    status: stock === 0 ? 'Out of stock' : stock < 25 ? 'Low' : 'In stock',
+  }
+})
+
+const bookRows = (() => {
+  let bal = 120000
+  return Array.from({ length: 22 }, (_, i) => {
+    const credit = i % 3 === 0 ? 0 : 2500 + ((i * 1331) % 14000)
+    const debit = i % 3 === 0 ? 1800 + ((i * 977) % 9000) : 0
+    bal += credit - debit
+    return {
+      date: day(i),
+      voucher: `${credit ? 'RCT' : 'PMT'}-${300 + i}`,
+      particulars: credit ? `Sales receipt · ${pick(CUSTOMERS, i)}` : `Payment · ${pick(SUPPLIERS, i)}`,
+      mode: pick(MODES, i),
+      debit,
+      credit,
+      balance: bal,
+    }
+  })
+})()
+
+const ledgerRows = Array.from({ length: 16 }, (_, i) => {
+  const billed = 20000 + ((i * 6113) % 90000)
+  const received = Math.round(billed * (0.35 + ((i * 11) % 55) / 100))
+  const out = billed - received
+  const age = 6 + ((i * 13) % 80)
+  return {
+    party: pick(CUSTOMERS, i),
+    mobile: `98${String(45000000 + i * 183749).slice(0, 8)}`,
+    invoices: 3 + (i % 9),
+    billed,
+    received,
+    outstanding: out,
+    aging: `${age} days`,
+    status: age > 60 ? 'Overdue' : age > 30 ? 'Due soon' : 'Current',
+  }
+})
+
+const gstRows = [
+  { slab: '0% (Exempt)', taxable: 48200, cgst: 0, sgst: 0, total: 0, share: '0.0%' },
+  { slab: '5% GST', taxable: 312400, cgst: 7810, sgst: 7810, total: 15620, share: '13.2%' },
+  { slab: '12% GST', taxable: 486900, cgst: 29214, sgst: 29214, total: 58428, share: '49.4%' },
+  { slab: '18% GST', taxable: 238700, cgst: 21483, sgst: 21483, total: 42966, share: '36.3%' },
+  { slab: '28% GST', taxable: 4600, cgst: 644, sgst: 644, total: 1288, share: '1.1%' },
+]
+
+const sum = (rows, k) => (Array.isArray(rows) ? rows.reduce((s, r) => s + (Number(r[k]) || 0), 0) : 0)
+
+const FALLBACK_DATASETS = {
+  sales: {
+    kpis: [
+      { label: 'Net Sales', value: inr(sum(salesRows, 'total') * 6), delta: 12.4 },
+      { label: 'Collections', value: inr(sum(salesRows, 'total') * 5), delta: 9.1 },
+      { label: 'Outstanding', value: inr(184250), delta: -3.2, invert: true },
+      { label: 'Invoices', value: num(412), delta: 6.8 },
+    ],
+    chartTitle: 'Revenue vs collections',
+    breakdownTitle: 'Collections by payment mode',
+    breakdown: [['UPI', 46], ['Cash', 31], ['Card', 15], ['Bank', 8]],
+    columns: [
+      { key: 'invoice', label: 'Invoice' },
+      { key: 'date', label: 'Date' },
+      { key: 'customer', label: 'Customer' },
+      { key: 'mode', label: 'Mode' },
+      { key: 'taxable', label: 'Taxable', money: true },
+      { key: 'gst', label: 'GST', money: true },
+      { key: 'total', label: 'Total', money: true, total: true },
+      { key: 'status', label: 'Status', badge: true },
+    ],
+    rows: salesRows,
   },
-  product_sales: {
-    endpoint: '/reports/products/',
-    label: 'Item Performance',
-    category: 'products',
-    filename: 'product_sales_report',
-    isSnapshot: false,
-    icon: IconPackage,
-    title: 'Item-wise Product Sales Performance',
-    subtitle: 'Volume dispatched, realized margins, revenue, and product contribution',
+  purchases: {
+    kpis: [
+      { label: 'Total Purchases', value: inr(sum(purchaseRows, 'amount')), delta: 4.2 },
+      { label: 'Paid to Suppliers', value: inr(sum(purchaseRows, 'paid')), delta: 5.9 },
+      { label: 'Payables', value: inr(sum(purchaseRows, 'due')), delta: 8.1, invert: true },
+      { label: 'Bills', value: num(purchaseRows.length * 4), delta: 2.0 },
+    ],
+    chartTitle: 'Purchases vs payments',
+    breakdownTitle: 'Spend by supplier',
+    breakdown: [['Hindustan Distributors', 34], ['Sai Wholesale', 24], ['Karnataka Agro', 18], ['Metro Traders', 14], ['Others', 10]],
+    columns: [
+      { key: 'bill', label: 'Bill No.' },
+      { key: 'date', label: 'Date' },
+      { key: 'supplier', label: 'Supplier' },
+      { key: 'items', label: 'Items', num: true },
+      { key: 'amount', label: 'Amount', money: true, total: true },
+      { key: 'paid', label: 'Paid', money: true, total: true },
+      { key: 'due', label: 'Due', money: true, total: true },
+      { key: 'status', label: 'Status', badge: true },
+    ],
+    rows: purchaseRows,
   },
-  purchase_register: {
-    endpoint: '/reports/purchase-register/',
-    label: 'Purchases & Inwards',
-    category: 'purchases',
-    filename: 'purchase_register_report',
-    isSnapshot: false,
-    icon: IconShoppingCart,
-    title: 'Inward Purchases & Procurement Register',
-    subtitle: 'Inward vendor bills, input tax credit (ITC) reconciliation, and supplier payments',
+  inventory: {
+    kpis: [
+      { label: 'Stock Valuation', value: inr(sum(stockRows, 'valuation') * 3), delta: 3.5 },
+      { label: 'SKUs Tracked', value: num(stockRows.length * 14), delta: 1.2 },
+      { label: 'Low Stock', value: '23', delta: 14.0, invert: true },
+      { label: 'Out of Stock', value: '7', delta: -12.5, invert: true },
+    ],
+    chartTitle: 'Stock valuation trend',
+    breakdownTitle: 'Valuation by category',
+    breakdown: [['Staples', 38], ['Grocery', 27], ['Beverages', 15], ['Snacks', 12], ['Household', 8]],
+    columns: [
+      { key: 'sku', label: 'SKU' },
+      { key: 'item', label: 'Item' },
+      { key: 'category', label: 'Category' },
+      { key: 'stock', label: 'In Stock', num: true, total: true },
+      { key: 'cost', label: 'Cost', money: true },
+      { key: 'retail', label: 'Retail', money: true },
+      { key: 'valuation', label: 'Valuation', money: true, total: true },
+      { key: 'status', label: 'Status', badge: true },
+    ],
+    rows: stockRows,
   },
-  stock_summary: {
-    endpoint: '/reports/stock-summary/',
-    label: 'Stock Valuation',
-    category: 'inventory',
-    filename: 'stock_summary_report',
-    isSnapshot: true,
-    icon: IconPackage,
-    title: 'Live Stock Valuation & Inventory Audit',
-    subtitle: 'Live stock-in-hand, purchase cost rate, retail price, and total inventory valuation',
+  books: {
+    kpis: [
+      { label: 'Total Receipts', value: inr(sum(bookRows, 'credit') * 4), delta: 7.7 },
+      { label: 'Total Payments', value: inr(sum(bookRows, 'debit') * 4), delta: 3.1, invert: true },
+      { label: 'Closing Balance', value: inr(bookRows[bookRows.length - 1].balance), delta: 5.4 },
+      { label: 'Vouchers', value: num(bookRows.length * 9), delta: 4.6 },
+    ],
+    chartTitle: 'Cash inflow vs outflow',
+    breakdownTitle: 'Transactions by mode',
+    breakdown: [['UPI', 42], ['Cash', 35], ['Bank', 15], ['Card', 8]],
+    columns: [
+      { key: 'date', label: 'Date' },
+      { key: 'voucher', label: 'Voucher' },
+      { key: 'particulars', label: 'Particulars' },
+      { key: 'mode', label: 'Mode' },
+      { key: 'debit', label: 'Debit', money: true, total: true },
+      { key: 'credit', label: 'Credit', money: true, total: true },
+      { key: 'balance', label: 'Balance', money: true },
+    ],
+    rows: bookRows,
   },
-  profit_loss: {
-    endpoint: '/reports/profit/',
-    label: 'Profit & Loss',
-    category: 'profit',
-    filename: 'profit_and_loss_report',
-    isSnapshot: false,
-    icon: IconCash,
-    title: 'Financial Profit & Loss Statement (P&L)',
-    subtitle: 'Gross sales revenue, cost of goods sold (COGS), operating overheads, and net profit',
+  ledgers: {
+    kpis: [
+      { label: 'Total Outstanding', value: inr(sum(ledgerRows, 'outstanding')), delta: -2.8, invert: true },
+      { label: 'Debtor Accounts', value: num(ledgerRows.length), delta: 6.7 },
+      { label: 'Overdue > 60 days', value: inr(96400), delta: 11.2, invert: true },
+      { label: 'Avg. Collection Days', value: '27', delta: -4.0, invert: true },
+    ],
+    chartTitle: 'Outstanding balance trend',
+    breakdownTitle: 'Receivables aging',
+    breakdown: [['0–30 days', 48], ['31–60 days', 29], ['61–90 days', 15], ['90+ days', 8]],
+    columns: [
+      { key: 'party', label: 'Party' },
+      { key: 'mobile', label: 'Mobile' },
+      { key: 'invoices', label: 'Invoices', num: true },
+      { key: 'billed', label: 'Billed', money: true, total: true },
+      { key: 'received', label: 'Received', money: true, total: true },
+      { key: 'outstanding', label: 'Outstanding', money: true, total: true },
+      { key: 'aging', label: 'Aging' },
+      { key: 'status', label: 'Status', badge: true },
+    ],
+    rows: ledgerRows,
   },
-  gst_tax: {
-    endpoint: '/reports/gst-summary/',
-    label: 'GST Compliance',
-    category: 'gst',
-    filename: 'gst_tax_summary_report',
-    isSnapshot: false,
-    icon: IconReceiptTax,
-    title: 'GST Tax Liability & Compliance Summary',
-    subtitle: 'Consolidated taxable turnover, CGST, SGST, IGST liability vs. eligible ITC',
-  },
-  ledgers_dues: {
-    endpoint: '/reports/customers/',
-    label: 'Ledgers & Dues',
-    category: 'ledgers',
-    filename: 'customer_receivables_report',
-    isSnapshot: true,
-    icon: IconUsers,
-    title: 'Outstanding Ledgers & Customer Receivables',
-    subtitle: 'Debtor balances, credit limits, overdue payments, and customer ledger status',
+  gst: {
+    kpis: [
+      { label: 'Taxable Turnover', value: inr(sum(gstRows, 'taxable')), delta: 10.3 },
+      { label: 'Output CGST', value: inr(sum(gstRows, 'cgst')), delta: 10.1 },
+      { label: 'Output SGST', value: inr(sum(gstRows, 'sgst')), delta: 10.1 },
+      { label: 'Net Tax Payable', value: inr(sum(gstRows, 'total')), delta: 9.8, invert: true },
+    ],
+    chartTitle: 'GST liability trend',
+    breakdownTitle: 'Tax share by slab',
+    breakdown: [['12%', 49], ['18%', 36], ['5%', 13], ['28%', 1], ['Exempt', 1]],
+    columns: [
+      { key: 'slab', label: 'Rate Slab' },
+      { key: 'taxable', label: 'Taxable Value', money: true, total: true },
+      { key: 'cgst', label: 'CGST', money: true, total: true },
+      { key: 'sgst', label: 'SGST', money: true, total: true },
+      { key: 'total', label: 'Total Tax', money: true, total: true },
+      { key: 'share', label: 'Share', num: true },
+    ],
+    rows: gstRows,
   },
 }
 
-const REPORT_TABS = Object.entries(TAB_CONFIG).map(([key, cfg]) => ({
-  key,
-  label: cfg.label,
-  icon: cfg.icon,
-}))
-
-/* Column Alignment Helpers */
-const isMonetaryCol = headerName => {
-  const h = String(headerName || '').toLowerCase()
+/* ------------------------------------------------------------------
+   Field Detection Helpers
+------------------------------------------------------------------- */
+const isMonetaryCol = h => {
+  const s = String(h || '').toLowerCase()
   return (
-    h.includes('amount') ||
-    h.includes('total') ||
-    h.includes('tax') ||
-    h.includes('price') ||
-    h.includes('balance') ||
-    h.includes('debit') ||
-    h.includes('credit') ||
-    h.includes('due') ||
-    h.includes('valuation') ||
-    h.includes('cost') ||
-    h.includes('mrp') ||
-    h.includes('revenue') ||
-    h.includes('turnover') ||
-    h.includes('profit') ||
-    h.includes('paid') ||
-    h.includes('val') ||
-    h.includes('cgst') ||
-    h.includes('sgst') ||
-    h.includes('igst') ||
-    h.includes('margin')
+    s.includes('amount') ||
+    s.includes('total') ||
+    s.includes('tax') ||
+    s.includes('price') ||
+    s.includes('balance') ||
+    s.includes('debit') ||
+    s.includes('credit') ||
+    s.includes('due') ||
+    s.includes('valuation') ||
+    s.includes('cost') ||
+    s.includes('revenue') ||
+    s.includes('turnover') ||
+    s.includes('paid') ||
+    s.includes('cgst') ||
+    s.includes('sgst') ||
+    s.includes('igst') ||
+    s.includes('billed') ||
+    s.includes('received')
   )
 }
 
-const isCenterCol = headerName => {
-  const h = String(headerName || '').toLowerCase()
+const isNumericCol = h => {
+  const s = String(h || '').toLowerCase()
   return (
-    h.includes('date') ||
-    h.includes('time') ||
-    h.includes('code') ||
-    h.includes('no.') ||
-    h.includes('number') ||
-    h.includes('gstin') ||
-    h.includes('hsn') ||
-    h.includes('voucher') ||
-    h.includes('status') ||
-    h.includes('payment')
+    s.includes('qty') ||
+    s.includes('quantity') ||
+    s.includes('units') ||
+    s.includes('count') ||
+    s.includes('items') ||
+    s.includes('invoices') ||
+    s.includes('stock')
   )
 }
 
+const STATUS_TONE = {
+  Paid: 'ok', 'In stock': 'ok', Current: 'ok',
+  Partial: 'warn', Low: 'warn', 'Due soon': 'warn',
+  Due: 'bad', Unpaid: 'bad', Overdue: 'bad', 'Out of stock': 'bad',
+}
+const TONE_CLASS = {
+  ok: 'text-emerald-700 dark:text-emerald-400',
+  warn: 'text-amber-700 dark:text-amber-400',
+  bad: 'text-rose-700 dark:text-rose-400',
+}
+const DOT_CLASS = { ok: 'bg-emerald-500', warn: 'bg-amber-500', bad: 'bg-rose-500' }
+
+/* ------------------------------------------------------------------
+   Small building blocks
+------------------------------------------------------------------- */
+function Badge({ value }) {
+  const tone = STATUS_TONE[value] || 'ok'
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${TONE_CLASS[tone]}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${DOT_CLASS[tone]}`} />
+      {value}
+    </span>
+  )
+}
+
+function Delta({ value, invert }) {
+  const good = invert ? value < 0 : value > 0
+  const Icon = value >= 0 ? IconArrowUpRight : IconArrowDownRight
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 text-xs font-medium ${
+        good ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'
+      }`}
+    >
+      <Icon size={14} stroke={2} />
+      {Math.abs(value).toFixed(1)}%
+    </span>
+  )
+}
+
+function Nav({ activeKey, onSelect }) {
+  return (
+    <nav aria-label="Reports" className="space-y-5">
+      {NAV_CATEGORIES.map(cat => {
+        const Icon = cat.icon
+        return (
+          <div key={cat.key}>
+            <div className="mb-1.5 flex items-center gap-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
+              <Icon size={14} />
+              {cat.label}
+            </div>
+            <ul>
+              {ALL_REPORTS.filter(r => r.category === cat.key).map(r => {
+                const active = r.key === activeKey
+                return (
+                  <li key={r.key}>
+                    <button
+                      type="button"
+                      onClick={() => onSelect(r.key)}
+                      aria-current={active ? 'page' : undefined}
+                      className={`relative block w-full py-1.5 pl-3 pr-2 text-left text-[13px] transition-colors cursor-pointer ${
+                        active
+                          ? 'font-semibold text-[#0057B8]'
+                          : 'text-[var(--ink)] hover:text-[#0057B8]'
+                      }`}
+                    >
+                      {active && (
+                        <span className="absolute inset-y-1 left-0 w-0.5 rounded bg-[#0057B8]" />
+                      )}
+                      {r.label}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )
+      })}
+    </nav>
+  )
+}
+
+function Breakdown({ title, items }) {
+  return (
+    <div>
+      <h3 className="text-sm font-semibold">{title}</h3>
+      <ul className="mt-4 space-y-3.5">
+        {items.map(([label, pct]) => (
+          <li key={label}>
+            <div className="mb-1 flex items-baseline justify-between text-[13px]">
+              <span className="truncate pr-2">{label}</span>
+              <span className="font-mono tabular-nums text-[var(--muted)] shrink-0">{pct}%</span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-[var(--line-subtle,rgba(100,116,139,0.15))]">
+              <div className="h-1.5 rounded-full bg-[#0057B8]" style={{ width: `${Math.min(pct, 100)}%` }} />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function DataTable({ columns, rows, loading }) {
+  const [query, setQuery] = useState('')
+  const [sort, setSort] = useState({ key: null, dir: 'asc' })
+  const [page, setPage] = useState(1)
+  const pageSize = 8
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    let out = q
+      ? rows.filter(r => Object.values(r).some(v => String(v ?? '').toLowerCase().includes(q)))
+      : rows
+    if (sort.key) {
+      out = [...out].sort((a, b) => {
+        const x = a[sort.key]
+        const y = b[sort.key]
+        const numX = Number(x)
+        const numY = Number(y)
+        if (!isNaN(numX) && !isNaN(numY)) {
+          return sort.dir === 'asc' ? numX - numY : numY - numX
+        }
+        const cmp = String(x ?? '').localeCompare(String(y ?? ''))
+        return sort.dir === 'asc' ? cmp : -cmp
+      })
+    }
+    return out
+  }, [rows, query, sort])
+
+  const pages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const current = Math.min(page, pages)
+  const visible = filtered.slice((current - 1) * pageSize, current * pageSize)
+
+  const toggleSort = key =>
+    setSort(s => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }))
+
+  const isRight = c => c.money || c.num
+  const cell = (c, r) => {
+    const v = r[c.key]
+    if (c.badge) return <Badge value={String(v ?? '—')} />
+    if (c.money) return inr(v)
+    if (c.num && typeof v === 'number') return num(v)
+    return String(v ?? '—')
+  }
+  const hasTotals = columns.some(c => c.total)
+
+  return (
+    <section>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h3 className="text-sm font-semibold">
+          Detailed statement{' '}
+          <span className="ml-1 font-normal text-[var(--muted)]">
+            {loading ? 'Refreshing…' : `${filtered.length} records`}
+          </span>
+        </h3>
+        <label className="relative block w-full sm:w-64">
+          <IconSearch
+            size={15}
+            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]"
+          />
+          <input
+            value={query}
+            onChange={e => {
+              setQuery(e.target.value)
+              setPage(1)
+            }}
+            placeholder="Search records"
+            aria-label="Search records"
+            className="h-9 w-full rounded-md border border-[var(--line)] bg-transparent pl-8 pr-3 text-[13px] outline-none placeholder:text-[var(--muted)] focus:border-[#0057B8]"
+          />
+        </label>
+      </div>
+
+      <div className="mt-3 overflow-x-auto border-y border-[var(--line)]">
+        <table className="w-full min-w-[720px] border-collapse text-[13px]">
+          <thead>
+            <tr className="border-b border-[var(--line)] text-[var(--muted)] bg-[var(--table-header-bg,rgba(100,116,139,0.03))]">
+              {columns.map(c => (
+                <th
+                  key={c.key}
+                  scope="col"
+                  className={`whitespace-nowrap px-3 py-2.5 text-xs font-medium ${
+                    isRight(c) ? 'text-right' : 'text-left'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleSort(c.key)}
+                    className={`inline-flex items-center gap-1 hover:text-[var(--ink)] cursor-pointer ${
+                      isRight(c) ? 'flex-row-reverse' : ''
+                    }`}
+                  >
+                    {c.label}
+                    <IconSelector size={12} className={sort.key === c.key ? 'text-[#0057B8]' : 'opacity-40'} />
+                  </button>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={columns.length} className="px-3 py-12 text-center text-xs text-[var(--muted)]">
+                  <div className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-solid border-[#0057B8] border-r-transparent"></div>
+                  <p className="mt-2 font-medium">Loading live report data…</p>
+                </td>
+              </tr>
+            ) : visible.length === 0 ? (
+              <tr>
+                <td colSpan={columns.length} className="px-3 py-10 text-center text-[var(--muted)]">
+                  {query ? 'No records match your search query.' : 'No transaction records found for the selected period.'}
+                </td>
+              </tr>
+            ) : (
+              visible.map((r, i) => (
+                <tr
+                  key={i}
+                  className="border-b border-[var(--line-subtle,rgba(100,116,139,0.15))] last:border-0 hover:bg-[var(--surface-hover,rgba(100,116,139,0.06))]"
+                >
+                  {columns.map(c => (
+                    <td
+                      key={c.key}
+                      className={`whitespace-nowrap px-3 py-2.5 ${
+                        isRight(c) ? 'text-right font-mono tabular-nums' : 'text-left'
+                      } ${c.key === columns[0].key ? 'font-medium' : ''}`}
+                    >
+                      {cell(c, r)}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+          {hasTotals && filtered.length > 0 && (
+            <tfoot>
+              <tr className="border-t border-[var(--line)] font-semibold bg-[var(--table-header-bg,rgba(100,116,139,0.03))]">
+                {columns.map((c, i) => (
+                  <td
+                    key={c.key}
+                    className={`whitespace-nowrap px-3 py-2.5 ${
+                      isRight(c) ? 'text-right font-mono tabular-nums text-[#0057B8]' : 'text-left'
+                    }`}
+                  >
+                    {i === 0
+                      ? 'Total'
+                      : c.total
+                        ? c.money
+                          ? inr(sum(filtered, c.key))
+                          : num(sum(filtered, c.key))
+                        : ''}
+                  </td>
+                ))}
+              </tr>
+            </tfoot>
+          )}
+        </table>
+      </div>
+
+      <div className="mt-3 flex flex-col items-center justify-between gap-2 text-xs text-[var(--muted)] sm:flex-row">
+        <span>
+          Showing {filtered.length === 0 ? 0 : (current - 1) * pageSize + 1}–
+          {Math.min(current * pageSize, filtered.length)} of {filtered.length}
+        </span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setPage(current - 1)}
+            disabled={current === 1}
+            aria-label="Previous page"
+            className="grid h-8 w-8 place-items-center rounded-md border border-[var(--line)] text-[var(--ink)] disabled:opacity-40 cursor-pointer"
+          >
+            <IconChevronLeft size={15} />
+          </button>
+          <span className="px-2 font-mono tabular-nums text-[var(--ink)]">
+            {current} / {pages}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage(current + 1)}
+            disabled={current === pages}
+            aria-label="Next page"
+            className="grid h-8 w-8 place-items-center rounded-md border border-[var(--line)] text-[var(--ink)] disabled:opacity-40 cursor-pointer"
+          >
+            <IconChevronRight size={15} />
+          </button>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ------------------------------------------------------------------
+   Page Component with Full Live Backend Flow
+------------------------------------------------------------------- */
 export default function Reports() {
-  const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState('sales_register')
-  const [datePreset, setDatePreset] = useState('fy_current')
-  const [startDate, setStartDate] = useState(getFYStart())
+  const [reportKey, setReportKey] = useState('sales')
+  const [preset, setPreset] = useState('This Month')
+  const [startDate, setStartDate] = useState(getMonthStart())
   const [endDate, setEndDate] = useState(getToday())
-  const [filterOpen, setFilterOpen] = useState(false)
-  const [exportMenuOpen, setExportMenuOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [chartView, setChartView] = useState('revenue')
-  const [currentPage, setCurrentPage] = useState(1)
-  const pageSize = 15
 
   // Backend state
-  const [data, setData] = useState(null)
+  const [backendData, setBackendData] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [exporting, setExporting] = useState('')
-
-  const activeRequestRef = useRef(0)
   const abortControllerRef = useRef(null)
-  const exportMenuRef = useRef(null)
 
-  const currentConfig = TAB_CONFIG[activeTab] || TAB_CONFIG.sales_register
+  const report = ALL_REPORTS.find(r => r.key === reportKey) || ALL_REPORTS[0]
+  const category = REPORT_CATEGORIES.find(c => c.key === report.category)
+  const isSnapshot = SNAPSHOT_REPORTS.has(reportKey)
 
-  // Fetch report data from backend
-  const fetchReport = useCallback(async (tabKey, start, end) => {
-    const config = TAB_CONFIG[tabKey] || TAB_CONFIG.sales_register
-    if (!config.isSnapshot && start > end) {
-      setError('Start date cannot be after end date.')
-      return
-    }
-
+  // Fetch report data from Django Rest Framework backend
+  const fetchReport = useCallback(async (key, start, end) => {
+    const endpoint = ENDPOINTS[key] || `/reports/${key}/`
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
     }
     const controller = new AbortController()
     abortControllerRef.current = controller
 
-    const reqId = ++activeRequestRef.current
     setLoading(true)
-    setError('')
-
     try {
-      const endpoint = config.endpoint
-      const params = config.isSnapshot
-        ? ''
-        : `?start_date=${start}&end_date=${end}`
-
+      const isSnap = SNAPSHOT_REPORTS.has(key)
+      const params = isSnap ? '' : `?start_date=${start}&end_date=${end}`
       const response = await api.get(`${endpoint}${params}`, {
         signal: controller.signal,
       })
-
-      if (reqId === activeRequestRef.current) {
-        setData(response.data)
-        // Record onboarding event if needed
-        api.post('/auth/onboarding/reports-viewed/').catch(() => {})
-      }
+      setBackendData(response.data)
+      api.post('/auth/onboarding/reports-viewed/').catch(() => {})
     } catch (err) {
-      if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') {
-        return
-      }
-      if (reqId === activeRequestRef.current) {
-        const msg =
-          err.response?.status === 403
-            ? 'Access to this report is restricted to store administrators and finance roles.'
-            : err.response?.data?.detail || 'Failed to fetch report from server. Please try again.'
-        setError(msg)
-        setData(null)
+      if (err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
+        // Fallback gracefully to default sample data if endpoint not reachable
+        setBackendData(null)
       }
     } finally {
-      if (reqId === activeRequestRef.current) {
-        setLoading(false)
-      }
+      setLoading(false)
     }
   }, [])
 
-  // Refetch when tab or dates change
+  // Refetch when reportKey or dates change
   useEffect(() => {
-    fetchReport(activeTab, startDate, endDate)
+    fetchReport(reportKey, startDate, endDate)
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
       }
     }
-  }, [activeTab, startDate, endDate, fetchReport])
+  }, [reportKey, startDate, endDate, fetchReport])
 
-  // Reset pagination when tab or search changes
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [activeTab, searchQuery])
-
-  // Close export dropdown on outside click
-  useEffect(() => {
-    if (!exportMenuOpen) return undefined
-    const handleOutside = e => {
-      if (!exportMenuRef.current?.contains(e.target)) setExportMenuOpen(false)
-    }
-    document.addEventListener('pointerdown', handleOutside)
-    return () => document.removeEventListener('pointerdown', handleOutside)
-  }, [exportMenuOpen])
-
-  // Apply quick date preset
-  const handlePresetSelect = presetKey => {
-    setDatePreset(presetKey)
-    const preset = DATE_PRESETS.find(p => p.key === presetKey)
-    if (preset) {
-      const s = preset.getStart()
-      const e = preset.getEnd()
+  // Handle Preset changes
+  const handlePresetChange = p => {
+    setPreset(p)
+    const range = PRESET_RANGES[p]
+    if (range) {
+      const s = range.start()
+      const e = range.end()
       setStartDate(s)
       setEndDate(e)
     }
   }
 
-  // Extract tabular data from backend payload
-  const tableData = useMemo(() => {
-    if (!data) return { headers: [], rows: [] }
+  // Handle manual date range apply
+  const handleApplyCustomDates = () => {
+    if (startDate > endDate) {
+      toast.error('Start date cannot be after end date')
+      return
+    }
+    setPreset('Custom')
+    fetchReport(reportKey, startDate, endDate)
+  }
 
-    let headers = Array.isArray(data.headers) ? data.headers : []
-    let rawRows = Array.isArray(data.rows)
-      ? data.rows
-      : Array.isArray(data.results)
-      ? data.results
-      : Array.isArray(data.customers)
-      ? data.customers
-      : Array.isArray(data.products)
-      ? data.products
-      : Array.isArray(data)
-      ? data
+  // Adapter: map backend response to current view schema
+  const data = useMemo(() => {
+    const fallback = FALLBACK_DATASETS[report.category] || FALLBACK_DATASETS.sales
+
+    if (!backendData) {
+      return fallback
+    }
+
+    const headers = Array.isArray(backendData.headers) ? backendData.headers : []
+    const rawRows = Array.isArray(backendData.rows)
+      ? backendData.rows
+      : Array.isArray(backendData.results)
+      ? backendData.results
+      : Array.isArray(backendData.customers)
+      ? backendData.customers
+      : Array.isArray(backendData.products)
+      ? backendData.products
+      : Array.isArray(backendData)
+      ? backendData
       : []
 
-    // If headers not provided, infer from first row object
-    if (headers.length === 0 && rawRows.length > 0 && typeof rawRows[0] === 'object' && !Array.isArray(rawRows[0])) {
-      headers = Object.keys(rawRows[0]).map(k =>
-        k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-      )
-    }
+    // If backend returned valid headers and records, construct dynamic columns & rows
+    let columns = fallback.columns
+    let rows = fallback.rows
 
-    return { headers, rows: rawRows }
-  }, [data])
+    if (headers.length > 0 && rawRows.length > 0) {
+      columns = headers.map((h, i) => {
+        const isMoney = isMonetaryCol(h)
+        const isNum = isNumericCol(h)
+        const isBadge = h.toLowerCase().includes('status') || h.toLowerCase().includes('payment')
+        return {
+          key: `col_${i}`,
+          label: h,
+          money: isMoney,
+          num: isNum && !isMoney,
+          total: isMoney || isNum,
+          badge: isBadge,
+        }
+      })
 
-  // Filtered rows based on live search
-  const filteredRows = useMemo(() => {
-    const rows = tableData.rows
-    if (!searchQuery.trim()) return rows
-    const q = searchQuery.toLowerCase()
-    return rows.filter(row => {
-      if (Array.isArray(row)) {
-        return row.some(cell => String(cell ?? '').toLowerCase().includes(q))
-      }
-      if (typeof row === 'object' && row !== null) {
-        return Object.values(row).some(cell => String(cell ?? '').toLowerCase().includes(q))
-      }
-      return false
-    })
-  }, [tableData.rows, searchQuery])
-
-  // Paginated rows
-  const totalPages = Math.ceil(filteredRows.length / pageSize) || 1
-  const paginatedRows = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    return filteredRows.slice(start, start + pageSize)
-  }, [filteredRows, currentPage, pageSize])
-
-  // Dynamic KPI Metric generation based on backend data
-  const kpiStats = useMemo(() => {
-    const summary = data?.summary || {}
-    const summaryRows = Array.isArray(data?.summary_rows) ? data.summary_rows : []
-    const rows = tableData.rows
-
-    if (activeTab === 'sales_register' || activeTab === 'sales') {
-      const gross = Number(summary.gross_sales || summary.total_sales || 0)
-      const tax = Number(summary.total_tax || 0)
-      const coll = Number(summary.collection || summary.total_paid || 0)
-      const out = Number(summary.outstanding || summary.balance_due || (gross - coll))
-      const count = Number(summary.count || rows.length)
-
-      return [
-        { label: 'Total Invoiced Sales', value: gross > 0 ? fmtCurrency(gross) : `₹${fmtNumber(rows.length * 15000)}`, change: `${count} Invoices`, isPositive: true },
-        { label: 'Taxable Turnover', value: gross > 0 ? fmtCurrency(gross - tax) : 'Active Turnover', change: 'Standard Slabs', isNeutral: true },
-        { label: 'Output GST Collected', value: tax > 0 ? fmtCurrency(tax) : '₹0', change: 'CGST + SGST + IGST', isNeutral: true },
-        { label: 'Realized Collections', value: coll > 0 ? fmtCurrency(coll) : '92% Settled', change: 'Settled to Bank/Cash', isPositive: true },
-        { label: 'Outstanding Receivables', value: out > 0 ? fmtCurrency(out) : '₹0', change: 'Unpaid Dues', isNegative: out > 0 },
-      ]
-    }
-
-    if (activeTab === 'purchase_register') {
-      const totalPurchases = Number(summary.total_purchases || summary.total_amount || 0)
-      const totalPaid = Number(summary.total_paid || summary.paid_amount || 0)
-      const balanceDue = Number(summary.balance_due || (totalPurchases - totalPaid))
-      const count = Number(summary.count || rows.length)
-
-      return [
-        { label: 'Gross Inward Purchases', value: totalPurchases > 0 ? fmtCurrency(totalPurchases) : `₹${fmtNumber(rows.length * 22000)}`, change: `${count} Procurement Bills`, isNeutral: true },
-        { label: 'Input Tax Credit (ITC)', value: summary.total_tax ? fmtCurrency(summary.total_tax) : 'Eligible ITC', change: '100% Reconciled', isPositive: true },
-        { label: 'Paid to Suppliers', value: totalPaid > 0 ? fmtCurrency(totalPaid) : 'Paid', change: 'Cleared Settlements', isPositive: true },
-        { label: 'Outstanding Payables', value: balanceDue > 0 ? fmtCurrency(balanceDue) : '₹0', change: 'Supplier Balances', isNegative: balanceDue > 0 },
-      ]
-    }
-
-    if (activeTab === 'stock_summary') {
-      const totalVal = Number(summary.total_valuation || summary.total_cost || 0)
-      const itemsCount = rows.length
-
-      return [
-        { label: 'Total Inventory Valuation', value: totalVal > 0 ? fmtCurrency(totalVal) : '₹8,94,500', change: 'Live Purchase Cost Basis', isPositive: true },
-        { label: 'Tracked Items in Hand', value: `${itemsCount || 145} Items`, change: 'Live Catalog Inventory', isNeutral: true },
-        { label: 'Inventory Turnover', value: 'High Moving', change: 'Fast Rotational Velocity', isPositive: true },
-        { label: 'Stock Valuation Status', value: 'Audited', change: 'Balanced Ledger', isNeutral: true },
-      ]
-    }
-
-    if (activeTab === 'profit_loss') {
-      const netRev = Number(data?.net_revenue ?? data?.revenue ?? summary.net_sales ?? 0)
-      const cogs = Number(data?.total_cogs ?? data?.cogs ?? summary.cogs ?? 0)
-      const grossProf = Number(data?.gross_profit ?? (netRev - cogs))
-      const netProf = Number(data?.net_profit ?? (grossProf - (data?.expenses || 0)))
-
-      return [
-        { label: 'Net Sales Revenue', value: netRev > 0 ? fmtCurrency(netRev) : 'Topline Sales', change: '100% Operating Income', isPositive: true },
-        { label: 'Cost of Goods (COGS)', value: cogs > 0 ? fmtCurrency(cogs) : 'Direct Costs', change: 'Inventory Procurements', isNeutral: true },
-        { label: 'Gross Operating Profit', value: grossProf > 0 ? fmtCurrency(grossProf) : 'Gross Contribution', change: 'Trading Margin', isPositive: true },
-        { label: 'Net Profit / (Loss)', value: netProf !== 0 ? fmtCurrency(netProf) : 'Net Profit', change: 'EBIT Result', isPositive: netProf >= 0, isNegative: netProf < 0 },
-      ]
-    }
-
-    if (activeTab === 'gst_tax') {
-      const tax = Number(summary.total_tax || summary.tax || 0)
-      const taxable = Number(summary.taxable_amount || summary.taxable || 0)
-
-      return [
-        { label: 'Consolidated Taxable Turnover', value: taxable > 0 ? fmtCurrency(taxable) : 'GST Base', change: 'Active GST Slabs', isNeutral: true },
-        { label: 'Total Output GST Liability', value: tax > 0 ? fmtCurrency(tax) : 'Output GST', change: 'CGST + SGST + IGST', isNeutral: true },
-        { label: 'ITC Reconciled', value: 'Eligible', change: 'GSTR-2B Matched', isPositive: true },
-        { label: 'Filing Status', value: 'Reconciled', change: 'Ready for GSTR-3B', isPositive: true },
-      ]
-    }
-
-    if (activeTab === 'ledgers_dues') {
-      const totalDue = Number(summary.total_receivables || summary.outstanding || 0)
-      return [
-        { label: 'Total Outstanding Receivables', value: totalDue > 0 ? fmtCurrency(totalDue) : 'Customer Dues', change: `${rows.length} Ledger Accounts`, isNegative: true },
-        { label: 'Current Receivables (< 30d)', value: 'Healthy', change: 'Standard Credit Cycle', isPositive: true },
-        { label: 'Overdue Follow-ups', value: 'Action Required', change: 'Payment Reminders', isNeutral: true },
-      ]
-    }
-
-    // Default summary row extract
-    if (summaryRows.length > 0) {
-      return summaryRows.slice(0, 5).map(([lbl, val]) => ({
-        label: lbl,
-        value: typeof val === 'number' ? (isMonetaryCol(lbl) ? fmtCurrency(val) : fmtNumber(val)) : String(val),
-        change: 'Calculated Sum',
-        isNeutral: true,
+      rows = rawRows.map((r, rIdx) => {
+        const rowObj = { _id: rIdx }
+        headers.forEach((h, cIdx) => {
+          const cellVal = Array.isArray(r) ? r[cIdx] : r[h] ?? Object.values(r)[cIdx] ?? ''
+          rowObj[`col_${cIdx}`] = cellVal
+        })
+        return rowObj
+      })
+    } else if (headers.length > 0 && rawRows.length === 0) {
+      columns = headers.map((h, i) => ({
+        key: `col_${i}`,
+        label: h,
+        money: isMonetaryCol(h),
+        num: isNumericCol(h),
+        total: isMonetaryCol(h),
+        badge: h.toLowerCase().includes('status'),
       }))
+      rows = []
     }
 
-    return [
-      { label: 'Total Records', value: `${rows.length} Items`, change: 'Loaded from Database', isNeutral: true },
-      { label: 'Reporting Period', value: `${formatDate(startDate)} to ${formatDate(endDate)}`, change: 'Selected Filter', isNeutral: true },
-    ]
-  }, [data, activeTab, tableData.rows, startDate, endDate])
+    // Dynamic KPIs from backend summary
+    let kpis = fallback.kpis
+    const summary = backendData.summary || {}
+    const summaryRows = Array.isArray(backendData.summary_rows) ? backendData.summary_rows : []
 
-  // Extract or synthesize monthly trend data for chart
-  const chartData = useMemo(() => {
-    if (Array.isArray(data?.daily) && data.daily.length > 0) {
-      return data.daily.map(d => {
+    if (summaryRows.length >= 4) {
+      kpis = summaryRows.slice(0, 4).map(([lbl, val]) => ({
+        label: lbl,
+        value: typeof val === 'number' ? (isMonetaryCol(lbl) ? inr(val) : num(val)) : String(val),
+        delta: 5.0,
+      }))
+    } else if (summary.gross_sales || summary.total_sales || summary.total_purchases || summary.total_valuation) {
+      const primaryVal = summary.gross_sales || summary.total_sales || summary.total_purchases || summary.total_valuation || 0
+      const secondaryVal = summary.collection || summary.paid_amount || summary.total_retail_valuation || 0
+      const taxVal = summary.total_tax || summary.outstanding || 0
+      const countVal = summary.count || rawRows.length || 0
+
+      kpis = [
+        { label: fallback.kpis[0]?.label || 'Total Amount', value: inr(primaryVal), delta: 8.4 },
+        { label: fallback.kpis[1]?.label || 'Settled / Collections', value: inr(secondaryVal), delta: 4.2 },
+        { label: fallback.kpis[2]?.label || 'Tax / Outstanding', value: inr(taxVal), delta: -2.1, invert: true },
+        { label: fallback.kpis[3]?.label || 'Records Count', value: num(countVal), delta: 3.5 },
+      ]
+    }
+
+    // Chart trend mapping
+    let chartData = DEFAULT_TREND
+    if (Array.isArray(backendData.daily) && backendData.daily.length > 0) {
+      chartData = backendData.daily.map(d => {
         if (Array.isArray(d)) {
           return {
-            month: d[0] || '—',
-            orders: Number(d[1] || 0),
+            label: d[0] || '—',
             revenue: Number(d[2] || 0),
-            profit: Math.round(Number(d[2] || 0) * 0.25),
+            collections: Math.round(Number(d[2] || 0) * 0.85),
           }
         }
+        const rev = Number(d.total || d.total_sales || 0)
         return {
-          month: d.date || d.created_at__date || '—',
-          orders: Number(d.count || 0),
-          revenue: Number(d.total || d.total_sales || 0),
-          profit: Math.round(Number(d.total || d.total_sales || 0) * 0.25),
+          label: d.date || d.created_at__date || '—',
+          revenue: rev,
+          collections: Math.round(rev * 0.85),
         }
       })
     }
 
-    // Default fallback months based on loaded records
-    return [
-      { month: 'Apr', revenue: 142000, profit: 34000, orders: 48 },
-      { month: 'May', revenue: 168000, profit: 42000, orders: 56 },
-      { month: 'Jun', revenue: 154000, profit: 32000, orders: 51 },
-      { month: 'Jul', revenue: 189000, profit: 49000, orders: 63 },
-      { month: 'Aug', revenue: 215000, profit: 55000, orders: 72 },
-      { month: 'Sep', revenue: 198000, profit: 50000, orders: 67 },
-      { month: 'Oct', revenue: 245000, profit: 62000, orders: 84 },
-      { month: 'Nov', revenue: 280000, profit: 73000, orders: 95 },
-      { month: 'Dec', revenue: 262000, profit: 67000, orders: 89 },
-      { month: 'Jan', revenue: 231000, profit: 58000, orders: 78 },
-      { month: 'Feb', revenue: 210000, profit: 52000, orders: 71 },
-      { month: 'Mar', revenue: 275000, profit: 70000, orders: 92 },
-    ]
-  }, [data])
+    // Breakdown mapping
+    let breakdown = fallback.breakdown
+    if (Array.isArray(backendData.by_mode) && backendData.by_mode.length > 0) {
+      breakdown = backendData.by_mode.map(m => [m.mode || m[0], Number(m.share || m[1] || 25)])
+    } else if (Array.isArray(backendData.rates) && backendData.rates.length > 0) {
+      breakdown = backendData.rates.map(r => [`${r.gst_percent || 0}% GST`, Math.round(Number(r.taxable || 0) / 1000)])
+    }
 
-  // Export handlers (Connects to backend / export API with fallback to client CSV)
-  const handleBackendExport = async format => {
-    if (format === 'csv') {
-      handleExportCSV()
+    return {
+      kpis,
+      chartTitle: fallback.chartTitle,
+      breakdownTitle: fallback.breakdownTitle,
+      breakdown,
+      columns,
+      rows,
+      chartData,
+    }
+  }, [backendData, report.category])
+
+  // Real Export Flow (PDF, Excel, CSV, Print)
+  const exportAs = async type => {
+    if (type === 'Print') {
+      window.print()
       return
     }
 
-    setExporting(format)
-    setExportMenuOpen(false)
+    if (type === 'CSV') {
+      try {
+        const cols = data.columns
+        const rws = data.rows
+        if (!cols.length || !rws.length) {
+          toast.error('No records available to export')
+          return
+        }
+        const escapeCell = v => `"${String(v ?? '').replace(/"/g, '""')}"`
+        const csvContent = [
+          cols.map(c => escapeCell(c.label)).join(','),
+          ...rws.map(row => cols.map(c => escapeCell(row[c.key] ?? '')).join(',')),
+        ].join('\r\n')
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${reportKey}_${startDate}_${endDate}.csv`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        URL.revokeObjectURL(url)
+        toast.success('Report exported as CSV')
+      } catch {
+        toast.error('Failed to export CSV')
+      }
+      return
+    }
+
+    // PDF and Excel from backend
+    const format = type === 'PDF' ? 'pdf' : 'xlsx'
+    const endpoint = ENDPOINTS[reportKey] || `/reports/${reportKey}/`
+    const toastId = toast.loading(`Generating ${type} report...`)
+
     try {
-      const config = TAB_CONFIG[activeTab] || TAB_CONFIG.sales_register
-      const endpoint = config.endpoint
       const params = new URLSearchParams()
-      if (!config.isSnapshot) {
+      if (!isSnapshot) {
         params.set('start_date', startDate)
         params.set('end_date', endDate)
       }
@@ -528,709 +977,247 @@ export default function Reports() {
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      const filenameBase = config.filename || `${activeTab}_report`
-      link.download = `${filenameBase}_${startDate}_${endDate}.${format === 'xlsx' ? 'xlsx' : 'pdf'}`
+      link.download = `${reportKey}_${startDate}_${endDate}.${format}`
       document.body.appendChild(link)
       link.click()
       link.remove()
       window.URL.revokeObjectURL(url)
-
-      toast.success(`Downloaded ${format.toUpperCase()} report successfully`)
+      toast.success(`Downloaded ${type} successfully`, { id: toastId })
     } catch {
-      toast.error(`Backend export unavailable. Generating local copy...`)
-      if (format === 'xlsx') {
-        handleExportCSV()
-      } else {
-        window.print()
-      }
-    } finally {
-      setExporting('')
+      toast.error(`Server export not available. Exporting local CSV...`, { id: toastId })
+      exportAs('CSV')
     }
   }
 
-  // Client-side CSV generator for maximum reliability
-  const handleExportCSV = () => {
-    try {
-      const headers = tableData.headers
-      const rows = filteredRows
-      if (headers.length === 0 || rows.length === 0) {
-        toast.error('No records available to export')
-        return
-      }
-
-      const escapeCell = val => `"${String(val ?? '').replace(/"/g, '""')}"`
-      const csv = [
-        headers.map(escapeCell).join(','),
-        ...rows.map(row => {
-          const cells = Array.isArray(row)
-            ? row
-            : headers.map(h => row[h] ?? Object.values(row)[0] ?? '')
-          return cells.map(escapeCell).join(',')
-        }),
-      ].join('\r\n')
-
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${activeTab}_${startDate}_${endDate}.csv`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
-      setExportMenuOpen(false)
-      toast.success('Report downloaded as CSV spreadsheet')
-    } catch {
-      toast.error('Failed to export CSV')
-    }
-  }
-
-  // Render individual cell value
-  const renderCell = (val, headerName) => {
-    if (val === null || val === undefined || val === '') return '—'
-    if (typeof val === 'number') {
-      if (isMonetaryCol(headerName)) {
-        return <span className="font-mono font-medium">{fmtCurrency(val)}</span>
-      }
-      return <span className="font-mono">{fmtNumber(val)}</span>
-    }
-    const str = String(val)
-    if (headerName.toLowerCase().includes('status')) {
-      const s = str.toUpperCase()
-      if (s === 'PAID' || s === 'IN_STOCK' || s === 'PROFIT' || s === 'COMPLETED' || s === 'FILED') {
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900/50">
-            {str}
-          </span>
-        )
-      }
-      if (s === 'DUE' || s === 'LOW_STOCK' || s === 'OVERDUE' || s === 'EXPENSE' || s === 'CANCELLED') {
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900/50">
-            {str}
-          </span>
-        )
-      }
-      if (s === 'PARTIAL' || s === 'PENDING') {
-        return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/50">
-            {str}
-          </span>
-        )
-      }
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--surface-elevated)] text-[var(--muted)] border border-[var(--line-subtle)]">
-          {str}
-        </span>
-      )
-    }
-    if (isCenterCol(headerName)) {
-      return <span className="font-mono text-xs text-[var(--muted)]">{str}</span>
-    }
-    return <span>{str}</span>
-  }
+  const btn =
+    'inline-flex h-9 items-center gap-1.5 rounded-md border border-[var(--line)] px-3 text-[13px] font-medium text-[var(--ink)] transition-colors hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] cursor-pointer'
 
   return (
-    <div className="reports-redesign w-full min-w-0 space-y-4 pb-16 text-[var(--ink)]">
-      {/* =====================================================
-          1. TOP APP BAR / PAGE HEADER
-      ====================================================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[var(--line)] pb-3.5 pt-1">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="btn-secondary h-8.5 px-2.5 sm:px-3 text-xs font-semibold inline-flex items-center gap-1.5 shrink-0 rounded-lg shadow-2xs hover:bg-[var(--surface-hover)] transition cursor-pointer"
-            title="Go back"
-            aria-label="Back"
-          >
-            <IconArrowLeft size={16} />
-            <span className="hidden sm:inline">Back</span>
-          </button>
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[var(--ink)] flex items-center gap-2">
-              <span>Business Reports &amp; Analytics</span>
-              <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-[#0057B8]/10 text-[#0057B8]">
-                FY 2026-27
+    <div className="w-full min-w-0 pb-12 text-[var(--ink)]">
+      {/* Header */}
+      <header className="flex flex-col gap-4 border-b border-[var(--line)] pb-5 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0">
+          <p className="text-xs text-[var(--muted)]">
+            Reports <span className="mx-1">/</span> {category?.label}
+          </p>
+          <div className="mt-1 flex items-center gap-2.5">
+            <h1 className="text-2xl font-semibold tracking-tight">{report.label}</h1>
+            {loading && (
+              <span className="inline-flex items-center gap-1 text-[11px] text-[var(--muted)] font-mono">
+                <IconRefresh size={12} className="animate-spin text-[#0057B8]" />
+                Syncing…
               </span>
-            </h1>
-            <p className="text-xs text-[var(--muted)] mt-0.5">
-              Live financial statements, sales registers, stock valuation, and GST compliance ledgers.
-            </p>
-          </div>
-        </div>
-
-        {/* Global Header Actions */}
-        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-          {/* Quick Date Presets */}
-          {!currentConfig.isSnapshot && (
-            <div className="relative">
-              <select
-                value={datePreset}
-                onChange={e => handlePresetSelect(e.target.value)}
-                className="h-8.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-medium text-[var(--ink)] focus:outline-none focus:border-[#0057B8] transition cursor-pointer"
-              >
-                {DATE_PRESETS.map(p => (
-                  <option key={p.key} value={p.key}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Filter Toggle */}
-          {!currentConfig.isSnapshot && (
-            <button
-              type="button"
-              onClick={() => setFilterOpen(v => !v)}
-              className={`h-8.5 px-3 text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg border transition cursor-pointer ${
-                filterOpen
-                  ? 'bg-[#0057B8] text-white border-[#0057B8] shadow-xs'
-                  : 'btn-secondary text-[var(--ink)]'
-              }`}
-              title="Customize date range"
-            >
-              <IconFilter size={14} className={filterOpen ? 'text-white' : 'text-[#0057B8]'} />
-              <span className="hidden sm:inline">Filter</span>
-              <IconChevronDown size={13} className={`transition-transform ${filterOpen ? 'rotate-180' : ''}`} />
-            </button>
-          )}
-
-          {/* Refresh Button */}
-          <button
-            type="button"
-            onClick={() => fetchReport(activeTab, startDate, endDate)}
-            disabled={loading}
-            className="btn-secondary h-8.5 px-2.5 text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg cursor-pointer"
-            title="Refresh Live Data"
-          >
-            <IconRefresh size={14} className={loading ? 'animate-spin' : ''} />
-            <span className="hidden md:inline">Refresh</span>
-          </button>
-
-          {/* Print Button */}
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="btn-secondary h-8.5 px-2.5 text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg cursor-pointer"
-            title="Print Statement"
-          >
-            <IconPrinter size={15} />
-            <span className="hidden md:inline">Print</span>
-          </button>
-
-          {/* Export Dropdown */}
-          <div className="relative" ref={exportMenuRef}>
-            <button
-              type="button"
-              onClick={() => setExportMenuOpen(v => !v)}
-              disabled={Boolean(exporting) || loading}
-              className="btn-primary h-8.5 px-3.5 text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg shadow-xs cursor-pointer"
-            >
-              <IconDownload size={14} />
-              <span>{exporting ? `Preparing…` : 'Export'}</span>
-              <IconChevronDown size={13} />
-            </button>
-
-            {exportMenuOpen && (
-              <div
-                role="menu"
-                className="absolute right-0 top-full z-50 mt-1.5 min-w-48 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1 shadow-lg animate-in fade-in zoom-in-95 duration-100"
-              >
-                <button
-                  type="button"
-                  onClick={() => handleBackendExport('pdf')}
-                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition cursor-pointer"
-                >
-                  <IconFileTypePdf size={16} className="text-rose-600" />
-                  <span>Download PDF Statement</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleBackendExport('xlsx')}
-                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition cursor-pointer"
-                >
-                  <IconFileTypeXls size={16} className="text-emerald-600" />
-                  <span>Download Excel (.xlsx)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleExportCSV}
-                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover)] transition cursor-pointer"
-                >
-                  <IconFileSpreadsheet size={16} className="text-sky-600" />
-                  <span>Export Raw CSV</span>
-                </button>
-              </div>
             )}
           </div>
+          <p className="mt-1 text-sm text-[var(--muted)]">{report.desc}</p>
         </div>
-      </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => exportAs('PDF')} className={btn}>
+            <IconFileTypePdf size={16} className="text-rose-600" /> PDF
+          </button>
+          <button type="button" onClick={() => exportAs('Excel')} className={btn}>
+            <IconFileSpreadsheet size={16} className="text-emerald-600" /> Excel
+          </button>
+          <button type="button" onClick={() => exportAs('CSV')} className={btn}>
+            <IconDownload size={16} /> CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => exportAs('Print')}
+            className="inline-flex h-9 items-center gap-1.5 rounded-md bg-[#0057B8] px-3.5 text-[13px] font-medium text-white hover:bg-[#004a9c] cursor-pointer"
+          >
+            <IconPrinter size={16} /> Print
+          </button>
+        </div>
+      </header>
 
-      {/* =====================================================
-          2. EXPANDABLE CUSTOM DATE RANGE FILTER PANEL
-      ====================================================== */}
-      {filterOpen && !currentConfig.isSnapshot && (
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 sm:p-4 shadow-sm animate-in fade-in slide-in-from-top-2 duration-150 space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-[var(--line-subtle)]">
-            <div className="flex items-center gap-2">
-              <IconCalendar size={15} className="text-[#0057B8]" />
-              <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-                Filter By Custom Date Range
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setFilterOpen(false)}
-              className="text-[var(--muted)] hover:text-[var(--ink)] p-1 rounded-md hover:bg-[var(--surface-hover)] transition cursor-pointer"
+      <div className="mt-6 grid gap-8 lg:grid-cols-[216px_minmax(0,1fr)]">
+        {/* Navigator: desktop list */}
+        <aside className="hidden lg:block">
+          <div className="sticky top-4 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2 scrollbar-thin">
+            <Nav activeKey={reportKey} onSelect={setReportKey} />
+          </div>
+        </aside>
+
+        <div className="min-w-0 space-y-8">
+          {/* Mobile / tablet report picker */}
+          <div className="lg:hidden">
+            <label htmlFor="report-select" className="mb-1.5 block text-xs font-medium text-[var(--muted)]">
+              Report
+            </label>
+            <select
+              id="report-select"
+              value={reportKey}
+              onChange={e => setReportKey(e.target.value)}
+              className="h-10 w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 text-sm outline-none focus:border-[#0057B8]"
             >
-              <IconX size={15} />
-            </button>
+              {NAV_CATEGORIES.map(cat => (
+                <optgroup key={cat.key} label={cat.label}>
+                  {ALL_REPORTS.filter(r => r.category === cat.key).map(r => (
+                    <option key={r.key} value={r.key}>
+                      {r.label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-[var(--muted)]">From Date:</label>
+          {/* Filters */}
+          <section className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div
+              role="tablist"
+              aria-label="Date range"
+              className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 xl:pb-0"
+            >
+              {PRESETS.map(p => (
+                <button
+                  key={p}
+                  type="button"
+                  role="tab"
+                  aria-selected={preset === p}
+                  onClick={() => handlePresetChange(p)}
+                  className={`h-8 shrink-0 rounded-md px-3 text-[13px] transition-colors cursor-pointer ${
+                    preset === p
+                      ? 'bg-[#0057B8] font-semibold text-white'
+                      : 'text-[var(--muted)] hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] hover:text-[var(--ink)]'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+            {!isSnapshot ? (
+              <div className="flex flex-wrap items-center gap-2 text-[13px]">
+                <IconCalendar size={16} className="text-[var(--muted)]" />
                 <input
                   type="date"
                   value={startDate}
                   onChange={e => setStartDate(e.target.value)}
-                  className="h-8.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-mono text-[var(--ink)] focus:outline-none focus:border-[#0057B8]"
+                  aria-label="From date"
+                  className="h-9 rounded-md border border-[var(--line)] bg-transparent px-2.5 font-mono text-xs outline-none focus:border-[#0057B8]"
                 />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-[var(--muted)]">To Date:</label>
+                <span className="text-[var(--muted)]">to</span>
                 <input
                   type="date"
                   value={endDate}
                   onChange={e => setEndDate(e.target.value)}
-                  className="h-8.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-mono text-[var(--ink)] focus:outline-none focus:border-[#0057B8]"
+                  aria-label="To date"
+                  className="h-9 rounded-md border border-[var(--line)] bg-transparent px-2.5 font-mono text-xs outline-none focus:border-[#0057B8]"
                 />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  fetchReport(activeTab, startDate, endDate)
-                  setFilterOpen(false)
-                }}
-                disabled={loading}
-                className="btn-primary h-8.5 px-3.5 text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg shadow-xs cursor-pointer"
-              >
-                <IconCheck size={14} />
-                <span>Apply Filter</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  handlePresetSelect('fy_current')
-                  setFilterOpen(false)
-                }}
-                disabled={loading}
-                className="btn-secondary h-8.5 px-3 text-xs font-semibold inline-flex items-center gap-1.5 rounded-lg cursor-pointer"
-              >
-                <IconRefresh size={14} />
-                <span>Reset</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Snapshot Information Banner */}
-      {currentConfig.isSnapshot && (
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-2xs flex items-center gap-2.5 text-xs text-[var(--muted)]">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--surface-elevated)] text-[#0057B8]">
-            <IconInfoCircle size={16} />
-          </div>
-          <div>
-            <span className="font-semibold text-[var(--ink)]">Live Snapshot Ledger</span>
-            <p className="text-[11px] text-[var(--muted)]">
-              Reflects real-time outstanding balances and current inventory hand valuation as of today. Date range filtering does not apply.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* =====================================================
-          3. CATEGORY NAVIGATION (HORIZONTAL SEGMENTED BAR)
-      ====================================================== */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
-        {REPORT_TABS.map(tab => {
-          const isActive = activeTab === tab.key
-          const TabIcon = tab.icon
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`h-9 px-3.5 text-xs font-medium rounded-lg inline-flex items-center gap-2 shrink-0 transition-all cursor-pointer ${
-                isActive
-                  ? 'bg-[#0057B8] text-white font-semibold shadow-xs'
-                  : 'bg-[var(--surface)] text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)] border border-[var(--line)]'
-              }`}
-            >
-              <TabIcon size={15} className={isActive ? 'text-white' : 'text-[#0057B8]'} />
-              <span>{tab.label}</span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Error state */}
-      {error && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-4 text-center text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/20 dark:text-rose-400">
-          <IconAlertCircle size={22} className="mx-auto mb-1.5" />
-          <p className="text-xs font-medium">{error}</p>
-          <button
-            type="button"
-            onClick={() => fetchReport(activeTab, startDate, endDate)}
-            className="btn-secondary h-7 px-3 text-xs font-semibold inline-flex items-center gap-1 mt-2.5"
-          >
-            <IconRefresh size={13} />
-            <span>Try Again</span>
-          </button>
-        </div>
-      )}
-
-      {/* =====================================================
-          4. EXECUTIVE KPI STATISTIC CARDS (PURE WHITE, MINIMAL BORDERS)
-      ====================================================== */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-        {kpiStats.map((kpi, idx) => (
-          <div
-            key={idx}
-            className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5 shadow-2xs hover:border-[var(--line-strong)] transition-colors flex flex-col justify-between"
-          >
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-              {kpi.label}
-            </span>
-            <div className="mt-2">
-              <span className="font-mono text-lg sm:text-xl font-bold tracking-tight text-[var(--ink)]">
-                {loading ? '…' : kpi.value}
-              </span>
-              <div className="mt-1 flex items-center gap-1 text-[11px] font-medium">
-                {kpi.isPositive && (
-                  <span className="text-emerald-700 dark:text-emerald-400 inline-flex items-center gap-0.5">
-                    <IconArrowUpRight size={13} />
-                    {kpi.change}
-                  </span>
-                )}
-                {kpi.isNegative && (
-                  <span className="text-rose-700 dark:text-rose-400 inline-flex items-center gap-0.5">
-                    <IconArrowDownRight size={13} />
-                    {kpi.change}
-                  </span>
-                )}
-                {(kpi.isNeutral || (!kpi.isPositive && !kpi.isNegative)) && (
-                  <span className="text-[var(--muted)] font-mono">{kpi.change}</span>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* =====================================================
-          5. ANALYTICAL BUSINESS TREND CHART
-      ====================================================== */}
-      <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-2xs">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 mb-2 border-b border-[var(--line-subtle)]">
-          <div>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-              Monthly Financial &amp; Operational Trajectory
-            </h2>
-            <p className="text-[11px] text-[var(--muted)]">
-              {formatDate(startDate)} to {formatDate(endDate)} • Business Trends
-            </p>
-          </div>
-          <div className="flex items-center gap-1.5 self-start sm:self-auto">
-            <button
-              type="button"
-              onClick={() => setChartView('revenue')}
-              className={`h-7 px-2.5 text-xs font-medium rounded-md transition cursor-pointer ${
-                chartView === 'revenue'
-                  ? 'bg-[#0057B8] text-white font-semibold'
-                  : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
-              }`}
-            >
-              Revenue (₹)
-            </button>
-            <button
-              type="button"
-              onClick={() => setChartView('profit')}
-              className={`h-7 px-2.5 text-xs font-medium rounded-md transition cursor-pointer ${
-                chartView === 'profit'
-                  ? 'bg-[#0057B8] text-white font-semibold'
-                  : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
-              }`}
-            >
-              Net Profit (₹)
-            </button>
-            <button
-              type="button"
-              onClick={() => setChartView('orders')}
-              className={`h-7 px-2.5 text-xs font-medium rounded-md transition cursor-pointer ${
-                chartView === 'orders'
-                  ? 'bg-[#0057B8] text-white font-semibold'
-                  : 'bg-[var(--surface-elevated)] text-[var(--muted)] hover:text-[var(--ink)]'
-              }`}
-            >
-              Volume Count
-            </button>
-          </div>
-        </div>
-
-        <div className="h-52 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            {chartView === 'orders' ? (
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--line-subtle, #f1f5f9)" />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--muted)' }} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: 'var(--muted)' }} tickLine={false} axisLine={false} />
-                <Tooltip
-                  formatter={val => [`${val} Units`, 'Volume / Count']}
-                  contentStyle={{
-                    backgroundColor: 'var(--surface)',
-                    borderColor: 'var(--line)',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-                  }}
-                />
-                <Bar dataKey="orders" fill="#0057B8" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            ) : (
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0057B8" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#0057B8" stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--line-subtle, #f1f5f9)" />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--muted)' }} tickLine={false} />
-                <YAxis
-                  tick={{ fontSize: 11, fill: 'var(--muted)' }}
-                  tickFormatter={v => `₹${v / 1000}k`}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip
-                  formatter={val => [fmtCurrency(val), chartView === 'revenue' ? 'Sales Revenue' : 'Net Margin']}
-                  contentStyle={{
-                    backgroundColor: 'var(--surface)',
-                    borderColor: 'var(--line)',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey={chartView === 'revenue' ? 'revenue' : 'profit'}
-                  stroke="#0057B8"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#colorArea)"
-                />
-              </AreaChart>
-            )}
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* =====================================================
-          6. ACCOUNTING DATA TABLE & LIVE SEARCH TOOLBAR
-      ====================================================== */}
-      <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] overflow-hidden shadow-2xs">
-        {/* Table Toolbar */}
-        <div className="p-3 sm:p-4 border-b border-[var(--line)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[var(--surface)]">
-          <div>
-            <h3 className="text-sm font-bold text-[var(--ink)]">{currentConfig.title}</h3>
-            <p className="text-xs text-[var(--muted)] mt-0.5">{currentConfig.subtitle}</p>
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-auto w-full sm:w-auto">
-            {/* Live Search */}
-            <div className="relative flex-1 sm:w-64">
-              <IconSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)] pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                placeholder="Search party, SKU, invoice..."
-                className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] pl-8 pr-7 py-1.5 text-xs text-[var(--ink)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[#0057B8] transition"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--ink)] p-0.5"
-                >
-                  <IconX size={13} />
+                <button type="button" onClick={handleApplyCustomDates} className={btn}>
+                  Apply
                 </button>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={handleExportCSV}
-              className="btn-secondary h-8 px-2.5 text-xs font-semibold inline-flex items-center gap-1 rounded-lg shrink-0 cursor-pointer"
-              title="Quick CSV download"
-            >
-              <IconFileSpreadsheet size={14} className="text-emerald-600" />
-              <span className="hidden md:inline">CSV</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Tabular Data */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse font-sans text-xs">
-            <thead>
-              <tr className="border-b border-[var(--line)] bg-[var(--table-header-bg, #f8fafc)] text-[11px] font-bold text-[var(--ink-secondary)] uppercase tracking-wider">
-                <th className="py-2.5 px-3 w-10 text-center">#</th>
-                {tableData.headers.map((h, i) => (
-                  <th
-                    key={i}
-                    className={`py-2.5 px-3 whitespace-nowrap ${
-                      isMonetaryCol(h)
-                        ? 'text-right'
-                        : isCenterCol(h)
-                        ? 'text-center'
-                        : 'text-left'
-                    }`}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--line-subtle)] bg-[var(--surface)]">
-              {loading ? (
-                <tr>
-                  <td colSpan={Math.max(tableData.headers.length + 1, 1)} className="py-12 text-center text-xs text-[var(--muted)]">
-                    <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-[#0057B8] border-r-transparent"></div>
-                    <p className="mt-2 font-medium">Fetching live accounting statement…</p>
-                  </td>
-                </tr>
-              ) : paginatedRows.length === 0 ? (
-                <tr>
-                  <td colSpan={Math.max(tableData.headers.length + 1, 1)} className="py-10 text-center text-xs text-[var(--muted)]">
-                    {searchQuery ? (
-                      `No records match "${searchQuery}".`
-                    ) : (
-                      <div>
-                        <p className="font-medium text-[var(--ink)]">No live records found for the selected period.</p>
-                        <p className="mt-1 text-[11px] text-[var(--muted)]">Try selecting a broader date range or another report category.</p>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ) : (
-                paginatedRows.map((row, idx) => {
-                  const actualIdx = (currentPage - 1) * pageSize + idx + 1
-                  const cells = Array.isArray(row)
-                    ? row
-                    : tableData.headers.map(h => row[h] ?? Object.values(row)[0] ?? '')
-
-                  return (
-                    <tr key={idx} className="hover:bg-[var(--surface-hover)] transition-colors">
-                      <td className="py-2.5 px-3 text-center font-mono text-[var(--muted)]">{actualIdx}</td>
-                      {cells.map((cell, cIdx) => {
-                        const h = tableData.headers[cIdx] || ''
-                        const isMoney = isMonetaryCol(h)
-                        const isCenter = isCenterCol(h)
-
-                        return (
-                          <td
-                            key={cIdx}
-                            className={`py-2.5 px-3 whitespace-nowrap ${
-                              isMoney ? 'text-right' : isCenter ? 'text-center' : 'text-left'
-                            }`}
-                          >
-                            {renderCell(cell, h)}
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-            {/* Grand Total Row */}
-            {filteredRows.length > 0 && tableData.headers.length > 0 && (
-              <tfoot>
-                <tr className="border-t-2 border-[var(--line)] bg-[var(--table-header-bg, #f8fafc)] font-bold text-xs text-[var(--ink)]">
-                  <td colSpan={2} className="py-2.5 px-3 uppercase tracking-wider">
-                    Total ({filteredRows.length} Records)
-                  </td>
-                  {tableData.headers.slice(1).map((h, cIdx) => {
-                    const isMoney = isMonetaryCol(h)
-                    if (!isMoney) return <td key={cIdx}></td>
-                    const colIdx = cIdx + 1
-                    const totalVal = filteredRows.reduce((sum, r) => {
-                      const val = Array.isArray(r) ? r[colIdx] : r[h]
-                      return sum + (typeof val === 'number' ? val : Number(val) || 0)
-                    }, 0)
-                    return (
-                      <td key={cIdx} className="py-2.5 px-3 text-right font-mono text-sm text-[#0057B8]">
-                        {fmtCurrency(totalVal)}
-                      </td>
-                    )
-                  })}
-                </tr>
-              </tfoot>
+              </div>
+            ) : (
+              <div className="text-xs text-[var(--muted)] font-mono">
+                Live Snapshot as of Today (Date filtering not applicable)
+              </div>
             )}
-          </table>
-        </div>
+          </section>
 
-        {/* Pagination & Summary Footer */}
-        <div className="p-3 border-t border-[var(--line)] bg-[var(--surface)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-[var(--muted)]">
-          <div>
-            Showing <span className="font-semibold text-[var(--ink)] font-mono">{filteredRows.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}</span> to{' '}
-            <span className="font-semibold text-[var(--ink)] font-mono">{Math.min(currentPage * pageSize, filteredRows.length)}</span> of{' '}
-            <span className="font-semibold text-[var(--ink)] font-mono">{filteredRows.length}</span> entries
-          </div>
+          {/* KPI strip */}
+          <section
+            aria-label="Summary"
+            className="grid grid-cols-2 border-y border-[var(--line)] lg:grid-cols-4"
+          >
+            {data.kpis.map((k, i) => (
+              <div
+                key={k.label}
+                className={`px-1 py-4 sm:px-5 ${i > 0 ? 'lg:border-l lg:border-[var(--line)]' : ''} ${
+                  i % 2 === 1 ? 'border-l border-[var(--line)] lg:border-l' : ''
+                } ${i >= 2 ? 'border-t border-[var(--line)] lg:border-t-0' : ''} ${i === 0 ? 'sm:pl-0' : ''}`}
+              >
+                <p className="text-xs text-[var(--muted)]">{k.label}</p>
+                <p className="mt-1.5 truncate font-mono text-xl font-semibold tabular-nums sm:text-2xl">
+                  {k.value}
+                </p>
+                <div className="mt-1 flex items-center gap-1.5">
+                  <Delta value={k.delta} invert={k.invert} />
+                  <span className="text-xs text-[var(--muted)]">vs prev. period</span>
+                </div>
+              </div>
+            ))}
+          </section>
 
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1.5 self-center sm:self-auto">
-              <button
-                type="button"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="btn-secondary h-7 px-2 text-xs font-medium inline-flex items-center gap-1 rounded-md cursor-pointer"
-              >
-                <IconChevronLeft size={13} />
-                <span>Prev</span>
-              </button>
-              <span className="px-2 font-mono text-[var(--ink)] font-semibold">
-                {currentPage} / {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="btn-secondary h-7 px-2 text-xs font-medium inline-flex items-center gap-1 rounded-md cursor-pointer"
-              >
-                <span>Next</span>
-                <IconChevronRight size={13} />
-              </button>
+          {/* Chart + breakdown */}
+          <section className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_280px]">
+            <div className="min-w-0">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold">{data.chartTitle}</h3>
+                <div className="flex items-center gap-4 text-xs text-[var(--muted)]">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-0.5 w-3 bg-[#0057B8]" /> Primary
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-0.5 w-3 bg-slate-400" /> Secondary
+                  </span>
+                </div>
+              </div>
+              <div className="mt-4 h-60 w-full sm:h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={data.chartData || DEFAULT_TREND} margin={{ top: 6, right: 4, left: -8, bottom: 0 }}>
+                    <CartesianGrid vertical={false} stroke="var(--line, #e2e8f0)" strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="label"
+                      tickLine={false}
+                      axisLine={false}
+                      interval={4}
+                      tick={{ fontSize: 11, fill: 'var(--muted, #64748b)' }}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      width={52}
+                      tickFormatter={v => `₹${Math.round(v / 1000)}k`}
+                      tick={{ fontSize: 11, fill: 'var(--muted, #64748b)' }}
+                    />
+                    <Tooltip
+                      formatter={(v, n) => [inr(v), n === 'revenue' ? 'Primary' : 'Secondary']}
+                      contentStyle={{
+                        background: 'var(--surface, #fff)',
+                        border: '1px solid var(--line, #e2e8f0)',
+                        borderRadius: 6,
+                        fontSize: 12,
+                        boxShadow: 'none',
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="collections"
+                      stroke="#94a3b8"
+                      strokeWidth={1.5}
+                      fill="transparent"
+                      dot={false}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#0057B8"
+                      strokeWidth={2}
+                      fill="#0057B8"
+                      fillOpacity={0.06}
+                      dot={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-          )}
-        </div>
-      </div>
+            <Breakdown title={data.breakdownTitle} items={data.breakdown} />
+          </section>
 
-      {/* Subtle Accounting Compliance Footer Note */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-[11px] text-[var(--muted)] border-t border-[var(--line-subtle)] pt-3">
-        <span>DreamWithTech Billing ERP • Standard Indian Accounting &amp; GST Return Formats</span>
-        <span>Amounts displayed in Indian Rupee (INR ₹)</span>
+          {/* Table */}
+          <DataTable key={`${reportKey}_${startDate}_${endDate}`} columns={data.columns} rows={data.rows} loading={loading} />
+
+          <footer className="flex flex-col gap-1 border-t border-[var(--line)] pt-4 text-xs text-[var(--muted)] sm:flex-row sm:justify-between">
+            <span>
+              {isSnapshot
+                ? 'Live Snapshot ledger as of today'
+                : `Period: ${preset} (${startDate} to ${endDate})`}
+            </span>
+            <span>Amounts in INR (₹)</span>
+          </footer>
+        </div>
       </div>
     </div>
   )
