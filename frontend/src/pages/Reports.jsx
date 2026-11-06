@@ -2,8 +2,11 @@ import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import toast from 'react-hot-toast'
 import api from '../api'
 import {
-  IconArrowDownRight,
-  IconArrowUpRight,
+  formatCurrency,
+  formatNumber,
+  formatDate,
+} from '../utils/formatters'
+import {
   IconCalendar,
   IconChevronDown,
   IconChevronLeft,
@@ -22,19 +25,13 @@ import {
   IconReceiptTax,
   IconChartBar,
   IconRefresh,
+  IconX,
+  IconLayoutGrid,
+  IconTable,
 } from '@tabler/icons-react'
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
 
 /* ------------------------------------------------------------------
-   Public exports (kept so other modules importing them keep working)
+   Public Exports (Retained for application-wide compatibility)
 ------------------------------------------------------------------- */
 export const REPORT_CATEGORIES = [
   { key: 'all', label: 'All Reports', icon: IconChartBar },
@@ -47,28 +44,28 @@ export const REPORT_CATEGORIES = [
 ]
 
 export const ALL_REPORTS = [
-  { key: 'sales', category: 'sales', label: 'Sales Summary', desc: 'Revenue, collections and daily sales trend' },
-  { key: 'sales_register', category: 'sales', label: 'Sales Register', desc: 'Invoice-wise sales with GST breakup' },
-  { key: 'products', category: 'sales', label: 'Item-wise Sales', desc: 'Volume and revenue per product' },
-  { key: 'purchases', category: 'purchases', label: 'Purchase Summary', desc: 'Supplier purchase totals and dues' },
-  { key: 'purchase_register', category: 'purchases', label: 'Purchase Register', desc: 'Inward bills with payment status' },
-  { key: 'item_wise_purchases', category: 'purchases', label: 'Item-wise Purchases', desc: 'Procurement quantity and cost per item' },
-  { key: 'stock_summary', category: 'inventory', label: 'Stock Valuation', desc: 'Stock in hand, cost and valuation' },
-  { key: 'stock_movement', category: 'inventory', label: 'Stock Movement', desc: 'Purchases, sales and adjustments' },
-  { key: 'day_book', category: 'books', label: 'Day Book', desc: 'Chronological record of all transactions' },
-  { key: 'cash_book', category: 'books', label: 'Cash Book', desc: 'Cash receipts, payments and balance' },
-  { key: 'bank_book', category: 'books', label: 'Bank Book', desc: 'Deposits, withdrawals and UPI receipts' },
-  { key: 'payments', category: 'books', label: 'Payment Collection', desc: 'Receipts by payment method' },
-  { key: 'expenses', category: 'books', label: 'Operating Expenses', desc: 'Expenses by category' },
-  { key: 'profit', category: 'books', label: 'Profit & Loss', desc: 'Revenue, costs and net profit' },
-  { key: 'customers', category: 'ledgers', label: 'Customer Receivables', desc: 'Outstanding balances by customer' },
-  { key: 'customer_ledger', category: 'ledgers', label: 'Customer Ledger', desc: 'Debit, credit and payment history' },
-  { key: 'outstanding_payables', category: 'ledgers', label: 'Supplier Payables', desc: 'Dues payable to vendors' },
-  { key: 'supplier_ledger', category: 'ledgers', label: 'Supplier Ledger', desc: 'Bills, returns and settlements' },
-  { key: 'gst', category: 'gst', label: 'GST Tax Summary', desc: 'Taxable value and CGST / SGST liability' },
-  { key: 'gstr1', category: 'gst', label: 'GSTR-1 Outward', desc: 'Outward supplies for filing' },
-  { key: 'gstr2', category: 'gst', label: 'GSTR-2 Inward', desc: 'Inward supplies and ITC' },
-  { key: 'gstr3b', category: 'gst', label: 'GSTR-3B Summary', desc: 'Output tax vs eligible ITC' },
+  { key: 'sales', category: 'sales', label: 'Sales Summary', desc: 'Date-wise sales totals, transaction counts and revenues' },
+  { key: 'sales_register', category: 'sales', label: 'Sales Register', desc: 'Itemized sales invoices with customer, tax and totals' },
+  { key: 'products', category: 'sales', label: 'Item-wise Sales', desc: 'Units sold, average selling prices and gross revenues' },
+  { key: 'purchases', category: 'purchases', label: 'Purchase Summary', desc: 'Procurement count, invoiced amounts and supplier dues' },
+  { key: 'purchase_register', category: 'purchases', label: 'Purchase Register', desc: 'Inward purchase bills with supplier details and payments' },
+  { key: 'item_wise_purchases', category: 'purchases', label: 'Item-wise Purchases', desc: 'Purchased quantities, unit purchase costs and total outlay' },
+  { key: 'stock_summary', category: 'inventory', label: 'Stock Valuation', desc: 'Current stock in hand, landed cost, retail value and valuation' },
+  { key: 'stock_movement', category: 'inventory', label: 'Stock Movement', desc: 'Stock inflow, outward billing, adjustments and ledger notes' },
+  { key: 'day_book', category: 'books', label: 'Day Book', desc: 'Chronological record of all vouchers, debits and credits' },
+  { key: 'cash_book', category: 'books', label: 'Cash Book', desc: 'Cash counter collections, payments and closing cash balance' },
+  { key: 'bank_book', category: 'books', label: 'Bank Book', desc: 'Bank inflows, outflows, UTR references and bank balance' },
+  { key: 'payments', category: 'books', label: 'Payment Collection', desc: 'Collections by payment channel, transaction ID and collector' },
+  { key: 'expenses', category: 'books', label: 'Operating Expenses', desc: 'Business expenses by category, payee and payment method' },
+  { key: 'profit', category: 'books', label: 'Profit & Loss', desc: 'Gross margin, operating overheads and net income statement' },
+  { key: 'customers', category: 'ledgers', label: 'Customer Receivables', desc: 'Customer outstanding dues, credit limits and balances' },
+  { key: 'customer_ledger', category: 'ledgers', label: 'Customer Ledger', desc: 'Customer account debit, credit and running balance history' },
+  { key: 'outstanding_payables', category: 'ledgers', label: 'Supplier Payables', desc: 'Vendor payables, phone, GSTIN and pending balances' },
+  { key: 'supplier_ledger', category: 'ledgers', label: 'Supplier Ledger', desc: 'Vendor bills, debit entries and settlement reconciliations' },
+  { key: 'gst', category: 'gst', label: 'GST Tax Summary', desc: 'GST rate slabs, taxable turnovers and net tax liability' },
+  { key: 'gstr1', category: 'gst', label: 'GSTR-1 Outward', desc: 'B2B/B2C outward supply schedules with CGST, SGST and IGST' },
+  { key: 'gstr2', category: 'gst', label: 'GSTR-2 Inward', desc: 'Inward procurement bills and eligible Input Tax Credit (ITC)' },
+  { key: 'gstr3b', category: 'gst', label: 'GSTR-3B Summary', desc: 'Consolidated return summary: output liability vs ITC offset' },
 ]
 
 const NAV_CATEGORIES = REPORT_CATEGORIES.filter(c => c.key !== 'all')
@@ -101,7 +98,7 @@ const ENDPOINTS = {
 const SNAPSHOT_REPORTS = new Set(['customers', 'outstanding_payables', 'stock_summary'])
 
 /* ------------------------------------------------------------------
-   Date Helpers & Presets
+   Date Presets
 ------------------------------------------------------------------- */
 const toLocalDate = d => {
   const year = d.getFullYear()
@@ -136,339 +133,348 @@ const PRESETS = Object.keys(PRESET_RANGES)
 /* ------------------------------------------------------------------
    Formatters
 ------------------------------------------------------------------- */
-const inr = n =>
-  '₹' + Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })
-const num = n => Number(n || 0).toLocaleString('en-IN')
-const pick = (arr, i) => arr[i % arr.length]
+const inr = n => formatCurrency(n, { maximumFractionDigits: 0, minimumFractionDigits: 0 })
+const num = n => formatNumber(n)
 const day = i => `${String(((i * 2) % 28) + 1).padStart(2, '0')} Oct 2026`
 
 /* ------------------------------------------------------------------
-   Updated Comprehensive Seed Data with User & Operator Details
+   EXACT BACKEND PDF REPORT SCHEMAS & REALISTIC DATASETS
+   Matches the exact headers and rows generated by PDF export
 ------------------------------------------------------------------- */
-const CUSTOMERS_SEED = [
-  { name: 'Lakshmi Stores', phone: '9845012345', gstin: '29AABCL1234F1Z1', role: 'Retailer' },
-  { name: 'Ravi Kumar', phone: '9886067890', gstin: 'URP', role: 'Customer' },
-  { name: 'Anita Traders', phone: '9448034567', gstin: '29ABCDE5678G2Z2', role: 'Wholesaler' },
-  { name: 'Sri Balaji Mart', phone: '9741099882', gstin: '29XYZAB4321C4Z8', role: 'Retailer' },
-  { name: 'Mohammed Iqbal', phone: '9900044551', gstin: 'URP', role: 'Customer' },
-  { name: 'Meena Provisions', phone: '9880122334', gstin: '29KLMNO9012J5Z3', role: 'Retailer' },
-  { name: 'Walk-in Customer', phone: 'Cash Counter', gstin: 'URP', role: 'Walk-in' },
-  { name: 'Suresh & Sons', phone: '9844055667', gstin: '29PQRST9876Q3Z2', role: 'Distributor' },
-  { name: 'Priya Bakery', phone: '9739088776', gstin: '29DEFGH3344K6Z0', role: 'Commercial' },
-  { name: 'Green Leaf Mart', phone: '9916022113', gstin: '29AABCG8899M1Z9', role: 'Supermarket' },
-]
-
-const SUPPLIERS_SEED = [
-  { name: 'Hindustan Distributors', phone: '080-22334455', gstin: '29AAACH1234D1Z2' },
-  { name: 'Sai Wholesale Agros', phone: '9845112233', gstin: '29AABCS5544B1Z9' },
-  { name: 'Karnataka Agro Agency', phone: '9886223344', gstin: '29AAACK7788P1Z4' },
-  { name: 'Metro Traders Depot', phone: '080-41223344', gstin: '29AAACM9900C1Z7' },
-  { name: 'Fresh Farms Pvt Ltd', phone: '9900334455', gstin: '29AAACF1122E1Z3' },
-  { name: 'Annapurna Suppliers', phone: '9741445566', gstin: '29AAACA3344F1Z8' },
-]
-
-const OPERATORS_SEED = ['Karthik R. (Cashier)', 'Rajesh K. (Owner)', 'Sundar M. (Admin)', 'Karthik R. (Cashier)']
-const ITEMS = ['Basmati Rice 5kg', 'Sunflower Oil 1L', 'Toor Dal 1kg', 'Sugar 1kg', 'Tata Salt 1kg', 'Wheat Atta 10kg', 'Tea Powder 500g', 'Milk 500ml', 'Biscuits Family Pack', 'Detergent 1kg']
-const MODES = ['UPI', 'Cash', 'Card', 'Bank']
-const STATUS_SALES = ['Paid', 'Paid', 'Partial', 'Paid', 'Due']
-
-const DEFAULT_TREND = Array.from({ length: 30 }, (_, i) => {
-  const revenue = Math.round(42000 + Math.sin(i / 2.2) * 9000 + i * 520 + (i % 7 === 0 ? 7000 : 0))
-  const collections = Math.round(revenue * (0.82 + ((i * 7) % 10) / 100))
-  return { label: `${i + 1} Oct`, revenue, collections }
-})
-
-const salesRows = Array.from({ length: 24 }, (_, i) => {
-  const taxable = 1800 + ((i * 937) % 9200)
-  const gst = Math.round(taxable * 0.12)
-  const cust = pick(CUSTOMERS_SEED, i * 3)
-  return {
-    invoice: `INV-${2410 + i}`,
-    date: day(i),
-    customer: cust.name,
-    mobile: cust.phone,
-    user: pick(OPERATORS_SEED, i),
-    mode: pick(MODES, i),
-    taxable,
-    gst,
-    total: taxable + gst,
-    status: pick(STATUS_SALES, i),
-  }
-})
-
-const purchaseRows = Array.from({ length: 18 }, (_, i) => {
-  const amount = 14000 + ((i * 4871) % 61000)
-  const paid = i % 4 === 0 ? 0 : i % 3 === 0 ? Math.round(amount / 2) : amount
-  const sup = pick(SUPPLIERS_SEED, i)
-  return {
-    bill: `PB-${880 + i}`,
-    date: day(i),
-    supplier: sup.name,
-    mobile: sup.phone,
-    user: 'Rajesh K. (Owner)',
-    items: 4 + ((i * 3) % 17),
-    amount,
-    paid,
-    due: amount - paid,
-    status: paid === amount ? 'Paid' : paid === 0 ? 'Unpaid' : 'Partial',
-  }
-})
-
-const stockRows = Array.from({ length: 20 }, (_, i) => {
-  const stock = (i * 17) % 140
-  const cost = 20 + ((i * 53) % 480)
-  const retail = Math.round(cost * 1.18)
-  return {
-    sku: `SKU-${1001 + i}`,
-    item: pick(ITEMS, i),
-    category: pick(['Grocery', 'Staples', 'Beverages', 'Snacks', 'Household'], i),
-    stock,
-    cost,
-    retail,
-    valuation: stock * cost,
-    status: stock === 0 ? 'Out of stock' : stock < 25 ? 'Low' : 'In stock',
-  }
-})
-
-const bookRows = (() => {
-  let bal = 120000
-  return Array.from({ length: 22 }, (_, i) => {
-    const credit = i % 3 === 0 ? 0 : 2500 + ((i * 1331) % 14000)
-    const debit = i % 3 === 0 ? 1800 + ((i * 977) % 9000) : 0
-    bal += credit - debit
-    const partyObj = credit ? pick(CUSTOMERS_SEED, i) : pick(SUPPLIERS_SEED, i)
-    return {
-      date: day(i),
-      voucher: `${credit ? 'RCT' : 'PMT'}-${300 + i}`,
-      particulars: partyObj.name,
-      mobile: partyObj.phone,
-      user: pick(OPERATORS_SEED, i),
-      mode: pick(MODES, i),
-      debit,
-      credit,
-      balance: bal,
-    }
-  })
-})()
-
-const ledgerRows = Array.from({ length: 16 }, (_, i) => {
-  const billed = 20000 + ((i * 6113) % 90000)
-  const received = Math.round(billed * (0.35 + ((i * 11) % 55) / 100))
-  const out = billed - received
-  const age = 6 + ((i * 13) % 80)
-  const cust = pick(CUSTOMERS_SEED, i)
-  return {
-    party: cust.name,
-    mobile: cust.phone,
-    role: cust.role,
-    invoices: 3 + (i % 9),
-    billed,
-    received,
-    outstanding: out,
-    aging: `${age} days`,
-    status: age > 60 ? 'Overdue' : age > 30 ? 'Due soon' : 'Current',
-  }
-})
-
-const gstRows = [
-  { slab: '0% (Exempt)', taxable: 48200, cgst: 0, sgst: 0, total: 0, share: '0.0%' },
-  { slab: '5% GST', taxable: 312400, cgst: 7810, sgst: 7810, total: 15620, share: '13.2%' },
-  { slab: '12% GST', taxable: 486900, cgst: 29214, sgst: 29214, total: 58428, share: '49.4%' },
-  { slab: '18% GST', taxable: 238700, cgst: 21483, sgst: 21483, total: 42966, share: '36.3%' },
-  { slab: '28% GST', taxable: 4600, cgst: 644, sgst: 644, total: 1288, share: '1.1%' },
-]
-
-const sum = (rows, k) => (Array.isArray(rows) ? rows.reduce((s, r) => s + (Number(r[k]) || 0), 0) : 0)
-
-// Dynamic real metrics computed directly from datasets
-const salesTotal = sum(salesRows, 'total')
-const salesTaxable = sum(salesRows, 'taxable')
-const salesGst = sum(salesRows, 'gst')
-const salesCollected = salesRows.filter(r => r.status === 'Paid').reduce((s, r) => s + r.total, 0)
-const salesOutstanding = Math.max(0, salesTotal - salesCollected)
-const salesModeSums = {}
-salesRows.forEach(r => {
-  salesModeSums[r.mode] = (salesModeSums[r.mode] || 0) + r.total
-})
-const salesModeBreakdown = Object.entries(salesModeSums)
-  .sort((a, b) => b[1] - a[1])
-  .map(([mode, amt]) => [mode, Math.round((amt / (salesTotal || 1)) * 100), amt])
-
-const purchaseTotal = sum(purchaseRows, 'amount')
-const purchasePaid = sum(purchaseRows, 'paid')
-const purchaseDue = sum(purchaseRows, 'due')
-const purchaseSupplierSums = {}
-purchaseRows.forEach(r => {
-  purchaseSupplierSums[r.supplier] = (purchaseSupplierSums[r.supplier] || 0) + r.amount
-})
-const purchaseBreakdown = Object.entries(purchaseSupplierSums)
-  .sort((a, b) => b[1] - a[1])
-  .map(([sup, amt]) => [sup, Math.round((amt / (purchaseTotal || 1)) * 100), amt])
-
-const stockValuation = sum(stockRows, 'valuation')
-const lowStockCount = stockRows.filter(r => r.status === 'Low').length
-const outStockCount = stockRows.filter(r => r.status === 'Out of stock').length
-const stockCatSums = {}
-stockRows.forEach(r => {
-  stockCatSums[r.category] = (stockCatSums[r.category] || 0) + r.valuation
-})
-const stockBreakdown = Object.entries(stockCatSums)
-  .sort((a, b) => b[1] - a[1])
-  .map(([cat, amt]) => [cat, Math.round((amt / (stockValuation || 1)) * 100), amt])
-
-const bookCredit = sum(bookRows, 'credit')
-const bookDebit = sum(bookRows, 'debit')
-const bookClosing = bookRows[bookRows.length - 1]?.balance || 0
-const bookModeSums = {}
-bookRows.forEach(r => {
-  bookModeSums[r.mode] = (bookModeSums[r.mode] || 0) + (r.credit || r.debit || 0)
-})
-const bookTotal = bookCredit + bookDebit || 1
-const bookModeBreakdown = Object.entries(bookModeSums)
-  .sort((a, b) => b[1] - a[1])
-  .map(([mode, amt]) => [mode, Math.round((amt / bookTotal) * 100), amt])
-
-const ledgerTotal = sum(ledgerRows, 'outstanding')
-const ledgerOverdue = ledgerRows.filter(r => r.status === 'Overdue' || r.status === 'Due').reduce((s, r) => s + r.outstanding, 0)
-
-const FALLBACK_DATASETS = {
+const BACKEND_TEMPLATES = {
+  // 1. Sales Summary
   sales: {
-    kpis: [
-      { label: 'Net Sales', value: inr(salesTotal), delta: 12.4 },
-      { label: 'Collections', value: inr(salesCollected), delta: 9.1 },
-      { label: 'Outstanding', value: inr(salesOutstanding), delta: -3.2, invert: true },
-      { label: 'Invoices', value: num(salesRows.length), delta: 6.8 },
-    ],
-    chartTitle: 'Revenue vs collections',
-    breakdownTitle: 'Collections by payment mode',
-    breakdown: salesModeBreakdown,
-    columns: [
-      { key: 'invoice', label: 'Invoice' },
-      { key: 'date', label: 'Date' },
-      { key: 'customer', label: 'Customer' },
-      { key: 'user', label: 'Billed By' },
-      { key: 'mode', label: 'Mode' },
-      { key: 'taxable', label: 'Taxable', money: true },
-      { key: 'gst', label: 'GST', money: true },
-      { key: 'total', label: 'Total', money: true, total: true },
-      { key: 'status', label: 'Status', badge: true },
-    ],
-    rows: salesRows,
+    title: 'Sales Summary',
+    headers: ['Date', 'Invoice Count', 'Total Sales'],
+    rows: Array.from({ length: 30 }, (_, i) => [
+      day(i),
+      12 + ((i * 7) % 24),
+      Math.round(28000 + ((i * 4120) % 65000)),
+    ]),
   },
+
+  // 2. Sales Register
+  sales_register: {
+    title: 'Sales Register',
+    headers: [
+      'Date', 'Invoice No.', 'Customer Name', 'GSTIN', 'Payment Mode',
+      'Taxable Amount', 'Tax Amount', 'Round Off', 'Invoice Total'
+    ],
+    rows: [
+      ['01 Oct 2026', 'INV-2410', 'Lakshmi Stores', '29AABCL1234F1Z1', 'UPI', 5200, 624, 0, 5824],
+      ['02 Oct 2026', 'INV-2411', 'Ravi Kumar', 'URP', 'Cash', 1850, 222, 0, 2072],
+      ['03 Oct 2026', 'INV-2412', 'Anita Traders', '29ABCDE5678G2Z2', 'Bank', 14200, 1704, 0, 15904],
+      ['04 Oct 2026', 'INV-2413', 'Sri Balaji Mart', '29XYZAB4321C4Z8', 'Card', 7800, 936, 0, 8736],
+      ['05 Oct 2026', 'INV-2414', 'Mohammed Iqbal', 'URP', 'Cash', 3100, 372, 0, 3472],
+      ['06 Oct 2026', 'INV-2415', 'Meena Provisions', '29KLMNO9012J5Z3', 'UPI', 9400, 1128, 0, 10528],
+      ['07 Oct 2026', 'INV-2416', 'Walk-in Customer', 'URP', 'Cash', 640, 77, 0, 717],
+      ['08 Oct 2026', 'INV-2417', 'Suresh & Sons', '29PQRST9876Q3Z2', 'UPI', 18900, 2268, 0, 21168],
+      ['09 Oct 2026', 'INV-2418', 'Priya Bakery', '29DEFGH3344K6Z0', 'Bank', 12400, 1488, 0, 13888],
+      ['10 Oct 2026', 'INV-2419', 'Green Leaf Mart', '29AABCG8899M1Z9', 'UPI', 22100, 2652, 0, 24752],
+      ['11 Oct 2026', 'INV-2420', 'Sri Balaji Mart', '29XYZAB4321C4Z8', 'Card', 6500, 780, 0, 7280],
+      ['12 Oct 2026', 'INV-2421', 'Lakshmi Stores', '29AABCL1234F1Z1', 'UPI', 11300, 1356, 0, 12656],
+    ],
+  },
+
+  // 3. Products / Item-Wise Sales
+  products: {
+    title: 'Item-wise Sales Report',
+    headers: ['Item Name', 'Barcode / SKU', 'Category', 'Units Sold', 'Average Price', 'Total Revenue'],
+    rows: [
+      ['Basmati Rice 5kg', 'SKU-1001', 'Grocery', 140, 450, 63000],
+      ['Sunflower Oil 1L', 'SKU-1002', 'Staples', 220, 135, 29700],
+      ['Toor Dal 1kg', 'SKU-1003', 'Staples', 185, 155, 28675],
+      ['Sugar 1kg', 'SKU-1004', 'Grocery', 310, 44, 13640],
+      ['Tata Salt 1kg', 'SKU-1005', 'Grocery', 260, 28, 7280],
+      ['Wheat Atta 10kg', 'SKU-1006', 'Staples', 95, 395, 37525],
+      ['Tea Powder 500g', 'SKU-1007', 'Beverages', 125, 195, 24375],
+      ['Milk 500ml', 'SKU-1008', 'Dairy', 480, 30, 14400],
+      ['Biscuits Family Pack', 'SKU-1009', 'Snacks', 170, 85, 14450],
+      ['Detergent 1kg', 'SKU-1010', 'Household', 115, 130, 14950],
+    ],
+  },
+
+  // 4. Purchases Summary
   purchases: {
-    kpis: [
-      { label: 'Total Purchases', value: inr(purchaseTotal), delta: 4.2 },
-      { label: 'Paid to Suppliers', value: inr(purchasePaid), delta: 5.9 },
-      { label: 'Payables', value: inr(purchaseDue), delta: 8.1, invert: true },
-      { label: 'Bills', value: num(purchaseRows.length), delta: 2.0 },
-    ],
-    chartTitle: 'Purchases vs payments',
-    breakdownTitle: 'Spend by supplier',
-    breakdown: purchaseBreakdown,
-    columns: [
-      { key: 'bill', label: 'Bill No.' },
-      { key: 'date', label: 'Date' },
-      { key: 'supplier', label: 'Supplier' },
-      { key: 'items', label: 'Items', num: true },
-      { key: 'amount', label: 'Amount', money: true, total: true },
-      { key: 'paid', label: 'Paid', money: true, total: true },
-      { key: 'due', label: 'Due', money: true, total: true },
-      { key: 'status', label: 'Status', badge: true },
-    ],
-    rows: purchaseRows,
+    title: 'Purchase Summary',
+    headers: ['Date', 'Purchase Count', 'Total Purchases'],
+    rows: Array.from({ length: 24 }, (_, i) => [
+      day(i),
+      2 + (i % 5),
+      Math.round(18000 + ((i * 5320) % 72000)),
+    ]),
   },
-  inventory: {
-    kpis: [
-      { label: 'Stock Valuation', value: inr(stockValuation), delta: 3.5 },
-      { label: 'SKUs Tracked', value: num(stockRows.length), delta: 1.2 },
-      { label: 'Low Stock', value: num(lowStockCount), delta: 14.0, invert: true },
-      { label: 'Out of Stock', value: num(outStockCount), delta: -12.5, invert: true },
+
+  // 5. Purchase Register
+  purchase_register: {
+    title: 'Purchase Register',
+    headers: ['Date', 'Bill No.', 'Supplier Name', 'GSTIN', 'Total Amount', 'Paid Amount', 'Balance Due', 'Status'],
+    rows: [
+      ['02 Oct 2026', 'PB-880', 'Hindustan Distributors', '29AAACH1234D1Z2', 45000, 45000, 0, 'PAID'],
+      ['04 Oct 2026', 'PB-881', 'Sai Wholesale Agros', '29AABCS5544B1Z9', 28500, 28500, 0, 'PAID'],
+      ['06 Oct 2026', 'PB-882', 'Karnataka Agro Agency', '29AAACK7788P1Z4', 62000, 30000, 32000, 'PARTIAL'],
+      ['08 Oct 2026', 'PB-883', 'Metro Traders Depot', '29AAACM9900C1Z7', 19800, 0, 19800, 'UNPAID'],
+      ['10 Oct 2026', 'PB-884', 'Fresh Farms Pvt Ltd', '29AAACF1122E1Z3', 34200, 34200, 0, 'PAID'],
+      ['12 Oct 2026', 'PB-885', 'Annapurna Suppliers', '29AAACA3344F1Z8', 51000, 25000, 26000, 'PARTIAL'],
+      ['14 Oct 2026', 'PB-886', 'Hindustan Distributors', '29AAACH1234D1Z2', 29000, 29000, 0, 'PAID'],
+      ['16 Oct 2026', 'PB-887', 'Sai Wholesale Agros', '29AABCS5544B1Z9', 42000, 0, 42000, 'UNPAID'],
     ],
-    chartTitle: 'Stock valuation trend',
-    breakdownTitle: 'Valuation by category',
-    breakdown: stockBreakdown,
-    columns: [
-      { key: 'sku', label: 'SKU' },
-      { key: 'item', label: 'Item' },
-      { key: 'category', label: 'Category' },
-      { key: 'stock', label: 'In Stock', num: true, total: true },
-      { key: 'cost', label: 'Cost', money: true },
-      { key: 'retail', label: 'Retail', money: true },
-      { key: 'valuation', label: 'Valuation', money: true, total: true },
-      { key: 'status', label: 'Status', badge: true },
-    ],
-    rows: stockRows,
   },
-  books: {
-    kpis: [
-      { label: 'Total Receipts', value: inr(bookCredit), delta: 7.7 },
-      { label: 'Total Payments', value: inr(bookDebit), delta: 3.1, invert: true },
-      { label: 'Closing Balance', value: inr(bookClosing), delta: 5.4 },
-      { label: 'Vouchers', value: num(bookRows.length), delta: 4.6 },
+
+  // 6. Item-Wise Purchases
+  item_wise_purchases: {
+    title: 'Item-wise Purchases',
+    headers: ['Item Name', 'Barcode / SKU', 'Category', 'Units Purchased', 'Average Cost', 'Total Cost'],
+    rows: [
+      ['Basmati Rice 5kg', 'SKU-1001', 'Grocery', 180, 380, 68400],
+      ['Sunflower Oil 1L', 'SKU-1002', 'Staples', 300, 110, 33000],
+      ['Toor Dal 1kg', 'SKU-1003', 'Staples', 250, 130, 32500],
+      ['Sugar 1kg', 'SKU-1004', 'Grocery', 400, 38, 15200],
+      ['Tata Salt 1kg', 'SKU-1005', 'Grocery', 350, 22, 7700],
+      ['Wheat Atta 10kg', 'SKU-1006', 'Staples', 120, 340, 40800],
+      ['Tea Powder 500g', 'SKU-1007', 'Beverages', 150, 160, 24000],
+      ['Detergent 1kg', 'SKU-1010', 'Household', 140, 105, 14700],
     ],
-    chartTitle: 'Cash inflow vs outflow',
-    breakdownTitle: 'Transactions by mode',
-    breakdown: bookModeBreakdown,
-    columns: [
-      { key: 'date', label: 'Date' },
-      { key: 'voucher', label: 'Voucher' },
-      { key: 'particulars', label: 'Particulars' },
-      { key: 'user', label: 'Operator' },
-      { key: 'mode', label: 'Mode' },
-      { key: 'debit', label: 'Debit', money: true, total: true },
-      { key: 'credit', label: 'Credit', money: true, total: true },
-      { key: 'balance', label: 'Balance', money: true },
-    ],
-    rows: bookRows,
   },
-  ledgers: {
-    kpis: [
-      { label: 'Total Outstanding', value: inr(ledgerTotal), delta: -2.8, invert: true },
-      { label: 'Debtor Accounts', value: num(ledgerRows.length), delta: 6.7 },
-      { label: 'Overdue Balances', value: inr(ledgerOverdue), delta: 11.2, invert: true },
-      { label: 'Avg. Collection Days', value: '24', delta: -4.0, invert: true },
+
+  // 7. Stock Valuation
+  stock_summary: {
+    title: 'Stock Summary Report',
+    headers: ['Product Name', 'SKU / Code', 'Category', 'Current Stock', 'Unit', 'Cost Price', 'Selling Price', 'Total Valuation'],
+    rows: [
+      ['Basmati Rice 5kg', 'SKU-1001', 'Grocery', 65, 'Pcs', 380, 450, 24700],
+      ['Sunflower Oil 1L', 'SKU-1002', 'Staples', 110, 'Pcs', 110, 135, 12100],
+      ['Toor Dal 1kg', 'SKU-1003', 'Staples', 80, 'Pcs', 130, 155, 10400],
+      ['Sugar 1kg', 'SKU-1004', 'Grocery', 140, 'Pcs', 38, 44, 5320],
+      ['Tata Salt 1kg', 'SKU-1005', 'Grocery', 95, 'Pcs', 22, 28, 2090],
+      ['Wheat Atta 10kg', 'SKU-1006', 'Staples', 35, 'Pcs', 340, 395, 11900],
+      ['Tea Powder 500g', 'SKU-1007', 'Beverages', 45, 'Pcs', 160, 195, 7200],
+      ['Milk 500ml', 'SKU-1008', 'Dairy', 18, 'Pcs', 26, 30, 468],
+      ['Biscuits Family Pack', 'SKU-1009', 'Snacks', 60, 'Pcs', 65, 85, 3900],
+      ['Detergent 1kg', 'SKU-1010', 'Household', 40, 'Pcs', 105, 130, 4200],
     ],
-    chartTitle: 'Outstanding balance trend',
-    breakdownTitle: 'Receivables aging',
-    breakdown: [['0–30 days', 48], ['31–60 days', 29], ['61–90 days', 15], ['90+ days', 8]],
-    columns: [
-      { key: 'party', label: 'Customer / Party' },
-      { key: 'invoices', label: 'Invoices', num: true },
-      { key: 'billed', label: 'Billed', money: true, total: true },
-      { key: 'received', label: 'Received', money: true, total: true },
-      { key: 'outstanding', label: 'Outstanding', money: true, total: true },
-      { key: 'aging', label: 'Aging' },
-      { key: 'status', label: 'Status', badge: true },
-    ],
-    rows: ledgerRows,
   },
+
+  // 8. Stock Movement
+  stock_movement: {
+    title: 'Stock Movement Report',
+    headers: ['Date & Time', 'Item Name', 'Movement Type', 'Qty Changed', 'Stock Before', 'Stock After', 'Reference Note'],
+    rows: [
+      ['01 Oct 2026 10:15', 'Basmati Rice 5kg', 'INWARD_PURCHASE', 50, 15, 65, 'PO-880 Hindustan'],
+      ['02 Oct 2026 11:30', 'Sunflower Oil 1L', 'INWARD_PURCHASE', 100, 10, 110, 'PO-881 Sai Agros'],
+      ['03 Oct 2026 14:20', 'Toor Dal 1kg', 'OUTWARD_SALE', -10, 90, 80, 'INV-2412 Sale'],
+      ['04 Oct 2026 16:45', 'Sugar 1kg', 'OUTWARD_SALE', -25, 165, 140, 'INV-2413 Sale'],
+      ['05 Oct 2026 09:30', 'Milk 500ml', 'EXPIRED_DAMAGE', -5, 23, 18, 'Damaged pack write-off'],
+      ['06 Oct 2026 17:10', 'Wheat Atta 10kg', 'INWARD_PURCHASE', 20, 15, 35, 'PO-885 Annapurna'],
+    ],
+  },
+
+  // 9. Day Book
+  day_book: {
+    title: 'Day Book Statement',
+    headers: ['Date & Time', 'Voucher Type', 'Voucher No.', 'Particulars / Account', 'Debit (Dr)', 'Credit (Cr)'],
+    rows: [
+      ['01 Oct 2026 09:30', 'SALES_INVOICE', 'INV-2410', 'Lakshmi Stores', 0, 5824],
+      ['01 Oct 2026 11:15', 'RECEIPT', 'RCT-301', 'Anita Traders', 0, 12000],
+      ['01 Oct 2026 14:00', 'PURCHASE_BILL', 'PB-880', 'Hindustan Distributors', 45000, 0],
+      ['01 Oct 2026 16:30', 'PAYMENT', 'PMT-302', 'Shop Electric Bill', 3400, 0],
+      ['02 Oct 2026 10:00', 'SALES_INVOICE', 'INV-2411', 'Ravi Kumar', 0, 2072],
+      ['02 Oct 2026 12:45', 'SALES_INVOICE', 'INV-2412', 'Anita Traders', 0, 15904],
+      ['02 Oct 2026 15:20', 'PAYMENT', 'PMT-303', 'Sai Wholesale Agros', 28500, 0],
+    ],
+  },
+
+  // 10. Cash Book
+  cash_book: {
+    title: 'Cash Book',
+    headers: ['Date', 'Particulars', 'Voucher / Ref No.', 'Cash In (Receipts)', 'Cash Out (Payments)', 'Closing Balance'],
+    rows: [
+      ['01 Oct 2026', 'Opening Cash Balance', 'OP-BAL', 0, 0, 25000],
+      ['01 Oct 2026', 'Cash Counter Sales', 'INV-2411', 2072, 0, 27072],
+      ['01 Oct 2026', 'Walk-in Cash Sale', 'INV-2416', 717, 0, 27789],
+      ['02 Oct 2026', 'Petty Cash Tea & Refreshment', 'PMT-04', 0, 350, 27439],
+      ['02 Oct 2026', 'Mohammed Iqbal Cash Payment', 'RCT-305', 3472, 0, 30911],
+      ['03 Oct 2026', 'Cash Deposit to Bank', 'CONTRA-01', 0, 15000, 15911],
+    ],
+  },
+
+  // 11. Bank Book
+  bank_book: {
+    title: 'Bank Book',
+    headers: ['Date', 'Particulars', 'Ref / UTR No.', 'Payment Mode', 'Bank Inflow', 'Bank Outflow', 'Bank Balance'],
+    rows: [
+      ['01 Oct 2026', 'Opening Bank Balance', 'OP-BAL', 'Bank', 0, 0, 142000],
+      ['01 Oct 2026', 'UPI Collection Lakshmi Stores', 'UPI-98450123', 'UPI', 5824, 0, 147824],
+      ['01 Oct 2026', 'Vendor NEFT Hindustan Dist', 'NEFT-004455', 'NEFT', 0, 45000, 102824],
+      ['02 Oct 2026', 'NEFT Anita Traders Settlement', 'NEFT-883344', 'NEFT', 15904, 0, 118728],
+      ['03 Oct 2026', 'Cash Deposit Counter', 'CHQ-00124', 'Cash', 15000, 0, 133728],
+    ],
+  },
+
+  // 12. Profit & Loss
+  profit: {
+    title: 'Profit & Loss Statement',
+    headers: ['Account / Particulars', 'Amount (Rs.)'],
+    rows: [
+      ['Gross Sales Revenue', 624500],
+      ['Less: Sales Returns & Discounts', -18200],
+      ['Net Revenue', 606300],
+      ['Cost of Goods Sold (COGS)', -418000],
+      ['Gross Profit Margin', 188300],
+      ['Less: Rent & Shop Utilities', -24000],
+      ['Less: Staff Salaries & Wages', -35000],
+      ['Less: Electricity & Water Bills', -6800],
+      ['Less: Logistics & Freight Outward', -8500],
+      ['Net Operating Income (EBITDA)', 114000],
+    ],
+  },
+
+  // 13. Operating Expenses
+  expenses: {
+    title: 'Expense Report',
+    headers: ['Date', 'Category', 'Description', 'Payment Method', 'Amount', 'Created By'],
+    rows: [
+      ['01 Oct 2026', 'Utilities', 'Shop Electricity Bill', 'UPI', 3400, 'Rajesh K. (Owner)'],
+      ['02 Oct 2026', 'Pantry', 'Tea and refreshments', 'Cash', 350, 'Karthik R. (Cashier)'],
+      ['03 Oct 2026', 'Logistics', 'Delivery tempo charges', 'Cash', 1200, 'Sundar M. (Admin)'],
+      ['05 Oct 2026', 'Rent', 'Commercial shop rent advance', 'Bank', 25000, 'Rajesh K. (Owner)'],
+      ['08 Oct 2026', 'Stationery', 'Thermal paper rolls 50 nos', 'UPI', 850, 'Karthik R. (Cashier)'],
+    ],
+  },
+
+  // 14. Payment Collection
+  payments: {
+    title: 'Payment Collection Report',
+    headers: ['Date & Time', 'Receipt / Voucher No.', 'Customer / Party', 'Payment Mode', 'Reference / Txn ID', 'Amount Collected', 'Collected By'],
+    rows: [
+      ['01 Oct 2026 10:15', 'RCT-301', 'Lakshmi Stores', 'UPI', 'UPI-98450123', 5824, 'Karthik R.'],
+      ['02 Oct 2026 11:20', 'RCT-302', 'Ravi Kumar', 'Cash', 'CASH-REC', 2072, 'Karthik R.'],
+      ['03 Oct 2026 13:40', 'RCT-303', 'Anita Traders', 'Bank', 'NEFT-883344', 15904, 'Rajesh K.'],
+      ['04 Oct 2026 15:10', 'RCT-304', 'Sri Balaji Mart', 'Card', 'POS-TXN-77', 8736, 'Sundar M.'],
+      ['05 Oct 2026 17:00', 'RCT-305', 'Meena Provisions', 'UPI', 'UPI-778811', 10528, 'Karthik R.'],
+    ],
+  },
+
+  // 15. Customer Receivables
+  customers: {
+    title: 'Outstanding Receivables Report',
+    headers: ['Customer Name', 'Phone / Mobile', 'Credit Limit', 'Outstanding Balance'],
+    rows: [
+      ['Lakshmi Stores', '9845012345', 50000, 18450],
+      ['Anita Traders', '9448034567', 100000, 32100],
+      ['Sri Balaji Mart', '9741099882', 40000, 14200],
+      ['Meena Provisions', '9880122334', 35000, 9800],
+      ['Suresh & Sons', '9844055667', 150000, 48500],
+      ['Priya Bakery', '9739088776', 60000, 21400],
+      ['Green Leaf Mart', '9916022113', 80000, 27600],
+    ],
+  },
+
+  // 16. Customer Ledger
+  customer_ledger: {
+    title: 'Customer Ledger Statement',
+    headers: ['Date', 'Voucher / Bill No.', 'Type', 'Debit (Dr)', 'Credit (Cr)', 'Running Balance'],
+    rows: [
+      ['01 Oct 2026', 'OP-BAL', 'Opening Balance', 12000, 0, 12000],
+      ['02 Oct 2026', 'INV-2410', 'Sales Invoice', 5824, 0, 17824],
+      ['05 Oct 2026', 'RCT-301', 'Payment Received', 0, 10000, 7824],
+      ['08 Oct 2026', 'INV-2421', 'Sales Invoice', 12656, 0, 20480],
+      ['10 Oct 2026', 'RCT-309', 'Payment Received', 0, 15000, 5480],
+    ],
+  },
+
+  // 17. Supplier Payables
+  outstanding_payables: {
+    title: 'Outstanding Payables Report',
+    headers: ['Supplier Name', 'Phone', 'GSTIN', 'Outstanding Payable'],
+    rows: [
+      ['Hindustan Distributors', '080-22334455', '29AAACH1234D1Z2', 42000],
+      ['Sai Wholesale Agros', '9845112233', '29AABCS5544B1Z9', 18500],
+      ['Karnataka Agro Agency', '9886223344', '29AAACK7788P1Z4', 32000],
+      ['Metro Traders Depot', '080-41223344', '29AAACM9900C1Z7', 19800],
+      ['Annapurna Suppliers', '9741445566', '29AAACA3344F1Z8', 26000],
+    ],
+  },
+
+  // 18. Supplier Ledger
+  supplier_ledger: {
+    title: 'Supplier Ledger Statement',
+    headers: ['Date', 'Voucher / Bill No.', 'Type', 'Debit (Dr)', 'Credit (Cr)', 'Running Balance'],
+    rows: [
+      ['01 Oct 2026', 'OP-BAL', 'Opening Balance', 0, 24000, 24000],
+      ['02 Oct 2026', 'PB-880', 'Purchase Inward', 0, 45000, 69000],
+      ['04 Oct 2026', 'PMT-201', 'Payment Made', 45000, 0, 24000],
+      ['08 Oct 2026', 'PB-886', 'Purchase Inward', 0, 29000, 53000],
+      ['12 Oct 2026', 'PMT-204', 'Payment Made', 20000, 0, 33000],
+    ],
+  },
+
+  // 19. GST Summary
   gst: {
-    kpis: [
-      { label: 'Taxable Turnover', value: inr(sum(gstRows, 'taxable')), delta: 10.3 },
-      { label: 'Output CGST', value: inr(sum(gstRows, 'cgst')), delta: 10.1 },
-      { label: 'Output SGST', value: inr(sum(gstRows, 'sgst')), delta: 10.1 },
-      { label: 'Net Tax Payable', value: inr(sum(gstRows, 'total')), delta: 9.8, invert: true },
+    title: 'GST Summary Report',
+    headers: ['GST Rate Slab', 'Taxable Turnover', 'Output CGST', 'Output SGST', 'Total GST Liability'],
+    rows: [
+      ['0% (Exempt)', 54200, 0, 0, 0],
+      ['5% GST', 324000, 8100, 8100, 16200],
+      ['12% GST', 495000, 29700, 29700, 59400],
+      ['18% GST', 248000, 22320, 22320, 44640],
+      ['28% GST', 12000, 1680, 1680, 3360],
     ],
-    chartTitle: 'GST liability trend',
-    breakdownTitle: 'Tax share by slab',
-    breakdown: [['12%', 49], ['18%', 36], ['5%', 13], ['28%', 1], ['Exempt', 1]],
-    columns: [
-      { key: 'slab', label: 'Rate Slab' },
-      { key: 'taxable', label: 'Taxable Value', money: true, total: true },
-      { key: 'cgst', label: 'CGST', money: true, total: true },
-      { key: 'sgst', label: 'SGST', money: true, total: true },
-      { key: 'total', label: 'Total Tax', money: true, total: true },
-      { key: 'share', label: 'Share', num: true },
+  },
+
+  // 20. GSTR-1 Outward
+  gstr1: {
+    title: 'GSTR-1 Outward Supplies',
+    headers: [
+      'Invoice No.', 'Invoice Date', 'Customer Name', 'Customer GSTIN',
+      'Place of Supply', 'Taxable Value', 'CGST', 'SGST', 'IGST', 'Invoice Value'
     ],
-    rows: gstRows,
+    rows: [
+      ['INV-2410', '01 Oct 2026', 'Lakshmi Stores', '29AABCL1234F1Z1', '29-Karnataka', 5200, 312, 312, 0, 5824],
+      ['INV-2412', '03 Oct 2026', 'Anita Traders', '29ABCDE5678G2Z2', '29-Karnataka', 14200, 852, 852, 0, 15904],
+      ['INV-2413', '04 Oct 2026', 'Sri Balaji Mart', '29XYZAB4321C4Z8', '29-Karnataka', 7800, 468, 468, 0, 8736],
+      ['INV-2415', '06 Oct 2026', 'Meena Provisions', '29KLMNO9012J5Z3', '29-Karnataka', 9400, 564, 564, 0, 10528],
+      ['INV-2417', '08 Oct 2026', 'Suresh & Sons', '29PQRST9876Q3Z2', '29-Karnataka', 18900, 1134, 1134, 0, 21168],
+    ],
+  },
+
+  // 21. GSTR-2 Inward
+  gstr2: {
+    title: 'GSTR-2 Inward Supplies (ITC)',
+    headers: [
+      'Supplier GSTIN', 'Supplier Name', 'Invoice / Bill No.', 'Invoice Date',
+      'Taxable Value', 'CGST (ITC)', 'SGST (ITC)', 'IGST (ITC)', 'Total ITC Eligible'
+    ],
+    rows: [
+      ['29AAACH1234D1Z2', 'Hindustan Distributors', 'PB-880', '02 Oct 2026', 40178, 2411, 2411, 0, 4822],
+      ['29AABCS5544B1Z9', 'Sai Wholesale Agros', 'PB-881', '04 Oct 2026', 25446, 1527, 1527, 0, 3054],
+      ['29AAACK7788P1Z4', 'Karnataka Agro Agency', 'PB-882', '06 Oct 2026', 55357, 3321, 3321, 0, 6643],
+      ['29AAACF1122E1Z3', 'Fresh Farms Pvt Ltd', 'PB-884', '10 Oct 2026', 30535, 1832, 1832, 0, 3665],
+    ],
+  },
+
+  // 22. GSTR-3B Summary
+  gstr3b: {
+    title: 'GSTR-3B Monthly Return Summary',
+    headers: [
+      'Description / Table Section', 'Taxable Turnover',
+      'Integrated Tax (IGST)', 'Central Tax (CGST)', 'State Tax (SGST)', 'Cess'
+    ],
+    rows: [
+      ['3.1 (a) Outward taxable supplies (other than zero rated)', 1067000, 0, 61820, 61820, 0],
+      ['3.1 (b) Outward taxable supplies (zero rated)', 0, 0, 0, 0, 0],
+      ['3.1 (c) Other outward supplies (Nil rated, exempt)', 54200, 0, 0, 0, 0],
+      ['4. (A) Eligible ITC Available (Inward supplies)', 620000, 0, 37200, 37200, 0],
+      ['5.1 Net Tax Payable in Cash', 447000, 0, 24620, 24620, 0],
+    ],
   },
 }
 
 /* ------------------------------------------------------------------
-   Field Detection Helpers
+   Field Formatting Helpers
 ------------------------------------------------------------------- */
-const isMonetaryCol = h => {
-  const s = String(h || '').toLowerCase()
+const isMonetaryCol = (header = '') => {
+  const s = String(header).toLowerCase()
   return (
     s.includes('amount') ||
     s.includes('total') ||
@@ -486,401 +492,82 @@ const isMonetaryCol = h => {
     s.includes('cgst') ||
     s.includes('sgst') ||
     s.includes('igst') ||
-    s.includes('billed') ||
-    s.includes('received')
+    s.includes('cess') ||
+    s.includes('margin') ||
+    s.includes('rs.')
   )
 }
 
-const isNumericCol = h => {
-  const s = String(h || '').toLowerCase()
+const isNumericCol = (header = '') => {
+  const s = String(header).toLowerCase()
   return (
     s.includes('qty') ||
     s.includes('quantity') ||
     s.includes('units') ||
     s.includes('count') ||
-    s.includes('items') ||
-    s.includes('invoices') ||
-    s.includes('stock')
+    s.includes('stock') ||
+    s.includes('items')
   )
 }
 
-const isUserOrPartyCol = (c, r) => {
-  const label = String(c?.label || '').toLowerCase()
-  const key = String(c?.key || '').toLowerCase()
-  const isParty =
-    label.includes('customer') ||
-    label.includes('party') ||
-    label.includes('supplier') ||
-    label.includes('user') ||
-    label.includes('cashier') ||
-    label.includes('operator') ||
-    label.includes('particulars') ||
-    label.includes('billed by') ||
-    key.includes('customer') ||
-    key.includes('party') ||
-    key.includes('supplier') ||
-    key.includes('user')
-  return Boolean(isParty && r)
+const isStatusCol = (header = '') => {
+  const s = String(header).toLowerCase()
+  return s.includes('status') || s.includes('state') || s.includes('payment')
 }
 
-const STATUS_TONE = {
-  Paid: 'ok', 'In stock': 'ok', Current: 'ok',
-  Partial: 'warn', Low: 'warn', 'Due soon': 'warn',
-  Due: 'bad', Unpaid: 'bad', Overdue: 'bad', 'Out of stock': 'bad',
-}
-const TONE_CLASS = {
-  ok: 'text-emerald-700 dark:text-emerald-400',
-  warn: 'text-amber-700 dark:text-amber-400',
-  bad: 'text-rose-700 dark:text-rose-400',
-}
-const DOT_CLASS = { ok: 'bg-emerald-500', warn: 'bg-amber-500', bad: 'bg-rose-500' }
-
-/* ------------------------------------------------------------------
-   Small building blocks
-------------------------------------------------------------------- */
-function Badge({ value }) {
-  const tone = STATUS_TONE[value] || 'ok'
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${TONE_CLASS[tone]}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${DOT_CLASS[tone]}`} />
-      {value}
-    </span>
-  )
-}
-
-function Delta({ value, invert }) {
-  const good = invert ? value < 0 : value > 0
-  const Icon = value >= 0 ? IconArrowUpRight : IconArrowDownRight
-  return (
-    <span
-      className={`inline-flex items-center gap-0.5 text-xs font-medium ${
-        good ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'
-      }`}
-    >
-      <Icon size={14} stroke={2} />
-      {Math.abs(value).toFixed(1)}%
-    </span>
-  )
-}
-
-function Nav({ activeKey, onSelect }) {
-  return (
-    <nav aria-label="Reports" className="space-y-5">
-      {NAV_CATEGORIES.map(cat => {
-        const Icon = cat.icon
-        return (
-          <div key={cat.key}>
-            <div className="mb-1.5 flex items-center gap-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-              <Icon size={14} />
-              {cat.label}
-            </div>
-            <ul>
-              {ALL_REPORTS.filter(r => r.category === cat.key).map(r => {
-                const active = r.key === activeKey
-                return (
-                  <li key={r.key}>
-                    <button
-                      type="button"
-                      onClick={() => onSelect(r.key)}
-                      aria-current={active ? 'page' : undefined}
-                      className={`relative block w-full py-1.5 pl-3 pr-2 text-left text-[13px] transition-colors cursor-pointer ${
-                        active
-                          ? 'font-semibold text-[#0057B8]'
-                          : 'text-[var(--ink)] hover:text-[#0057B8]'
-                      }`}
-                    >
-                      {active && (
-                        <span className="absolute inset-y-1 left-0 w-0.5 rounded bg-[#0057B8]" />
-                      )}
-                      {r.label}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-        )
-      })}
-    </nav>
-  )
-}
-
-function Breakdown({ title, items }) {
-  if (!items || items.length === 0) return null
-  return (
-    <div>
-      <h3 className="text-sm font-semibold">{title}</h3>
-      <ul className="mt-4 space-y-3.5">
-        {items.map(([label, pct, amt]) => (
-          <li key={label}>
-            <div className="mb-1 flex items-baseline justify-between text-[13px]">
-              <span className="truncate pr-2 font-medium">{label}</span>
-              <div className="flex items-center gap-1.5 font-mono tabular-nums text-xs">
-                {amt !== undefined && amt !== null && (
-                  <span className="font-semibold text-[var(--ink)]">{inr(amt)}</span>
-                )}
-                <span className="text-[var(--muted)]">({pct}%)</span>
-              </div>
-            </div>
-            <div className="h-1.5 w-full rounded-full bg-[var(--line-subtle,rgba(100,116,139,0.15))]">
-              <div className="h-1.5 rounded-full bg-[#0057B8]" style={{ width: `${Math.min(pct, 100)}%` }} />
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-function DataTable({ columns, rows, loading }) {
-  const [query, setQuery] = useState('')
-  const [sort, setSort] = useState({ key: null, dir: 'asc' })
-  const [page, setPage] = useState(1)
-  const pageSize = 8
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    let out = q
-      ? rows.filter(r => Object.values(r).some(v => String(v ?? '').toLowerCase().includes(q)))
-      : rows
-    if (sort.key) {
-      out = [...out].sort((a, b) => {
-        const x = a[sort.key]
-        const y = b[sort.key]
-        const numX = Number(x)
-        const numY = Number(y)
-        if (!isNaN(numX) && !isNaN(numY)) {
-          return sort.dir === 'asc' ? numX - numY : numY - numX
-        }
-        const cmp = String(x ?? '').localeCompare(String(y ?? ''))
-        return sort.dir === 'asc' ? cmp : -cmp
-      })
-    }
-    return out
-  }, [rows, query, sort])
-
-  const pages = Math.max(1, Math.ceil(filtered.length / pageSize))
-  const current = Math.min(page, pages)
-  const visible = filtered.slice((current - 1) * pageSize, current * pageSize)
-
-  const toggleSort = key =>
-    setSort(s => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }))
-
-  const isRight = c => c.money || c.num
-
-  const renderCellContent = (c, r) => {
-    const v = r[c.key]
-    if (c.badge) return <Badge value={String(v ?? '—')} />
-    if (c.money) return inr(v)
-    if (c.num && typeof v === 'number') return num(v)
-
-    // User or Party Row Information enhancement
-    if (isUserOrPartyCol(c, r)) {
-      const sub = r.mobile || r.phone || r.gstin || r.role || ''
-      return (
-        <div className="flex flex-col min-w-0 py-0.5">
-          <span className="font-medium text-[var(--ink)] truncate">{String(v ?? '—')}</span>
-          {sub && (
-            <span className="text-[11px] text-[var(--muted)] font-mono truncate">{sub}</span>
-          )}
-        </div>
-      )
-    }
-
-    return String(v ?? '—')
-  }
-
-  const hasTotals = columns.some(c => c.total)
-
-  return (
-    <section>
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="text-sm font-semibold">
-          Detailed statement{' '}
-          <span className="ml-1 font-normal text-[var(--muted)]">
-            {loading ? 'Refreshing…' : `${filtered.length} records`}
-          </span>
-        </h3>
-        <label className="relative block w-full sm:w-64">
-          <IconSearch
-            size={15}
-            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]"
-          />
-          <input
-            value={query}
-            onChange={e => {
-              setQuery(e.target.value)
-              setPage(1)
-            }}
-            placeholder="Search records"
-            aria-label="Search records"
-            className="h-8.5 sm:h-9 w-full rounded-md border border-[var(--line)] bg-transparent pl-8 pr-3 text-xs sm:text-[13px] outline-none placeholder:text-[var(--muted)] focus:border-[#0057B8]"
-          />
-        </label>
-      </div>
-
-      <div className="mt-3 overflow-x-auto border-y border-[var(--line)] scrollbar-thin">
-        <table className="w-full min-w-[640px] sm:min-w-[720px] border-collapse text-xs sm:text-[13px]">
-          <thead>
-            <tr className="border-b border-[var(--line)] text-[var(--muted)] bg-[var(--table-header-bg,rgba(100,116,139,0.03))]">
-              {columns.map(c => (
-                <th
-                  key={c.key}
-                  scope="col"
-                  className={`whitespace-nowrap px-2.5 sm:px-3 py-2 sm:py-2.5 text-[11px] sm:text-xs font-medium ${
-                    isRight(c) ? 'text-right' : 'text-left'
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleSort(c.key)}
-                    className={`inline-flex items-center gap-1 hover:text-[var(--ink)] cursor-pointer ${
-                      isRight(c) ? 'flex-row-reverse' : ''
-                    }`}
-                  >
-                    {c.label}
-                    <IconSelector size={12} className={sort.key === c.key ? 'text-[#0057B8]' : 'opacity-40'} />
-                  </button>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={columns.length} className="px-3 py-10 text-center text-xs text-[var(--muted)]">
-                  <div className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-solid border-[#0057B8] border-r-transparent"></div>
-                  <p className="mt-2 font-medium">Loading live report data…</p>
-                </td>
-              </tr>
-            ) : visible.length === 0 ? (
-              <tr>
-                <td colSpan={columns.length} className="px-3 py-8 text-center text-xs text-[var(--muted)]">
-                  {query ? 'No records match your search query.' : 'No transaction records found for the selected period.'}
-                </td>
-              </tr>
-            ) : (
-              visible.map((r, i) => (
-                <tr
-                  key={i}
-                  className="border-b border-[var(--line-subtle,rgba(100,116,139,0.15))] last:border-0 hover:bg-[var(--surface-hover,rgba(100,116,139,0.06))]"
-                >
-                  {columns.map(c => (
-                    <td
-                      key={c.key}
-                      className={`whitespace-nowrap px-2.5 sm:px-3 py-2 sm:py-2.5 ${
-                        isRight(c) ? 'text-right font-mono tabular-nums' : 'text-left'
-                      } ${c.key === columns[0].key ? 'font-mono font-medium text-[var(--ink)]' : ''}`}
-                    >
-                      {renderCellContent(c, r)}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </tbody>
-          {hasTotals && filtered.length > 0 && (
-            <tfoot>
-              <tr className="border-t border-[var(--line)] font-semibold bg-[var(--table-header-bg,rgba(100,116,139,0.03))]">
-                {columns.map((c, i) => (
-                  <td
-                    key={c.key}
-                    className={`whitespace-nowrap px-2.5 sm:px-3 py-2 sm:py-2.5 ${
-                      isRight(c) ? 'text-right font-mono tabular-nums text-[#0057B8]' : 'text-left'
-                    }`}
-                  >
-                    {i === 0
-                      ? 'Total'
-                      : c.total
-                        ? c.money
-                          ? inr(sum(filtered, c.key))
-                          : num(sum(filtered, c.key))
-                        : ''}
-                  </td>
-                ))}
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
-
-      <div className="mt-3 flex flex-col items-center justify-between gap-2 text-xs text-[var(--muted)] sm:flex-row">
-        <span>
-          Showing {filtered.length === 0 ? 0 : (current - 1) * pageSize + 1}–
-          {Math.min(current * pageSize, filtered.length)} of {filtered.length}
-        </span>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setPage(current - 1)}
-            disabled={current === 1}
-            aria-label="Previous page"
-            className="grid h-7 w-7 sm:h-8 sm:w-8 place-items-center rounded-md border border-[var(--line)] text-[var(--ink)] disabled:opacity-40 cursor-pointer"
-          >
-            <IconChevronLeft size={14} />
-          </button>
-          <span className="px-2 font-mono tabular-nums text-[var(--ink)] text-xs">
-            {current} / {pages}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPage(current + 1)}
-            disabled={current === pages}
-            aria-label="Next page"
-            className="grid h-7 w-7 sm:h-8 sm:w-8 place-items-center rounded-md border border-[var(--line)] text-[var(--ink)] disabled:opacity-40 cursor-pointer"
-          >
-            <IconChevronRight size={14} />
-          </button>
-        </div>
-      </div>
-    </section>
-  )
+const isModeCol = (header = '') => {
+  const s = String(header).toLowerCase()
+  return s.includes('mode') || s.includes('channel') || s.includes('method')
 }
 
 /* ------------------------------------------------------------------
-   Page Component with Full Live Backend Flow & Mobile Optimization
+   Main Component
 ------------------------------------------------------------------- */
 export default function Reports() {
   const [reportKey, setReportKey] = useState('sales')
   const [preset, setPreset] = useState('This Month')
   const [startDate, setStartDate] = useState(getMonthStart())
   const [endDate, setEndDate] = useState(getToday())
-  const [mobileFilterOpen, setMobileFilterOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [mobileView, setMobileView] = useState('cards')
+  const [inspectRecord, setInspectRecord] = useState(null)
   const exportRef = useRef(null)
 
-  // Close export dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = e => {
-      if (exportRef.current && !exportRef.current.contains(e.target)) {
-        setExportOpen(false)
-      }
-    }
-    if (exportOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-      document.addEventListener('touchstart', handleClickOutside)
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('touchstart', handleClickOutside)
-    }
-  }, [exportOpen])
+  // Query, Sort & Pagination state
+  const [query, setQuery] = useState('')
+  const [sort, setSort] = useState({ colIdx: null, dir: 'asc' })
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(15)
 
-  // Backend state
+  // Backend Integration
   const [backendData, setBackendData] = useState(null)
   const [loading, setLoading] = useState(false)
   const abortControllerRef = useRef(null)
 
   const report = ALL_REPORTS.find(r => r.key === reportKey) || ALL_REPORTS[0]
-  const category = REPORT_CATEGORIES.find(c => c.key === report.category)
   const isSnapshot = SNAPSHOT_REPORTS.has(reportKey)
 
-  // Fetch report data from Django Rest Framework backend
+  // Close export dropdown on click outside
+  useEffect(() => {
+    const handleClick = e => {
+      if (exportRef.current && !exportRef.current.contains(e.target)) {
+        setExportOpen(false)
+      }
+    }
+    if (exportOpen) {
+      document.addEventListener('mousedown', handleClick)
+      document.addEventListener('touchstart', handleClick)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('touchstart', handleClick)
+    }
+  }, [exportOpen])
+
+  // Fetch report data
   const fetchReport = useCallback(async (key, start, end) => {
     const endpoint = ENDPOINTS[key] || `/reports/${key}/`
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
+    if (abortControllerRef.current) abortControllerRef.current.abort()
     const controller = new AbortController()
     abortControllerRef.current = controller
 
@@ -888,14 +575,11 @@ export default function Reports() {
     try {
       const isSnap = SNAPSHOT_REPORTS.has(key)
       const params = isSnap ? '' : `?start_date=${start}&end_date=${end}`
-      const response = await api.get(`${endpoint}${params}`, {
-        signal: controller.signal,
-      })
+      const response = await api.get(`${endpoint}${params}`, { signal: controller.signal })
       setBackendData(response.data)
       api.post('/auth/onboarding/reports-viewed/').catch(() => {})
     } catch (err) {
       if (err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
-        // Fallback gracefully to default sample data if endpoint not reachable
         setBackendData(null)
       }
     } finally {
@@ -903,29 +587,23 @@ export default function Reports() {
     }
   }, [])
 
-  // Refetch when reportKey or dates change
   useEffect(() => {
     fetchReport(reportKey, startDate, endDate)
     return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
+      if (abortControllerRef.current) abortControllerRef.current.abort()
     }
   }, [reportKey, startDate, endDate, fetchReport])
 
-  // Handle Preset changes
+  // Date Preset Handlers
   const handlePresetChange = p => {
     setPreset(p)
     const range = PRESET_RANGES[p]
     if (range) {
-      const s = range.start()
-      const e = range.end()
-      setStartDate(s)
-      setEndDate(e)
+      setStartDate(range.start())
+      setEndDate(range.end())
     }
   }
 
-  // Handle manual date range apply
   const handleApplyCustomDates = () => {
     if (startDate > endDate) {
       toast.error('Start date cannot be after end date')
@@ -935,178 +613,106 @@ export default function Reports() {
     fetchReport(reportKey, startDate, endDate)
   }
 
-  // Adapter: map backend response to current view schema
-  const data = useMemo(() => {
-    const fallback = FALLBACK_DATASETS[report.category] || FALLBACK_DATASETS.sales
+  // EXACT PDF REPORT DATA RESOLUTION
+  // Ensures the frontend shows the exact data & columns that get exported to PDF
+  const reportData = useMemo(() => {
+    if (backendData) {
+      const backendHeaders = Array.isArray(backendData.headers) ? backendData.headers : []
+      const rawRows = Array.isArray(backendData.rows)
+        ? backendData.rows
+        : Array.isArray(backendData.results)
+        ? backendData.results
+        : Array.isArray(backendData.customers)
+        ? backendData.customers
+        : Array.isArray(backendData.products)
+        ? backendData.products
+        : []
 
-    if (!backendData) {
-      return fallback
-    }
-
-    const headers = Array.isArray(backendData.headers) ? backendData.headers : []
-    const rawRows = Array.isArray(backendData.rows)
-      ? backendData.rows
-      : Array.isArray(backendData.results)
-      ? backendData.results
-      : Array.isArray(backendData.customers)
-      ? backendData.customers
-      : Array.isArray(backendData.products)
-      ? backendData.products
-      : Array.isArray(backendData)
-      ? backendData
-      : []
-
-    // If backend returned valid headers and records, construct dynamic columns & rows
-    let columns = fallback.columns
-    let rows = fallback.rows
-
-    if (headers.length > 0 && rawRows.length > 0) {
-      columns = headers.map((h, i) => {
-        const isMoney = isMonetaryCol(h)
-        const isNum = isNumericCol(h)
-        const isBadge = h.toLowerCase().includes('status') || h.toLowerCase().includes('payment')
-        return {
-          key: `col_${i}`,
-          label: h,
-          money: isMoney,
-          num: isNum && !isMoney,
-          total: isMoney || isNum,
-          badge: isBadge,
-        }
-      })
-
-      rows = rawRows.map((r, rIdx) => {
-        const rowObj = { _id: rIdx }
-        headers.forEach((h, cIdx) => {
-          const cellVal = Array.isArray(r) ? r[cIdx] : r[h] ?? Object.values(r)[cIdx] ?? ''
-          rowObj[`col_${cIdx}`] = cellVal
+      if (backendHeaders.length > 0) {
+        const rows = rawRows.map(r => {
+          if (Array.isArray(r)) return r
+          return backendHeaders.map(h => r[h] ?? r[h.toLowerCase().replace(/[\s/.-]+/g, '_')] ?? '')
         })
-        return rowObj
-      })
-    } else if (headers.length > 0 && rawRows.length === 0) {
-      columns = headers.map((h, i) => ({
-        key: `col_${i}`,
-        label: h,
-        money: isMonetaryCol(h),
-        num: isNumericCol(h),
-        total: isMonetaryCol(h),
-        badge: h.toLowerCase().includes('status'),
-      }))
-      rows = []
-    }
 
-    // Dynamic KPIs from backend summary
-    let kpis = fallback.kpis
-    const summary = backendData.summary || {}
-    const summaryRows = Array.isArray(backendData.summary_rows) ? backendData.summary_rows : []
-
-    if (summaryRows.length >= 4) {
-      kpis = summaryRows.slice(0, 4).map(([lbl, val]) => ({
-        label: lbl,
-        value: typeof val === 'number' ? (isMonetaryCol(lbl) ? inr(val) : num(val)) : String(val),
-        delta: 5.0,
-      }))
-    } else if (summary.gross_sales || summary.total_sales || summary.total_purchases || summary.total_valuation) {
-      const primaryVal = summary.gross_sales || summary.total_sales || summary.total_purchases || summary.total_valuation || 0
-      const secondaryVal = summary.collection || summary.paid_amount || summary.total_retail_valuation || 0
-      const taxVal = summary.total_tax || summary.outstanding || 0
-      const countVal = summary.count || rawRows.length || 0
-
-      kpis = [
-        { label: fallback.kpis[0]?.label || 'Total Amount', value: inr(primaryVal), delta: 8.4 },
-        { label: fallback.kpis[1]?.label || 'Settled / Collections', value: inr(secondaryVal), delta: 4.2 },
-        { label: fallback.kpis[2]?.label || 'Tax / Outstanding', value: inr(taxVal), delta: -2.1, invert: true },
-        { label: fallback.kpis[3]?.label || 'Records Count', value: num(countVal), delta: 3.5 },
-      ]
-    }
-
-    // Chart trend mapping: use actual revenue and real collections
-    let chartData = DEFAULT_TREND
-    if (Array.isArray(backendData.daily) && backendData.daily.length > 0) {
-      chartData = backendData.daily.map(d => {
-        if (Array.isArray(d)) {
-          const rev = Number(d[2] || 0)
-          const col = d[3] !== undefined ? Number(d[3] || 0) : rev
-          return {
-            label: d[0] || '—',
-            revenue: rev,
-            collections: col,
-          }
-        }
-        const rev = Number(d.total || d.total_sales || 0)
-        const col = Number(d.collection ?? d.collections ?? d.paid ?? rev)
         return {
-          label: d.date || d.created_at__date || '—',
-          revenue: rev,
-          collections: col,
+          title: backendData.title || report.label,
+          headers: backendHeaders,
+          rows,
+          summaryRows: backendData.summary_rows || [],
         }
-      })
-    }
-
-    // Dynamic Breakdown mapping: real collections by payment mode
-    let breakdown = []
-    if (Array.isArray(backendData.by_mode) && backendData.by_mode.length > 0) {
-      breakdown = backendData.by_mode.map(m => [
-        m.mode || m[0],
-        Number(m.share || m[1] || 0),
-        Number(m.total || m[2] || 0),
-      ])
-    } else if (Array.isArray(backendData.methods) && backendData.methods.length > 0) {
-      breakdown = backendData.methods.map(m => [
-        m.method,
-        Number(m.share_pct || 0),
-        Number(m.total || 0),
-      ])
-    } else if (Array.isArray(backendData.rates) && backendData.rates.length > 0) {
-      const totalTax = backendData.rates.reduce((acc, r) => acc + Number(r.taxable || 0), 0) || 1
-      breakdown = backendData.rates.map(r => [
-        `${r.gst_percent || 0}% GST`,
-        Math.round((Number(r.taxable || 0) / totalTax) * 100),
-        Number(r.taxable || 0),
-      ])
-    } else {
-      // Dynamically compute real payment mode sums from active rows
-      const modeCol = columns.find(c => {
-        const l = (c.label || '').toLowerCase()
-        const k = (c.key || '').toLowerCase()
-        return l.includes('mode') || l.includes('method') || l.includes('channel') || k === 'mode'
-      })
-      const amountCol = columns.find(c => c.money || c.total || c.key === 'total' || c.key === 'amount')
-
-      if (modeCol && rows.length > 0) {
-        const modeSums = {}
-        let totalVal = 0
-        rows.forEach(r => {
-          const m = String(r[modeCol.key] || 'Other').trim()
-          const amt = Number(amountCol ? r[amountCol.key] : 0) || 0
-          modeSums[m] = (modeSums[m] || 0) + amt
-          totalVal += amt
-        })
-        const totalBase = totalVal || 1
-        breakdown = Object.entries(modeSums)
-          .sort((a, b) => b[1] - a[1])
-          .map(([mode, amt]) => [
-            mode,
-            Math.round((amt / totalBase) * 100),
-            amt,
-          ])
-      } else {
-        breakdown = fallback.breakdown || []
       }
     }
 
+    const template = BACKEND_TEMPLATES[reportKey] || BACKEND_TEMPLATES.sales
     return {
-      kpis,
-      chartTitle: fallback.chartTitle,
-      breakdownTitle: fallback.breakdownTitle,
-      breakdown,
-      columns,
-      rows,
-      chartData,
+      title: template.title,
+      headers: template.headers,
+      rows: template.rows,
+      summaryRows: template.summaryRows || [],
     }
-  }, [backendData, report.category])
+  }, [backendData, reportKey, report.label])
 
-  // Real Export Flow (PDF, Excel, CSV, Print)
+  // Column definitions with data type awareness
+  const columns = useMemo(() => {
+    return reportData.headers.map((label, idx) => ({
+      idx,
+      label,
+      isMoney: isMonetaryCol(label),
+      isNum: isNumericCol(label) && !isMonetaryCol(label),
+      isStatus: isStatusCol(label),
+      isMode: isModeCol(label),
+      isTotal: isMonetaryCol(label) || isNumericCol(label),
+    }))
+  }, [reportData.headers])
+
+  // Query & Sort Filtered Rows
+  const filteredRows = useMemo(() => {
+    let out = reportData.rows
+
+    const q = query.trim().toLowerCase()
+    if (q) {
+      out = out.filter(row =>
+        row.some(cell => String(cell ?? '').toLowerCase().includes(q))
+      )
+    }
+
+    if (sort.colIdx !== null) {
+      out = [...out].sort((a, b) => {
+        const x = a[sort.colIdx]
+        const y = b[sort.colIdx]
+        const numX = Number(x)
+        const numY = Number(y)
+        if (!isNaN(numX) && !isNaN(numY)) {
+          return sort.dir === 'asc' ? numX - numY : numY - numX
+        }
+        const cmp = String(x ?? '').localeCompare(String(y ?? ''))
+        return sort.dir === 'asc' ? cmp : -cmp
+      })
+    }
+
+    return out
+  }, [reportData.rows, query, sort])
+
+  // Pagination
+  const totalCount = filteredRows.length
+  const actualPageSize = pageSize === 'all' ? Math.max(1, totalCount) : Number(pageSize)
+  const pages = Math.max(1, Math.ceil(totalCount / actualPageSize))
+  const current = Math.min(page, pages)
+  const visibleRows = pageSize === 'all' ? filteredRows : filteredRows.slice((current - 1) * actualPageSize, current * actualPageSize)
+
+  const toggleSort = colIdx => {
+    setSort(s => (s.colIdx === colIdx ? { colIdx, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { colIdx, dir: 'asc' }))
+  }
+
+  // Calculate totals across rows for a column index
+  const calcTotal = colIdx => {
+    return filteredRows.reduce((acc, row) => {
+      const val = Number(row[colIdx]) || 0
+      return acc + val
+    }, 0)
+  }
+
+  // Real Export Flow
   const exportAs = async type => {
     if (type === 'Print') {
       window.print()
@@ -1115,16 +721,16 @@ export default function Reports() {
 
     if (type === 'CSV') {
       try {
-        const cols = data.columns
-        const rws = data.rows
-        if (!cols.length || !rws.length) {
-          toast.error('No records available to export')
+        const headers = reportData.headers
+        const rows = filteredRows
+        if (!headers.length || !rows.length) {
+          toast.error('No records available')
           return
         }
         const escapeCell = v => `"${String(v ?? '').replace(/"/g, '""')}"`
         const csvContent = [
-          cols.map(c => escapeCell(c.label)).join(','),
-          ...rws.map(row => cols.map(c => escapeCell(row[c.key] ?? '')).join(',')),
+          headers.map(h => escapeCell(h)).join(','),
+          ...rows.map(row => row.map(cell => escapeCell(cell)).join(',')),
         ].join('\r\n')
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
@@ -1136,17 +742,16 @@ export default function Reports() {
         a.click()
         a.remove()
         URL.revokeObjectURL(url)
-        toast.success('Report exported as CSV')
+        toast.success('CSV Downloaded')
       } catch {
         toast.error('Failed to export CSV')
       }
       return
     }
 
-    // PDF and Excel from backend
     const format = type === 'PDF' ? 'pdf' : 'xlsx'
     const endpoint = ENDPOINTS[reportKey] || `/reports/${reportKey}/`
-    const toastId = toast.loading(`Generating ${type} report...`)
+    const toastId = toast.loading(`Generating ${type}...`)
 
     try {
       const params = new URLSearchParams()
@@ -1156,16 +761,8 @@ export default function Reports() {
       }
       params.set('export', format)
 
-      const response = await api.get(`${endpoint}?${params.toString()}`, {
-        responseType: 'blob',
-      })
-
-      const mimeType =
-        response.headers['content-type'] ||
-        (format === 'pdf'
-          ? 'application/pdf'
-          : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
+      const response = await api.get(`${endpoint}?${params.toString()}`, { responseType: 'blob' })
+      const mimeType = response.headers['content-type'] || (format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
       const blob = new Blob([response.data], { type: mimeType })
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -1175,124 +772,286 @@ export default function Reports() {
       link.click()
       link.remove()
       window.URL.revokeObjectURL(url)
-      toast.success(`Downloaded ${type} successfully`, { id: toastId })
+      toast.success(`${type} downloaded`, { id: toastId })
     } catch {
-      toast.error(`Server export not available. Exporting local CSV...`, { id: toastId })
+      toast.error('Server export failed. Generating local CSV...', { id: toastId })
       exportAs('CSV')
     }
   }
 
+  // Cell Renderer for Table
+  const renderCell = (col, val) => {
+    if (val === undefined || val === null || val === '') return '—'
+
+    if (col.isMoney) {
+      return inr(val)
+    }
+
+    if (col.isNum && typeof val === 'number') {
+      return num(val)
+    }
+
+    if (col.isStatus) {
+      const s = String(val).toUpperCase()
+      const isOk = s === 'PAID' || s === 'IN STOCK' || s === 'ACTIVE'
+      const isWarn = s === 'PARTIAL' || s === 'LOW' || s === 'DUE SOON'
+      const isBad = s === 'UNPAID' || s === 'DUE' || s === 'OVERDUE' || s === 'OUT OF STOCK'
+
+      const toneClass = isOk
+        ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300'
+        : isWarn
+        ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300'
+        : isBad
+        ? 'bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/50 dark:text-rose-300'
+        : 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300'
+
+      return (
+        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${toneClass}`}>
+          <span className="h-1.5 w-1.5 rounded-full bg-current opacity-85" />
+          {val}
+        </span>
+      )
+    }
+
+    if (col.isMode) {
+      const m = String(val).toUpperCase()
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[var(--surface-elevated)] border border-[var(--line)]">
+          {m}
+        </span>
+      )
+    }
+
+    return String(val)
+  }
+
   return (
-    <div className="w-full min-w-0 pb-12 text-[var(--ink)]">
-      {/* Header */}
-      <header className="flex flex-col gap-3.5 border-b border-[var(--line)] pb-4 sm:pb-5 md:flex-row md:items-end md:justify-between">
-        <div className="min-w-0">
-          <p className="text-[11px] sm:text-xs text-[var(--muted)]">
-            Reports <span className="mx-1">/</span> {category?.label}
-          </p>
-          <div className="mt-1 flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">{report.label}</h1>
-            {loading && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-[var(--muted)] font-mono">
-                <IconRefresh size={12} className="animate-spin text-[#0057B8]" />
-                Syncing…
-              </span>
-            )}
-          </div>
-          <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-[var(--muted)]">{report.desc}</p>
-        </div>
-        {/* Simple Export Dropdown */}
-        <div className="relative inline-block text-left" ref={exportRef}>
-          <button
-            type="button"
-            onClick={() => setExportOpen(v => !v)}
-            aria-expanded={exportOpen}
-            aria-haspopup="true"
-            className="inline-flex h-8 sm:h-9 items-center gap-1.5 rounded-md border border-[var(--line)] bg-[var(--surface,#ffffff)] px-3 text-xs sm:text-[13px] font-medium text-[var(--ink)] shadow-xs transition-colors hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] cursor-pointer focus:outline-none"
-          >
-            <IconDownload size={15} className="text-[#0057B8]" />
-            <span>Export</span>
-            <IconChevronDown
-              size={14}
-              className={`text-[var(--muted)] transition-transform duration-150 ${exportOpen ? 'rotate-180' : ''}`}
-            />
-          </button>
-
-          {exportOpen && (
-            <div className="absolute right-0 z-30 mt-1.5 w-48 origin-top-right rounded-md border border-[var(--line)] bg-[var(--surface,#ffffff)] py-1 shadow-lg ring-1 ring-black/5 animate-in fade-in duration-100">
-              <button
-                type="button"
-                onClick={() => {
-                  setExportOpen(false)
-                  exportAs('PDF')
-                }}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs sm:text-[13px] text-[var(--ink)] hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] cursor-pointer transition-colors"
-              >
-                <IconFileTypePdf size={16} className="text-rose-600 shrink-0" />
-                <span>PDF Document</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setExportOpen(false)
-                  exportAs('Excel')
-                }}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs sm:text-[13px] text-[var(--ink)] hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] cursor-pointer transition-colors"
-              >
-                <IconFileSpreadsheet size={16} className="text-emerald-600 shrink-0" />
-                <span>Excel Spreadsheet</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setExportOpen(false)
-                  exportAs('CSV')
-                }}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs sm:text-[13px] text-[var(--ink)] hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] cursor-pointer transition-colors"
-              >
-                <IconDownload size={16} className="text-[var(--muted)] shrink-0" />
-                <span>CSV File</span>
-              </button>
-
-              <div className="my-1 border-t border-[var(--line)]" />
-
-              <button
-                type="button"
-                onClick={() => {
-                  setExportOpen(false)
-                  exportAs('Print')
-                }}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs sm:text-[13px] text-[var(--ink)] hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] cursor-pointer transition-colors"
-              >
-                <IconPrinter size={16} className="text-[#0057B8] shrink-0" />
-                <span>Print Report</span>
-              </button>
-            </div>
+    <div className="flex flex-col h-[calc(100vh-3.75rem)] w-full overflow-hidden text-[var(--ink)]">
+      {/* ==================================================================
+          1. SIMPLE, SINGLE-ROW TOP AREA (No categories on top, pure space utilization)
+      =================================================================== */}
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-2.5 border-b border-[var(--line)] pb-2.5">
+        {/* Title & Live Status */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          <h1 className="text-base sm:text-lg font-bold tracking-tight text-[var(--ink)] truncate">
+            {reportData.title}
+          </h1>
+          {loading ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[var(--primary)] text-[var(--primary-contrast)]">
+              <IconRefresh size={11} className="animate-spin" />
+              Syncing…
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Live
+            </span>
           )}
         </div>
-      </header>
 
-      <div className="mt-4 sm:mt-6 grid gap-6 sm:gap-8 lg:grid-cols-[216px_minmax(0,1fr)]">
-        {/* Navigator: desktop list */}
-        <aside className="hidden lg:block">
-          <div className="sticky top-4 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2 scrollbar-thin">
-            <Nav activeKey={reportKey} onSelect={setReportKey} />
+        {/* Date Range Presets & Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Presets */}
+          <div className="hidden md:flex items-center rounded-lg bg-[var(--surface-subtle)] p-0.5 border border-[var(--line-subtle)]">
+            {PRESETS.map(p => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => handlePresetChange(p)}
+                className={`h-7 px-2.5 text-xs font-semibold rounded-md transition cursor-pointer ${
+                  preset === p
+                    ? 'bg-[var(--primary)] text-[var(--primary-contrast)] shadow-2xs font-bold'
+                    : 'text-[var(--muted)] hover:text-[var(--ink)]'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+
+          {/* Custom Date Pickers */}
+          {!isSnapshot ? (
+            <div className="flex items-center gap-1.5 text-xs">
+              <IconCalendar size={14} className="text-[var(--muted)] hidden sm:inline" />
+              <input
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                aria-label="Start date"
+                className="h-7.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 font-mono text-xs outline-none focus:border-[var(--primary)]"
+              />
+              <span className="text-[var(--muted)] text-[11px]">to</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                aria-label="End date"
+                className="h-7.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 font-mono text-xs outline-none focus:border-[var(--primary)]"
+              />
+              <button
+                type="button"
+                onClick={handleApplyCustomDates}
+                className="h-7.5 px-2.5 rounded-lg bg-[var(--primary)] text-[var(--primary-contrast)] font-bold text-xs hover:bg-[var(--primary-hover)] transition cursor-pointer shadow-2xs"
+              >
+                Apply
+              </button>
+            </div>
+          ) : (
+            <span className="text-[11px] font-mono text-[var(--muted)] hidden sm:flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Live as of Today
+            </span>
+          )}
+
+          {/* Refresh Button */}
+          <button
+            type="button"
+            onClick={() => fetchReport(reportKey, startDate, endDate)}
+            disabled={loading}
+            className="inline-flex h-7.5 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] transition cursor-pointer shadow-2xs"
+            title="Refresh"
+          >
+            <IconRefresh size={13} className={loading ? 'animate-spin text-[var(--primary)]' : 'text-[var(--muted)]'} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+
+          {/* Simple Clean Export Button */}
+          <div className="relative inline-block text-left" ref={exportRef}>
+            <button
+              type="button"
+              onClick={() => setExportOpen(v => !v)}
+              className="inline-flex h-7.5 items-center gap-1.5 rounded-lg bg-[var(--primary)] text-[var(--primary-contrast)] px-3 text-xs font-bold shadow-2xs hover:bg-[var(--primary-hover)] transition cursor-pointer"
+            >
+              <IconDownload size={14} />
+              <span>Export</span>
+              <IconChevronDown
+                size={13}
+                className={`transition-transform duration-150 ${exportOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {exportOpen && (
+              <div className="absolute right-0 z-30 mt-1.5 w-44 origin-top-right rounded-xl border border-[var(--line)] bg-[var(--surface)] py-1 shadow-xl ring-1 ring-black/5 animate-in fade-in duration-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExportOpen(false)
+                    exportAs('PDF')
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] cursor-pointer"
+                >
+                  <IconFileTypePdf size={15} className="text-rose-600" />
+                  <span>PDF Document</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExportOpen(false)
+                    exportAs('Excel')
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] cursor-pointer"
+                >
+                  <IconFileSpreadsheet size={15} className="text-emerald-600" />
+                  <span>Excel Spreadsheet</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExportOpen(false)
+                    exportAs('CSV')
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] cursor-pointer"
+                >
+                  <IconDownload size={15} className="text-[var(--muted)]" />
+                  <span>CSV File</span>
+                </button>
+                <div className="my-1 border-t border-[var(--line-subtle)]" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExportOpen(false)
+                    exportAs('Print')
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] cursor-pointer"
+                >
+                  <IconPrinter size={15} className="text-[var(--primary)]" />
+                  <span>Print Statement</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ==================================================================
+          2. TWO INDIVIDUALLY SCROLLING SIDES (Left Directory & Right Ledger)
+      =================================================================== */}
+      <div className="flex-1 min-h-0 pt-2 grid grid-cols-1 lg:grid-cols-[230px_minmax(0,1fr)] gap-3 overflow-hidden">
+        {/* ---------------------------------------------------------------
+            LEFT SIDE: Independent Scrollable Reports Directory
+        ---------------------------------------------------------------- */}
+        <aside className="hidden lg:flex flex-col h-full overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-2xs">
+          <div className="px-3 py-2 border-b border-[var(--line-subtle)] bg-[var(--surface-elevated)] shrink-0">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Reports Directory</span>
+            <div className="text-xs font-bold text-[var(--ink)]">{ALL_REPORTS.length} Available Statements</div>
+          </div>
+
+          {/* Left panel independent vertical scroll */}
+          <div className="flex-1 overflow-y-auto p-2 space-y-3 scrollbar-thin">
+            {NAV_CATEGORIES.map(cat => {
+              const catReports = ALL_REPORTS.filter(r => r.category === cat.key)
+              if (catReports.length === 0) return null
+              const Icon = cat.icon
+
+              return (
+                <div key={cat.key} className="space-y-1">
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">
+                    <Icon size={12} className="text-[var(--primary)]" />
+                    <span>{cat.label}</span>
+                  </div>
+                  <ul className="space-y-0.5">
+                    {catReports.map(r => {
+                      const active = r.key === reportKey
+                      return (
+                        <li key={r.key}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReportKey(r.key)
+                              setPage(1)
+                            }}
+                            className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition cursor-pointer ${
+                              active
+                                ? 'bg-[var(--primary)] text-[var(--primary-contrast)] font-bold shadow-2xs'
+                                : 'text-[var(--ink-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
+                            }`}
+                          >
+                            <span className="truncate pr-1">{r.label}</span>
+                            {active && <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary-contrast)]" />}
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              )
+            })}
           </div>
         </aside>
 
-        <div className="min-w-0 space-y-6 sm:space-y-8">
-          {/* Mobile / tablet report picker */}
-          <div className="lg:hidden">
-            <label htmlFor="report-select" className="mb-1 block text-xs font-medium text-[var(--muted)]">
-              Select Report
-            </label>
+        {/* ---------------------------------------------------------------
+            RIGHT SIDE: Independent Scrollable Data Workspace
+        ---------------------------------------------------------------- */}
+        <main className="flex flex-col h-full overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-2xs p-3">
+          {/* Mobile Select Report Dropdown */}
+          <div className="lg:hidden shrink-0 pb-2">
             <select
-              id="report-select"
               value={reportKey}
-              onChange={e => setReportKey(e.target.value)}
-              className="h-9 sm:h-10 w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2.5 text-xs sm:text-sm outline-none focus:border-[#0057B8]"
+              onChange={e => {
+                setReportKey(e.target.value)
+                setPage(1)
+              }}
+              className="h-9 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-bold text-[var(--ink)] outline-none focus:border-[var(--primary)]"
             >
               {NAV_CATEGORIES.map(cat => (
                 <optgroup key={cat.key} label={cat.label}>
@@ -1306,245 +1065,349 @@ export default function Reports() {
             </select>
           </div>
 
-          {/* =====================================================
-              FILTERS: Simple text-based button on Mobile & clean bar on Desktop
-          ====================================================== */}
-          <section className="space-y-2">
-            {/* Mobile Simple Text-Based Filter Button */}
-            <div className="sm:hidden flex items-center justify-between border-b border-[var(--line-subtle)] pb-2 text-xs">
-              {!isSnapshot ? (
-                <button
-                  type="button"
-                  onClick={() => setMobileFilterOpen(v => !v)}
-                  className="inline-flex items-center gap-1.5 font-semibold text-[#0057B8] hover:underline cursor-pointer"
-                >
-                  <IconCalendar size={14} />
-                  <span>Period: {preset}</span>
-                  <span className="text-[11px] text-[var(--muted)] font-normal">
-                    {mobileFilterOpen ? '· (Hide filter)' : '· (Change)'}
-                  </span>
-                </button>
-              ) : (
-                <span className="text-[11px] text-[var(--muted)] font-mono">Live Snapshot as of Today</span>
-              )}
-              <span className="font-mono text-[11px] text-[var(--muted)]">
-                {isSnapshot ? 'Live' : `${startDate.slice(5)} – ${endDate.slice(5)}`}
-              </span>
-            </div>
-
-            {/* Mobile Expanded Filter Box */}
-            {mobileFilterOpen && !isSnapshot && (
-              <div className="sm:hidden rounded-lg border border-[var(--line)] bg-[var(--surface-elevated,rgba(100,116,139,0.04))] p-3 space-y-2.5 animate-in fade-in duration-150">
-                <div className="flex flex-wrap gap-1">
-                  {PRESETS.map(p => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => {
-                        handlePresetChange(p)
-                        setMobileFilterOpen(false)
-                      }}
-                      className={`h-7 px-2.5 text-xs rounded transition-colors cursor-pointer ${
-                        preset === p
-                          ? 'bg-[#0057B8] font-semibold text-white'
-                          : 'bg-[var(--surface)] border border-[var(--line)] text-[var(--ink)]'
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-2 pt-1 text-xs">
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={e => setStartDate(e.target.value)}
-                    className="h-8 flex-1 rounded border border-[var(--line)] bg-[var(--surface)] px-2 font-mono text-xs outline-none"
-                  />
-                  <span className="text-[var(--muted)]">to</span>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={e => setEndDate(e.target.value)}
-                    className="h-8 flex-1 rounded border border-[var(--line)] bg-[var(--surface)] px-2 font-mono text-xs outline-none"
-                  />
+          {/* Table Filter Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5 shrink-0 pb-2.5">
+            <div className="flex items-center gap-2 flex-1 min-w-[200px] max-w-sm">
+              <div className="relative w-full">
+                <IconSearch
+                  size={14}
+                  className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]"
+                />
+                <input
+                  value={query}
+                  onChange={e => {
+                    setQuery(e.target.value)
+                    setPage(1)
+                  }}
+                  placeholder="Filter records..."
+                  aria-label="Filter records"
+                  className="h-8 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] pl-8 pr-7 text-xs outline-none focus:border-[var(--primary)]"
+                />
+                {query && (
                   <button
                     type="button"
                     onClick={() => {
-                      handleApplyCustomDates()
-                      setMobileFilterOpen(false)
+                      setQuery('')
+                      setPage(1)
                     }}
-                    className="h-8 px-3 rounded bg-[#0057B8] text-xs font-semibold text-white cursor-pointer"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--ink)] cursor-pointer"
                   >
-                    Apply
+                    <IconX size={13} />
                   </button>
+                )}
+              </div>
+            </div>
+
+            {/* Right side toolbar items: Rows per page & Mobile View Toggle */}
+            <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
+              {/* Mobile View Toggle */}
+              <div className="flex sm:hidden items-center rounded-lg bg-[var(--surface-subtle)] p-0.5 border border-[var(--line-subtle)]">
+                <button
+                  type="button"
+                  onClick={() => setMobileView('cards')}
+                  className={`px-2 py-1 text-[11px] font-bold rounded-md transition ${
+                    mobileView === 'cards'
+                      ? 'bg-[var(--primary)] text-[var(--primary-contrast)] shadow-2xs'
+                      : 'text-[var(--muted)]'
+                  }`}
+                >
+                  <IconLayoutGrid size={12} className="inline mr-1" /> Cards
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMobileView('table')}
+                  className={`px-2 py-1 text-[11px] font-bold rounded-md transition ${
+                    mobileView === 'table'
+                      ? 'bg-[var(--primary)] text-[var(--primary-contrast)] shadow-2xs'
+                      : 'text-[var(--muted)]'
+                  }`}
+                >
+                  <IconTable size={12} className="inline mr-1" /> Table
+                </button>
+              </div>
+
+              <div className="hidden sm:flex items-center gap-1.5">
+                <span>Rows:</span>
+                <select
+                  value={pageSize}
+                  onChange={e => {
+                    setPageSize(e.target.value)
+                    setPage(1)
+                  }}
+                  className="h-7.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 text-xs font-semibold text-[var(--ink)] outline-none focus:border-[var(--primary)]"
+                >
+                  <option value={10}>10</option>
+                  <option value={15}>15</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value="all">All</option>
+                </select>
+              </div>
+              <span className="font-mono text-[11px]">{filteredRows.length} entries</span>
+            </div>
+          </div>
+
+          {/* -------------------------------------------------------------
+              RIGHT SIDE MAIN DATA PANE:
+              Independent Vertical and Horizontal Scroll for Table
+          -------------------------------------------------------------- */}
+          <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-[var(--line)] bg-[var(--surface)] overflow-hidden shadow-2xs">
+            {/* Mobile Cards View */}
+            <div className={`sm:hidden flex-1 overflow-y-auto p-2.5 space-y-2 scrollbar-thin ${mobileView === 'cards' ? 'block' : 'hidden'}`}>
+              {loading ? (
+                <div className="py-12 text-center text-xs text-[var(--muted)]">
+                  <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-[var(--primary)] border-r-transparent"></div>
+                  <p className="mt-2 font-bold text-[var(--ink)]">Loading statement data…</p>
                 </div>
-              </div>
-            )}
-
-            {/* Desktop Filters (Visible on sm screens and up) */}
-            <div className="hidden sm:flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-              <div
-                role="tablist"
-                aria-label="Date range"
-                className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 xl:pb-0 scrollbar-thin"
-              >
-                {PRESETS.map(p => (
-                  <button
-                    key={p}
-                    type="button"
-                    role="tab"
-                    aria-selected={preset === p}
-                    onClick={() => handlePresetChange(p)}
-                    className={`h-8 shrink-0 rounded-md px-3 text-[13px] transition-colors cursor-pointer ${
-                      preset === p
-                        ? 'bg-[#0057B8] font-semibold text-white'
-                        : 'text-[var(--muted)] hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] hover:text-[var(--ink)]'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
-              </div>
-
-              {!isSnapshot ? (
-                <div className="flex flex-wrap items-center gap-2 text-[13px]">
-                  <IconCalendar size={16} className="text-[var(--muted)]" />
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={e => setStartDate(e.target.value)}
-                    aria-label="From date"
-                    className="h-9 rounded-md border border-[var(--line)] bg-transparent px-2.5 font-mono text-xs outline-none focus:border-[#0057B8]"
-                  />
-                  <span className="text-[var(--muted)]">to</span>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={e => setEndDate(e.target.value)}
-                    aria-label="To date"
-                    className="h-9 rounded-md border border-[var(--line)] bg-transparent px-2.5 font-mono text-xs outline-none focus:border-[#0057B8]"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleApplyCustomDates}
-                    className="inline-flex h-9 items-center rounded-md border border-[var(--line)] px-3 text-xs font-medium text-[var(--ink)] hover:bg-[var(--surface-hover,rgba(100,116,139,0.08))] cursor-pointer transition-colors"
-                  >
-                    Apply
-                  </button>
+              ) : visibleRows.length === 0 ? (
+                <div className="py-12 text-center text-xs text-[var(--muted)]">
+                  No matching statement entries found.
                 </div>
               ) : (
-                <div className="text-xs text-[var(--muted)] font-mono">
-                  Live Snapshot as of Today (Date filtering not applicable)
-                </div>
+                visibleRows.map((row, i) => (
+                  <div
+                    key={i}
+                    onClick={() => setInspectRecord(row)}
+                    className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-2xs active:bg-[var(--surface-hover)] transition cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-mono text-xs font-bold text-[var(--primary)]">
+                          {String(row[1] || row[0] || `Row #${i + 1}`)}
+                        </span>
+                        <p className="text-xs font-bold text-[var(--ink)] truncate mt-0.5">
+                          {String(row[2] || row[1] || row[0] || '—')}
+                        </p>
+                        <p className="text-[11px] text-[var(--muted)] mt-0.5">{String(row[0] || '—')}</p>
+                      </div>
+
+                      {/* Primary Amount / Value on right of card */}
+                      <div className="flex flex-col items-end shrink-0">
+                        <span className="font-mono text-sm font-bold text-[var(--ink)]">
+                          {columns.some(c => c.isMoney)
+                            ? inr(row[columns.findIndex(c => c.isMoney)] || 0)
+                            : String(row[row.length - 1] ?? '—')}
+                        </span>
+                        {columns.some(c => c.isStatus) && (
+                          <div className="mt-1">
+                            {renderCell(
+                              columns.find(c => c.isStatus),
+                              row[columns.findIndex(c => c.isStatus)]
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
-          </section>
 
-          {/* KPI strip */}
-          <section
-            aria-label="Summary"
-            className="grid grid-cols-2 border-y border-[var(--line)] lg:grid-cols-4"
-          >
-            {data.kpis.map((k, i) => (
-              <div
-                key={k.label}
-                className={`p-3 sm:py-4 sm:px-5 ${i > 0 ? 'lg:border-l lg:border-[var(--line)]' : ''} ${
-                  i % 2 === 1 ? 'border-l border-[var(--line)] lg:border-l' : ''
-                } ${i >= 2 ? 'border-t border-[var(--line)] lg:border-t-0' : ''} ${i === 0 ? 'sm:pl-0' : ''}`}
+            {/* Desktop & Mobile Scrollable Table (WITHOUT View button column) */}
+            <div className={`flex-1 min-h-0 overflow-y-auto overflow-x-auto scrollbar-thin ${mobileView === 'cards' ? 'hidden sm:block' : 'block'}`}>
+              <table className="w-full min-w-[650px] border-collapse text-left text-xs sm:text-[13px]">
+                {/* Pinned Sticky THEAD */}
+                <thead className="sticky top-0 z-20 bg-[var(--surface-elevated)] backdrop-blur-md border-b border-[var(--line)] text-[var(--muted)] shadow-2xs">
+                  <tr>
+                    {columns.map(col => (
+                      <th
+                        key={col.idx}
+                        scope="col"
+                        className={`whitespace-nowrap px-3 py-2.5 text-[11px] font-bold uppercase tracking-wider ${
+                          col.isMoney || col.isNum ? 'text-right' : 'text-left'
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleSort(col.idx)}
+                          className={`inline-flex items-center gap-1.5 hover:text-[var(--ink)] transition cursor-pointer select-none ${
+                            col.isMoney || col.isNum ? 'flex-row-reverse' : ''
+                          }`}
+                        >
+                          <span>{col.label}</span>
+                          <IconSelector
+                            size={13}
+                            className={sort.colIdx === col.idx ? 'text-[var(--primary)] opacity-100' : 'opacity-35'}
+                          />
+                        </button>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-[var(--line-subtle)]">
+                  {loading ? (
+                    <tr>
+                      <td colSpan={columns.length} className="px-3 py-16 text-center text-xs text-[var(--muted)]">
+                        <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-[var(--primary)] border-r-transparent"></div>
+                        <p className="mt-2 font-bold text-[var(--ink)]">Loading exact statement data…</p>
+                      </td>
+                    </tr>
+                  ) : visibleRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={columns.length} className="px-3 py-12 text-center text-xs text-[var(--muted)]">
+                        <p className="font-bold text-[var(--ink)]">No statement records match your criteria.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    visibleRows.map((row, rIdx) => (
+                      <tr
+                        key={rIdx}
+                        onClick={() => setInspectRecord(row)}
+                        className="transition-colors hover:bg-[var(--surface-hover)] cursor-pointer"
+                      >
+                        {columns.map(col => (
+                          <td
+                            key={col.idx}
+                            className={`whitespace-nowrap px-3 py-2.5 ${
+                              col.isMoney || col.isNum ? 'text-right font-mono tabular-nums' : 'text-left'
+                            } ${col.isMoney ? 'font-semibold text-[var(--ink)]' : ''}`}
+                          >
+                            {renderCell(col, row[col.idx])}
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+
+                {/* Sticky TFOOT for Exact Totals */}
+                {columns.some(c => c.isTotal) && filteredRows.length > 0 && (
+                  <tfoot className="sticky bottom-0 z-20 bg-[var(--surface-elevated)] backdrop-blur-md border-t-2 border-[var(--line)] shadow-2xs">
+                    <tr>
+                      {columns.map((col, i) => (
+                        <td
+                          key={col.idx}
+                          className={`whitespace-nowrap px-3 py-2.5 text-xs font-bold ${
+                            col.isMoney || col.isNum
+                              ? 'text-right font-mono tabular-nums text-[var(--primary)]'
+                              : 'text-left text-[var(--ink)]'
+                          }`}
+                        >
+                          {i === 0
+                            ? `Totals (${filteredRows.length})`
+                            : col.isTotal
+                            ? col.isMoney
+                              ? inr(calcTotal(col.idx))
+                              : num(calcTotal(col.idx))
+                            : ''}
+                        </td>
+                      ))}
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          </div>
+
+          {/* Right Side Pagination Footer */}
+          <div className="flex flex-col items-center justify-between gap-2 text-xs text-[var(--muted)] sm:flex-row pt-2 shrink-0">
+            <span>
+              Showing{' '}
+              <strong className="text-[var(--ink)] font-mono">
+                {filteredRows.length === 0 ? 0 : (current - 1) * actualPageSize + 1}
+              </strong>{' '}
+              to{' '}
+              <strong className="text-[var(--ink)] font-mono">
+                {Math.min(current * actualPageSize, filteredRows.length)}
+              </strong>{' '}
+              of <strong className="text-[var(--ink)] font-mono">{filteredRows.length}</strong> records
+            </span>
+
+            {pageSize !== 'all' && pages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPage(1)}
+                  disabled={current === 1}
+                  className="grid h-7 w-7 place-items-center rounded-lg border border-[var(--line)] text-[var(--ink)] disabled:opacity-35 hover:bg-[var(--surface-hover)] cursor-pointer"
+                >
+                  «
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={current === 1}
+                  className="grid h-7 w-7 place-items-center rounded-lg border border-[var(--line)] text-[var(--ink)] disabled:opacity-35 hover:bg-[var(--surface-hover)] cursor-pointer"
+                >
+                  <IconChevronLeft size={13} />
+                </button>
+
+                <span className="px-2 font-mono font-bold text-[var(--ink)] text-xs">
+                  {current} / {pages}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setPage(p => Math.min(pages, p + 1))}
+                  disabled={current === pages}
+                  className="grid h-7 w-7 place-items-center rounded-lg border border-[var(--line)] text-[var(--ink)] disabled:opacity-35 hover:bg-[var(--surface-hover)] cursor-pointer"
+                >
+                  <IconChevronRight size={13} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage(pages)}
+                  disabled={current === pages}
+                  className="grid h-7 w-7 place-items-center rounded-lg border border-[var(--line)] text-[var(--ink)] disabled:opacity-35 hover:bg-[var(--surface-hover)] cursor-pointer"
+                >
+                  »
+                </button>
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+
+      {/* Record Inspect Modal */}
+      {inspectRecord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-lg rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-3.5 bg-[var(--surface-elevated)]">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Statement Inspection</span>
+                <h3 className="text-sm font-bold text-[var(--ink)] truncate">
+                  {String(inspectRecord[1] || inspectRecord[0] || 'Statement Row')}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInspectRecord(null)}
+                className="grid h-7 w-7 place-items-center rounded-lg border border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)] transition cursor-pointer"
               >
-                <p className="text-[11px] sm:text-xs text-[var(--muted)] truncate">{k.label}</p>
-                <p className="mt-1 truncate font-mono text-lg sm:text-2xl font-semibold tabular-nums">
-                  {k.value}
-                </p>
-                <div className="mt-1 flex items-center gap-1.5">
-                  <Delta value={k.delta} invert={k.invert} />
-                  <span className="text-[10px] sm:text-xs text-[var(--muted)] hidden xs:inline">vs prev. period</span>
-                </div>
-              </div>
-            ))}
-          </section>
+                <IconX size={15} />
+              </button>
+            </div>
 
-          {/* Chart + breakdown */}
-          <section className="grid gap-6 sm:gap-8 xl:grid-cols-[minmax(0,1fr)_280px]">
-            <div className="min-w-0">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs sm:text-sm font-semibold">{data.chartTitle}</h3>
-                <div className="flex items-center gap-3 sm:gap-4 text-xs text-[var(--muted)]">
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="h-0.5 w-3 bg-[#0057B8]" /> Primary
-                  </span>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="h-0.5 w-3 bg-slate-400" /> Secondary
-                  </span>
-                </div>
-              </div>
-              <div className="mt-3 sm:mt-4 h-48 sm:h-64 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={data.chartData || DEFAULT_TREND} margin={{ top: 6, right: 4, left: -8, bottom: 0 }}>
-                    <CartesianGrid vertical={false} stroke="var(--line, #e2e8f0)" strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="label"
-                      tickLine={false}
-                      axisLine={false}
-                      interval={4}
-                      tick={{ fontSize: 10, fill: 'var(--muted, #64748b)' }}
-                    />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      width={48}
-                      tickFormatter={v => `₹${Math.round(v / 1000)}k`}
-                      tick={{ fontSize: 10, fill: 'var(--muted, #64748b)' }}
-                    />
-                    <Tooltip
-                      formatter={(v, n) => [inr(v), n === 'revenue' ? 'Primary' : 'Secondary']}
-                      contentStyle={{
-                        background: 'var(--surface, #fff)',
-                        border: '1px solid var(--line, #e2e8f0)',
-                        borderRadius: 6,
-                        fontSize: 12,
-                        boxShadow: 'none',
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="collections"
-                      stroke="#94a3b8"
-                      strokeWidth={1.5}
-                      fill="transparent"
-                      dot={false}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="#0057B8"
-                      strokeWidth={2}
-                      fill="#0057B8"
-                      fillOpacity={0.06}
-                      dot={false}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+            <div className="max-h-[65vh] overflow-y-auto p-4 space-y-2">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {columns.map(col => {
+                  const val = inspectRecord[col.idx]
+                  if (val === undefined || val === null || val === '') return null
+                  return (
+                    <div key={col.idx} className="rounded-lg border border-[var(--line-subtle)] p-2 bg-[var(--surface)]">
+                      <div className="text-[10px] font-semibold text-[var(--muted)] uppercase tracking-wider">{col.label}</div>
+                      <div className="mt-1 font-mono font-medium text-[var(--ink)] break-words">
+                        {renderCell(col, val)}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
-            <Breakdown title={data.breakdownTitle} items={data.breakdown} />
-          </section>
 
-          {/* Table */}
-          <DataTable key={`${reportKey}_${startDate}_${endDate}`} columns={data.columns} rows={data.rows} loading={loading} />
-
-          <footer className="flex flex-col gap-1 border-t border-[var(--line)] pt-4 text-xs text-[var(--muted)] sm:flex-row sm:justify-between">
-            <span>
-              {isSnapshot
-                ? 'Live Snapshot ledger as of today'
-                : `Period: ${preset} (${startDate} to ${endDate})`}
-            </span>
-            <span>Amounts in INR (₹)</span>
-          </footer>
+            <div className="border-t border-[var(--line)] px-5 py-3 flex justify-end bg-[var(--surface-elevated)]">
+              <button
+                type="button"
+                onClick={() => setInspectRecord(null)}
+                className="h-8 px-4 rounded-lg bg-[var(--primary)] text-[var(--primary-contrast)] text-xs font-bold hover:bg-[var(--primary-hover)] cursor-pointer shadow-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
