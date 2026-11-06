@@ -5,28 +5,23 @@ import { getAccessToken } from '../services/tokenStorage'
 import { API_BASE_URL } from '../api'
 import invoiceService from '../features/billing/api/invoiceService'
 import settingsService from '../features/settings/api/settingsService'
-import { Spinner, TableSkeleton, ConfirmDialog, EmptyState, useModalA11y, SearchInput } from '../components/UI'
-import { INVOICE_STATUS, PAYMENT_STATUS, PAYMENT_METHODS } from '../constants'
+import { Spinner, TableSkeleton, ConfirmDialog, useModalA11y, SearchInput } from '../components/UI'
 import toast from 'react-hot-toast'
 import InvoiceDocument from '../components/InvoiceDocument'
 import TemplateCustomizerModal from '../components/TemplateCustomizerModal'
 import CommunicationHistory from '../components/CommunicationHistory'
 import { InvoiceEmptyIllustration } from '../components/visuals'
-import { MobileKpiGrid, MobileFAB } from '../components/MobileUI'
+import { MobileFAB } from '../components/MobileUI'
 import { CustomerCollectPaymentModal } from './Customers'
 
-import { QRCodeSVG } from 'qrcode.react'
 import {
   IconBrandWhatsapp,
   IconEye,
   IconPrinter,
   IconDownload,
   IconFileTypeXls,
-  IconCircleX,
   IconRotate2,
-  IconSearch,
   IconX,
-  IconMessageCircle,
   IconMail,
   IconShare,
   IconPhone,
@@ -34,20 +29,17 @@ import {
   IconReceipt,
   IconCurrencyRupee,
   IconShoppingBag,
-  IconShoppingCart,
   IconCreditCard,
   IconCalendarEvent,
   IconChevronLeft,
   IconChevronRight,
   IconDots,
   IconClockHour3,
-  IconUserCircle,
   IconCircleCheck,
   IconAlertCircle,
   IconBan,
   IconRotate2 as RefundIcon,
   IconAdjustmentsHorizontal,
-  IconFilter,
   IconFileText,
   IconExternalLink,
   IconCopy,
@@ -59,10 +51,6 @@ import {
 
 import {
   formatCurrency,
-  formatNumber,
-  formatDecimal,
-  formatPercent,
-  formatQuantity,
   formatDate as fmtDateStd,
   formatDateTime,
   formatTime as fmtTimeStd,
@@ -87,16 +75,6 @@ const DATE_FILTERS = [
   { label: 'All Time', value: '' },
 ]
 
-const STATUS_FILTERS = [
-  { label: 'All', value: '' },
-  { label: 'Paid', value: 'paid' },
-  { label: 'Partial', value: 'partial' },
-  { label: 'Credit', value: 'credit' },
-  { label: 'Pending', value: 'pending' },
-  { label: 'Cancelled', value: 'cancelled' },
-  { label: 'Refunded', value: 'refunded' },
-]
-
 function buildShareText(bill, shopName) {
   const date = fmtDateStd(bill.created_at)
   return [
@@ -108,11 +86,6 @@ function buildShareText(bill, shopName) {
       bill.payment_status?.toUpperCase() || bill.status?.toUpperCase() || '—'
     }`,
   ].join('\n')
-}
-
-function paymentLabel(method) {
-  if (!method) return '—'
-  return method.charAt(0).toUpperCase() + method.slice(1)
 }
 
 function getStatus(bill) {
@@ -188,7 +161,7 @@ async function openPdf(billId, printer = false, template = null) {
       document.body.removeChild(a)
       setTimeout(() => URL.revokeObjectURL(blobUrl), 120000)
     }
-  } catch (err) {
+  } catch {
     if (previewWindow && !previewWindow.closed) {
       previewWindow.close()
     }
@@ -218,7 +191,7 @@ async function downloadPdf(billId, invoiceNumber = 'invoice', printer = false, t
     document.body.removeChild(link)
     setTimeout(() => URL.revokeObjectURL(blobUrl), 60000)
     toast.success('PDF downloaded', { id: toastId })
-  } catch (err) {
+  } catch {
     toast.error('Could not download PDF. Opening in new tab...', { id: toastId })
     const fallbackUrl = getPdfUrl(billId, printer, template) + '&download=1'
     window.open(fallbackUrl, '_blank')
@@ -371,51 +344,6 @@ function ShareMenu({ bill, shopName, onClose, onShareWhatsApp }) {
 }
 
 /* =========================================================
-   STAT CARD
-========================================================= */
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  helper,
-  tone = 'blue',
-}) {
-  const tones = {
-    blue:   { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-[#1E3A5F] dark:text-slate-200', accent: 'text-[#1E3A5F] dark:text-slate-200' },
-    green:  { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-teal-700 dark:text-teal-400',     accent: 'text-teal-700 dark:text-teal-400' },
-    violet: { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-[#475569] dark:text-slate-300', accent: 'text-[#475569] dark:text-slate-300' },
-    amber:  { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-amber-700 dark:text-amber-400',   accent: 'text-amber-700 dark:text-amber-400' },
-    rose:   { icon: 'bg-[var(--surface-elevated)] border border-[var(--line)] text-red-600 dark:text-red-400',     accent: 'text-red-600 dark:text-red-400' },
-  }
-
-  const style = tones[tone] || tones.blue
-
-  return (
-    <div className="group rounded-md border border-[var(--line)] bg-[var(--surface)] p-3 shadow-none transition hover:shadow-md sm:p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted-light)]">
-            {label}
-          </p>
-          <p className="mt-1.5 truncate font-mono text-base font-semibold tabular-nums tracking-tight text-[var(--ink)] sm:text-xl">
-            {value}
-          </p>
-          {helper && (
-            <p className="mt-1 text-[11px] text-[var(--muted-light)]">
-              {helper}
-            </p>
-          )}
-        </div>
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md shadow-sm ${style.icon}`}>
-          <Icon size={18} />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* =========================================================
    STATUS
 ========================================================= */
 
@@ -520,7 +448,6 @@ function PaymentBadge({ method }) {
 
 function InvoiceActions({
   bill,
-  shopName,
   settings,
   onView,
   onCollect,
@@ -744,8 +671,7 @@ function InvoiceModal({
   const modalRef = useRef(null)
   const [shareOpen, setShareOpen] = useState(false)
   const [customizingTpl, setCustomizingTpl] = useState(null)
-  const [sendingWhatsApp, setSendingWhatsApp] = useState(false)
-  const [historyKey, setHistoryKey] = useState(0)
+  const historyKey = selected?.id || 0
   const [mobileTab, setMobileTab] = useState('summary') // 'summary' | 'preview' | 'activity'
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [invoicePayments, setInvoicePayments] = useState([])
@@ -1638,7 +1564,6 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
   const [moreOpen, setMoreOpen] = useState(false)
   const isDue = Number(bill.balance_due || 0) > 0 && bill.status !== 'cancelled' && bill.status !== 'refunded'
   const balance = Number(bill.balance_due || 0)
-  const paid = Number(bill.paid_amount || 0)
 
   const isHalfA4 = settings?.invoice_template === 'half_a4' || settings?.printer_type === 'half_a4' || settings?.invoice_template === 'advanced_gst_a5'
   const isThermal58 = settings?.printer_type === 'thermal_58' || settings?.invoice_template === 'thermal_58'
@@ -1648,7 +1573,13 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
   return (
     <article
       className="p-3 transition hover:bg-[var(--surface-hover)] active:bg-[var(--surface-elevated)]"
-      onClick={() => onView ? onView(bill) : navigate(`/invoice/${bill.id}`)}
+      onClick={() => {
+        if (onView) {
+          onView(bill)
+        } else {
+          navigate(`/invoice/${bill.id}`)
+        }
+      }}
     >
       {/* Row 1: Invoice # + Date/Time + Status Badge */}
       <div className="flex items-center justify-between gap-2">
@@ -1657,7 +1588,11 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
             type="button"
             onClick={e => {
               e.stopPropagation()
-              onView ? onView(bill) : navigate(`/invoice/${bill.id}`)
+              if (onView) {
+                onView(bill)
+              } else {
+                navigate(`/invoice/${bill.id}`)
+              }
             }}
             className="font-mono text-xs font-bold text-[#1E3A5F] hover:underline dark:text-sky-400 shrink-0"
           >
@@ -1834,7 +1769,6 @@ function MobileInvoiceCard({ bill, shopName, settings, onView, onCollect, onRefr
 ========================================================= */
 
 export default function Bills() {
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
   const [showKpis, setShowKpis] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
@@ -1965,7 +1899,7 @@ export default function Bills() {
         .catch(() => toast.error('Failed to load bills'))
         .finally(() => setLoading(false))
     },
-    [dateFilter, startDate, endDate, paymentMethodFilter, pageSize]
+    [dateFilter, startDate, endDate, paymentMethodFilter, pageSize, search]
   )
 
   const searchDebounce = useRef(null)

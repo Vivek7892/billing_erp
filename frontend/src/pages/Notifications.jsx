@@ -6,13 +6,7 @@ import { ROLES } from '../constants'
 import toast from 'react-hot-toast'
 import {
   formatCurrency,
-  formatNumber,
-  formatDecimal,
-  formatPercent,
-  formatQuantity,
-  formatDate,
   formatDateTime,
-  formatTime,
 } from '../utils/formatters'
 
 import {
@@ -33,7 +27,6 @@ import {
   IconDotsVertical,
   IconPackage,
   IconRefresh,
-  IconSearch,
   IconSettings,
   IconShieldExclamation,
   IconShoppingBag,
@@ -490,7 +483,7 @@ export default function Notifications() {
 
   // Tabs & Filters (default tab: "needs_attention")
   const [activeTab, setActiveTab] = useState('needs_attention')
-  const [scopeFilter, setScopeFilter] = useState('role') // 'role' | 'all'
+  const [scopeFilter, _setScopeFilter] = useState('role') // 'role' | 'all'
   const [search, setSearch] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [typeFilter, setTypeFilter] = useState('')

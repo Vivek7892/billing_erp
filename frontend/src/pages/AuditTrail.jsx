@@ -1,17 +1,14 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import api from '../api'
-import { PageHeader, Spinner, Modal, Pagination, SearchInput } from '../components/UI'
+import { Spinner, Modal, Pagination, SearchInput } from '../components/UI'
 import toast from 'react-hot-toast'
 import {
   formatCurrency,
-  formatDate,
   formatDateTime,
 } from '../utils/formatters'
 
 import {
   IconShieldCheck,
-  IconSearch,
-  IconX,
   IconFilter,
   IconCalendar,
   IconRotate2,
@@ -27,7 +24,6 @@ import {
   IconLayersLinked,
   IconCopy,
   IconCheck,
-  IconAlertTriangle,
   IconCreditCard,
   IconSettings,
   IconActivity,

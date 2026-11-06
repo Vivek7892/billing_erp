@@ -2,14 +2,12 @@ import { MobileFAB } from '../components/MobileUI'
 import React, { useEffect, useMemo, useState, useRef } from 'react'
 import api from '../api'
 
-import { Badge, Spinner, TableSkeleton, Modal, ConfirmDialog, EmptyState, SearchInput } from '../components/UI'
-
+import { Badge, TableSkeleton, Modal, ConfirmDialog, EmptyState, SearchInput } from '../components/UI'
 
 import {
   IconBuildingStore,
   IconTruck,
   IconPlus,
-  IconSearch,
   IconPencil,
   IconTrash,
   IconPhone,
@@ -20,7 +18,6 @@ import {
   IconPackage,
   IconCurrencyRupee,
   IconDeviceFloppy,
-  IconX,
   IconCreditCard,
   IconClockHour3,
   IconFileSpreadsheet,
@@ -32,8 +29,8 @@ import {
   IconAlertTriangle,
   IconRotate2,
   IconCheck,
-  IconFileText,
   IconArrowRight,
+  IconRefresh,
 } from '@tabler/icons-react'
 
 import toast from 'react-hot-toast'
@@ -44,13 +41,6 @@ import toast from 'react-hot-toast'
 
 import {
   formatCurrency,
-  formatNumber,
-  formatDecimal,
-  formatPercent,
-  formatQuantity,
-  formatDate,
-  formatDateTime,
-  formatTime,
 } from '../utils/formatters'
 
 const fmt = value => formatCurrency(value)
@@ -2325,6 +2315,7 @@ export default function Suppliers() {
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={confirmDelete}
+        loading={deleting}
         title="Delete Supplier?"
         message={`Are you sure you want to delete supplier "${deleteTarget?.name}"? This action cannot be undone.`}
         confirmText="Delete Supplier"

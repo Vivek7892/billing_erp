@@ -1,6 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useRef, isValidElement } from 'react'
 import {
-  IconSearch,
   IconX,
   IconAlertTriangle,
   IconAlertCircle,
@@ -815,7 +814,7 @@ export function Drawer({
    RESPONSIVE TAG CHIP COMPONENT
 ============================================================ */
 
-export function TagChip({ label, onRemove, color = 'default', className = '' }) {
+export function TagChip({ label, onRemove, _color = 'default', className = '' }) {
   return (
     <span
       className={[
@@ -971,9 +970,9 @@ export function Skeleton({ className = '' }) {
 ============================================================ */
 
 export function TableSkeleton({
-  rows = 8,
-  cols = 5,
-  columns,
+  _rows = 8,
+  _cols = 5,
+  _columns,
   label = 'Loading data',
 }) {
   return (
@@ -1543,8 +1542,8 @@ export function SearchBar({
   inputClassName = '',
   iconClassName = '',
   clearButtonClassName = '',
-  clearButtonProps = {},
-  shortcutClassName = '',
+  _clearButtonProps = {},
+  _shortcutClassName = '',
   variant = 'standard',
   autoFocus = false,
   children,

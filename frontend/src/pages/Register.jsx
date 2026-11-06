@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   IconEye,
@@ -33,7 +33,7 @@ export default function Register() {
   const { user, register } = useAuth()
   const navigate = useNavigate()
 
-  const redirectToApp = (path = '/') => {
+  const redirectToApp = useCallback((path = '/') => {
     const hostname = window.location.hostname.toLowerCase()
     const isAccountsDomain = hostname === 'accounts.dreamwithtech.dev' || hostname.startsWith('accounts.')
 
@@ -52,13 +52,13 @@ export default function Register() {
     }
 
     navigate(path, { replace: true })
-  }
+  }, [user, navigate])
 
   useEffect(() => {
     if (user) {
       redirectToApp('/')
     }
-  }, [user])
+  }, [user, redirectToApp])
 
   const handleMobileChange = e => {
     const digits = e.target.value.replace(/\D/g, '').slice(0, 10)

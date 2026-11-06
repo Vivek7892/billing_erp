@@ -68,8 +68,8 @@ export default function ThermalReceipt({
     if (mode === 'thermal_58') raw.thermal_paper_width = '58'
     else if (mode === 'thermal_80') raw.thermal_paper_width = '80'
 
-    return normalizeThermalSettings(raw, inv)
-  }, [settings, templateConfig, inv, mode])
+    return normalizeThermalSettings(raw, invoice)
+  }, [settings, templateConfig, invoice, mode])
 
   const {
     is58mm,

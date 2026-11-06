@@ -12,9 +12,6 @@ import {
   IconUsers,
   IconCurrencyRupee,
   IconChevronRight,
-  IconChevronDown,
-  IconChevronUp,
-  IconSearch,
 } from '@tabler/icons-react'
 
 /* ============================================================

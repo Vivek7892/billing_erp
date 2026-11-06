@@ -4,9 +4,6 @@ import {
   IconFileText,
   IconInfoCircle,
   IconPhone,
-  IconReceipt,
-  IconCalendar,
-  IconArrowRight,
   IconDownload,
   IconLoader2,
 } from '@tabler/icons-react'
@@ -15,13 +12,7 @@ import { Modal } from './UI'
 import { invoiceService } from '../features/billing/api/invoiceService'
 import {
   formatCurrency,
-  formatNumber,
-  formatDecimal,
-  formatPercent,
-  formatQuantity,
   formatDate,
-  formatDateTime,
-  formatTime,
 } from '../utils/formatters'
 
 
@@ -146,6 +137,7 @@ export default function WhatsAppShareModal({
     invoice?.payment_method,
     invoice?.payment_status,
     invoice?.notes,
+    invoice?.public_token,
     shortUrl,
   ])
 

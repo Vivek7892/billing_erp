@@ -3,19 +3,10 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   IconBuildingStore,
   IconReceipt,
-  IconFileText,
   IconPrinter,
   IconBarcode,
   IconUsers,
-  IconBell,
-  IconPercentage,
-  IconCreditCard,
   IconFileSpreadsheet,
-  IconTag,
-  IconGift,
-  IconHelpCircle,
-  IconKeyboard,
-  IconLogout,
   IconCheck,
   IconChevronDown,
   IconChevronUp,
@@ -27,15 +18,12 @@ import {
   IconAlertCircle,
   IconInfoCircle,
   IconCopy,
-  IconMenu2,
   IconX,
-  IconUserCheck,
   IconAdjustments,
   IconEye,
   IconArrowLeft,
   IconArrowRight,
   IconCircleCheck,
-  IconExternalLink,
   IconMessageCircle,
   IconPhoneCall,
   IconMail,
@@ -48,7 +36,7 @@ import { useAuth } from '../AuthContext'
 import InvoiceDocument, { isTrue } from '../components/InvoiceDocument'
 import ThermalReceipt from '../components/ThermalReceipt'
 import { isValidUpiId } from '../utils/thermalSettings'
-import { drawTabletopStandeeCanvas, generatePrintStandHtml, loadUpiBrandLogos, UpiLogo } from '../components/UpiLogos'
+import { drawTabletopStandeeCanvas, generatePrintStandHtml, loadUpiBrandLogos } from '../components/UpiLogos'
 import merchantStandIllustration from '../assets/merchant-qr-stand.svg'
 import googlePayLogo from '../assets/google-pay.svg'
 import phonePeLogo from '../assets/phonepe.svg'
@@ -513,19 +501,6 @@ export default function Settings() {
     }
   }
 
-  const handleResetTemplate = async template => {
-    if (!template?.id) return
-    if (!window.confirm(`Reset "${template.name}" to factory default settings?`)) return
-    try {
-      await api.post(`/settings/templates/${template.id}/reset/`)
-      toast.success(`${template.name} reset to factory defaults`)
-      await loadSettings()
-      window.dispatchEvent(new CustomEvent('shop-settings-updated'))
-    } catch {
-      toast.error('Failed to reset template')
-    }
-  }
-
   // Logo Upload
   const handleLogoUpload = async e => {
     const file = e.target.files?.[0]
@@ -683,92 +658,6 @@ export default function Settings() {
     requestAnimationFrame(() => window.print())
   }
 
-  const printThermalDirect = () => {
-    const is58 = settings.thermal_paper_width === '58' || settings.thermal_paper_width === '2'
-    const pageSize = `${is58 ? '58mm' : '80mm'} auto`
-    document.getElementById('settings-invoice-print-page')?.remove()
-    const pageStyle = document.createElement('style')
-    pageStyle.id = 'settings-invoice-print-page'
-    pageStyle.textContent = `@page { size: ${pageSize}; margin: 0; }`
-    document.head.appendChild(pageStyle)
-    document.body.classList.add('settings-invoice-print')
-    const cleanup = () => {
-      document.body.classList.remove('settings-invoice-print')
-      pageStyle.remove()
-      window.removeEventListener('afterprint', cleanup)
-    }
-    window.addEventListener('afterprint', cleanup, { once: true })
-    requestAnimationFrame(() => window.print())
-  }
-
-  const printBarcodeLabelDirect = () => {
-    const labelSize = settings.barcode_label_size || '50x25'
-    const sheetLayout = labelSize === 'a4_4x8'
-      ? { columns: 4, rows: 8, width: 48, height: 34, gap: 2 }
-      : labelSize === 'a4_3x5' ? { columns: 3, rows: 5, width: 64, height: 54, gap: 3 } : null
-    const rollWidth = labelSize === '38x25' ? 38 : labelSize === '80mm_roll' ? 80 : 50
-    const rollHeight = labelSize === '80mm_roll' ? 50 : 25
-    const printWindow = window.open('', '_blank', 'width=450,height=400')
-    if (!printWindow) {
-      toast.error('Allow pop-ups to print barcode labels')
-      return
-    }
-
-    const svgMarkup = document.querySelector('#barcode-preview-canvas svg')?.outerHTML || ''
-    const bizName = isTrue(settings.barcode_show_business_name, true) ? (settings.shop_name || 'MY STORE') : ''
-    const prodName = isTrue(settings.barcode_show_product_name, true) ? testProduct.name : ''
-    const mrp = isTrue(settings.barcode_show_mrp, true) ? `MRP: ₹${testProduct.mrp}` : ''
-    const price = isTrue(settings.barcode_show_selling_price, true) ? `₹${testProduct.price}` : ''
-    const isBold = isTrue(settings.barcode_bold, true)
-    const align = settings.barcode_align || 'center'
-    const labelFont = settings.barcode_font_size === 'large' ? 13 : settings.barcode_font_size === 'small' ? 9 : 11
-    const sku = isTrue(settings.barcode_show_sku, true) && testProduct.sku ? `SKU: ${testProduct.sku}` : ''
-    const escapeHtml = value => String(value || '').replace(/[&<>\"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' })[char])
-    const safeLabelContent = `
-      ${bizName ? `<div class="store-name">${escapeHtml(bizName)}</div>` : ''}
-      ${prodName ? `<div class="prod-name">${escapeHtml(prodName)}</div>` : ''}
-      ${svgMarkup}
-      ${sku ? `<div class="sku">${escapeHtml(sku)}</div>` : ''}
-      ${(mrp || price) ? `<div class="prices">${mrp ? `<span class="mrp">${escapeHtml(mrp)}</span>` : ''}${price ? `<span class="price">${escapeHtml(price)}</span>` : ''}</div>` : ''}
-    `
-    const labels = sheetLayout
-      ? `<main class="sheet">${Array.from({ length: sheetLayout.columns * sheetLayout.rows }, () => `<article class="label-box">${safeLabelContent}</article>`).join('')}</main>`
-      : `<main class="roll">${safeLabelContent}</main>`
-    const pageSize = sheetLayout ? 'A4 portrait' : `${rollWidth}mm ${rollHeight}mm`
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Print Barcode Label</title>
-          <style>
-            @page { size: ${pageSize}; margin: 0; }
-            * { box-sizing: border-box; }
-            body { margin: 0; padding: 0; font-family: Arial, sans-serif; text-align: ${align}; color: #111; }
-            .sheet { width: 210mm; height: 297mm; padding: ${sheetLayout ? Math.max(0, (297 - sheetLayout.rows * sheetLayout.height - (sheetLayout.rows - 1) * sheetLayout.gap) / 2) : 0}mm ${sheetLayout ? Math.max(0, (210 - sheetLayout.columns * sheetLayout.width - (sheetLayout.columns - 1) * sheetLayout.gap) / 2) : 0}mm; display: grid; gap: ${sheetLayout?.gap || 0}mm; grid-template-columns: repeat(${sheetLayout?.columns || 1}, ${sheetLayout?.width || rollWidth}mm); grid-template-rows: repeat(${sheetLayout?.rows || 1}, ${sheetLayout?.height || rollHeight}mm); align-content: start; justify-content: center; }
-            .label-box { width: ${sheetLayout?.width || rollWidth}mm; height: ${sheetLayout?.height || rollHeight}mm; padding: 1.5mm; display: flex; flex-direction: column; justify-content: center; overflow: hidden; text-align: ${align}; }
-            .roll { width: ${rollWidth}mm; height: ${rollHeight}mm; padding: 1mm; display: flex; flex-direction: column; justify-content: center; overflow: hidden; text-align: ${align}; }
-            .store-name { font-size: ${Math.max(8, labelFont - 2)}px; font-weight: bold; text-transform: uppercase; }
-            .prod-name { font-size: ${labelFont}px; font-weight: ${isBold ? 'bold' : 'normal'}; margin: 1px 0; }
-            .sku { font-size: 8px; margin-top: 1px; }
-            .prices { font-size: 11px; margin-top: 1px; display: flex; justify-content: center; gap: 3px; }
-            .mrp { text-decoration: line-through; color: #555; font-size: 9px; margin-right: 4px; }
-            .price { font-weight: ${isBold ? 'bold' : 'normal'}; font-size: ${labelFont}px; }
-            svg { display: block; margin: 1px auto; width: 95%; max-height: ${Number(settings.barcode_height) || 36}px; }
-            @media print { .sheet, .roll { break-inside: avoid; } }
-          </style>
-        </head>
-        <body>
-          ${labels}
-          <script>
-            window.onload = function() { window.print(); window.close(); }
-          </script>
-        </body>
-      </html>
-    `)
-    printWindow.document.close()
-  }
-
   // QR Stand actions
   const printMerchantQrStand = () => {
     if (!merchantQrValue) {
@@ -915,13 +804,13 @@ export default function Settings() {
   const previewTemplateId = selectedTemplateId
   const previewInvoiceTemplate = invoiceTemplates.find(template => template.id === previewTemplateId)
     || selectedInvoiceTemplate
-  const getTemplatePreviewConfig = template => {
-    const config = template?.config || {}
+  const previewTemplateConfig = useMemo(() => {
+    const config = previewInvoiceTemplate?.config || {}
     return {
       ...config,
       business_info: {
         ...(config.business_info || {}),
-        header_layout: template?.id === 'stylish' && settings.invoice_header_layout === 'logo_left'
+        header_layout: previewInvoiceTemplate?.id === 'stylish' && settings.invoice_header_layout === 'logo_left'
           ? (config.business_info?.header_layout || 'corporate_bar')
           : settings.invoice_header_layout || config.business_info?.header_layout,
       },
@@ -937,11 +826,7 @@ export default function Settings() {
       invoice_footer: settings.invoice_footer || config.invoice_footer,
       invoice_terms: settings.invoice_terms || config.invoice_terms,
     }
-  }
-  const previewTemplateConfig = useMemo(
-    () => getTemplatePreviewConfig(previewInvoiceTemplate),
-    [previewInvoiceTemplate, settings],
-  )
+  }, [previewInvoiceTemplate, settings])
 
   const is58Settings = settings.thermal_paper_width === '58' || settings.thermal_paper_width === '2' || previewTemplateId === 'thermal_58'
   const previewDocumentWidth = is58Settings ? 216 : previewTemplateId.startsWith('thermal') ? 300 : previewTemplateId === 'half_a4' ? 560 : 794

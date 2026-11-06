@@ -6,7 +6,6 @@ import {
   IconAlertCircle,
   IconCircleCheck,
   IconCircleX,
-  IconClockHour3,
   IconCreditCard,
   IconWallet,
   IconDeviceMobile,
@@ -20,20 +19,13 @@ import {
   IconCalendarEvent,
   IconHash,
   IconShieldCheck,
-  IconArrowUpRight,
   IconCash,
   IconFilter,
 } from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 import {
   formatCurrency,
-  formatNumber,
-  formatDecimal,
-  formatPercent,
-  formatQuantity,
   formatDate,
-  formatDateTime,
-  formatTime,
 } from '../utils/formatters'
 
 import { SearchBar } from '../components/UI'
@@ -65,17 +57,6 @@ const STATUS_DOT_COLORS = {
   refunded: 'bg-[#C2410C]',
 }
 
-const STATUS_ICONS = {
-  success: IconCircleCheck,
-  captured: IconCircleCheck,
-  failed: IconCircleX,
-  pending: IconClockHour3,
-  initiated: IconClockHour3,
-  created: IconClockHour3,
-  expired: IconClockHour3,
-  refunded: IconArrowUpRight,
-}
-
 const PAYMENT_METHODS = [
   'All methods',
   'upi',
@@ -94,22 +75,7 @@ const ESTIMATED_GATEWAY_FEE_RATE = 0.02
 // FORMATTERS
 // --------------------------------------------------
 
-const fmt = (value, currency = 'INR') => formatCurrency(value)
-
-const fmtCompact = (value, currency = 'INR') => {
-  const amount = Number(value || 0)
-
-  try {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: currency || 'INR',
-      notation: 'compact',
-      maximumFractionDigits: 1,
-    }).format(amount)
-  } catch {
-    return fmt(amount, currency)
-  }
-}
+const fmt = (value) => formatCurrency(value)
 
 const fmtDate = (value) => {
   if (!value) return '—'

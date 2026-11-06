@@ -4,13 +4,8 @@ import { PageHeader, Spinner, Modal, SearchInput } from '../components/UI'
 import toast from 'react-hot-toast'
 import {
   formatCurrency,
-  formatNumber,
-  formatDecimal,
-  formatPercent,
-  formatQuantity,
   formatDate,
   formatDateTime,
-  formatTime,
 } from '../utils/formatters'
 
 import {
@@ -20,14 +15,6 @@ import {
   IconFileText,
   IconPackage,
   IconShoppingBag,
-  IconExternalLink,
-  IconCircleCheck,
-  IconAlertTriangle,
-  IconInfoCircle,
-  IconCalendar,
-  IconUser,
-  IconSearch,
-  IconX,
 } from '@tabler/icons-react'
 
 export default function RecycleBin() {

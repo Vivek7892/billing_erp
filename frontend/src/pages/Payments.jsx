@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import api from '../api'
-import { Spinner, Modal, TableSkeleton, EmptyState, ErrorState, Pagination, SearchInput } from '../components/UI'
-import { MobileKpiGrid, MobileFAB } from '../components/MobileUI'
+import { Spinner, Modal, TableSkeleton, EmptyState, ErrorState, SearchInput } from '../components/UI'
+import { MobileKpiGrid } from '../components/MobileUI'
 import toast from 'react-hot-toast'
 import {
   IconCash,
@@ -11,7 +11,6 @@ import {
   IconSearch,
   IconDeviceMobile,
   IconWallet,
-  IconX,
   IconReceipt,
   IconAdjustmentsHorizontal,
   IconEye,
@@ -33,15 +32,11 @@ import {
   IconPhone,
   IconMail,
   IconCalendar,
-  IconTrendingUp,
   IconChartBar,
-  IconArrowDownRight,
-  IconArrowUpRight,
   IconArrowsSort,
   IconDotsVertical,
   IconCopy,
   IconCheck,
-  IconAlertCircle,
   IconFileText,
   IconBuildingBank,
   IconHistory,
@@ -55,10 +50,6 @@ import customerService from '../features/customers/api/customerService'
 import settingsService from '../features/settings/api/settingsService'
 import {
   formatCurrency,
-  formatNumber,
-  formatDecimal,
-  formatPercent,
-  formatQuantity,
   formatDate,
   formatDateTime,
   formatTime,
@@ -165,73 +156,6 @@ const FILTERS = [
     label: value.label,
   })),
 ]
-
-function SummaryCard({
-  title,
-  value,
-  description,
-  icon: Icon,
-  iconClass,
-  active,
-  onClick,
-  count,
-}) {
-  const content = (
-    <>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--muted-light)] sm:text-[11px]">
-            {title}
-          </p>
-
-          <p className="mt-2 truncate text-lg font-bold tracking-tight text-[var(--ink)] sm:text-2xl">
-            {value}
-          </p>
-        </div>
-
-        <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-sm ${iconClass}`}
-        >
-          <Icon size={18} strokeWidth={1.8} />
-        </div>
-      </div>
-
-      <div className="mt-4 flex items-center justify-between gap-2">
-        <p className="truncate text-[11px] text-[var(--muted-light)]">
-          {description}
-        </p>
-
-        {typeof count === 'number' && (
-          <span className="shrink-0 rounded-full bg-[var(--surface-elevated)] px-2 py-1 text-[10px] font-semibold text-[var(--muted)]">
-            {count}
-          </span>
-        )}
-      </div>
-    </>
-  )
-
-  if (onClick) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={`group rounded-2xl border bg-[var(--surface)] p-5 text-left shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--focus-ring)] ${
-          active
-            ? 'border-[var(--primary-border)] ring-2 ring-[var(--focus-ring)]'
-            : 'border-[var(--line)]'
-        }`}
-      >
-        {content}
-      </button>
-    )
-  }
-
-  return (
-    <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5 shadow-[var(--shadow-card)]">
-      {content}
-    </div>
-  )
-}
 
 function PaymentBadge({ method }) {
   const meta = METHOD_META[method] || METHOD_META.cash
@@ -579,33 +503,6 @@ export default function Payments() {
     }
   }, [invoiceAction])
 
-  const InvoiceActions = ({ bill, compact = false }) => {
-    const isBusy = invoiceAction?.startsWith(`${bill.id}:`)
-    return (
-      <div className={`flex items-center gap-1.5 ${compact ? 'w-full' : ''}`}>
-        <button
-          type="button"
-          disabled={isBusy}
-          onClick={() => handleInvoiceAction(bill, 'print')}
-          title="Open invoice for printing"
-          className={`inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--primary)] px-2.5 py-2 text-[11px] font-bold text-white shadow-sm transition hover:brightness-110 disabled:cursor-wait disabled:opacity-60 ${compact ? 'flex-1' : ''}`}
-        >
-          <IconPrinter size={13} />
-          <span>{isBusy ? 'Preparing...' : 'Invoice'}</span>
-        </button>
-        <button
-          type="button"
-          disabled={isBusy}
-          onClick={() => handleInvoiceAction(bill, 'download')}
-          title="Download invoice PDF"
-          className="inline-flex items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 text-[var(--ink-secondary)] transition hover:bg-[var(--surface-elevated)] disabled:cursor-wait disabled:opacity-60"
-        >
-          <IconDownload size={13} />
-        </button>
-      </div>
-    )
-  }
-
   const loadPayments = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
       setRefreshing(true)
@@ -642,32 +539,6 @@ export default function Payments() {
     window.addEventListener('pos:payment-collected', handleSync)
     return () => window.removeEventListener('pos:payment-collected', handleSync)
   }, [loadCollections, loadCustomers, loadPayments])
-
-  const summary = useMemo(
-    () =>
-      Object.entries(METHOD_META).map(([key, meta]) => {
-        const transactions = bills.filter(
-          bill => bill.payment_method === key,
-        )
-
-        return {
-          key,
-          ...meta,
-          count: transactions.length,
-          total: transactions.reduce(
-            (sum, bill) =>
-              sum +
-              Number(
-                bill.paid_amount ??
-                  (bill.payment_method === 'credit' ? 0 : bill.grand_total) ??
-                  0,
-              ),
-            0,
-          ),
-        }
-      }),
-    [bills],
-  )
 
   const totalCollected = useMemo(
     () =>
@@ -725,14 +596,6 @@ export default function Payments() {
       .slice(-14)
       .map(r => ({ ...r, label: r.date.slice(5) }))
   }, [bills])
-
-  // Method share for mini bar
-  const methodChartData = useMemo(() => {
-    return summary
-      .filter(s => s.total > 0)
-      .map(s => ({ name: s.label, value: s.total, count: s.count }))
-      .sort((a, b) => b.value - a.value)
-  }, [summary])
 
   const normalizedSearch = search.trim().toLowerCase()
 

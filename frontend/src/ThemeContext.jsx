@@ -43,7 +43,7 @@ function getSavedTheme() {
     ) {
       return savedTheme
     }
-  } catch (error) {
+  } catch {
     console.warn('Unable to access saved theme preference.')
   }
 
@@ -106,24 +106,6 @@ export function ThemeProvider({ children }) {
       console.warn('Unable to save theme preference.')
     }
   }, [theme, isDark])
-
-  /**
-   * Smooth transition between themes
-   */
-  useEffect(() => {
-    const root = document.documentElement
-
-    root.classList.add('theme-transition')
-
-    const timer = window.setTimeout(() => {
-      root.classList.remove('theme-transition')
-    }, 250)
-
-    return () => {
-      window.clearTimeout(timer)
-      root.classList.remove('theme-transition')
-    }
-  }, [theme])
 
   /**
    * Update theme manually

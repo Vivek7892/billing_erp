@@ -17,7 +17,7 @@ export default function SessionExpiredModal() {
   const { login, user } = useAuth()
 
   useEffect(() => {
-    const handleSessionExpired = (e) => {
+    const handleSessionExpired = () => {
       // Prefill username if known
       if (user?.username) {
         setUsername(user.username)

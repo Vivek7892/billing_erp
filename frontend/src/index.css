@@ -724,11 +724,29 @@ textarea.input {
 }
 
 select.input,
-select.erp-control,
-select {
+select.erp-control:not([multiple]),
+select:not([multiple]) {
+  -webkit-appearance: none;
+  appearance: none;
   cursor: pointer;
   background-color: var(--surface);
   color: var(--ink);
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='m4 6 4 4 4-4' stroke='%2364758B' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.625rem center;
+  background-size: 1rem;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+select:not([multiple]):hover:not(:disabled) {
+  border-color: var(--line-strong);
+}
+
+select:focus-visible {
+  border-color: var(--primary);
+  outline: 2px solid color-mix(in srgb, var(--primary) 22%, transparent);
+  outline-offset: 1px;
 }
 
 select option {
@@ -755,6 +773,7 @@ input[type="datetime-local"] {
   cursor: pointer;
   accent-color: var(--primary);
   padding-right: 0.625rem;
+  border-radius: 5px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
@@ -812,7 +831,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 input[type="date"]::-webkit-calendar-picker-indicator:hover,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
-  transform: scale(1.1);
+  background-color: var(--surface-hover);
 }
 
 .dark input[type="date"]::-webkit-calendar-picker-indicator,

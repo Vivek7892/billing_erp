@@ -7,7 +7,6 @@ import {
   formatQuantity,
   formatDate,
   formatDateTime,
-  formatTime,
 } from '../utils/formatters'
 /*
  * NewBill.jsx
@@ -47,7 +46,6 @@ import logoImg from '../assets/logo.png'
 import {
   UpiBrandStrip,
   generatePrintStandHtml,
-  getUpiBrandRibbonSvg,
   loadUpiBrandLogos,
   drawTabletopStandeeCanvas,
 } from '../components/UpiLogos'
@@ -63,10 +61,8 @@ import {
   IconClock,
   IconKeyboard,
   IconCircleCheck,
-  IconShare,
   IconX,
   IconAlertTriangle,
-  IconFileText,
   IconMaximize,
   IconMinimize,
   IconLayersLinked,
@@ -79,10 +75,8 @@ import {
   IconWallet,
   IconUser,
   IconUserPlus,
-  IconUserCircle,
   IconShoppingCart,
   IconDotsVertical,
-  IconArrowLeft,
   IconArrowRight,
   IconCopy,
   IconCheck,
@@ -95,7 +89,7 @@ import { Modal, ConfirmDialog, SearchBar } from '../components/UI'
 import { useNavigate } from 'react-router-dom'
 import RazorpayPaymentModal from '../features/billing/RazorpayPaymentModal'
 import { PAYMENT_METHODS, PAYMENT_STATUS } from '../constants'
-import { BillingWorkflowVisual, PaymentCompletedVisual } from '../components/visuals'
+import { BillingWorkflowVisual } from '../components/visuals'
 
 // ---------------------------------------------------------------------------
 // Configuration switches (UI-level validation only)
@@ -161,6 +155,7 @@ const enforcedStock = product => {
   const n = Number(s)
   return Number.isFinite(n) ? n : Infinity
 }
+const hasAvailableStock = product => enforcedStock(product) > 0
 
 // Touch devices: don't re-focus the search box after adding an item, or the
 // on-screen keyboard pops up on every product tap.
@@ -176,14 +171,6 @@ const PAYMENT_METHOD_OPTIONS = [
 const CASH_CHIPS = [50, 100, 200, 500, 1000, 2000]
 const QR_PRESETS = [100, 200, 500, 1000, 2000]
 const INITIAL_PAYMENT = { method: PAYMENT_METHODS.CASH, amount: '', reference: '', status: PAYMENT_STATUS.PAID, autoAmount: true }
-
-// Amount actually received for an invoice, without overstating pending Razorpay.
-const lastPaidAmount = inv => {
-  if (!inv) return 0
-  if (inv.payment_method === 'razorpay' && inv.payment_status !== 'paid') return 0
-  if (inv.payment_method === 'credit') return Number(inv.paid_amount ?? 0)
-  return Number(inv.amount_received ?? inv.paid_amount ?? 0)
-}
 
 function SimpleCalculator({ open, onClose }) {
   const [display, setDisplay] = useState('0')
@@ -254,29 +241,33 @@ function SimpleCalculator({ open, onClose }) {
       setStartNewValue(false)
     } else if (!display.includes('.')) setDisplay(value => `${value}.`)
   }
-  const handleKeyDown = useCallback(event => {
-    if (event.altKey || event.ctrlKey || event.metaKey || /^(INPUT|TEXTAREA|SELECT)$/.test(event.target?.tagName) || event.target?.isContentEditable) return
-    const key = event.key
-    let handled = true
-    if (/^\d$/.test(key)) enterDigit(key)
-    else if (key === '.') appendDecimal()
-    else if (key === '+') chooseOperator('+')
-    else if (key === '-') chooseOperator('−')
-    else if (key === '*') chooseOperator('×')
-    else if (key === '/') chooseOperator('÷')
-    else if (key === '%') setDisplay(value => value === 'Error' ? '0' : String(Number(value) / 100))
-    else if (key === 'Enter' || key === '=') equals()
-    else if (key === 'Backspace') backspace()
-    else if (key === 'Delete') clear()
-    else handled = false
-    if (handled) event.preventDefault()
-  }, [display, startNewValue, storedValue, operator])
+
+  const calcRef = useRef({})
+  calcRef.current = { enterDigit, appendDecimal, chooseOperator, equals, backspace, clear }
 
   useEffect(() => {
     if (!open) return undefined
+    const handleKeyDown = event => {
+      if (event.altKey || event.ctrlKey || event.metaKey || /^(INPUT|TEXTAREA|SELECT)$/.test(event.target?.tagName) || event.target?.isContentEditable) return
+      const key = event.key
+      const c = calcRef.current
+      let handled = true
+      if (/^\d$/.test(key)) c.enterDigit(key)
+      else if (key === '.') c.appendDecimal()
+      else if (key === '+') c.chooseOperator('+')
+      else if (key === '-') c.chooseOperator('−')
+      else if (key === '*') c.chooseOperator('×')
+      else if (key === '/') c.chooseOperator('÷')
+      else if (key === '%') setDisplay(value => value === 'Error' ? '0' : String(Number(value) / 100))
+      else if (key === 'Enter' || key === '=') c.equals()
+      else if (key === 'Backspace') c.backspace()
+      else if (key === 'Delete') c.clear()
+      else handled = false
+      if (handled) event.preventDefault()
+    }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, handleKeyDown])
+  }, [open])
 
   const keys = [
     { label: 'MC', action: () => setMemory(0), utility: true, name: 'Clear memory' },
@@ -384,7 +375,6 @@ function BufferedNumber({ value, onCommit, max, allowZero = false, onClamp, clas
 function CartRow({ item, index, stock, showGst, justAdded, onQty, onDiscount, onBatch, onRemove }) {
   const gross = item.unit_price * item.qty
   const discountAmount = gross * item.discount_percent / 100
-  const basic = gross - discountAmount
   const overStock = Number.isFinite(stock) && item.qty > stock
   return (
     <tr className={`pb-bill-tr${overStock ? ' pb-tr-warn' : ''}${justAdded ? ' pb-tr-added' : ''}`}>
@@ -1001,6 +991,7 @@ export default function NewBill() {
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [showCalculator, setShowCalculator] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [pendingSale, setPendingSale] = useState(null)
   const [showRazorpay, setShowRazorpay] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [showDrafts, setShowDrafts] = useState(false)
@@ -1211,17 +1202,17 @@ export default function NewBill() {
 
   const searchResults = useMemo(() => filtered.slice(0, 8), [filtered])
 
-  const availableProducts = useMemo(() => filtered.filter(p => Number(p?.current_stock || 0) > 0), [filtered])
+  const availableProducts = useMemo(() => filtered.filter(hasAvailableStock), [filtered])
   const recentProducts = useMemo(() => {
     try {
       const list = Array.isArray(products) ? products : []
       const ids = JSON.parse(localStorage.getItem('pos_recent_products') || '[]').map(p => p?.id)
-      return ids.map(id => list.find(p => p?.id === id)).filter(Boolean).filter(p => Number(p.current_stock || 0) > 0).slice(0, 5)
+      return ids.map(id => list.find(p => p?.id === id)).filter(Boolean).filter(hasAvailableStock).slice(0, 5)
     } catch { return [] }
-  }, [products, cart])
+  }, [products])
   const recommendedProducts = useMemo(() => {
     const base = search.trim() ? filtered : (catFilter ? filtered : availableProducts)
-    return base.filter(p => Number(p?.current_stock || 0) > 0 && !cart.some(i => i.id === p.id)).slice(0, 6)
+    return base.filter(p => hasAvailableStock(p) && !cart.some(i => i.id === p.id)).slice(0, 6)
   }, [search, filtered, catFilter, availableProducts, cart])
 
   // Search is filter-only. Enter never adds a product.
@@ -1627,6 +1618,19 @@ export default function NewBill() {
     }
   }
 
+  const requestSaleConfirmation = (print = false, overridePayment = null) => {
+    if (savingRef.current) return
+    if (validationErrors.length) return toast.error(validationErrors[0])
+    setPendingSale({ print, payment: overridePayment })
+  }
+
+  const confirmSale = async () => {
+    if (!pendingSale || savingRef.current) return
+    const sale = pendingSale
+    await saveBill(sale.print, sale.payment)
+    setPendingSale(null)
+  }
+
   const addCustomer = async () => {
     if (addingCustomer) return
     if (!newCustomer.name.trim()) return toast.error('Customer name is required')
@@ -1645,11 +1649,6 @@ export default function NewBill() {
     } finally {
       setAddingCustomer(false)
     }
-  }
-
-  const getShortUrl = async (invoiceId) => {
-    const link = await invoiceService.createShortLink(invoiceId)
-    return link.short_url
   }
 
   const shareInvoice = (inv = null) => {
@@ -1703,7 +1702,7 @@ export default function NewBill() {
 
   // Ctrl+P / F7: print the bill being built (complete & print), otherwise the last invoice.
   const printCurrent = () => {
-    if (cart.length) saveBill(true)
+    if (cart.length) requestSaleConfirmation(true)
     else if (lastInvoice?.id) printInvoiceDocument(lastInvoice.id, false)
     else toast.error('Nothing to print')
   }
@@ -1716,7 +1715,7 @@ export default function NewBill() {
 
   // Keyboard shortcuts — handlers are read through a ref so they never go stale.
   actionsRef.current = {
-    saveBill,
+    requestSaleConfirmation,
     saveDraft,
     printCurrent,
     focusPayment,
@@ -1725,6 +1724,7 @@ export default function NewBill() {
     showSuccess,
     startNewBill,
     setShowSuccess,
+    paymentMethod: payment.method,
   }
   useEffect(() => {
     const onKey = e => {
@@ -1743,8 +1743,8 @@ export default function NewBill() {
       else if (mod && key.toLowerCase() === 'p') { e.preventDefault(); a.printCurrent() }
       else if (mod && key === 'Enter') {
         e.preventDefault()
-        if (payment.method === 'razorpay') a.openRazorpayCheckout()
-        else a.saveBill(false)
+        if (a.paymentMethod === 'razorpay') a.openRazorpayCheckout()
+        else a.requestSaleConfirmation(false)
       }
       else if (key === 'F1') { e.preventDefault(); a.navigate('/billing/new') }
       else if (key === 'F2') { e.preventDefault(); customerRef.current?.focus() }
@@ -1755,8 +1755,8 @@ export default function NewBill() {
       else if (key === 'F7') { e.preventDefault(); a.printCurrent() }
       else if (key === 'F8') {
         e.preventDefault()
-        if (payment.method === 'razorpay') a.openRazorpayCheckout()
-        else a.saveBill(false)
+        if (a.paymentMethod === 'razorpay') a.openRazorpayCheckout()
+        else a.requestSaleConfirmation(false)
       }
       else if (key === 'Escape') {
         setShowQr(false); setShowCustomerModal(false); setShowShortcuts(false)
@@ -2069,7 +2069,7 @@ export default function NewBill() {
                 'aria-expanded': searchActive,
                 'aria-controls': 'pb-search-list',
                 'aria-autocomplete': 'list',
-                autoFocus: true,
+                autoFocus: canAutoFocus(),
                 inputMode: 'search',
                 autoComplete: 'off',
                 autoCapitalize: 'none',
@@ -2871,7 +2871,7 @@ export default function NewBill() {
                   type="button"
                   className="pb-btn-dock pb-btn-print"
                   title="Complete Sale &amp; Print Bill (Ctrl+P / F7)"
-                  onClick={() => saveBill(true)}
+                  onClick={() => requestSaleConfirmation(true)}
                   disabled={!canAttemptComplete}
                 >
                   <IconPrinter size={13} />
@@ -2896,7 +2896,7 @@ export default function NewBill() {
                   type="button"
                   className="pb-btn-complete-sale"
                   title={completeTitle}
-                  onClick={() => saveBill(false)}
+                  onClick={() => requestSaleConfirmation(false)}
                   disabled={!canAttemptComplete}
                 >
                   <IconCircleCheck size={15} />
@@ -2970,13 +2970,13 @@ export default function NewBill() {
         subtitle={`${formatNumber(cart.length)} item${cart.length === 1 ? '' : 's'} (${formatQuantity(totalQty)} units) · ${customer ? customer.name : 'Walk-in Customer'}`}
         size="lg"
         footer={
-          <div className="flex w-full flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               {payment.method !== 'razorpay' && (
                 <button
                   type="button"
                   className="flex min-h-[44px] flex-1 sm:flex-initial items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] px-4 py-2 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--surface-hover)] active:scale-95 transition disabled:opacity-50"
-                  onClick={() => saveBill(true)}
+                  onClick={() => requestSaleConfirmation(true)}
                   disabled={!canAttemptComplete || saving}
                 >
                   <IconPrinter size={15} />
@@ -3020,9 +3020,9 @@ export default function NewBill() {
               ) : (
                 <button
                   type="button"
-                  className="flex min-h-[48px] w-full sm:w-auto flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-emerald-700 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex min-h-[48px] w-full sm:w-auto flex-1 items-center justify-center gap-2 rounded-lg sm:rounded-xl bg-[var(--primary)] px-6 py-2.5 text-sm font-bold text-[var(--primary-contrast)] hover:brightness-95 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   title={completeTitle}
-                  onClick={() => saveBill(false)}
+                  onClick={() => requestSaleConfirmation(false)}
                   disabled={!canAttemptComplete || saving}
                 >
                   <IconCircleCheck size={18} />
@@ -3033,38 +3033,38 @@ export default function NewBill() {
           </div>
         }
       >
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {/* Order Summary & Total to Pay Card (Clean, Simple & Mobile-Friendly) */}
-          <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800/90 bg-[var(--surface-elevated)] p-4 shadow-2xs">
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:rounded-2xl sm:bg-[var(--surface-elevated)] sm:p-4 sm:shadow-2xs">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted)]">Total to Collect</span>
-                <div className="text-3xl font-black font-mono tracking-tight text-emerald-600 dark:text-emerald-400">{fmt(grandTotal)}</div>
-                <div className="mt-1 text-xs text-[var(--muted)] flex items-center gap-1.5 flex-wrap">
+                <div className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-[var(--ink)] sm:text-emerald-600 dark:sm:text-emerald-400">{fmt(grandTotal)}</div>
+                <div className="mt-1 hidden text-xs text-[var(--muted)] items-center gap-1.5 flex-wrap sm:flex">
                   <span className="font-semibold text-[var(--ink)] font-mono tabular-nums">{formatNumber(cart.length)} {cart.length === 1 ? 'item' : 'items'} ({formatQuantity(totalQty)} units)</span>
                   <span>•</span>
                   <span>{customer ? customer.name : 'Walk-in Customer'}</span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-[var(--line-subtle)] text-xs">
-                <div className="rounded-xl border border-slate-200/70 dark:border-slate-800/70 bg-[var(--surface)] p-2 shadow-2xs">
-                  <span className="text-[9px] uppercase tracking-wider text-[var(--muted)] block">Subtotal</span>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-[var(--line-subtle)] pt-2 text-[11px] sm:grid sm:grid-cols-2 sm:gap-2 sm:border-0 sm:pt-0 sm:text-xs lg:grid-cols-4">
+                <div className="sm:rounded-xl sm:border sm:border-[var(--line)] sm:bg-[var(--surface)] sm:p-2 sm:shadow-2xs">
+                  <span className="text-[9px] uppercase tracking-wider text-[var(--muted)] sm:block">Subtotal </span>
                   <span className="font-mono font-semibold text-[var(--ink)]">{fmt(subtotal)}</span>
                 </div>
                 {billDiscount > 0 && (
-                  <div className="rounded-xl border border-amber-300/60 dark:border-amber-800/60 bg-amber-50/50 dark:bg-amber-950/20 p-2 shadow-2xs">
-                    <span className="text-[9px] uppercase tracking-wider text-amber-700 dark:text-amber-400 block">Discount</span>
+                  <div className="sm:rounded-xl sm:border sm:border-amber-300/60 sm:bg-amber-50/50 sm:p-2 sm:shadow-2xs dark:sm:border-amber-800/60 dark:sm:bg-amber-950/20">
+                    <span className="text-[9px] uppercase tracking-wider text-amber-700 dark:text-amber-400 sm:block">Discount </span>
                     <span className="font-mono font-semibold text-amber-700 dark:text-amber-300">-{fmt(billDiscount)}</span>
                   </div>
                 )}
                 {showGst && (
-                  <div className="rounded-xl border border-slate-200/70 dark:border-slate-800/70 bg-[var(--surface)] p-2 shadow-2xs">
-                    <span className="text-[9px] uppercase tracking-wider text-[var(--muted)] block">GST / Tax</span>
+                  <div className="sm:rounded-xl sm:border sm:border-[var(--line)] sm:bg-[var(--surface)] sm:p-2 sm:shadow-2xs">
+                    <span className="text-[9px] uppercase tracking-wider text-[var(--muted)] sm:block">GST / Tax </span>
                     <span className="font-mono font-semibold text-[var(--ink)]">{fmt(tax)}</span>
                   </div>
                 )}
-                <div className="rounded-xl border border-slate-200/70 dark:border-slate-800/70 bg-[var(--surface)] p-2 shadow-2xs">
-                  <span className="text-[9px] uppercase tracking-wider text-[var(--muted)] block">Round Off</span>
+                <div className="sm:rounded-xl sm:border sm:border-[var(--line)] sm:bg-[var(--surface)] sm:p-2 sm:shadow-2xs">
+                  <span className="text-[9px] uppercase tracking-wider text-[var(--muted)] sm:block">Round Off </span>
                   <span className="font-mono font-semibold text-[var(--ink)]">{fmtSigned(roundOff)}</span>
                 </div>
               </div>
@@ -3076,7 +3076,8 @@ export default function NewBill() {
             <label className="text-xs font-bold uppercase tracking-wider text-[var(--muted)] mb-2 block">
               Choose Payment Method
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2" role="radiogroup" aria-label="Payment method">
+            <div className="overflow-x-auto pb-1 sm:overflow-visible">
+            <div className="grid min-w-[316px] grid-cols-5 gap-1 sm:min-w-0 sm:gap-2" role="radiogroup" aria-label="Payment method">
               {PAYMENT_METHOD_OPTIONS.map(({ id, label, icon: Icon }) => {
                 const isSelected = payment.method === id
                 return (
@@ -3085,23 +3086,24 @@ export default function NewBill() {
                     type="button"
                     role="radio"
                     aria-checked={isSelected}
-                    className={`flex min-h-[52px] items-center justify-center gap-2 rounded-xl border p-2.5 text-xs font-bold transition-all ${
+                    className={`flex min-h-[58px] sm:min-h-[52px] flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 rounded-lg sm:rounded-xl border p-1.5 sm:p-2.5 text-[10px] sm:text-xs font-bold transition-colors ${
                       isSelected
                         ? 'border-emerald-600 bg-emerald-50 text-emerald-800 shadow-sm dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-300'
                         : 'border-[var(--line)] bg-[var(--surface-subtle)] text-[var(--ink)] hover:bg-[var(--surface-hover)]'
                     }`}
                     onClick={() => selectPayment(id)}
                   >
-                    <Icon size={18} className={isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-[var(--muted)]'} />
-                    <span>{label}</span>
+                    <Icon size={16} className={isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-[var(--muted)]'} />
+                    <span className="truncate">{label}</span>
                   </button>
                 )
               })}
             </div>
+            </div>
           </div>
 
           {/* Contextual Form Controls for Chosen Payment Method */}
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface-subtle)] p-4">
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--surface)] p-3 sm:rounded-2xl sm:bg-[var(--surface-subtle)] sm:p-4">
             {payment.method === 'cash' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -3462,6 +3464,18 @@ export default function NewBill() {
         isDestructive={true}
       />
 
+      <ConfirmDialog
+        open={Boolean(pendingSale)}
+        onClose={() => !saving && setPendingSale(null)}
+        onConfirm={confirmSale}
+        title="Confirm Sale"
+        message={pendingSale
+          ? `Complete this sale for ${fmt(grandTotal)} from ${customer?.name || 'Walk-in Customer'} using ${PAYMENT_METHOD_OPTIONS.find(option => option.id === (pendingSale.payment?.method || payment.method))?.label || 'selected payment method'}${pendingSale.print ? ' and print the invoice' : ''}?`
+          : ''}
+        confirmLabel={pendingSale?.print ? 'Complete & Print' : 'Complete Sale'}
+        loading={saving}
+      />
+
       <Modal open={showDrafts} onClose={() => setShowDrafts(false)} title="Draft Bills" subtitle={`${drafts.length} parked bill${drafts.length === 1 ? '' : 's'}`} size="md">
         <div className="space-y-3">
           {drafts.length === 0 ? (
@@ -3506,10 +3520,16 @@ export default function NewBill() {
           {/* Payment Completed Visual Animation & Settlement Header */}
           <div className="overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-b from-emerald-50/70 to-white dark:from-emerald-950/30 dark:to-slate-900 p-3 shadow-2xs">
             <div className="flex flex-col items-center justify-center">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md shadow-emerald-500/30">
+              <div className="relative flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md shadow-emerald-500/30">
                 <IconCheck size={24} strokeWidth={3} />
+                <IconSparkles size={14} className="absolute -right-3 -top-1 text-amber-500" aria-hidden="true" />
+                <IconSparkles size={12} className="absolute -bottom-1 -left-3 text-emerald-600 dark:text-emerald-300" aria-hidden="true" />
               </div>
-              <h3 className="mt-1.5 text-sm font-black text-emerald-800 dark:text-emerald-300">Sale Completed!</h3>
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <IconSparkles size={13} className="text-amber-500" aria-hidden="true" />
+                <h3 className="text-sm font-black text-emerald-800 dark:text-emerald-300">Sale Completed!</h3>
+                <IconSparkles size={13} className="text-amber-500" aria-hidden="true" />
+              </div>
               <div className="font-mono text-2xl font-black text-[var(--ink)] mt-0.5">
                 {fmt(Number(lastInvoice?.grand_total || 0))}
               </div>
@@ -3651,7 +3671,7 @@ export default function NewBill() {
           setShowQr(false)
           toast.success(`UPI payment of ${fmt(amount)} marked paid`)
         }}
-        onCompleteSale={async (amount, isPrint = false) => {
+        onCompleteSale={(amount, isPrint = false) => {
           const upiPayment = {
             method: 'upi',
             amount: amount.toFixed(2),
@@ -3662,7 +3682,7 @@ export default function NewBill() {
           setPayment(upiPayment)
           setShowQr(false)
           setMobilePaymentOpen(false)
-          await saveBill(isPrint, upiPayment)
+          requestSaleConfirmation(isPrint, upiPayment)
         }}
       />
 

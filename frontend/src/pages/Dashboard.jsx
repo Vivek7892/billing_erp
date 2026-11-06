@@ -16,8 +16,6 @@ import {
   IconFilter,
   IconPackage,
   IconPlus,
-  IconRefresh,
-  IconRoute,
   IconShieldCheck,
   IconX,
 } from '@tabler/icons-react'
@@ -32,7 +30,6 @@ import {
 } from 'recharts'
 import api from '../api'
 import { Badge, Spinner } from '../components/UI'
-import { MobileKpiGrid, MobileFAB } from '../components/MobileUI'
 import { useShop } from '../components/Layout'
 import { useAuth } from '../AuthContext'
 import DashboardBannerCarousel from './DashboardBannerCarousel'
@@ -43,13 +40,8 @@ import {
   EcosystemVisualModal,
 } from '../components/visual-content'
 import {
-  formatCurrency,
-  formatNumber,
-  formatDecimal,
-  formatPercent,
   formatQuantity,
   formatDate,
-  formatDateTime,
   fmtCurrency,
 } from '../utils/formatters'
 
@@ -101,8 +93,6 @@ const percentChange = (current, previous) => {
   ) / 10
 }
 
-const formatDateShort = (dateString) => formatDate(dateString)
-
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
@@ -149,7 +139,6 @@ export default function Dashboard() {
 
   const [data, setData] = useState(EMPTY)
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [ecosystemModalOpen, setEcosystemModalOpen] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -182,7 +171,6 @@ export default function Dashboard() {
 
   const loadDashboard = useCallback(async (overrideFilter) => {
     try {
-      setRefreshing(true)
       setError('')
       const activePeriod = overrideFilter && 'period' in overrideFilter ? overrideFilter.period : filterPeriod
       const activeDate = overrideFilter && 'date' in overrideFilter ? overrideFilter.date : customDate
@@ -204,7 +192,6 @@ export default function Dashboard() {
       setError('Unable to refresh dashboard data.')
     } finally {
       setLoading(false)
-      setRefreshing(false)
     }
   }, [filterPeriod, customDate])
 
@@ -288,7 +275,7 @@ export default function Dashboard() {
   const nearExpiryBatches = data.near_expiry_batches || []
   const recentBills = data.recent_bills || []
   const topProducts = data.top_products || []
-  const actionRequired = data.action_required || []
+  const actionRequired = useMemo(() => data.action_required || [], [data.action_required])
 
   const creditDueCount = useMemo(() => {
     const item = actionRequired.find(a => a.key === 'credit')
@@ -343,36 +330,6 @@ export default function Dashboard() {
       onClick: () => navigate('/parties/customers?credit_due=1'),
     },
   ], [data, creditDueCount, navigate, isFiltered])
-
-  const secondaryKpis = useMemo(() => [
-    {
-      label: "Gross Profit",
-      value: fmtCurrency(data.today_profit),
-      sub: `Margin ${Number(data.profit_margin || 0).toFixed(1)}%`,
-    },
-    {
-      label: "Stock Alerts",
-      value: `${data.low_stock_count || 0} low`,
-      sub: `${data.out_of_stock || 0} out of stock`,
-    },
-    {
-      label: "Purchases Today",
-      value: fmtCurrency(data.today_purchases),
-    },
-    {
-      label: "Expenses Today",
-      value: fmtCurrency(data.today_expenses),
-    },
-    {
-      label: "Month Sales",
-      value: fmtCurrency(data.month_sales),
-      sub: Number(data.last_month_sales) ? `${data.sales_growth > 0 ? '+' : ''}${Number(data.sales_growth || 0).toFixed(1)}% vs prior` : undefined,
-    },
-    {
-      label: "Month Profit",
-      value: fmtCurrency(data.month_profit),
-    },
-  ], [data])
 
   if (loading) {
     return <Spinner label="Loading dashboard" />

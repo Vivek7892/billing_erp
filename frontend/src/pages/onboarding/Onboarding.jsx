@@ -9,9 +9,7 @@ import {
   IconArrowLeft,
   IconPrinter,
   IconSparkles,
-  IconShoppingBag,
   IconCheck,
-  IconPencil,
   IconShieldCheck,
   IconDeviceMobile,
   IconKey,
@@ -101,7 +99,7 @@ export default function Onboarding() {
       const { data } = await http.post('/auth/2fa/setup/')
       setTotpData(data)
       setTotpSetupMode(true)
-    } catch (e) {
+    } catch {
       toast.error('Failed to initiate 2FA setup')
     } finally {
       setTotpLoading(false)
@@ -330,7 +328,7 @@ export default function Onboarding() {
 
       await http.patch('/auth/onboarding-progress/', payload)
       setCurrentStep(4)
-    } catch (err) {
+    } catch {
       toast.error('Failed to save catalogue step')
     } finally {
       setSaving(false)

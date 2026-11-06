@@ -5,7 +5,6 @@ import toast from 'react-hot-toast'
 import {
   IconDownload,
   IconPrinter,
-  IconBrandWhatsapp,
   IconRefresh,
   IconAlertCircle,
   IconEye,
@@ -242,25 +241,6 @@ export default function PublicBill() {
     }
   }, [id, token, retryCount])
 
-  const getBillUrl = () => {
-    return data?.invoice?.short_url || window.location.href
-  }
-
-  // Action: WhatsApp Share
-  const shareWhatsApp = () => {
-    if (!data?.invoice) return
-    const billUrl = getBillUrl()
-    const shop = data.business?.name || data.settings?.shop_name || 'Store'
-    const invNum = data.invoice.invoice_number || ''
-    const grandTotal = currency(data.invoice.grand_total || 0)
-    const isSettled = String(data.invoice.payment_status || '').toLowerCase() === 'paid'
-    const dueAmt = Number(data.invoice.balance_due || 0)
-
-    const statusNote = isSettled ? 'Paid in Full' : `Balance Due: ${currency(dueAmt)}`
-    const text = `Tax Invoice #${invNum} from ${shop}\nAmount: ${grandTotal} (${statusNote})\n\nView official invoice: ${billUrl}`
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer')
-  }
-
   // Action: Print Invoice
   const printBill = async () => {
     if (isPreview) {
@@ -417,11 +397,11 @@ export default function PublicBill() {
   const halfTax = tax > 0 ? tax / 2 : 0
 
   return (
-    <div className="min-h-screen bg-neutral-100/60 font-sans text-neutral-900 antialiased print:bg-white sm:py-8">
+    <div className="min-h-screen bg-[#F3F5F7] font-sans text-[#111827] antialiased print:bg-white sm:py-8" style={{ colorScheme: 'light' }}>
       
       {/* Sample Banner if in preview mode */}
       {isPreview && (
-        <div className="bg-neutral-800 text-white text-xs font-medium text-center py-1.5 px-4 print:hidden">
+        <div className="bg-[#EAF2FB] text-[#174A7C] text-xs font-semibold text-center py-2 px-4 print:hidden">
           Sample Digital Tax Invoice Preview
         </div>
       )}
@@ -429,7 +409,7 @@ export default function PublicBill() {
       {/* ============================================================
           TOP ACTION CONTROLS (Rectangular, Simple, Print-Hidden)
       ============================================================ */}
-      <div className="max-w-4xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3 print:hidden">
+      <div className="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div className="text-xs text-neutral-600 font-medium">
           Invoice #{inv.invoice_number || '—'}
         </div>
@@ -440,7 +420,7 @@ export default function PublicBill() {
           <button
             type="button"
             onClick={printBill}
-            className="inline-flex items-center gap-1.5 border border-neutral-300 bg-white px-3.5 py-1.5 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 transition active:scale-[0.99]"
+            className="inline-flex min-h-10 items-center gap-1.5 border border-neutral-300 bg-white px-3.5 py-2 text-xs font-semibold text-neutral-800 hover:bg-neutral-50 transition active:scale-[0.99]"
             title="Print Invoice"
           >
             <IconPrinter size={15} />
@@ -451,7 +431,7 @@ export default function PublicBill() {
             type="button"
             onClick={downloadPdf}
             disabled={downloading}
-            className="inline-flex items-center gap-1.5 bg-[#1E3A5F] hover:bg-[#162F4D] text-white px-4 py-1.5 text-xs font-semibold transition active:scale-[0.99] disabled:opacity-60"
+            className="inline-flex min-h-10 items-center gap-1.5 bg-[#1E3A5F] hover:bg-[#162F4D] text-white px-4 py-2 text-xs font-semibold transition active:scale-[0.99] disabled:opacity-60"
             title="Download PDF"
           >
             <IconDownload size={14} />
@@ -463,41 +443,46 @@ export default function PublicBill() {
       {/* ============================================================
           MAIN INVOICE SHEET (Pure White, Traditional Accounting Standard)
       ============================================================ */}
-      <article className="max-w-4xl mx-auto bg-white border-0 sm:border border-neutral-300 p-4 sm:p-10 text-neutral-900 print:p-0 print:border-none print:max-w-none">
+      <article className="max-w-5xl mx-auto bg-white border-0 sm:border border-[#D9E0E8] p-4 sm:p-8 lg:p-10 text-[#111827] shadow-none sm:shadow-sm print:p-0 print:border-none print:shadow-none print:max-w-none">
         
         {/* HEADER SECTION: Business Details (Left) & Tax Invoice Meta (Right) */}
-        <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-neutral-300">
+        <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-5 pb-5 sm:pb-6 border-b-2 border-[#1E3A5F]">
           
           {/* Left: Business Credentials */}
-          <div className="space-y-1 max-w-md">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 uppercase">
-              {shopName}
-            </h1>
-            {biz.address && (
-              <p className="whitespace-pre-line text-xs text-neutral-600 leading-relaxed pt-0.5">
-                {biz.address}
-              </p>
+          <div className="flex items-start gap-3 max-w-md">
+            {(biz.logo || s.shop_logo) && (
+              <img src={biz.logo || s.shop_logo} alt={`${shopName} logo`} className="h-14 w-14 shrink-0 object-contain print:h-12 print:w-12" />
             )}
-            {biz.mobile && (
-              <p className="text-xs text-neutral-600">
-                Phone: <span className="text-neutral-900 font-medium">{biz.mobile}</span>
-              </p>
-            )}
-            {biz.email && (
-              <p className="text-xs text-neutral-600">
-                Email: <span className="text-neutral-900">{biz.email}</span>
-              </p>
-            )}
-            {bizGstin && (
-              <p className="text-xs font-semibold text-neutral-800 pt-0.5">
-                GSTIN: <span className="font-mono text-neutral-900">{bizGstin}</span>
-              </p>
-            )}
+            <div className="space-y-1 min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-neutral-900 uppercase break-words">
+                {shopName}
+              </h1>
+              {biz.address && (
+                <p className="whitespace-pre-line text-xs text-neutral-600 leading-relaxed pt-0.5">
+                  {biz.address}
+                </p>
+              )}
+              {biz.mobile && (
+                <p className="text-xs text-neutral-600">
+                  Phone: <span className="text-neutral-900 font-medium">{biz.mobile}</span>
+                </p>
+              )}
+              {biz.email && (
+                <p className="text-xs text-neutral-600 break-all">
+                  Email: <span className="text-neutral-900">{biz.email}</span>
+                </p>
+              )}
+              {bizGstin && (
+                <p className="text-xs font-semibold text-neutral-800 pt-0.5">
+                  GSTIN: <span className="font-mono text-neutral-900">{bizGstin}</span>
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Right: Invoice Metadata */}
-          <div className="sm:text-right space-y-1 text-xs sm:min-w-[220px]">
-            <p className="text-base sm:text-lg font-black tracking-wider text-neutral-900 uppercase">
+          <div className="sm:text-right space-y-1 text-xs sm:min-w-[240px] sm:pl-4">
+            <p className="text-base sm:text-lg font-black tracking-wider text-[#1E3A5F] uppercase">
               TAX INVOICE
             </p>
             <p className="text-xs font-bold text-neutral-800">
@@ -516,7 +501,7 @@ export default function PublicBill() {
             </p>
             <p className="text-neutral-600">
               Payment Status:{' '}
-              <span className={`font-bold ${isPaid ? 'text-emerald-700' : 'text-neutral-900'}`}>
+              <span className={`inline-flex items-center border px-2 py-0.5 text-[10px] uppercase tracking-wide ${isPaid ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : due > 0 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-neutral-200 bg-neutral-50 text-neutral-700'}`}>
                 {paymentStatusLabel}
               </span>
             </p>
@@ -525,8 +510,9 @@ export default function PublicBill() {
         </header>
 
         {/* CUSTOMER DETAILS: BILL TO */}
-        <section className="py-5 border-b border-neutral-300 text-xs">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 mb-1">
+        <section className="grid gap-4 py-5 border-b border-neutral-200 text-xs sm:grid-cols-[1fr_auto] sm:items-start">
+          <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-[#1E3A5F] mb-1.5">
             BILL TO
           </p>
           <div className="space-y-0.5">
@@ -549,14 +535,21 @@ export default function PublicBill() {
               </p>
             )}
           </div>
+          </div>
+          {!isPaid && due > 0 && (
+            <div className="border-l-2 border-amber-400 bg-amber-50 px-3 py-2 sm:min-w-44">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Balance due</p>
+              <p className="mt-0.5 font-mono text-base font-bold text-amber-900">{currency(due)}</p>
+            </div>
+          )}
         </section>
 
         {/* ITEMIZED INVOICE TABLE */}
-        <section className="py-6">
+        <section className="py-5 sm:py-6">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full min-w-[680px] text-left border-collapse text-xs">
               <thead>
-                <tr className="border-y border-neutral-300 bg-neutral-50 text-[11px] font-bold uppercase tracking-wider text-neutral-700">
+                <tr className="border-y border-neutral-300 bg-[#F3F6FA] text-[10px] font-bold uppercase tracking-wider text-neutral-700">
                   <th className="py-2.5 px-3 w-10 text-center">#</th>
                   <th className="py-2.5 px-3">Item Description</th>
                   <th className="py-2.5 px-3 w-24 text-center">HSN/SAC</th>
@@ -569,7 +562,7 @@ export default function PublicBill() {
               <tbody className="divide-y divide-neutral-200">
                 {items.length ? (
                   items.map((item, index) => (
-                    <tr key={item.id || index} className="align-top">
+                    <tr key={item.id || index} className="align-top even:bg-[#FAFBFC]">
                       <td className="py-3 px-3 text-center text-neutral-500 font-mono">
                         {index + 1}
                       </td>
@@ -611,8 +604,8 @@ export default function PublicBill() {
         </section>
 
         {/* PAYMENT DETAILS & INVOICE SUMMARY */}
-        <section className="pt-2 pb-6 border-t border-neutral-300">
-          <div className="flex flex-col sm:flex-row justify-between items-start gap-8">
+        <section className="pt-4 pb-6 border-t border-neutral-300">
+          <div className="flex flex-col sm:flex-row justify-between items-start gap-6 sm:gap-8">
             
             {/* Left: Notes & Terms */}
             <div className="text-xs text-neutral-600 space-y-3 max-w-sm">
@@ -636,7 +629,7 @@ export default function PublicBill() {
             </div>
 
             {/* Right: Accounting Summary Table */}
-            <div className="w-full sm:w-80 space-y-2 text-xs">
+            <div className="w-full sm:w-[340px] space-y-2 text-xs">
               <div className="flex justify-between text-neutral-700">
                 <span>Subtotal / Taxable Value</span>
                 <span className="font-mono text-neutral-900 font-medium">{currency(subtotal)}</span>
@@ -677,11 +670,11 @@ export default function PublicBill() {
               )}
 
               {/* GRAND TOTAL (Prominent Bold Typography) */}
-              <div className="py-2.5 my-2 border-y-2 border-neutral-900 flex justify-between items-baseline">
-                <span className="text-sm font-black uppercase tracking-wider text-neutral-900">
+              <div className="py-3 my-2 border-y-2 border-[#1E3A5F] flex justify-between items-baseline">
+                <span className="text-sm font-black uppercase tracking-wider text-[#1E3A5F]">
                   GRAND TOTAL
                 </span>
-                <span className="text-lg sm:text-xl font-black font-mono text-neutral-900">
+                <span className="text-xl sm:text-2xl font-black font-mono text-neutral-900">
                   {currency(total)}
                 </span>
               </div>
@@ -694,7 +687,7 @@ export default function PublicBill() {
                 </div>
 
                 {due > 0 ? (
-                  <div className="flex justify-between font-bold text-neutral-900 text-xs pt-1 border-t border-neutral-200">
+                  <div className="flex justify-between font-bold text-amber-900 text-xs pt-2 border-t border-neutral-200">
                     <span>Balance Due</span>
                     <span className="font-mono text-neutral-900">{currency(due)}</span>
                   </div>
@@ -720,7 +713,7 @@ export default function PublicBill() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-neutral-200 text-neutral-600 text-[11px]">
+                  <tr className="border-b border-neutral-200 bg-[#F8FAFC] text-neutral-600 text-[10px] uppercase tracking-wide">
                     <th className="py-1.5 pr-4 font-semibold">Date</th>
                     <th className="py-1.5 pr-4 font-semibold">Method</th>
                     <th className="py-1.5 pr-4 font-semibold">Reference</th>
@@ -743,8 +736,8 @@ export default function PublicBill() {
         )}
 
         {/* COMPANY BRANDING: BOTTOM OF INVOICE */}
-        <footer className="mt-12 pt-6 border-t border-neutral-200 text-center">
-          <p className="text-xs text-neutral-400 font-medium tracking-wide">
+        <footer className="mt-8 sm:mt-12 pt-5 sm:pt-6 border-t border-neutral-200 text-center">
+          <p className="text-[11px] text-neutral-500 font-medium tracking-wide">
             Powered by DreamWithTech
           </p>
         </footer>

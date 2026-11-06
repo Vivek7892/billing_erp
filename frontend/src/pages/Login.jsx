@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import {
   IconEye,
@@ -43,7 +43,7 @@ export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const handleRedirectAfterLogin = loggedUser => {
+  const handleRedirectAfterLogin = useCallback(loggedUser => {
     let targetPath = '/'
     if (loggedUser && !loggedUser.onboarding_completed) {
       targetPath = '/onboarding'
@@ -90,14 +90,14 @@ export default function Login() {
     }
 
     navigate(targetPath, { replace: true })
-  }
+  }, [location.search, navigate])
 
   // Redirect authenticated users away from login
   useEffect(() => {
     if (user) {
       handleRedirectAfterLogin(user)
     }
-  }, [user])
+  }, [user, handleRedirectAfterLogin])
 
   const handleMobileChange = e => {
     const digits = e.target.value.replace(/\D/g, '').slice(0, 10)

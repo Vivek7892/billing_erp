@@ -7,46 +7,42 @@ import {
   IconMail,
   IconCircleCheck,
   IconCalendar,
-  IconExternalLink,
   IconCopy,
-  IconClock,
-  IconSend,
 } from '@tabler/icons-react'
 
 export default function CommunicationHistory({
   referenceType,
   referenceId,
   initialLogs = null,
-  compact = false,
-  onLogAdded = null,
+  _compact = false,
+  _onLogAdded = null,
 }) {
   const [logs, setLogs] = useState(initialLogs || [])
   const [loading, setLoading] = useState(!initialLogs)
 
-  const fetchLogs = async () => {
-    if (!referenceType || !referenceId) return
-    try {
-      const res = await api.get('/communication-logs/', {
-        params: {
-          reference_type: referenceType,
-          reference_id: referenceId,
-        },
-      })
-      const data = Array.isArray(res.data) ? res.data : res.data.results || []
-      setLogs(data)
-    } catch {
-      // silent fallback
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    if (!initialLogs) {
-      fetchLogs()
-    } else {
+    if (initialLogs) {
       setLogs(initialLogs)
+      return
     }
+    if (!referenceType || !referenceId) return
+    let active = true
+    api.get('/communication-logs/', {
+      params: {
+        reference_type: referenceType,
+        reference_id: referenceId,
+      },
+    })
+      .then(res => {
+        if (!active) return
+        const data = Array.isArray(res.data) ? res.data : res.data.results || []
+        setLogs(data)
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => { active = false }
   }, [referenceType, referenceId, initialLogs])
 
   if (loading) {

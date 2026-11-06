@@ -4,13 +4,9 @@ import {
   IconPhone,
   IconMail,
   IconMessageCircle,
-  IconSearch,
   IconChevronDown,
   IconChevronUp,
   IconKeyboard,
-  IconCircleCheck,
-  IconServer,
-  IconX,
 } from '@tabler/icons-react'
 
 const FAQ_DATA = [
@@ -353,24 +349,6 @@ export default function Support() {
           )}
         </div>
       </section>
-    </div>
-  )
-}
-
-function StatusItem({ label, value, status = false }) {
-  return (
-    <div>
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-light)]">
-        {label}
-      </p>
-
-      <div className="mt-1 flex items-center gap-1.5 text-sm font-medium">
-        {status && (
-          <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
-        )}
-
-        {value}
-      </div>
     </div>
   )
 }

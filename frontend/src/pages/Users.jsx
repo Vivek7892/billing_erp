@@ -1,21 +1,16 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import api from '../api'
 import { Card, PageHeader, Modal, ConfirmDialog, TableSkeleton, EmptyState, Badge, SearchInput } from '../components/UI'
-import { ROLES, PERMISSIONS } from '../constants'
-import { useAuth } from '../AuthContext'
+import { MobileFAB } from '../components/MobileUI'
+import { ROLES } from '../constants'
 import toast from 'react-hot-toast'
 import {
   IconPlus,
   IconEdit,
   IconTrash,
   IconSearch,
-  IconX,
-  IconShieldCheck,
   IconUsers as UsersIcon,
   IconPhone,
-  IconLock,
-  IconChevronDown,
-  IconChevronUp,
 } from '@tabler/icons-react'
 
 const ROLE_OPTIONS = [
@@ -43,7 +38,6 @@ const emptyForm = {
 }
 
 export default function Users() {
-  const { user: currentUser } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
@@ -225,7 +219,7 @@ export default function Users() {
         title="Staff & Users"
         subtitle="Manage employee access, edit mobile numbers and passwords, and assign cashier or admin roles."
         action={
-          <button onClick={openAdd} className="btn-primary flex min-h-[42px] w-full items-center justify-center gap-2 sm:w-auto">
+          <button onClick={openAdd} className="btn-primary hidden min-h-[42px] items-center justify-center gap-2 md:inline-flex">
             <IconPlus size={16} /> Add Staff Member
           </button>
         }
@@ -525,6 +519,8 @@ export default function Users() {
         message="Are you sure you want to delete this staff member? Their account access will be revoked immediately."
         danger
       />
+
+      <MobileFAB icon={IconPlus} label="Add Staff" onClick={openAdd} />
     </div>
   )
 }

@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import api from '../api'
 import productService from '../features/inventory/api/productService'
 import ProductBatchManager from '../features/inventory/ProductBatchManager'
-import { STOCK_STATUS } from '../constants'
 import {
   Badge,
   PageHeader,
@@ -20,13 +18,7 @@ import toast from 'react-hot-toast'
 import BarcodePrintModal from '../components/BarcodePrintModal'
 import {
   formatCurrency,
-  formatNumber,
-  formatDecimal,
-  formatPercent,
-  formatQuantity,
-  formatDate,
   formatDateTime,
-  formatTime,
 } from '../utils/formatters'
 import {
   IconPlus,
@@ -38,22 +30,16 @@ import {
   IconPackage,
   IconRefresh,
   IconAdjustmentsHorizontal,
-  IconMinus,
   IconX,
-  IconPrinter,
-  IconChevronDown,
   IconAlertTriangle,
   IconCircleCheck,
   IconCircleX,
   IconEye,
   IconHistory,
-  IconDownload,
   IconUpload,
   IconArrowsSort,
   IconPackages,
   IconTag,
-  IconPercentage,
-  IconPower,
   IconCopy,
   IconCheck,
   IconFileSpreadsheet,
@@ -171,51 +157,6 @@ function FormField({ label, required, hint, children, className = '' }) {
         )}
       </div>
       {children}
-    </div>
-  )
-}
-
-function BarcodeQuantityControl({ value, onChange }) {
-  const updateValue = nextValue => {
-    const parsed = Number(nextValue)
-    if (!Number.isFinite(parsed)) {
-      onChange(1)
-      return
-    }
-    onChange(Math.max(1, Math.min(500, Math.floor(parsed))))
-  }
-
-  return (
-    <div className="flex w-full max-w-xs items-center overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
-      <button
-        type="button"
-        onClick={() => updateValue(value - 1)}
-        disabled={value <= 1}
-        className="flex h-11 w-11 shrink-0 items-center justify-center text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] disabled:cursor-not-allowed disabled:opacity-30"
-        aria-label="Decrease quantity"
-      >
-        <IconMinus size={16} />
-      </button>
-
-      <input
-        type="number"
-        min="1"
-        max="500"
-        value={value}
-        onChange={event => updateValue(event.target.value)}
-        className="h-11 min-w-0 flex-1 border-x border-[var(--line)] bg-transparent px-2 text-center text-sm font-bold text-[var(--ink)] outline-none"
-        aria-label="Quantity"
-      />
-
-      <button
-        type="button"
-        onClick={() => updateValue(value + 1)}
-        disabled={value >= 500}
-        className="flex h-11 w-11 shrink-0 items-center justify-center text-[var(--muted)] transition hover:bg-[var(--surface-elevated)] disabled:cursor-not-allowed disabled:opacity-30"
-        aria-label="Increase quantity"
-      >
-        <IconPlus size={16} />
-      </button>
     </div>
   )
 }
@@ -743,7 +684,7 @@ export default function Products() {
         toast.success('Stock updated successfully')
         setModal(null)
         await load(search, catFilter)
-      } catch (err) {
+      } catch (error) {
         toast.error(
           error.response?.data?.error || 'Failed to adjust product stock',
         )

@@ -1,19 +1,14 @@
 import { useState, useEffect } from 'react'
 import {
-  IconUser,
-  IconLock,
-  IconPhone,
-  IconMail,
   IconShieldCheck,
   IconEye,
   IconEyeOff,
-  IconCheck,
   IconDeviceMobile,
 } from '@tabler/icons-react'
 import toast from 'react-hot-toast'
 import http from '../api'
 import { useAuth } from '../AuthContext'
-import { Card, Badge } from '../components/UI'
+import { Card } from '../components/UI'
 
 export default function CashierSettings() {
   const { user, updateUser } = useAuth()

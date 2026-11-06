@@ -2,9 +2,7 @@ import { useEffect } from 'react'
 import {
   IconX,
   IconPlayerPlay,
-  IconVolume,
   IconShieldCheck,
-  IconCircleCheck,
 } from '@tabler/icons-react'
 import './VisualContent.css'
 

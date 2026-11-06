@@ -4,19 +4,15 @@ import { Card, PageHeader, Modal } from '../components/UI'
 import toast from 'react-hot-toast'
 import {
   IconShieldCheck,
-  IconLock,
   IconCopy,
   IconDownload,
   IconCheck,
   IconAlertTriangle,
-  IconDeviceMobile,
   IconKey,
   IconRefresh,
-  IconX,
 } from '@tabler/icons-react'
 
 export default function SecuritySettings() {
-  const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState({ totp_enabled: false, recovery_codes_remaining: 0, confirmed_at: null })
 
   // Setup modal state
@@ -41,14 +37,11 @@ export default function SecuritySettings() {
   const [regenStep, setRegenStep] = useState(1) // 1: prompt, 2: display new codes
 
   const loadStatus = useCallback(async () => {
-    setLoading(true)
     try {
       const res = await api.get('/auth/2fa/status/')
       setStatus(res.data)
     } catch {
       toast.error('Failed to load two-factor authentication status')
-    } finally {
-      setLoading(false)
     }
   }, [])
 

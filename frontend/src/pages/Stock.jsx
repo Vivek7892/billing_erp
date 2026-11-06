@@ -1,43 +1,28 @@
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import api, { API_BASE_URL } from '../api'
+import api from '../api'
 import productService from '../features/inventory/api/productService'
-import { Badge, PageHeader, Modal, Spinner, EmptyState, Pagination, TableSkeleton, SearchBar, SearchInput } from '../components/UI'
+import { Modal, Spinner, EmptyState, TableSkeleton, SearchInput } from '../components/UI'
 import { MobileKpiGrid, MobileFAB } from '../components/MobileUI'
-import { STOCK_STATUS } from '../constants'
 import toast from 'react-hot-toast'
 import BarcodePrintModal from '../components/BarcodePrintModal'
 import { InformationalBanner } from '../components/visual-content'
 import {
-  formatCurrency,
-  formatNumber,
-  formatDecimal,
-  formatPercent,
-  formatQuantity,
-  formatDate,
   formatDateTime,
-  formatTime,
   fmtCurrency,
 } from '../utils/formatters'
 import {
   IconPlus,
   IconPackages,
   IconRefresh,
-  IconFileSpreadsheet,
   IconFileTypeXls,
-  IconChevronUp,
   IconAlertTriangle,
   IconCircleCheck,
   IconCircleX,
   IconAdjustmentsHorizontal,
-  IconPackage,
-  IconChevronDown,
   IconX,
-  IconDownload,
   IconBarcode,
   IconHistory,
-  IconTrendingDown,
-  IconTrendingUp,
   IconTag,
   IconArrowsSort,
   IconFilter,
@@ -300,7 +285,7 @@ export default function Stock() {
       toast.success('Stock adjusted successfully')
       setAdjustModal(false)
       await load()
-    } catch (err) {
+    } catch {
       // Fallback direct patch if adjust endpoint has permission limitation
       try {
         const nextStock = Math.max(0, current + delta)
@@ -310,7 +295,7 @@ export default function Stock() {
         toast.success('Stock updated successfully')
         setAdjustModal(false)
         await load()
-      } catch (e) {
+      } catch {
         toast.error('Failed to adjust stock')
       }
     } finally {
@@ -700,7 +685,7 @@ export default function Stock() {
           {/* Category & Supplier selectors */}
           <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
             <select
-              className="h-8 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 text-xs font-medium text-[var(--ink)] outline-none focus:border-[#1E3A5F] w-full sm:w-auto"
+              className="h-10 min-w-0 flex-1 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-medium text-[var(--ink)] outline-none focus:border-[var(--primary)] sm:w-[190px] sm:flex-none"
               value={selectedCat}
               onChange={e => setSelectedCat(e.target.value)}
               aria-label="Filter by category"
@@ -714,7 +699,7 @@ export default function Stock() {
             </select>
 
             <select
-              className="h-8 rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 text-xs font-medium text-[var(--ink)] outline-none focus:border-[#1E3A5F] w-full sm:w-auto"
+              className="h-10 min-w-0 flex-1 rounded-md border border-[var(--line)] bg-[var(--surface)] px-3 text-xs font-medium text-[var(--ink)] outline-none focus:border-[var(--primary)] sm:w-[190px] sm:flex-none"
               value={selectedSup}
               onChange={e => setSelectedSup(e.target.value)}
               aria-label="Filter by supplier"

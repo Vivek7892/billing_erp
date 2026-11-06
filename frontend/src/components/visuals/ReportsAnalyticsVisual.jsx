@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react'
 import {
   IconTrendingUp,
   IconChartBar,
-  IconChartPie,
-  IconArrowUpRight,
 } from '@tabler/icons-react'
 import DreamVisualContainer from './DreamVisualContainer'
 

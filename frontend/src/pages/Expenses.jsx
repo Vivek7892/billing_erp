@@ -1,14 +1,10 @@
-import { MobileFAB } from '../components/MobileUI'
 import { useEffect, useState } from 'react'
 import api from '../api'
-import { Spinner, Modal, EmptyState, SearchInput } from '../components/UI'
+import { Spinner, Modal, EmptyState, SearchInput, ConfirmDialog } from '../components/UI'
 
 import {
   IconCurrencyRupee,
   IconPlus,
-  IconRefresh,
-  IconSearch,
-  IconX,
   IconPencil,
   IconTrash,
   IconShoppingBag,
@@ -22,13 +18,7 @@ import {
 import toast from 'react-hot-toast'
 import {
   formatCurrency,
-  formatNumber,
-  formatDecimal,
-  formatPercent,
-  formatQuantity,
   formatDate,
-  formatDateTime,
-  formatTime,
 } from '../utils/formatters'
 
 const fmt = v => formatCurrency(v)
@@ -40,16 +30,6 @@ const CAT_ICON = {
   Rent: IconShoppingBag, Utilities: IconBolt, Salaries: IconUsers,
   Transport: IconCar, Supplies: IconShoppingBag, Marketing: IconTrendingDown,
   Maintenance: IconDots, Other: IconCurrencyRupee,
-}
-const CAT_ICON_CLS = {
-  Rent: 'border-[var(--line)] text-[#1E3A5F] dark:text-slate-300',
-  Utilities: 'border-[var(--line)] text-amber-600 dark:text-amber-400',
-  Salaries: 'border-[var(--line)] text-slate-700 dark:text-slate-300',
-  Transport: 'border-[var(--line)] text-slate-600 dark:text-slate-400',
-  Supplies: 'border-[var(--line)] text-teal-700 dark:text-teal-400',
-  Marketing: 'border-[var(--line)] text-rose-600 dark:text-rose-400',
-  Maintenance: 'border-[var(--line)] text-amber-700 dark:text-amber-400',
-  Other: 'border-[var(--line)] text-slate-500 dark:text-slate-400',
 }
 
 const CAT_BADGE = {
@@ -84,6 +64,7 @@ export default function Expenses() {
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(null)
+  const [expenseToDelete, setExpenseToDelete] = useState(null)
 
   const load = () => {
     setLoading(true)
@@ -145,9 +126,15 @@ export default function Expenses() {
     } finally { setSaving(false) }
   }
 
-  const del = async id => {
-    setDeleting(id)
-    try { await api.delete(`/expenses/${id}/`); toast.success('Deleted'); load() }
+  const del = async () => {
+    if (!expenseToDelete) return
+    setDeleting(expenseToDelete.id)
+    try {
+      await api.delete(`/expenses/${expenseToDelete.id}/`)
+      toast.success('Deleted')
+      setExpenseToDelete(null)
+      load()
+    }
     catch { toast.error('Failed to delete') }
     finally { setDeleting(null) }
   }
@@ -335,7 +322,7 @@ export default function Expenses() {
 
                         <button
                           type="button"
-                          onClick={() => del(e.id)}
+                          onClick={() => setExpenseToDelete(e)}
                           disabled={deleting === e.id}
                           className="icon-btn !h-8 !w-8 text-rose-600 hover:text-rose-700"
                           title="Delete expense"
@@ -430,7 +417,7 @@ export default function Expenses() {
 
                             <button
                               type="button"
-                              onClick={() => del(e.id)}
+                              onClick={() => setExpenseToDelete(e)}
                               disabled={deleting === e.id}
                               className="icon-btn text-rose-600 hover:text-rose-700"
                               title="Delete expense"
@@ -493,6 +480,19 @@ export default function Expenses() {
           </div>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={Boolean(expenseToDelete)}
+        onClose={() => !deleting && setExpenseToDelete(null)}
+        onConfirm={del}
+        title="Delete Expense?"
+        message={expenseToDelete
+          ? `Delete “${expenseToDelete.description}” (${fmt(expenseToDelete.amount)})? This action cannot be undone.`
+          : ''}
+        confirmLabel="Delete Expense"
+        loading={Boolean(deleting)}
+        danger
+      />
     
       
       

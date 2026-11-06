@@ -2,7 +2,7 @@ import { MobileFAB } from '../components/MobileUI'
 import { Fragment, useState, useEffect, useMemo, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import api from '../api'
-import { Badge, PageHeader, Modal, Spinner, EmptyState, ConfirmDialog, TableSkeleton, SearchInput } from '../components/UI'
+import { Badge, PageHeader, Modal, EmptyState, ConfirmDialog, TableSkeleton, SearchInput } from '../components/UI'
 
 import toast from 'react-hot-toast'
 import { PurchaseEmptyIllustration } from '../components/visuals'
@@ -14,15 +14,11 @@ import {
   IconChevronDown,
   IconChevronRight,
   IconBuildingStore,
-  IconPhone,
-  IconMail,
   IconMapPin,
   IconEdit,
-  IconSearch,
   IconDeviceFloppy,
   IconWallet,
   IconClockHour3,
-  IconClipboardList,
   IconTrendingUp,
   IconFilter,
   IconMessageCircle,
@@ -36,20 +32,13 @@ import {
   IconRotate2,
   IconCheck,
   IconArrowRight,
-  IconFileText,
-  IconX,
   IconRefresh,
 } from '@tabler/icons-react'
 import CommunicationHistory from '../components/CommunicationHistory'
 import {
   formatCurrency,
-  formatNumber,
   formatDecimal,
-  formatPercent,
-  formatQuantity,
   formatDate,
-  formatDateTime,
-  formatTime,
 } from '../utils/formatters'
 
 const fmt = v => formatCurrency(v)
@@ -116,7 +105,7 @@ function printPO(purchase, suppliers) {
     <div class="total" style="margin-top:8px">Grand Total: ₹${total.toFixed(2)}</div>
     <div class="total" style="font-size:13px;margin-top:4px">Balance Due: ₹${balance.toFixed(2)}</div>
     <div class="footer">This is a computer generated purchase order.</div>
-    <script>window.onload=()=>{window.print();window.close()}<\/script></body></html>`)
+    <script>window.onload=()=>{window.print();window.close()}</script></body></html>`)
   win.document.close()
 }
 
@@ -315,7 +304,7 @@ function PurchaseBulkImportModal({ open, onClose, onSuccess, initialMode = 'orde
     })
   }
 
-  const handleDownloadTemplate = async (format = 'xlsx') => {
+  const handleDownloadTemplate = async (_format = 'xlsx') => {
     setDownloadingTemplate(true)
     const endpoint = mode === 'orders' ? '/purchases/import-template/' : '/suppliers/import-template/'
     const filename = mode === 'orders' ? 'Purchase_Import_Template.xlsx' : 'Supplier_Import_Template.xlsx'

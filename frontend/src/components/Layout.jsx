@@ -4,14 +4,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../AuthContext'
 import api from '../api'
 import {
-  formatCurrency,
-  formatNumber,
-  formatDecimal,
-  formatPercent,
-  formatQuantity,
-  formatDate,
   formatDateTime,
-  formatTime,
 } from '../utils/formatters'
 
 import logoImg from '../assets/logo.png'
@@ -139,7 +132,6 @@ const PAGE_META = NAV_GROUPS.reduce((acc, group) => {
 }, {})
 
 function NavGroup({ group, collapsed, mobile, user, onNav }) {
-  const location = useLocation()
   const [open, setOpen] = useState(true)
 
   const userRole = String(user?.role || '').toLowerCase()
@@ -257,7 +249,7 @@ function NavGroupItems({ items, collapsed, mobile, groupLabel, open, setOpen, on
   )
 }
 
-function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, shopId, logoSrc, onNav, onToggle, onClose, onLogout }) {
+function Sidebar({ collapsed, mobile, settingsMode, user, shopName, shopPhone, logoSrc, onNav, onToggle, onClose, onLogout }) {
   const [headerHovered, setHeaderHovered] = useState(false)
   const location = useLocation()
   const canAccessUtility = [ROLES.ADMIN, ROLES.OWNER].includes(String(user?.role || '').toLowerCase())
@@ -1113,8 +1105,8 @@ function ProfileMenu({ user, shopId }) {
             {theme === 'dark' ? <IconMoon size={14} /> : <IconSun size={14} />}
             {theme === 'dark' ? 'Dark mode' : 'Light mode'}
           </span>
-          <span className={`flex h-4 w-7 items-center rounded-full p-0.5 transition-colors ${theme === 'dark' ? 'bg-[var(--primary)]' : 'bg-[var(--line-strong)]'}`} aria-hidden="true">
-            <span className={`h-3 w-3 rounded-full bg-white shadow-sm transition-transform ${theme === 'dark' ? 'translate-x-3' : 'translate-x-0'}`} />
+          <span className={`flex h-4 w-7 items-center rounded-full p-0.5 ${theme === 'dark' ? 'bg-[var(--primary)]' : 'bg-[var(--line-strong)]'}`} aria-hidden="true">
+            <span className={`h-3 w-3 rounded-full bg-white shadow-sm ${theme === 'dark' ? 'translate-x-3' : 'translate-x-0'}`} />
           </span>
         </button>
       </div>

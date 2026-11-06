@@ -2,13 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   formatCurrency,
-  formatNumber,
-  formatDecimal,
-  formatPercent,
-  formatQuantity,
-  formatDate,
   formatDateTime,
-  formatTime,
 } from '../utils/formatters'
 
 import { SearchInput } from '../components/UI'
@@ -22,9 +16,6 @@ import {
   IconChevronRight,
   IconReceiptTax,
   IconArrowLeft,
-  IconClockHour3,
-  IconSearch,
-  IconX,
 } from '@tabler/icons-react'
 
 const DRAFT_KEY = 'pos_drafts'

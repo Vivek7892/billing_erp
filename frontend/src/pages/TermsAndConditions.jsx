@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
   IconFileText,
   IconShield,
@@ -8,20 +8,15 @@ import {
   IconLock,
   IconRefresh,
   IconPrinter,
-  IconArrowLeft,
   IconCircleCheck,
-  IconExternalLink,
-  IconChevronRight,
   IconScale,
   IconReceipt,
   IconMail,
-  IconMapPin,
   IconClock,
   IconDeviceLaptop,
 } from '@tabler/icons-react'
 
 export default function TermsAndConditions() {
-  const navigate = useNavigate()
   const [activeSection, setActiveSection] = useState('acceptance')
 
   const sections = [

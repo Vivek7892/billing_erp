@@ -145,7 +145,7 @@ export default function InvoiceDocument({
       return entry?.config || null
     }
     return null
-  }, [templateConfig, s, mode])
+  }, [templateConfig, s.template_settings, s.active_templates, mode])
 
   const tBiz = activeTplConfig?.business_info || {}
   const tFields = activeTplConfig?.fields || {}
@@ -324,9 +324,6 @@ export default function InvoiceDocument({
   const showTotalCol = thermal
     ? isTrue(s.thermal_show_total, true)
     : isTrue(tFields.show_total !== undefined ? tFields.show_total : s.show_total_col, true)
-  const showThermalBatch = isTrue(s.thermal_show_batch, showBatchCol)
-  const showThermalExpiry = isTrue(s.thermal_show_expiry, showExpiryCol)
-  const showThermalMrp = isTrue(s.thermal_show_mrp, showMrpCol)
   const showCessCol = isTrue(s.cess_enabled, false) && cessAmount > 0
 
   // Tax breakdown flags
@@ -348,13 +345,8 @@ export default function InvoiceDocument({
   const showBankDetails = isTrue(tPayment.show_bank_details, isTrue(s.show_bank_details, true)) && Boolean(bankDetailsText)
   const upiId = s.shop_upi_id || ''
   const showUpiA4 = isTrue(tPayment.show_upi_qr !== undefined ? tPayment.show_upi_qr : s.show_upi_qr_on_invoice, true) && Boolean(upiId)
-  const showUpiThermal = isTrue(s.thermal_show_upi_qr !== undefined ? s.thermal_show_upi_qr : (tPayment.show_upi_qr !== undefined ? tPayment.show_upi_qr : s.show_upi_qr_on_thermal), true) && Boolean(upiId)
-  const is58mm = mode === 'thermal_58' || (mode === 'thermal' && (s.thermal_paper_width === '58' || s.thermal_paper_width === '58mm' || s.thermal_paper_width === '2' || s.printer_type === 'thermal_58')) || tPage.thermal_roll_width === '58mm' || (s.invoice_template === 'thermal_58' && mode !== 'thermal_80' && mode !== 'a4' && mode !== 'half_a4')
 
   const qrSizeA4 = ({ small: 64, medium: 78, large: 96 })[s.upi_qr_size_a4] || 78
-  const qrSizeThermal = is58mm
-    ? ({ small: 64, medium: 78, large: 88 })[s.upi_qr_size_thermal] || 78
-    : ({ small: 72, medium: 92, large: 110 })[s.upi_qr_size_thermal] || 92
   const qrValue = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(shopName)}&am=${grandTotal.toFixed(2)}&cu=INR&tn=${encodeURIComponent(invoiceNo)}`
 
   // Digital Bill QR Code ("Scan to View Bill") - completely separate from payment UPI QR
@@ -373,8 +365,6 @@ export default function InvoiceDocument({
   const showSignature = tPayment.show_signature !== undefined ? tPayment.show_signature : isTrue(s.show_signature_area, false)
   const showFooter = (tPayment.show_footer !== undefined ? tPayment.show_footer : isTrue(s.show_footer, true)) && (tPayment.footer_layout || s.invoice_footer_layout) !== 'none'
   const footerText = tPayment.footer_text_override || s.invoice_footer || 'THANK YOU FOR SHOPPING WITH US!'
-  const thermalTermsText = s.thermal_terms || termsText
-  const thermalFooterText = s.receipt_footer || footerText
   const footerAlign = (tPayment.footer_layout || s.invoice_footer_layout) === 'text_left' ? 'left' : 'center'
 
   // Font and typography

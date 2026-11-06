@@ -13,14 +13,12 @@ import {
   SearchInput,
 } from '../components/UI'
 
-import { CreditCollectedVisual, CustomerEmptyIllustration } from '../components/visuals'
+import { CustomerEmptyIllustration } from '../components/visuals'
 import toast from 'react-hot-toast'
 import CommunicationHistory from '../components/CommunicationHistory'
 import { QRCodeSVG } from 'qrcode.react'
-import { UpiLogo } from '../components/UpiLogos'
 import {
   IconPlus,
-  IconSearch,
   IconEdit,
   IconTrash,
   IconEye,
@@ -52,12 +50,7 @@ import {
 
 import {
   formatCurrency,
-  formatNumber,
-  formatDecimal,
-  formatPercent,
-  formatQuantity,
   formatDate,
-  formatDateTime,
   formatTime,
 } from '../utils/formatters'
 
@@ -71,39 +64,6 @@ const emptyForm = {
 }
 
 const currency = value => formatCurrency(value)
-
-const getInitials = name =>
-  String(name || 'Customer')
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map(part => part[0]?.toUpperCase() || '')
-    .join('')
-
-const avatarColors = [
-  'bg-white text-[#1E3A5F] border border-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700',
-  'bg-teal-50 text-teal-800 border border-teal-200 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-800/40',
-  'bg-white text-slate-800 border border-slate-300 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700',
-  'bg-sky-50 text-[#1E3A5F] border border-sky-200 dark:bg-slate-900 dark:text-sky-300 dark:border-slate-700',
-]
-
-const CustomerAvatar = ({ customer, size = 'md' }) => {
-  const initials = getInitials(customer?.name)
-  const color = avatarColors[(Number(customer?.id) || 0) % avatarColors.length]
-  const dimensions = size === 'lg' ? 'w-16 h-16 text-xl' : size === 'sm' ? 'w-9 h-9 text-xs' : 'w-11 h-11 text-sm'
-
-  return customer?.profile_picture || customer?.profile_image || customer?.avatar ? (
-    <img
-      src={customer.profile_picture || customer.profile_image || customer.avatar}
-      alt={customer?.name || 'Customer'}
-      className={`${dimensions} rounded-full object-cover shrink-0`}
-    />
-  ) : (
-    <div className={`${dimensions} ${color} rounded-full flex items-center justify-center font-bold ring-2 ring-[var(--surface)] shadow-sm shrink-0`}>
-      {initials || <IconUserCircle size={18} />}
-    </div>
-  )
-}
 
 const getErrorMessage = error => {
   const data = error?.response?.data
